@@ -70,18 +70,30 @@ Frontend:
 
 ### Running Services (alle auf DGX Spark!)
 ```yaml
-Backend:   http://localhost:8000  # FastAPI (uvicorn)
-Frontend:  http://localhost:5179  # Vite dev server
-Qdrant:    localhost:6333/6334    # Vector DB (gRPC on 6334)
-Neo4j:     bolt://localhost:7687  # Graph DB (Browser: 7474)
-Redis:     localhost:6379         # Memory/Cache
-Ollama:    http://localhost:11434 # LLM (llama3.2:8b)
+# Sprint 92: All services run in Docker containers
+Frontend:  http://192.168.178.10      # Port 80 (React/Vite in Docker)
+Backend:   http://192.168.178.10:8000 # FastAPI (Docker)
+Qdrant:    localhost:6333/6334        # Vector DB (gRPC on 6334)
+Neo4j:     bolt://localhost:7687      # Graph DB (Browser: 7474)
+Redis:     localhost:6379             # Memory/Cache
+Ollama:    http://localhost:11434     # LLM (Nemotron3)
+Grafana:   http://192.168.178.10:3000 # Monitoring Dashboard
 ```
 
-**WICHTIG:** Alle Services laufen auf der DGX Spark in Docker!
-- Backend/Frontend: Direkt mit poetry/npm gestartet
-- Datenbanken: Native Installation auf DGX Spark
-- Docling Container: Muss separat gestartet werden für PDF-Ingestion
+**Sprint 92: Vollständige Docker-Deployment**
+- **Alle Services** laufen in Docker-Containern
+- Frontend auf Port 80 für einfachen Zugriff
+- Auto-Start mit `docker compose up -d`
+- Hot-Reload für Frontend-Entwicklung aktiv
+
+```bash
+# Start all services (inkl. Frontend)
+docker compose -f docker-compose.dgx-spark.yml up -d
+
+# View logs
+docker logs -f aegis-frontend
+docker logs -f aegis-api
+```
 
 ### Ingestion API (KRITISCH für RAGAS Testing)
 
@@ -449,13 +461,16 @@ curl http://localhost:8000/health
 # 1. API Container neu bauen (enthält Backend Code)
 docker compose -f docker-compose.dgx-spark.yml build --no-cache api
 
-# 2. Test Container neu bauen (enthält Tests)
+# 2. Frontend Container neu bauen (Sprint 92: React/Vite in Docker)
+docker compose -f docker-compose.dgx-spark.yml build --no-cache frontend
+
+# 3. Test Container neu bauen (enthält Tests)
 docker compose -f docker-compose.dgx-spark.yml build --no-cache test
 
-# 3. Docling Container (nur bei Änderungen am Ingestion Code)
+# 4. Docling Container (nur bei Änderungen am Ingestion Code)
 docker compose -f docker-compose.dgx-spark.yml build --no-cache docling
 
-# 4. Alle Container neu starten
+# 5. Alle Container neu starten
 docker compose -f docker-compose.dgx-spark.yml up -d
 ```
 
@@ -509,6 +524,7 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
 **Sprint 83 Complete:** ER-Extraction Improvements (26 SP, 4 features), 3-Rank LLM Cascade (Nemotron3→GPT-OSS→Hybrid SpaCy NER, 99.9% success), Gleaning (+20-40% recall, Microsoft GraphRAG), Fast Upload (2-5s response, 10-15x faster), Multi-language SpaCy (DE/EN/FR/ES), Comprehensive Logging (P95 metrics, GPU VRAM, LLM cost), Ollama Health Monitor, 94+ tests (100%), 7,638 LOC, 5 TDs archived (27 SP).
 **Sprint 87 Complete:** BGE-M3 Native Hybrid Search (replaces BM25), FlagEmbedding Service (Dense 1024D + Sparse lexical), Qdrant multi-vector collection with server-side RRF fusion, async embedding fix for LangGraph compatibility.
 **Sprint 88 In Progress:** RAGAS Phase 2 Evaluation (Tables + Code), T2-RAGBench (5/5 = 100%), MBPP Code QA (5/5 = 100%), comprehensive metrics schema (4 RAGAS + ingestion + retrieval + LLM eval metrics).
+**Sprint 92 Complete (36 SP, 24 Features):** Graph Search **17-19s→<2s** (89% faster), FlagEmbedding Warmup (40s→<1s), Ollama GPU Fix (19→77 tok/s), Deep Research UI, Docker Frontend (Port 80), Vector display fix, Rank consistency (1-indexed), Stop Words Filter, **Community Detection GDS Fix** (2,387 communities), Context Relevance Guard (TD-080 resolved), Recursive LLM Scoring (ADR-052), 10+ unit tests, ADR-053.
 
 ---
 

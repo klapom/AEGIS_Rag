@@ -63,6 +63,8 @@ ADRs dokumentieren wichtige Architektur-Entscheidungen mit Kontext, Alternativen
 | 050 | Intent-Based Skill Router Architecture | Accepted | 2026-01-14 |
 | 051 | Recursive Language Model Context Processing | Accepted | 2026-01-14 |
 | 052 | Recursive LLM Adaptive Scoring with C-LARA Granularity Mapping | Accepted | 2026-01-14 |
+| 053 | Docker Frontend Deployment (Port 80, Auto-Start) | Accepted | 2026-01-14 |
+| 054 | Azure Container Apps Deployment | Proposed | 2026-01-15 |
 
 ---
 

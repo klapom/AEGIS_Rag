@@ -1,0 +1,91 @@
+# =============================================================================
+# Dockerfile.frontend - AegisRAG React Frontend
+# =============================================================================
+# Sprint 92: Docker container for frontend auto-start
+#
+# Features:
+#   - Node 20 Debian slim (better ARM64/canvas support than Alpine)
+#   - Development mode with hot-reload
+#   - Production build option available
+#
+# Usage:
+#   # Development (hot-reload)
+#   docker compose -f docker-compose.dgx-spark.yml up -d frontend
+#
+#   # Production build
+#   docker build --target production -f docker/Dockerfile.frontend -t aegis-frontend:prod .
+# =============================================================================
+
+# Use Debian slim instead of Alpine for better native module support on ARM64
+FROM node:20-slim AS base
+
+WORKDIR /app
+
+# Install system dependencies for canvas (node-canvas requires cairo, pango, etc.)
+# Using Debian packages for better ARM64 compatibility
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 \
+    build-essential \
+    libcairo2-dev \
+    libpango1.0-dev \
+    libjpeg-dev \
+    libgif-dev \
+    librsvg2-dev \
+    libpixman-1-dev \
+    pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy package files
+COPY frontend/package*.json ./
+
+# Install dependencies
+RUN npm ci
+
+# Copy source code
+COPY frontend/ ./
+
+# =============================================================================
+# Development stage - with hot-reload
+# =============================================================================
+FROM base AS development
+
+# Expose Vite dev server port
+EXPOSE 5179
+
+# Environment for development
+ENV NODE_ENV=development
+
+# Start Vite dev server with host binding
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5179"]
+
+# =============================================================================
+# Production build stage
+# =============================================================================
+FROM base AS build
+
+# Build for production
+RUN npm run build
+
+# =============================================================================
+# Production stage - nginx to serve static files
+# =============================================================================
+FROM nginx:alpine AS production
+
+# Copy built files
+COPY --from=build /app/dist /usr/share/nginx/html
+
+# Copy nginx config for SPA routing
+RUN echo 'server { \
+    listen 80; \
+    location / { \
+        root /usr/share/nginx/html; \
+        try_files $uri $uri/ /index.html; \
+    } \
+    location /api { \
+        proxy_pass http://api:8000; \
+    } \
+}' > /etc/nginx/conf.d/default.conf
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]

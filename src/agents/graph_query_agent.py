@@ -252,6 +252,8 @@ class GraphQueryAgent(BaseAgent):
         """
         # Start timing
         timing = self._measure_latency()
+        import time
+        phase_timings = {}  # Track timing for each phase
 
         # Extract query
         query = state.get("query", "")
@@ -275,37 +277,28 @@ class GraphQueryAgent(BaseAgent):
         self._add_trace(state, "processing graph query")
 
         try:
-            # Sprint 69 Feature 69.5: Extract graph intents for targeted traversal
-            graph_intent_result = None
-            try:
-                graph_intent_result = await self.query_rewriter_v2.extract_graph_intents(query)
-                self.logger.info(
-                    "graph_intents_extracted",
-                    query=query[:50],
-                    intents=graph_intent_result.graph_intents,
-                    entities=graph_intent_result.entities_mentioned,
-                    cypher_hints_count=len(graph_intent_result.cypher_hints),
-                    confidence=graph_intent_result.confidence,
-                    latency_ms=round(graph_intent_result.latency_ms, 2),
-                )
-            except Exception as e:
-                self.logger.warning(
-                    "graph_intent_extraction_failed",
-                    query=query[:50],
-                    error=str(e),
-                    fallback="standard_graph_search",
-                )
+            # Sprint 92 Performance Optimization: Execute intent extraction in background
+            # Intent extraction is informational only and doesn't block search execution
+            # This saves ~500-1000ms by not waiting for LLM response
+            import asyncio
+
+            # Start intent extraction in background (non-blocking)
+            graph_intent_task = asyncio.create_task(
+                self.query_rewriter_v2.extract_graph_intents(query)
+            )
 
             # Sprint 68 Feature 68.5: Check if community search should be used
             use_community_search = should_use_community_search(query)
 
             if use_community_search:
                 # Community-based section retrieval
+                phase_start = time.perf_counter()
                 top_k = getattr(settings, "graph_search_top_k", 10)
                 community_result = await self.community_service.retrieve_by_community(
                     query=query,
                     top_k=top_k,
                 )
+                phase_timings["community_search_ms"] = (time.perf_counter() - phase_start) * 1000
 
                 # Calculate latency
                 latency_ms = self._calculate_latency_ms(timing)
@@ -355,9 +348,12 @@ class GraphQueryAgent(BaseAgent):
 
                 if search_mode == SearchMode.LOCAL:
                     # Entity-level search
-                    entities = await self.dual_level_search.local_search(
+                    phase_start = time.perf_counter()
+                    entities, local_metadata = await self.dual_level_search.local_search(
                         query=query, top_k=top_k, namespaces=namespaces
                     )
+                    phase_timings["local_search_ms"] = (time.perf_counter() - phase_start) * 1000
+                    # Sprint 92: Include graph_hops_used in metadata
                     graph_result = GraphSearchResult(
                         query=query,
                         answer=f"Found {len(entities)} entities related to the query.",
@@ -366,13 +362,18 @@ class GraphQueryAgent(BaseAgent):
                         topics=[],
                         context="",
                         mode="local",
-                        metadata={"entities_found": len(entities)},
+                        metadata={
+                            "entities_found": len(entities),
+                            "graph_hops_used": local_metadata.get("graph_hops_used", 0),
+                        },
                     )
                 elif search_mode == SearchMode.GLOBAL:
                     # Topic-level search
+                    phase_start = time.perf_counter()
                     topics = await self.dual_level_search.global_search(
                         query=query, top_k=min(top_k, 5), namespaces=namespaces
                     )
+                    phase_timings["global_search_ms"] = (time.perf_counter() - phase_start) * 1000
                     graph_result = GraphSearchResult(
                         query=query,
                         answer=f"Found {len(topics)} topics related to the query.",
@@ -385,12 +386,42 @@ class GraphQueryAgent(BaseAgent):
                     )
                 else:  # HYBRID
                     # Combined search with LLM answer
+                    phase_start = time.perf_counter()
                     graph_result = await self.dual_level_search.hybrid_search(
                         query=query, top_k=top_k, namespaces=namespaces
                     )
+                    phase_timings["hybrid_search_ms"] = (time.perf_counter() - phase_start) * 1000
 
                 # Calculate latency
                 latency_ms = self._calculate_latency_ms(timing)
+
+            # Sprint 92: Collect intent extraction result (non-blocking)
+            # Try to get result if it finished, otherwise skip
+            graph_intent_result = None
+            try:
+                graph_intent_result = await asyncio.wait_for(graph_intent_task, timeout=0.1)
+                self.logger.info(
+                    "graph_intents_extracted",
+                    query=query[:50],
+                    intents=graph_intent_result.graph_intents,
+                    entities=graph_intent_result.entities_mentioned,
+                    cypher_hints_count=len(graph_intent_result.cypher_hints),
+                    confidence=graph_intent_result.confidence,
+                    latency_ms=round(graph_intent_result.latency_ms, 2),
+                )
+            except asyncio.TimeoutError:
+                self.logger.debug(
+                    "graph_intent_extraction_still_running",
+                    query=query[:50],
+                    fallback="skip_intent_metadata",
+                )
+            except Exception as e:
+                self.logger.warning(
+                    "graph_intent_extraction_failed",
+                    query=query[:50],
+                    error=str(e),
+                    fallback="skip_intent_metadata",
+                )
 
             # Convert Pydantic models to dicts if needed
             entities_list = []
@@ -461,6 +492,9 @@ class GraphQueryAgent(BaseAgent):
             # Add entities as retrieved contexts (for compatibility with vector search)
             if entities_list:
                 retrieved_contexts = []
+                # Sprint 92: Extract graph_hops_used from graph_result metadata
+                graph_hops_used = graph_result.metadata.get("graph_hops_used", 0)
+
                 for i, entity in enumerate(entities_list):
                     context = {
                         "id": entity.get("id", f"entity_{i}"),
@@ -473,7 +507,10 @@ class GraphQueryAgent(BaseAgent):
                         "document_id": entity.get("source_document", ""),
                         "rank": i,
                         "search_type": "graph",
-                        "metadata": entity,
+                        "metadata": {
+                            **entity,
+                            "graph_hops_used": graph_hops_used,  # Sprint 92: Add hops count
+                        },
                     }
                     retrieved_contexts.append(context)
 
@@ -494,7 +531,7 @@ class GraphQueryAgent(BaseAgent):
                 "latency_ms": latency_ms,
             }
 
-            # Log success
+            # Log success with phase timings
             self._log_success(
                 "graph_query",
                 query=query[:50],
@@ -503,6 +540,7 @@ class GraphQueryAgent(BaseAgent):
                 relationships_found=len(relationships_list),
                 topics_found=len(topics_list),
                 latency_ms=latency_ms,
+                phase_timings=phase_timings,  # Sprint 92: Detailed phase timings
             )
 
             self._add_trace(state, f"graph query complete ({search_mode.value} mode)")

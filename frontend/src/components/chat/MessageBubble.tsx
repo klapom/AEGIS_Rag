@@ -133,11 +133,23 @@ export function MessageBubble({ message, onCitationClick }: MessageBubbleProps) 
 
   // Sprint 51 Fix: Filter sources to only show those actually cited in the answer
   // This prevents showing irrelevant sources with high "search relevance" but no actual usage
+  // Sprint 92 Fix: If no citations exist, show all sources instead of filtering to 0
   const filteredSources = useMemo((): CitedSource[] => {
     if (!message.sources || message.sources.length === 0) {
       return [];
     }
-    return filterCitedSources(message.sources, message.content);
+    const cited = filterCitedSources(message.sources, message.content);
+
+    // Sprint 92 Fix: If no citations found but sources exist, show all sources
+    // This handles cases where LLM doesn't generate citation markers
+    if (cited.length === 0 && message.sources.length > 0) {
+      return message.sources.map((source, index) => ({
+        source,
+        citationNumber: index + 1,
+      }));
+    }
+
+    return cited;
   }, [message.sources, message.content]);
 
   // Sprint 70.13: Hide sources when answer indicates information is not available

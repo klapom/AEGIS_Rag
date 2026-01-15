@@ -773,21 +773,24 @@ class CoordinatorAgent:
                 )
 
             # Get raw counts
-            vector_count = search_metadata.get("vector_results_count", 0)
-            bm25_count = search_metadata.get("bm25_results_count", 0)
+            # Sprint 92: Support both new (dense/sparse) and legacy (vector/bm25) field names
+            dense_count = search_metadata.get("dense_results_count", search_metadata.get("vector_results_count", 0))
+            sparse_count = search_metadata.get("sparse_results_count", search_metadata.get("bm25_results_count", 0))
             graph_local_count = search_metadata.get("graph_local_results_count", 0)
             graph_global_count = search_metadata.get("graph_global_results_count", 0)
-            total_count = vector_count + bm25_count + graph_local_count + graph_global_count
+            total_count = dense_count + sparse_count + graph_local_count + graph_global_count
 
             # Calculate effective weights based on actual results
             # If a channel has 0 results, its effective weight is 0
             raw_weights = search_metadata.get("weights", {})
+            # Sprint 92: Use dense/sparse if available, fallback to vector/bm25
             effective_weights = _calculate_effective_weights(
-                raw_weights, vector_count, bm25_count, graph_local_count, graph_global_count
+                raw_weights, dense_count, sparse_count, graph_local_count, graph_global_count
             )
 
             # Yield final answer with intent metadata
             # Sprint 52: Include full 4-way search metadata for frontend display
+            # Sprint 92: Include both dense/sparse (new) and vector/bm25 (legacy) for compatibility
             # IMPORTANT: "answer" must be at top level for process_query_stream check
             yield {
                 "answer": answer,
@@ -800,13 +803,17 @@ class CoordinatorAgent:
                     "total_latency_ms": latency_ms,
                     "session_id": session_id,
                     "search_mode": search_metadata.get("search_mode", "hybrid"),
-                    # Sprint 52: 4-way channel results for UI display
+                    # Sprint 92: 4-way channel results with dense/sparse
                     "four_way_results": {
-                        "vector_count": vector_count,
-                        "bm25_count": bm25_count,
+                        # New fields (Sprint 92)
+                        "dense_count": dense_count,
+                        "sparse_count": sparse_count,
                         "graph_local_count": graph_local_count,
                         "graph_global_count": graph_global_count,
                         "total_count": total_count,
+                        # Legacy fields (backward compatibility)
+                        "vector_count": dense_count,  # Map to dense for backward compat
+                        "bm25_count": sparse_count,  # Map to sparse for backward compat
                     },
                     # Sprint 52: Per-channel result samples for detailed display
                     "channel_samples": channel_samples,

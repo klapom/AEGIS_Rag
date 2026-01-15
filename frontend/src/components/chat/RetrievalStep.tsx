@@ -24,7 +24,8 @@ function getSourceIcon(source: RetrievalSource): React.ReactNode {
   switch (source) {
     case 'qdrant':
       return <Database className={iconClass} />;
-    case 'bm25':
+    case 'sparse':
+    case 'bm25': // Legacy: backward compatibility
       return <Search className={iconClass} />;
     case 'neo4j':
       return <GitBranch className={iconClass} />;
@@ -41,13 +42,16 @@ function getSourceIcon(source: RetrievalSource): React.ReactNode {
 
 /**
  * Get human-readable name for each retrieval source
+ * Sprint 87: BM25 replaced with Sparse (BGE-M3 learned lexical weights)
  */
 function getSourceName(source: RetrievalSource): string {
   switch (source) {
     case 'qdrant':
       return 'Qdrant Vector Search';
-    case 'bm25':
-      return 'BM25 Keyword Search';
+    case 'sparse':
+      return 'Sparse Lexical Search';
+    case 'bm25': // Legacy: backward compatibility
+      return 'Sparse Lexical Search';
     case 'neo4j':
       return 'Neo4j Graph Query';
     case 'redis':
@@ -76,7 +80,8 @@ function getSourceColor(source: RetrievalSource): {
         text: 'text-blue-700',
         border: 'border-blue-200',
       };
-    case 'bm25':
+    case 'sparse':
+    case 'bm25': // Legacy: backward compatibility
       return {
         bg: 'bg-amber-50',
         text: 'text-amber-700',
@@ -149,7 +154,8 @@ function renderDetails(step: RetrievalStepType): React.ReactNode {
         </div>
       );
 
-    case 'bm25':
+    case 'sparse':
+    case 'bm25': // Legacy: backward compatibility
       return (
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600">
           <span>

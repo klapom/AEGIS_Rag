@@ -2,6 +2,7 @@
 
 **Sprint 59**: Agentic Features & Tool Use
 **Date**: 2025-12-21
+**Last Updated**: 2026-01-15 (Sprint 92 - Research UI Enhanced)
 **Status**: Complete
 
 ---
@@ -175,34 +176,36 @@ Response to User
 
 ## Journey 3: Deep Research with Agentic Search
 
-> **⚠️ STATUS**: Research endpoint not yet implemented. Planned for Sprint 62 (Feature 62.10).
+> **✅ STATUS**: Research endpoint IMPLEMENTED. Enhanced in Sprint 92 (Feature 92.3).
 >
-> **Workaround**: Use standard `/api/v1/chat/` endpoint with `use_tools=true` for agentic behavior.
+> Full research UI with 4-level progress tracking (plan/search/evaluate/summary).
 
 ### Scenario
 User asks complex question requiring multi-step research.
 
 ### User Steps
 
-1. **Send Research Request** *(Planned Endpoint)*
+1. **Send Research Request** *(Implemented Sprint 92)*
    ```bash
-   # PLANNED FOR SPRINT 62 - NOT YET AVAILABLE
-   curl -X POST http://localhost:8000/api/v1/chat/research \
+   # Research endpoint with SSE streaming
+   curl -X POST http://localhost:8000/api/v1/research \
      -H "Content-Type: application/json" \
+     -H "Accept: text/event-stream" \
      -d '{
        "query": "What are the latest advances in transformer architectures?",
-       "max_iterations": 3
+       "max_iterations": 3,
+       "include_web_search": false
      }'
    ```
 
-   **Current Workaround** (use standard chat endpoint):
+   **Alternative** (use standard chat endpoint with research mode):
    ```bash
    curl -X POST http://localhost:8000/api/v1/chat/ \
      -H "Content-Type: application/json" \
      -d '{
        "query": "What are the latest advances in transformer architectures?",
        "session_id": "research-session-1",
-       "use_tools": true
+       "research_mode": true
      }'
    ```
 
@@ -347,36 +350,37 @@ Return to user
 
 ### E2E Tests with Playwright
 
-> **⚠️ STATUS**: E2E tests not yet implemented. Planned for Sprint 63 (Feature 63.6).
+> **✅ STATUS**: E2E tests IMPLEMENTED (Sprint 72+)
 
-**Planned location**: `tests/e2e/test_tool_framework_journeys.py`
+**Test Files:**
+- `frontend/e2e/tests/admin/mcp-tools.spec.ts` - MCP Tool Management (15 tests)
+- `frontend/e2e/research-mode.spec.ts` - Deep Research (12 tests)
 
-**Planned test structure** (Sprint 63):
-```python
-@pytest.mark.e2e
-async def test_journey_1_bash_execution(page):
-    """Test complete bash execution journey."""
-    # Navigate to tool execution page
-    await page.goto("http://localhost:5179/tools")
+**Example Test (MCP Tools):**
+```typescript
+test('should execute tool with parameters', async ({ page }) => {
+  await setupAuthMocking(page);
 
-    # Select bash tool
-    await page.click("text=Bash Command")
+  await page.goto('/admin/tools');
+  await page.waitForLoadState('domcontentloaded');
 
-    # Enter command
-    await page.fill("textarea[name='command']", "echo 'test'")
+  // Select tool
+  const toolSelector = page.getByTestId('tool-selector');
+  await toolSelector.click();
+  await page.locator('role=option').first().click();
 
-    # Execute
-    await page.click("button:has-text('Execute')")
+  // Execute
+  await page.getByTestId('execute-button').click();
 
-    # Wait for result
-    result = await page.locator(".result-output").text_content()
-    assert "test" in result
+  // Verify result
+  await expect(page.getByTestId('execution-result')).toBeVisible();
+});
 ```
 
 **Current Testing Coverage**:
 - ✅ Unit tests: 55/55 PASSED (bash: 26, python: 29)
 - ✅ Integration tests: 8/9 PASSED
-- ❌ E2E tests: Not implemented (Sprint 63)
+- ✅ E2E tests: 27+ tests (MCP: 15, Research: 12)
 
 ### Performance Expectations
 
@@ -496,6 +500,6 @@ The standard chat endpoint (`/api/v1/chat/`) does not require authentication in 
 
 ---
 
-**Document Version**: 1.1
-**Last Updated**: 2025-12-21 (Post-Sprint 59 Testing)
-**Next Review**: Sprint 61
+**Document Version**: 2.0
+**Last Updated**: 2026-01-15 (Sprint 92 - Research UI Enhanced)
+**Next Review**: Sprint 100

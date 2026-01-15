@@ -166,37 +166,49 @@ class HybridExtractionService:
         Note:
             This is a simple heuristic that checks for language-specific patterns.
             For production, consider using a language detection library (langdetect, fasttext).
+
+        Sprint 92.18 Fix: Added English indicators - previously English had score=0 and
+        other languages would win due to common substring matches ("de ", "en " etc.)
         """
-        # Simple heuristic: Check for German-specific patterns
+        # Simple heuristic: Check for language-specific patterns
         text_lower = text.lower()
 
-        # German indicators
-        german_indicators = ["der ", "die ", "das ", "und ", "ist ", "von ", "zu ", "im "]
+        # Sprint 92.18 Fix: English indicators (previously missing!)
+        # English-specific patterns that rarely appear in other languages
+        english_indicators = [
+            " the ", " is ", " are ", " was ", " were ", " have ", " has ", " been ",
+            " with ", " that ", " this ", " from ", " which ", " their ", " they ",
+            " would ", " could ", " should ", " about ", " than ", " into "
+        ]
+        english_score = sum(1 for indicator in english_indicators if indicator in text_lower)
+
+        # German indicators (unique German patterns)
+        german_indicators = ["der ", "die ", "das ", "und ", "ist ", "von ", "zu ", "im ", " nicht ", " sich "]
         german_score = sum(1 for indicator in german_indicators if indicator in text_lower)
 
-        # French indicators
-        french_indicators = ["le ", "la ", "les ", "de ", "et ", "est ", "dans ", "pour "]
+        # French indicators (unique French patterns)
+        french_indicators = ["le ", "la ", "les ", " que ", " dans ", "pour ", " avec ", " mais ", " sont ", " aux "]
         french_score = sum(1 for indicator in french_indicators if indicator in text_lower)
 
-        # Spanish indicators
-        spanish_indicators = ["el ", "la ", "los ", "las ", "de ", "es ", "en ", "por "]
+        # Spanish indicators (unique Spanish patterns, removed "de ", "es ", "en " - too common in English)
+        spanish_indicators = ["el ", "los ", "las ", " que ", " para ", " como ", " pero ", " está ", " son ", " muy "]
         spanish_score = sum(1 for indicator in spanish_indicators if indicator in text_lower)
 
         # Determine language by highest score
         scores = {
             "de": german_score,
-            "en": 0,  # Default fallback
+            "en": english_score,  # Sprint 92.18 Fix: English now has indicators!
             "fr": french_score,
             "es": spanish_score,
         }
 
         detected_language = max(scores, key=scores.get)  # type: ignore
 
-        # Default to English if no strong signal
-        if scores[detected_language] < 2:
+        # Default to English if no strong signal (threshold increased from 2 to 3)
+        if scores[detected_language] < 3:
             detected_language = "en"
 
-        logger.debug(
+        logger.info(
             "language_detected",
             language=detected_language,
             scores=scores,

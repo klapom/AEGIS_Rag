@@ -1393,23 +1393,56 @@ def _extract_sources(result: dict[str, Any]) -> list[SourceDocument]:
             if primary_section:
                 enhanced_metadata["primary_section"] = primary_section
 
+            # Sprint 92 Fix: Add rank to metadata for frontend display
+            # The rank field from RetrievedContext needs to be in metadata for SourceCard
+            if "rank" in ctx and ctx["rank"] is not None:
+                enhanced_metadata["rank"] = ctx["rank"]
+
             # Sprint 81: Removed 500-char truncation for full context in RAGAS evaluation
             # Full chunk text is needed for accurate Faithfulness metrics
+
+            # Sprint 92: Normalize score for frontend display (0.0-1.0 range)
+            # Priority: rerank_score > original score > weighted_rrf_score
+            # - rerank_score: Cross-encoder score (0-1 range, most meaningful)
+            # - score: Original channel score (vector=0-1, graph=entity_count)
+            # - weighted_rrf_score: RRF fusion score (very small, ~0.01-0.05)
+            raw_score = ctx.get("rerank_score")  # Best option: reranker score (0-1)
+            if raw_score is None:
+                raw_score = ctx.get("score", ctx.get("relevance"))
+
+            # Normalize score to 0-1 range for display
+            normalized_score = None
+            if raw_score is not None:
+                if raw_score > 1.0:
+                    # Entity count from graph search (1, 2, 3...) - normalize to 0-1
+                    # Use logarithmic scale: score of 5 entities ≈ 0.85
+                    import math
+                    normalized_score = min(1.0, math.log10(raw_score + 1) / math.log10(10))
+                else:
+                    # Already in 0-1 range (vector similarity or rerank score)
+                    normalized_score = max(0.0, min(1.0, raw_score))
+
             source = SourceDocument(
                 text=ctx.get("text", ctx.get("content", "")),  # Full chunk text (no truncation)
                 title=title,  # Enhanced with section info
                 source=ctx.get("source", ctx.get("file_path", "Unknown")),
-                score=ctx.get("score", ctx.get("relevance", None)),
+                score=normalized_score,
                 metadata=enhanced_metadata,
             )
             sources.append(source)
 
+    # Sprint 92: Filter out sources with very low relevance scores (< 5%)
+    # These are likely irrelevant matches from broad graph queries
+    MIN_RELEVANCE_THRESHOLD = 0.05
+    filtered_sources = [s for s in sources if s.score is None or s.score >= MIN_RELEVANCE_THRESHOLD]
+
     logger.debug(
         "sources_extracted",
-        count=len(sources),
-        with_sections=sum(1 for s in sources if s.metadata.get("primary_section")),
+        count=len(filtered_sources),
+        filtered_out=len(sources) - len(filtered_sources),
+        with_sections=sum(1 for s in filtered_sources if s.metadata.get("primary_section")),
     )
-    return sources[:5]  # Return top 5 sources
+    return filtered_sources[:5]  # Return top 5 sources
 
 
 def _extract_tool_calls(result: dict[str, Any]) -> list[ToolCallInfo]:

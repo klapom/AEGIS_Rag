@@ -1,6 +1,7 @@
 """Generation Configuration Service.
 
 TD-097: Sprint 80 Settings UI/DB Integration
+Sprint 92: Context Relevance Threshold (anti-hallucination)
 
 Provides centralized access to answer generation configuration with Redis persistence.
 
@@ -73,6 +74,18 @@ class GenerationConfig(BaseModel):
             "Improves Context Recall by ensuring contexts are always retrieved."
         ),
     )
+    # Sprint 92: Context Relevance Threshold (anti-hallucination)
+    context_relevance_threshold: float = Field(
+        default=0.3,
+        ge=0.0,
+        le=1.0,
+        description=(
+            "Minimum relevance score required to generate an answer. "
+            "If no retrieved context exceeds this threshold, the system refuses to answer "
+            "to prevent hallucination. Range: 0.0-1.0, Default: 0.3 (30%). "
+            "Sprint 97: Admin UI configuration planned."
+        ),
+    )
     updated_at: str | None = Field(None, description="ISO timestamp of last update")
 
     model_config = {
@@ -80,6 +93,7 @@ class GenerationConfig(BaseModel):
             "example": {
                 "strict_faithfulness_enabled": False,
                 "graph_vector_fallback_enabled": True,
+                "context_relevance_threshold": 0.3,
                 "updated_at": "2026-01-09T12:00:00Z",
             }
         }
@@ -146,6 +160,7 @@ class GenerationConfigService:
                     "generation_config_loaded_from_redis",
                     strict_faithfulness=config.strict_faithfulness_enabled,
                     graph_vector_fallback=config.graph_vector_fallback_enabled,
+                    context_relevance_threshold=config.context_relevance_threshold,
                 )
 
                 # Cache for 60 seconds
@@ -167,6 +182,10 @@ class GenerationConfigService:
                     ),
                     graph_vector_fallback_enabled=getattr(
                         settings, "graph_vector_fallback_enabled", True
+                    ),
+                    # Sprint 92: Default threshold from answer_generator constant
+                    context_relevance_threshold=getattr(
+                        settings, "context_relevance_threshold", 0.3
                     ),
                 )
             except Exception:
@@ -220,6 +239,7 @@ class GenerationConfigService:
                 "generation_config_saved_to_redis",
                 strict_faithfulness=config.strict_faithfulness_enabled,
                 graph_vector_fallback=config.graph_vector_fallback_enabled,
+                context_relevance_threshold=config.context_relevance_threshold,
                 updated_at=config.updated_at,
             )
 

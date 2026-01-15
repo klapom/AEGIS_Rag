@@ -343,6 +343,7 @@ Full web browsing capability with two implementation options:
 - Automatic action planning (click, type, scroll, extract)
 - Vision-based element detection
 - GitHub: [browser-use/browser-use](https://github.com/browser-use/browser-use)
+- Make sure to use the latest version
 
 **Option B: Raw Playwright**
 - Direct Playwright API control

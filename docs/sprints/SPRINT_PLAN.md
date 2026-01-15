@@ -709,8 +709,11 @@ Complete Frontend UI for Sprint 76-78 backend features (Graph Expansion Settings
 | **82** | **8** | **4** | ✅ | **RAGAS Phase 1 - Text-Only Benchmark (500 samples)** |
 | **83** | **26** | **4** | ✅ | **3-Rank Cascade + Gleaning + Fast Upload (7,638 LOC, 94+ tests)** |
 | **84** | **20** | **6** | 📝 | **Stabilization & Iterative Ingestion (Outlier Detection, Configurable Cascade)** |
+| **87** | **34** | **4** | ✅ | **BGE-M3 Native Hybrid Search (replaces BM25, 2,200+ LOC)** |
+| **88** | **28** | **3** | ✅ | **RAGAS Phase 2 Evaluation (Tables + Code)** |
+| **92** | **21** | **10** | 🔄 | **Performance Optimization & Deep Research Enhancements (FlagEmbedding, GPU, Research UI)** |
 
-**Cumulative Story Points (Sprints 1-84):** ~2,784 SP
+**Cumulative Story Points (Sprints 1-92):** ~2,925 SP
 **Average Velocity (Sprints 61-79):** ~40 SP per sprint
 **E2E Test Improvement:** 337/594 (57% - Sprint 66) → 620/620 (100% - Sprint 72)
 **Code Quality:** 84% test coverage, 0 TypeScript errors, <500ms P95 query latency
@@ -750,10 +753,10 @@ Complete Frontend UI for Sprint 76-78 backend features (Graph Expansion Settings
 
 ---
 
-**Last Updated:** 2026-01-10
-**Current Sprint:** 84 (Planned - Stabilization & Iterative Ingestion)
-**Previous Sprints:** 77-83 (Completed - Bug Fixes, Graph Expansion, RAGAS 0.4.2, 3-Rank Cascade)
-**Upcoming:** Sprint 85-86 (RAGAS 1000-Sample Benchmark Phase 2-3 - 34 SP)
+**Last Updated:** 2026-01-14
+**Current Sprint:** 92 (In Progress - Performance Optimization & Deep Research Enhancements)
+**Previous Sprints:** 87-88 (Completed - BGE-M3 Hybrid, RAGAS Phase 2)
+**Upcoming:** Sprint 100 (SpaCy-First Pipeline - 18 SP)
 
 ---
 
@@ -937,6 +940,277 @@ After implementing comprehensive logging (Sprint 83), we expect to discover addi
 
 ---
 
+## Sprint 92: Performance Optimization & Deep Research Enhancements ✅ (COMPLETED 2026-01-15)
+**Epic:** Query Performance Fixes & UI Enhancements + Extraction Bug Fixes
+**Total Story Points:** 36 SP
+**Status:** ✅ **COMPLETE** - 24 Features/Bugfixes complete
+
+| Feature | SP | Priority | Status |
+|---------|-----|----------|--------|
+| 92.1 | FlagEmbedding Warmup Fix | 2 | P0 | ✅ DONE |
+| 92.2 | Ollama GPU Configuration Fix | 2 | P0 | ✅ DONE |
+| 92.3 | Deep Research UI Enhancements | 4 | P0 | ✅ DONE |
+| 92.4 | Graph Search Performance Fix (17-19s → <2s) | 3 | P1 | ✅ DONE |
+| 92.5 | Vector Results Display Fix | 2 | P1 | ✅ DONE |
+| 92.6 | Chunk Ranking Fix (1-indexed consistency) | 2 | P1 | ✅ DONE |
+| 92.7 | BM25 → Sparse Label Rename | 1 | P2 | ✅ DONE |
+| 92.8 | Timing Metrics Fix | 2 | P2 | ✅ DONE |
+| 92.9 | Graph Hops Count UI | 1 | P2 | ✅ DONE |
+| 92.10 | Sparse/Dense Counts UI | 1 | P2 | ✅ DONE |
+| 92.11 | Context Relevance Threshold (Anti-Hallucination) | 3 | P0 | ✅ DONE |
+| 92.12 | Docker Frontend Deployment | 2 | P1 | ✅ DONE |
+| 92.13 | CORS Configuration for External Access | 1 | P1 | ✅ DONE |
+| 92.14 | Entity Consolidation Pipeline | 4 | P0 | ✅ DONE |
+| 92.15 | Sparse Results Count Fix | 1 | P1 | ✅ DONE |
+| 92.16 | Entity Max-Length Filter | 1 | P1 | ✅ DONE |
+| 92.17 | Comprehensive Extraction Debug Logging | 3 | P0 | ✅ DONE |
+| 92.18 | SpaCy Language Detection Fix (Bug) | 2 | P0 | ✅ DONE |
+| 92.19 | Entity Consolidation SpaCy Type Check (Bug) | 1 | P0 | ✅ DONE |
+| 92.20 | Time Import Fix for LLM Stages (Bug) | 1 | P0 | ✅ DONE |
+| 92.21 | Sparse Search Stop Words Filter | 1 | P1 | ✅ DONE |
+| 92.22 | Community Detection GDS Label Fix | 2 | P0 | ✅ DONE |
+| 92.23 | Recursive LLM Adaptive Scoring (ADR-052) | 3 | P0 | ✅ DONE |
+| 92.24 | RAGAS Namespace Fix for Sprint 88 Ingestion | 1 | P1 | ✅ DONE |
+
+### Completed Features
+
+**Feature 92.1: FlagEmbedding Warmup Fix ✅**
+- **Problem:** 40-90s delay on first query due to lazy loading of embedding model
+- **Solution:** Changed from lazy loading to eager loading via factory pattern
+- **Implementation:** Modified BGE-M3 embedding initialization at API startup
+- **Impact:** First query now <500ms (within normal latency range)
+- **Commit:** b8e157d
+- **Files Modified:** `src/components/vector_search/embedding_service.py`
+
+**Feature 92.2: Ollama GPU Configuration Fix ✅**
+- **Problem:** Ollama running on CPU instead of GPU (19 tok/s vs 77 tok/s)
+- **Solution:**
+  - Added `OLLAMA_FLASH_ATTENTION=false` for DGX Spark Blackwell GPU compatibility
+  - Reduced `OLLAMA_NUM_PARALLEL` from 4 to 2 for GPU memory optimization
+- **Impact:** 4x speed improvement (19 → 77 tok/s)
+- **Commit:** 964d8e6
+- **Files Modified:** `docker-compose.dgx-spark.yml`, `.env.template`
+
+**Feature 92.3: Deep Research UI Enhancements ✅**
+- **Problem:** Deep research progress tracking lacked detail about retrieval process
+- **Solution:** Enhanced ResearchProgressTracker component with 4 new visualization levels
+- **Implementation Details:**
+  - **Plan step:** Show generated sub-queries with relevance scores
+  - **Search step:** Display chunks found per sub-query (count + brief preview)
+  - **Evaluation step:** Show relevance scores and quality labels for each context
+  - **Summary step:** Display which chunks were selected for final response
+  - **Error handling:** Better feedback for empty results and timeouts
+- **Files Modified:**
+  - `src/api/v1/research.py` - Backend research orchestration
+  - `frontend/src/components/research/ResearchProgressTracker.tsx` - UI component
+- **Impact:** Users now understand research flow and retrieval effectiveness at each stage
+
+**Feature 92.11: Context Relevance Threshold (Anti-Hallucination) ✅**
+- **Problem:** LLM generates answers from training data when retrieved contexts are irrelevant
+- **Root Cause:** NO_HEDGING prompt forbids "I don't know", combined with irrelevant graph results
+- **Solution:** Pre-generation relevance check with configurable threshold (default: 0.3)
+- **Implementation:**
+  - Added `MIN_CONTEXT_RELEVANCE_THRESHOLD = 0.3` constant
+  - Added `_check_context_relevance()` method to verify max score exceeds threshold
+  - Added `_no_relevant_context_answer()` for standardized "not found" response
+  - Added `context_relevance_threshold` field to `GenerationConfig` model
+  - Threshold configurable via Redis config (UI planned for Sprint 97)
+- **Files Modified:**
+  - `src/agents/answer_generator.py` - Relevance check before LLM generation
+  - `src/components/generation_config/generation_config_service.py` - Config field
+- **Impact:** Prevents hallucination by refusing to generate when contexts are irrelevant
+- **Sprint 97:** Admin UI configuration for threshold adjustment planned
+
+**Feature 92.12: Docker Frontend Deployment ✅**
+- **Problem:** Frontend required manual `npm run dev` startup
+- **Solution:** Containerized React/Vite frontend with auto-start
+- **Implementation:**
+  - Created `docker/Dockerfile.frontend` (multi-stage, Debian slim for ARM64)
+  - Added frontend service to `docker-compose.dgx-spark.yml` on port 80
+  - Volume mounts for hot-reload in development
+  - Health dependency on API service
+- **ADR:** ADR-053 documents architecture decision
+- **Impact:** Frontend auto-starts with `docker compose up -d`
+
+**Feature 92.13: CORS Configuration for External Access ✅**
+- **Problem:** Browser CORS preflight (OPTIONS) returned 400 Bad Request
+- **Solution:** Added external IP to CORS origins in docker-compose
+- **Implementation:**
+  - Added `CORS_ORIGINS` environment variable with JSON array format
+  - Uses `DGX_SPARK_IP` variable for dynamic configuration
+  - Added port 80 to default CORS origins in `config.py`
+- **Impact:** Frontend on port 80 can communicate with API on port 8000
+
+**Feature 92.14: Entity Consolidation Pipeline ✅**
+- **Problem:** Entity extraction pipeline had multiple quality issues:
+  - LLM returned full sentences (91-145 chars) as "ENTITY" type
+  - No deduplication between SpaCy and LLM entities
+  - Quality filter applied too late (after relation extraction)
+- **Root Cause:** Missing consolidation step between entity extraction and relation extraction
+- **Solution:** New `EntityConsolidator` class with 3-step filtering:
+  1. **Type Validation:** Reject generic "ENTITY" type (LLM extraction failures)
+  2. **Length Filtering:** Max 80 chars (filters sentence-like entities)
+  3. **Deduplication:** Case-insensitive exact match (prefer SpaCy over LLM)
+- **Implementation:**
+  - New file: `src/components/graph_rag/entity_consolidator.py` (~350 LOC)
+  - Integrated into extraction pipeline after Stage 2 (LLM enrichment)
+  - Logs consolidation stats (filter rate, by type/length/duplicate)
+- **Files Modified:**
+  - `src/components/graph_rag/entity_consolidator.py` - New consolidation service
+  - `src/components/graph_rag/extraction_service.py:1079-1106` - Pipeline integration
+- **Impact:** Cleaner entity graphs, no more sentence-like entities in Neo4j
+- **Test Results:** 37.5% filter rate on problematic entities
+
+**Feature 92.15: Sparse Results Count Fix ✅**
+- **Problem:** UI showed "Sparse 0%" despite results being returned
+- **Root Cause:** `sparse_results_count` field not passed through agent pipeline
+- **Solution:** Added `dense_results_count` and `sparse_results_count` mappings
+- **Files Modified:**
+  - `src/agents/vector_search_agent.py:119-125` - Metadata dict mapping
+  - `src/agents/vector_search_agent.py:237-260` - Search result transformation
+- **Impact:** UI now correctly shows Sparse search result counts
+
+**Feature 92.16: Entity Max-Length Filter ✅**
+- **Problem:** SpaCy's EntityQualityFilter had min_length but no max_length
+- **Solution:** Added `max_length=80` parameter to filter sentence-like entities
+- **Files Modified:**
+  - `src/components/graph_rag/entity_quality_filter.py:110` - New parameter
+  - `src/components/graph_rag/entity_quality_filter.py:186-196` - Filter logic
+- **Impact:** Entities longer than 80 chars (likely sentences) are filtered
+
+**Feature 92.17: Comprehensive Extraction Debug Logging ✅**
+- **Problem:** Extraction pipeline failures hard to debug (no visibility into LLM prompts/responses)
+- **Solution:** Full-detail logging module for extraction pipeline
+- **Implementation:**
+  - New module: `src/components/graph_rag/extraction_debug_logger.py` (~530 LOC)
+  - Logs: Full LLM prompts, full LLM responses, all entities/relations with details
+  - Stage timing breakdown (SpaCy NER, LLM enrichment, LLM relation extraction)
+  - JSON validation errors and token counts
+  - Saves debug sessions to `/tmp/extraction_debug/*.json`
+- **Environment Variables:**
+  - `AEGIS_EXTRACTION_DEBUG=1` (default) - Enable/disable debug logging
+  - `AEGIS_EXTRACTION_DEBUG_DIR=/tmp/extraction_debug` - Output directory
+- **Impact:** Enables root cause analysis for extraction issues
+
+**Feature 92.18: SpaCy Language Detection Fix (Bug) ✅**
+- **Problem:** English text detected as Spanish ("es") instead of English ("en")
+- **Root Cause:** `_detect_language()` had NO English indicators (score=0), but Spanish indicators included "de ", "es ", "en " which appear in English text
+- **Solution:**
+  - Added 20+ English-specific indicators: " the ", " is ", " are ", " have ", " been ", etc.
+  - Refined Spanish indicators to remove common false positives
+  - Increased detection threshold from 2 to 3
+- **Files Modified:** `src/components/graph_rag/hybrid_extraction_service.py:157-218`
+- **Impact:** English text now correctly uses `en_core_web_lg` model (previously used `es_core_news_lg`)
+
+**Feature 92.19: Entity Consolidation SpaCy Type Check (Bug) ✅**
+- **Problem:** SpaCy entities with type="ENTITY" (invalid) passed through consolidation
+- **Root Cause:** `_filter_entities()` called with `check_types=False` for SpaCy source
+- **Solution:** Added `check_types=self.config.reject_generic_types` for SpaCy entities
+- **Files Modified:** `src/components/graph_rag/entity_consolidator.py:186-191`
+- **Impact:** SpaCy entities with generic "ENTITY" type now filtered out
+
+**Feature 92.20: Time Import Fix for LLM Stages (Bug) ✅**
+- **Problem:** LLM enrichment/relation stages failing with "name 'time' is not defined"
+- **Root Cause:** `time` imported inside `extract_with_spacy_first_pipeline()` but used in `_pipeline_stage2_entity_enrichment()` and `_pipeline_stage3_relation_extraction()` which are separate methods
+- **Solution:** Moved `import time` to module level (line 34)
+- **Files Modified:** `src/components/graph_rag/extraction_service.py:30-36`
+- **Impact:** LLM stages now execute correctly (verified: 824ms enrichment, 14s relation extraction)
+
+**Combined Impact of 92.18-92.20 Bug Fixes:**
+| Metric | Before (Bugs) | After (Fixed) |
+|--------|---------------|---------------|
+| Language Detection | "es" (wrong) | "en" (correct) |
+| Entity Types | 45 with "ENTITY" | 10 clean entities |
+| Relations Extracted | 0 | **7 semantic relations** |
+| Total Duration | 30min timeout | **46 seconds** |
+
+### Additional Completed Features (Sprint 92 Continuation)
+
+**Feature 92.4: Graph Search Performance Fix ✅**
+- **Problem:** Graph search taking 17-19s, target <2s
+- **Root Cause:** Sequential LLM calls + semantic reranking overhead
+- **Solution:**
+  - Background intent extraction with `asyncio.create_task()` (non-blocking)
+  - Skip semantic reranking by default (use `expand_entities()` not `expand_and_rerank()`)
+  - Added comprehensive timing logs for phase profiling
+- **Impact:** 17-19s → <2s (**89-90% reduction**)
+- **Files Modified:** `graph_query_agent.py`, `dual_level_search.py`, `entity_expansion.py`
+- **Tests:** 5 unit tests added (100% pass)
+
+**Feature 92.5: Vector Results Display Fix ✅**
+- **Problem:** 5 results retrieved but 0 source cards displayed
+- **Root Cause:** Frontend filtered sources by citation markers `[1]`, `[2]` - if LLM doesn't cite, 0 sources shown
+- **Solution:** Fallback logic: if no citations found but sources exist, show all sources
+- **Files Modified:** `MessageBubble.tsx` (lines 136-153)
+- **Impact:** Sources always displayed when available
+
+**Feature 92.6: Chunk Ranking Fix ✅**
+- **Problem:** Rank #6 shown instead of higher ranks (#1-3)
+- **Root Cause:** 3 issues found:
+  1. Missing rank in frontend metadata
+  2. 0-indexed ranks in Ollama reranker (`enumerate` without `start=1`)
+  3. 0-indexed ranks in legacy reranker
+- **Solution:** Fixed all 3 to use 1-indexed ranks consistently
+- **Files Modified:** `chat.py`, `four_way_hybrid_search.py`, `reranker.py`
+- **Tests:** 5 unit tests added (100% pass)
+
+**Feature 92.21: Sparse Search Stop Words Filter ✅**
+- **Problem:** Sparse search showing stop words as keywords ("hast", "du", "eine")
+- **Solution:** Reuse `MULTILINGUAL_STOPWORDS` from bm25_search.py (3,999 words, 10 languages)
+- **Implementation:** Added `filter_stop_words()` function to `four_way_hybrid_search.py`
+- **Files Modified:** `four_way_hybrid_search.py` (lines 309, 715, 823)
+
+**Feature 92.22: Community Detection GDS Label Fix ✅**
+- **Problem:** Graph Global returning 0 results, community detection failing
+- **Root Cause:** GDS Leiden algorithm using wrong label `'Entity'` instead of `'base'`
+- **Solution:** Changed graph projection label in `community_detector.py`
+- **Batch Run:** Manually assigned communities to 2,534 existing entities (2,387 communities created)
+- **Files Modified:** `community_detector.py`
+
+**Feature 92.23: Recursive LLM Adaptive Scoring (ADR-052) ✅**
+- **Documented:** ADR-052 for recursive LLM adaptive scoring system
+- **Implementation:** Completed in Sprint 92 session
+- **Tests:** Mock-based validation script added
+
+**Feature 92.24: RAGAS Namespace Fix for Sprint 88 Ingestion ✅**
+- **Problem:** RAGAS evaluation finding 0 contexts (namespace mismatch)
+- **Root Cause:** Documents ingested as `ragas_phase1_sprint88`, but eval using `ragas_phase1`
+- **Solution:** Run evaluation with correct namespace: `--namespace ragas_phase1_sprint88`
+- **Impact:** RAGAS metrics now computing correctly
+
+### Success Criteria (All Met)
+
+- [x] FlagEmbedding warmup eliminated (Feature 92.1)
+- [x] Ollama GPU utilization verified (Feature 92.2)
+- [x] Deep research visibility improved (Feature 92.3)
+- [x] Graph search <2s latency (Feature 92.4) ✅ **17-19s → <2s**
+- [x] Vector results display correctly (Feature 92.5) ✅ **Fallback to all sources**
+- [x] Chunk ranking fixed (Feature 92.6) ✅ **1-indexed consistency**
+- [x] All timing metrics populated (Feature 92.8)
+- [x] All UI labels and counts accurate (92.7, 92.9, 92.10)
+- [x] Stop words filtered from Sparse search (Feature 92.21)
+- [x] Community detection working (Feature 92.22)
+- [x] RAGAS evaluation running on correct namespace (Feature 92.24)
+
+### Performance Impact
+
+| Metric | Before | After | Improvement |
+|--------|--------|-------|-------------|
+| First Query Latency | 40-90s | <500ms | **98% faster** |
+| Ollama Token Rate | 19 tok/s | 77 tok/s | **4x faster** |
+| Graph Search Latency | 17-19s | <2s | **89-90% reduction** |
+| Source Display | 0/5 shown | 5/5 shown | **100% visibility** |
+| Rank Consistency | 0-indexed | 1-indexed | **Correct ordering** |
+
+### References
+
+- Commit b8e157d - FlagEmbedding warmup fix
+- Commit 964d8e6 - Ollama GPU configuration
+- [ADR-024: BGE-M3 Embeddings](../adr/ADR-024-bge-m3-embeddings.md)
+- [ADR-027: Docling CUDA Ingestion](../adr/ADR-027-docling-cuda-ingestion.md)
+
+---
+
 ## Sprint 100: SpaCy-First Pipeline (MOVED from Sprint 89) 🔄 (IN PROGRESS 2026-01-13)
 **Epic:** Entity Extraction Performance Optimization
 **Total Story Points:** 18 SP
@@ -986,6 +1260,28 @@ After implementing comprehensive logging (Sprint 83), we expect to discover addi
 - RAGAS Faithfulness: 80% → 88%+
 
 **For detailed plan, see:** [SPRINT_90_PLAN.md](SPRINT_90_PLAN.md)
+
+---
+
+## Sprint 97: Admin UI Configuration Enhancements 📝 (PLANNED)
+**Epic:** Admin UI Settings & Quality Tuning
+**Total Story Points:** ~12 SP (estimated)
+**Status:** 📝 **PLANNED** - Deferred from Sprint 92
+
+| Feature | SP | Priority | Status | Description |
+|---------|-----|----------|--------|-------------|
+| 97.1 | Context Relevance Threshold UI | 4 | P0 | 📝 PLANNED | Admin UI slider to configure anti-hallucination threshold (0.0-1.0) |
+| 97.2 | HallucinationMonitor Integration | 4 | P1 | 📝 PLANNED | Integrate Sprint 90 HallucinationMonitor into answer generation pipeline |
+| 97.3 | Hallucination Detection Dashboard | 4 | P2 | 📝 PLANNED | Admin UI for hallucination metrics and logs visualization |
+
+**Target Outcomes:**
+- UI slider for `context_relevance_threshold` in Admin Settings
+- Real-time hallucination detection with claim-level verification
+- Dashboard for monitoring hallucination metrics (PASS/WARN/FAIL verdicts)
+
+**Dependencies:**
+- Sprint 92.11: Context Relevance Threshold (Backend) ✅ DONE
+- Sprint 90.3: Hallucination Monitoring & Logging ✅ DONE
 
 ---
 

@@ -199,6 +199,9 @@ export function SourceCard({ source, index }: SourceCardProps) {
   // Sprint 52: Get search type from metadata
   const searchType = source.metadata?.search_type as string | undefined;
 
+  // Sprint 92: Get graph hops from metadata (if graph search was used)
+  const graphHops = source.metadata?.graph_hops_used as number | undefined;
+
   // Sprint 62.4: Extract section metadata and document type
   const sectionMetadata = extractSectionMetadata(source);
   const docType = source.document_type || getDocumentType(source);
@@ -306,6 +309,18 @@ export function SourceCard({ source, index }: SourceCardProps) {
             </span>
           )}
 
+          {/* Graph Hops Badge - Sprint 92 */}
+          {graphHops !== undefined && graphHops > 0 && searchType === 'graph' && (
+            <span
+              className="px-2 py-1 text-xs font-medium rounded-md border bg-indigo-100 text-indigo-700 border-indigo-200 flex items-center gap-1 flex-shrink-0"
+              title={`Graph-Traversierung: ${graphHops} Hop${graphHops !== 1 ? 's' : ''}`}
+              data-testid="graph-hops-badge"
+            >
+              <span>↔️</span>
+              <span>{graphHops}-hop</span>
+            </span>
+          )}
+
           {/* Score Badge */}
           {source.score != null && source.score > 0 && (
             <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-700 rounded-md flex-shrink-0">
@@ -376,6 +391,16 @@ export function SourceCard({ source, index }: SourceCardProps) {
               <div>
                 <span className="text-gray-500">Suchmethode:</span>
                 <span className="ml-2 text-gray-700">{getSearchTypeName(searchType)}</span>
+              </div>
+            )}
+
+            {/* Graph Hops - Sprint 92 */}
+            {graphHops !== undefined && graphHops > 0 && searchType === 'graph' && (
+              <div data-testid="graph-hops-info">
+                <span className="text-gray-500">Graph-Hops:</span>
+                <span className="ml-2 text-indigo-600 font-medium">
+                  {graphHops} Hop{graphHops !== 1 ? 's' : ''}
+                </span>
               </div>
             )}
 

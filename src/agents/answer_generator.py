@@ -3,6 +3,7 @@
 Sprint 11: Feature 11.1 - LLM-Based Answer Generation
 Sprint 23: Feature 23.6 - AegisLLMProxy Integration
 Sprint 27: Feature 27.10 - Inline Source Citations
+Sprint 92: Feature 92.x - Context Relevance Threshold (anti-hallucination)
 Migrated from Ollama to multi-cloud LLM proxy (Local → Alibaba Cloud → OpenAI).
 """
 
@@ -12,6 +13,12 @@ from typing import Any
 import structlog
 
 from src.components.llm_proxy import get_aegis_llm_proxy
+
+# Sprint 92: Context Relevance Threshold (anti-hallucination)
+# If no retrieved context has a relevance score above this threshold,
+# refuse to generate an answer to prevent hallucination.
+# This value can be configured via Admin UI in Sprint 97.
+MIN_CONTEXT_RELEVANCE_THRESHOLD = 0.3
 from src.components.llm_proxy.models import (
     Complexity,
     LLMTask,
@@ -140,6 +147,106 @@ class AnswerGenerator:
 
         return model
 
+    async def _get_relevance_threshold(self) -> float:
+        """Get context relevance threshold from config service.
+
+        Sprint 92: Anti-hallucination feature
+        Sprint 97: UI configuration planned
+
+        Returns:
+            Relevance threshold (0.0-1.0), defaults to MIN_CONTEXT_RELEVANCE_THRESHOLD
+        """
+        try:
+            from src.components.generation_config import get_generation_config_service
+
+            config_service = get_generation_config_service()
+            config = await config_service.get_config()
+            return config.context_relevance_threshold
+        except Exception as e:
+            logger.debug(
+                "relevance_threshold_fallback",
+                error=str(e),
+                using_default=MIN_CONTEXT_RELEVANCE_THRESHOLD,
+            )
+            return MIN_CONTEXT_RELEVANCE_THRESHOLD
+
+    def _check_context_relevance(
+        self,
+        contexts: list[dict[str, Any]],
+        threshold: float | None = None,
+    ) -> tuple[bool, float]:
+        """Check if any context has sufficient relevance to answer the query.
+
+        Sprint 92: Anti-hallucination feature
+        If no context exceeds the relevance threshold, we should refuse to generate
+        an answer rather than risk hallucinating information from LLM training data.
+
+        Args:
+            contexts: Retrieved document contexts with 'score' or 'relevance' keys
+            threshold: Minimum relevance score (default: MIN_CONTEXT_RELEVANCE_THRESHOLD)
+
+        Returns:
+            Tuple of (has_relevant_context, max_relevance_score)
+            - has_relevant_context: True if at least one context exceeds threshold
+            - max_relevance_score: Highest relevance score found (for logging)
+
+        Example:
+            >>> contexts = [{"text": "...", "score": 0.25}, {"text": "...", "score": 0.15}]
+            >>> has_relevant, max_score = generator._check_context_relevance(contexts)
+            >>> has_relevant
+            False  # No context above 0.3 threshold
+            >>> max_score
+            0.25
+        """
+        if threshold is None:
+            threshold = MIN_CONTEXT_RELEVANCE_THRESHOLD
+
+        max_score = 0.0
+        for ctx in contexts:
+            # Try multiple score field names
+            score = ctx.get("score") or ctx.get("relevance") or ctx.get("rerank_score") or 0.0
+            if isinstance(score, (int, float)):
+                max_score = max(max_score, float(score))
+
+        has_relevant = max_score >= threshold
+
+        logger.debug(
+            "context_relevance_check",
+            num_contexts=len(contexts),
+            max_relevance=max_score,
+            threshold=threshold,
+            has_relevant_context=has_relevant,
+        )
+
+        return has_relevant, max_score
+
+    def _no_relevant_context_answer(self, query: str, max_score: float) -> str:
+        """Return a standardized response when no relevant contexts are found.
+
+        Sprint 92: Anti-hallucination feature
+        Instead of hallucinating, we explicitly inform the user that the
+        information is not available in the knowledge base.
+
+        Args:
+            query: Original user query
+            max_score: Highest relevance score found (for context)
+
+        Returns:
+            Standardized "not found" response in German
+        """
+        logger.warning(
+            "no_relevant_context_for_query",
+            query=query[:100],
+            max_relevance_score=max_score,
+            threshold=MIN_CONTEXT_RELEVANCE_THRESHOLD,
+            action="refusing_to_generate",
+        )
+
+        return (
+            "Zu dieser Frage sind keine relevanten Informationen in der Wissensdatenbank verfügbar. "
+            "Bitte formulieren Sie Ihre Frage um oder fragen Sie nach einem anderen Thema."
+        )
+
     async def generate_answer(
         self,
         query: str,
@@ -162,6 +269,14 @@ class AnswerGenerator:
         """
         if not contexts:
             return self._no_context_answer(query)
+
+        # Sprint 92: Check context relevance before generating
+        # Prevents hallucination when contexts are irrelevant to the query
+        # Load threshold from config service (allows UI configuration in Sprint 97)
+        threshold = await self._get_relevance_threshold()
+        has_relevant, max_score = self._check_context_relevance(contexts, threshold)
+        if not has_relevant:
+            return self._no_relevant_context_answer(query, max_score)
 
         # Format contexts
         context_text = self._format_contexts(contexts)
@@ -301,6 +416,14 @@ class AnswerGenerator:
         # Handle no contexts case
         if not contexts:
             return self._no_context_answer(query), {}
+
+        # Sprint 92: Check context relevance before generating
+        # Prevents hallucination when contexts are irrelevant to the query
+        # Load threshold from config service (allows UI configuration in Sprint 97)
+        threshold = await self._get_relevance_threshold()
+        has_relevant, max_score = self._check_context_relevance(contexts, threshold)
+        if not has_relevant:
+            return self._no_relevant_context_answer(query, max_score), {}
 
         # TD-097: Load strict_faithfulness from Redis config if not explicitly passed
         if strict_faithfulness is None:
@@ -721,6 +844,18 @@ class AnswerGenerator:
         # Handle no contexts case
         if not contexts:
             answer = self._no_context_answer(query)
+            yield {"event": "citation_map", "data": {}}
+            yield {"event": "token", "data": {"content": answer}}
+            yield {"event": "complete", "data": {"done": True, "answer": answer, "citation_map": {}}}
+            return
+
+        # Sprint 92: Check context relevance before generating
+        # Prevents hallucination when contexts are irrelevant to the query
+        # Load threshold from config service (allows UI configuration in Sprint 97)
+        threshold = await self._get_relevance_threshold()
+        has_relevant, max_score = self._check_context_relevance(contexts, threshold)
+        if not has_relevant:
+            answer = self._no_relevant_context_answer(query, max_score)
             yield {"event": "citation_map", "data": {}}
             yield {"event": "token", "data": {"content": answer}}
             yield {"event": "complete", "data": {"done": True, "answer": answer, "citation_map": {}}}

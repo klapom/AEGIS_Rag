@@ -188,21 +188,104 @@ function PhaseItem({ phase, status, progressData, isExpanded, onToggle }: PhaseI
             )}
           </div>
 
-          {/* Plan steps (if available) */}
+          {/* Plan steps (if available) - Sprint 92: Enhanced sub-query display */}
           {progressData.metadata.plan_steps &&
             Array.isArray(progressData.metadata.plan_steps) &&
             progressData.metadata.plan_steps.length > 0 && (
               <div className="mt-2">
-                <div className="opacity-70 mb-1">Suchplan:</div>
-                <ul className="list-disc list-inside text-xs space-y-1">
+                <div className="opacity-70 mb-1">Generierte Such-Queries:</div>
+                <ul className="list-decimal list-inside text-xs space-y-1">
                   {(progressData.metadata.plan_steps as string[]).map((step, idx) => (
-                    <li key={idx} className="truncate">
+                    <li key={idx} className="truncate" title={step}>
                       {step}
                     </li>
                   ))}
                 </ul>
               </div>
             )}
+
+          {/* Sprint 92: Per-query chunk counts */}
+          {progressData.metadata.contexts_per_query &&
+            typeof progressData.metadata.contexts_per_query === 'object' && (
+              <div className="mt-2">
+                <div className="opacity-70 mb-1">Chunks pro Query:</div>
+                <div className="text-xs space-y-0.5">
+                  {Object.entries(progressData.metadata.contexts_per_query as Record<string, number>).map(
+                    ([queryIdx, count]) => (
+                      <div key={queryIdx} className="flex justify-between">
+                        <span className="opacity-70">Query {queryIdx}:</span>
+                        <span className="font-medium">{count} Chunks</span>
+                      </div>
+                    )
+                  )}
+                </div>
+              </div>
+            )}
+
+          {/* Sprint 92: Quality label for evaluate phase */}
+          {progressData.metadata.quality_label && (
+            <div className="mt-2">
+              <div className="flex items-center gap-2">
+                <span className="opacity-70">Qualität:</span>
+                <span
+                  className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                    progressData.metadata.quality_label === 'excellent'
+                      ? 'bg-green-100 text-green-700'
+                      : progressData.metadata.quality_label === 'good'
+                      ? 'bg-blue-100 text-blue-700'
+                      : progressData.metadata.quality_label === 'fair'
+                      ? 'bg-yellow-100 text-yellow-700'
+                      : 'bg-red-100 text-red-700'
+                  }`}
+                >
+                  {progressData.metadata.quality_label === 'excellent'
+                    ? 'Exzellent'
+                    : progressData.metadata.quality_label === 'good'
+                    ? 'Gut'
+                    : progressData.metadata.quality_label === 'fair'
+                    ? 'Ausreichend'
+                    : 'Schwach'}
+                </span>
+                {progressData.metadata.avg_score !== undefined && (
+                  <span className="text-xs opacity-60">
+                    (Ø Score: {(progressData.metadata.avg_score as number).toFixed(2)})
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Sprint 92: Top sources used in synthesis */}
+          {progressData.metadata.top_sources &&
+            Array.isArray(progressData.metadata.top_sources) &&
+            progressData.metadata.top_sources.length > 0 && (
+              <div className="mt-2">
+                <div className="opacity-70 mb-1">Verwendete Quellen:</div>
+                <ul className="text-xs space-y-1 max-h-32 overflow-y-auto">
+                  {(progressData.metadata.top_sources as string[]).map((source, idx) => (
+                    <li key={idx} className="truncate text-gray-600" title={source}>
+                      {source}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+          {/* Sprint 92: Better empty results feedback */}
+          {progressData.metadata.num_contexts === 0 && phase === 'search' && (
+            <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-amber-700 text-xs">
+              <div className="font-medium">Keine Ergebnisse gefunden</div>
+              <div className="mt-1 opacity-80">
+                Die Suche hat keine passenden Dokumente gefunden.
+                Mögliche Gründe:
+                <ul className="list-disc list-inside mt-1">
+                  <li>Zu spezifische Suchbegriffe</li>
+                  <li>Dokumente nicht im gewählten Namespace</li>
+                  <li>Noch keine Dokumente indiziert</li>
+                </ul>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

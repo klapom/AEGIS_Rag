@@ -44,6 +44,7 @@ class FilterStats:
     total_output: int = 0
     filtered_by_type: int = 0
     filtered_by_length: int = 0
+    filtered_by_max_length: int = 0  # Sprint 92: Too long entities (sentences)
     filtered_by_conditional: int = 0
     articles_removed: int = 0
 
@@ -106,6 +107,7 @@ class EntityQualityFilter:
     def __init__(
         self,
         min_length: int = 2,
+        max_length: int = 80,  # Sprint 92: Filter sentences masquerading as entities
         remove_articles: bool = True,
         filter_stopwords: bool = True,
     ):
@@ -113,16 +115,21 @@ class EntityQualityFilter:
 
         Args:
             min_length: Minimum entity name length after normalization
+            max_length: Maximum entity name length (entities longer are likely sentences).
+                       Sprint 92: Added to filter out full sentences being extracted as entities.
+                       Default: 80 chars (longest real entities: ~50-60 chars)
             remove_articles: Whether to remove leading articles from names
             filter_stopwords: Whether to filter pure stopword entities
         """
         self.min_length = min_length
+        self.max_length = max_length
         self.remove_articles = remove_articles
         self.filter_stopwords = filter_stopwords
 
         logger.info(
             "entity_quality_filter_initialized",
             min_length=min_length,
+            max_length=max_length,
             remove_articles=remove_articles,
             filter_stopwords=filter_stopwords,
             noise_types=list(self.NOISE_TYPES),
@@ -176,6 +183,18 @@ class EntityQualityFilter:
                 stats.filtered_by_length += 1
                 continue
 
+            # Sprint 92: Check maximum length (filter sentences masquerading as entities)
+            # Entities like "Reboot the connected device by disconnecting..." are sentences
+            if len(name) > self.max_length:
+                logger.debug(
+                    "entity_filtered_too_long",
+                    name=name[:50] + "..." if len(name) > 50 else name,
+                    length=len(name),
+                    max_length=self.max_length,
+                )
+                stats.filtered_by_max_length += 1
+                continue
+
             # Filter stopword-only entities
             if self.filter_stopwords and self._is_stopword(name, lang):
                 stats.filtered_by_length += 1  # Count as length filter
@@ -197,6 +216,7 @@ class EntityQualityFilter:
                 filter_rate=f"{stats.filter_rate:.1f}%",
                 by_type=stats.filtered_by_type,
                 by_length=stats.filtered_by_length,
+                by_max_length=stats.filtered_by_max_length,  # Sprint 92: Sentences
                 by_conditional=stats.filtered_by_conditional,
                 articles_removed=stats.articles_removed,
             )

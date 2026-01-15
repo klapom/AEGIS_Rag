@@ -386,6 +386,10 @@ services:
       - API_HOST=0.0.0.0
       - API_PORT=8000
       - API_WORKERS=4
+      # Sprint 92: CORS Origins for Docker frontend deployment
+      # Browser on port 80 needs to access API on port 8000 (cross-origin)
+      # Note: pydantic-settings requires JSON array format for list[str] fields
+      - CORS_ORIGINS=["http://localhost","http://localhost:80","http://localhost:3000","http://localhost:5173","http://localhost:5179","http://${DGX_SPARK_IP:-192.168.178.10}","http://${DGX_SPARK_IP:-192.168.178.10}:80"]
       # Sprint 81: C-LARA SetFit Intent Classifier (A/B Testing)
       # Set to 'true' to use C-LARA SetFit model (95.22% accuracy, ~40ms)
       # Set to 'false' to use legacy LLM-based classifier
@@ -466,6 +470,61 @@ services:
               capabilities: [gpu]
         limits:
           memory: 16G  # Increased from 8G for CUDA runtime + model
+
+  # ============================================================================
+  # AEGIS RAG Frontend - React/Vite Development Server
+  # ============================================================================
+  # Sprint 92: Auto-start frontend with Docker
+  #
+  # Features:
+  #   - Hot-reload development mode
+  #   - Auto-connects to API service
+  #   - Accessible on port 5179
+  #
+  # Usage:
+  #   # Start with main services
+  #   docker compose -f docker-compose.dgx-spark.yml up -d
+  #
+  #   # View logs
+  #   docker logs -f aegis-frontend
+  # ============================================================================
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+      target: development
+    image: aegis-frontend:latest
+    container_name: aegis-frontend
+    ports:
+      - "80:5179"  # Sprint 92: Expose on port 80 for easy access
+    volumes:
+      # Mount source for hot-reload
+      - ./frontend/src:/app/src:ro
+      - ./frontend/public:/app/public:ro
+      - ./frontend/index.html:/app/index.html:ro
+    environment:
+      - NODE_ENV=development
+      # API URL - IMPORTANT: Use external IP for browser access!
+      # The browser runs on user's machine, not in Docker, so it needs
+      # the external IP address of the DGX Spark server.
+      # Set DGX_SPARK_IP in your .env file or use default
+      - VITE_API_BASE_URL=http://${DGX_SPARK_IP:-192.168.178.10}:8000
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5179"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - aegis-network
+    deploy:
+      resources:
+        limits:
+          memory: 1G
 
   # ============================================================================
   # AEGIS RAG Test Runner - For running pytest in container

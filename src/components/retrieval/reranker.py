@@ -185,7 +185,7 @@ class RerankResult(BaseModel):
         rerank_score: Cross-encoder relevance score (-inf to +inf)
         final_score: Normalized score (0.0 to 1.0)
         original_rank: Position before reranking (0-indexed)
-        final_rank: Position after reranking (0-indexed)
+        final_rank: Position after reranking (1-indexed, rank 1 = best) - Sprint 92 Fix
         adaptive_score: Intent-aware weighted score (Sprint 67.8)
         bm25_score: BM25 keyword score (Sprint 67.8)
         recency_score: Document recency score (Sprint 67.8)
@@ -591,7 +591,8 @@ class CrossEncoderReranker:
             results.sort(key=lambda x: x.rerank_score, reverse=True)
 
         # Update final ranks
-        for rank, result in enumerate(results):
+        # Sprint 92 Fix: Use 1-indexed ranks for consistency (rank 1 = best)
+        for rank, result in enumerate(results, start=1):
             result.final_rank = rank
 
         # Apply score threshold filter

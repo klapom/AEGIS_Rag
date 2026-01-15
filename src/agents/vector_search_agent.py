@@ -111,10 +111,19 @@ class VectorSearchAgent(BaseAgent):
             latency_ms = self._calculate_latency_ms(timing)
 
             # Create metadata dict (Sprint 42: Include intent classification)
+            # Sprint 92: Add dense/sparse counts for UI (new naming convention)
             metadata = {
                 "latency_ms": latency_ms,
                 "result_count": len(retrieved_contexts),
                 "search_mode": "4way_hybrid",
+                # Sprint 92: New field names for UI display
+                "dense_results_count": search_result["search_metadata"].get(
+                    "dense_results_count", search_result["search_metadata"]["vector_results_count"]
+                ),
+                "sparse_results_count": search_result["search_metadata"].get(
+                    "sparse_results_count", search_result["search_metadata"]["bm25_results_count"]
+                ),
+                # Legacy field names (backward compatibility)
                 "vector_results_count": search_result["search_metadata"]["vector_results_count"],
                 "bm25_results_count": search_result["search_metadata"]["bm25_results_count"],
                 "graph_local_results_count": search_result["search_metadata"][
@@ -226,6 +235,10 @@ class VectorSearchAgent(BaseAgent):
             return {
                 "results": result["results"],
                 "search_metadata": {
+                    # Sprint 92: New field names for UI display (dense/sparse)
+                    "dense_results_count": result["metadata"].dense_results_count,
+                    "sparse_results_count": result["metadata"].sparse_results_count,
+                    # Legacy field names (backward compatibility)
                     "vector_results_count": result["metadata"].vector_results_count,
                     "bm25_results_count": result["metadata"].bm25_results_count,
                     "graph_local_results_count": result["metadata"].graph_local_results_count,
@@ -239,6 +252,9 @@ class VectorSearchAgent(BaseAgent):
                     "weights": {
                         "vector": result["weights"]["vector"],
                         "bm25": result["weights"]["bm25"],
+                        # Sprint 92: Map to new UI field names
+                        "dense": result["weights"].get("dense", result["weights"]["vector"]),
+                        "sparse": result["weights"].get("sparse", result["weights"]["bm25"]),
                         "local": result["weights"]["local"],
                         "global": result["weights"]["global"],
                     },

@@ -911,8 +911,11 @@ class Settings(BaseSettings):
 
     # CORS Configuration (Sprint 22 Feature 22.2.3)
     # Sprint 31: Extended port range 5170-5180 for frontend dev server flexibility
+    # Sprint 92: Added port 80 for Docker frontend deployment
     cors_origins: list[str] = Field(
         default=[
+            "http://localhost",  # Sprint 92: Port 80 (default HTTP)
+            "http://localhost:80",  # Sprint 92: Explicit port 80
             "http://localhost:3000",
             "http://localhost:5170",
             "http://localhost:5171",
@@ -926,7 +929,8 @@ class Settings(BaseSettings):
             "http://localhost:5179",
             "http://localhost:5180",
         ],
-        description="Allowed CORS origins (port range 5170-5180 for frontend dev flexibility)",
+        description="Allowed CORS origins. Override with CORS_ORIGINS env var (comma-separated). "
+        "Sprint 92: Include external IP for Docker deployment, e.g., http://192.168.178.10",
     )
     cors_allow_credentials: bool = Field(default=True, description="Allow credentials in CORS")
     cors_allow_methods: list[str] = Field(

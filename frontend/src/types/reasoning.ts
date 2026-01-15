@@ -8,10 +8,12 @@
 
 /**
  * Source types for retrieval steps
+ * Note: 'sparse' refers to BGE-M3 learned lexical weights (replaces BM25 since Sprint 87)
  */
 export type RetrievalSource =
   | 'qdrant'
-  | 'bm25'
+  | 'sparse'
+  | 'bm25' // Legacy: kept for backward compatibility with old data
   | 'neo4j'
   | 'redis'
   | 'rrf_fusion'
@@ -56,7 +58,7 @@ export interface RetrievalStepDetails {
   merged_count?: number;
   /** Fusion weights used (for RRF fusion) */
   weights?: Record<string, number>;
-  /** Query terms used (for BM25 keyword search) */
+  /** Query terms used (for Sparse lexical search with BGE-M3 learned weights) */
   query_terms?: string[];
   /** Reranker model used */
   model?: string;
@@ -89,7 +91,7 @@ export interface ChannelSample {
   document_id: string;
   /** Document title */
   title: string;
-  /** BM25: Keywords used for the search */
+  /** Sparse: Keywords used for the search (BGE-M3 learned lexical weights) */
   keywords?: string[];
   /** Graph Local/Global: Matched entities from the graph */
   matched_entities?: string[];
@@ -99,38 +101,54 @@ export interface ChannelSample {
 
 /**
  * Sprint 52: 4-Way Hybrid Search Channel Results
+ * Sprint 87: bm25 renamed to sparse (BGE-M3 learned lexical weights)
+ * Sprint 92: vector renamed to dense (BGE-M3 dense embeddings)
  */
 export interface FourWayResults {
-  /** Vector/embedding search results count */
-  vector_count: number;
-  /** BM25/keyword search results count */
-  bm25_count: number;
+  /** Dense vector (1024-dim semantic) search results count - Sprint 92 */
+  dense_count: number;
+  /** Sparse vector (learned lexical weights) search results count - Sprint 87 */
+  sparse_count: number;
   /** Graph local (entity → chunk) results count */
   graph_local_count: number;
   /** Graph global (community → entity → chunk) results count */
   graph_global_count: number;
   /** Total results across all channels */
   total_count?: number;
+  /** @deprecated Use dense_count - kept for backward compatibility */
+  vector_count?: number;
+  /** @deprecated Use sparse_count - kept for backward compatibility */
+  bm25_count?: number;
 }
 
 /**
  * Sprint 52: Per-channel sample results for detailed display
+ * Sprint 87: bm25 renamed to sparse (BGE-M3 learned lexical weights)
+ * Sprint 92: vector renamed to dense (BGE-M3 dense embeddings)
  */
 export interface ChannelSamples {
-  vector: ChannelSample[];
-  bm25: ChannelSample[];
+  dense: ChannelSample[];  // Sprint 92: Dense vector samples
+  sparse: ChannelSample[];  // Sprint 87: Sparse vector samples
   graph_local: ChannelSample[];
   graph_global: ChannelSample[];
+  // Legacy fields (backward compatibility)
+  vector?: ChannelSample[];  // @deprecated Use dense
+  bm25?: ChannelSample[];  // @deprecated Use sparse
 }
 
 /**
  * Sprint 52: Intent weights for 4-way channels
+ * Sprint 87: bm25 renamed to sparse (BGE-M3 learned lexical weights)
+ * Sprint 92: vector renamed to dense (BGE-M3 dense embeddings)
  */
 export interface IntentWeights {
-  vector: number;
-  bm25: number;
+  dense: number;  // Sprint 92: Dense vector weight
+  sparse: number;  // Sprint 87: Sparse vector weight
   local: number;
   global: number;
+  // Legacy fields (backward compatibility)
+  vector?: number;  // @deprecated Use dense
+  bm25?: number;  // @deprecated Use sparse
 }
 
 /**
@@ -232,11 +250,12 @@ export interface PhaseEvent {
 
 /**
  * Human-readable phase names in German
+ * Sprint 87: BM25 replaced with Sparse (BGE-M3 learned lexical weights)
  */
 export const PHASE_NAMES: Record<PhaseType, string> = {
   intent_classification: 'Intent analysieren',
   vector_search: 'Vektor-Suche',
-  bm25_search: 'BM25-Suche',
+  bm25_search: 'Lexikalische Suche',
   rrf_fusion: 'Ergebnisse fusionieren',
   reranking: 'Reranking',
   graph_query: 'Graph durchsuchen',

@@ -97,46 +97,108 @@ async def _stream_research_progress(
 
                 if node_name and state_update:
                     # Emit progress for each phase (Sprint 70: Updated node names)
+                    # Sprint 92: Enhanced metadata for detailed UI feedback
                     if node_name == "planner":
+                        sub_queries = state_update.get("sub_queries", [])
                         progress = ResearchProgress(
                             phase="plan",
                             message="Creating research plan",
                             iteration=iteration_count,
-                            metadata={"num_queries": len(state_update.get("sub_queries", []))},
+                            metadata={
+                                "num_queries": len(sub_queries),
+                                # Sprint 92: Send actual sub-queries for display
+                                "plan_steps": sub_queries,
+                            },
                         )
                         yield f"data: {progress.model_dump_json()}\n\n"
 
                     elif node_name == "searcher":
                         iteration_count = state_update.get("iteration", iteration_count)
+                        all_contexts = state_update.get("all_contexts", [])
+
+                        # Sprint 92: Group contexts by query_index for per-query counts
+                        contexts_by_query: dict[int, int] = {}
+                        for ctx in all_contexts:
+                            query_idx = ctx.get("query_index", 0)
+                            contexts_by_query[query_idx] = contexts_by_query.get(query_idx, 0) + 1
+
                         progress = ResearchProgress(
                             phase="search",
                             message=f"Executing searches (iteration {iteration_count})",
                             iteration=iteration_count,
                             metadata={
                                 "num_queries": len(state_update.get("sub_queries", [])),
-                                "num_contexts": len(state_update.get("all_contexts", [])),
+                                "num_contexts": len(all_contexts),
+                                # Sprint 92: Per-query chunk counts
+                                "contexts_per_query": contexts_by_query,
+                                "sources_found": len(all_contexts),
                             },
                         )
                         yield f"data: {progress.model_dump_json()}\n\n"
 
                     elif node_name == "supervisor":
+                        all_contexts = state_update.get("all_contexts", [])
+
+                        # Sprint 92: Calculate quality metrics for display
+                        num_contexts = len(all_contexts)
+                        avg_score = 0.0
+                        if num_contexts > 0:
+                            avg_score = sum(ctx.get("score", 0.0) for ctx in all_contexts) / num_contexts
+
+                        # Determine quality level
+                        if num_contexts >= 10 and avg_score > 0.7:
+                            quality_label = "excellent"
+                        elif num_contexts >= 5 and avg_score > 0.5:
+                            quality_label = "good"
+                        elif num_contexts >= 3:
+                            quality_label = "fair"
+                        else:
+                            quality_label = "poor"
+
                         progress = ResearchProgress(
                             phase="evaluate",
                             message="Evaluating search quality",
                             iteration=iteration_count,
                             metadata={
                                 "should_continue": state_update.get("should_continue", False),
-                                "num_contexts": len(state_update.get("all_contexts", [])),
+                                "num_contexts": num_contexts,
+                                # Sprint 92: Enhanced quality metrics
+                                "num_results": num_contexts,
+                                "avg_score": round(avg_score, 3),
+                                "quality_score": avg_score,
+                                "quality_label": quality_label,
                             },
                         )
                         yield f"data: {progress.model_dump_json()}\n\n"
 
                     elif node_name == "synthesizer":
+                        all_contexts = state_update.get("all_contexts", [])
+                        metadata_update = state_update.get("metadata", {})
+
+                        # Sprint 92: Show which contexts are being used
+                        # Top contexts by score for synthesis
+                        top_contexts = sorted(
+                            all_contexts,
+                            key=lambda c: c.get("score", 0.0),
+                            reverse=True
+                        )[:10]
+
+                        context_summaries = []
+                        for i, ctx in enumerate(top_contexts[:5], 1):
+                            text = ctx.get("text", "")[:80] + "..." if len(ctx.get("text", "")) > 80 else ctx.get("text", "")
+                            source = ctx.get("source", ctx.get("source_channel", "unknown"))
+                            context_summaries.append(f"[{i}] {source}: {text}")
+
                         progress = ResearchProgress(
                             phase="synthesize",
                             message="Synthesizing final answer",
                             iteration=iteration_count,
-                            metadata={"num_contexts": len(state_update.get("all_contexts", []))},
+                            metadata={
+                                "num_contexts": len(all_contexts),
+                                # Sprint 92: Show contexts being synthesized
+                                "num_sources_cited": metadata_update.get("num_sources_cited", len(top_contexts)),
+                                "top_sources": context_summaries,
+                            },
                         )
                         yield f"data: {progress.model_dump_json()}\n\n"
 

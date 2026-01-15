@@ -31,7 +31,7 @@ logger = structlog.get_logger(__name__)
 
 # Configuration
 API_BASE_URL = "http://localhost:8000"
-AUTH_URL = f"{API_BASE_URL}/api/v1/auth/login"
+AUTH_URL = f"{API_BASE_URL}/api/v1/retrieval/auth/token"
 UPLOAD_URL = f"{API_BASE_URL}/api/v1/retrieval/upload"
 ADMIN_STATUS_URL = f"{API_BASE_URL}/api/v1/admin/upload-status"
 

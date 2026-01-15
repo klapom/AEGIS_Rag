@@ -1,9 +1,9 @@
 # Technical Debt Index
 
-**Last Updated:** 2026-01-13 (Sprint 87/89 - LightRAG CRUD Gap)
-**Total Open Items:** 6
-**Total Story Points:** ~121 SP
-**Archived Items:** [28 items](archive/ARCHIVE_INDEX.md) (TD-074, TD-103 resolved Sprint 87)
+**Last Updated:** 2026-01-15 (Sprint 92 - Context Relevance Guard resolved)
+**Total Open Items:** 5
+**Total Story Points:** ~116 SP
+**Archived Items:** [29 items](archive/ARCHIVE_INDEX.md) (TD-080 resolved Sprint 92.11)
 **Sprint 51 Review:** [Analysis & Archival Decisions](SPRINT_51_REVIEW_ANALYSIS.md)
 **Sprint 52:** Community Summaries, Async Follow-ups, Admin Dashboard, CI/CD
 **Sprint 53-58:** Refactoring Initiative (ADR-046)
@@ -73,6 +73,7 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 | **TD-100** | **Gleaning Multi-Pass Extraction** | **Sprint 83** (Code Analysis Sprint 84) | **5** |
 | **TD-074** | **BM25 Cache Discrepancy** | **Sprint 87** (BGE-M3 Native Hybrid) | **5** |
 | **TD-103** | **BM25 Index Desync** | **Sprint 87** (BGE-M3 Native Hybrid) | **21** |
+| **TD-080** | **Context Relevance Guard (Anti-Hallucination)** | **Sprint 92.11** | **5** |
 
 ---
 
@@ -91,8 +92,9 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 | TD# | Title | Status | SP | Target Sprint |
 |-----|-------|--------|-----|---------------|
 | [TD-102](TD-102_RELATION_EXTRACTION_IMPROVEMENT.md) | **Relation Extraction Improvement** | 🔴 OPEN | 18 | **Sprint 86-88** |
-| [TD-080](TD-080_CONTEXT_RELEVANCE_GUARD.md) | Context Relevance Guard (Anti-Hallucination) | PHASE 1 COMPLETE | 5 | **Sprint 71-73** |
 | [TD-078](TD-078_SECTION_EXTRACTION_PERFORMANCE.md) | Section Extraction Performance | ✅ O(n²) FIX DONE | 18 | **Sprint 67-68** |
+
+**TD-080 RESOLVED (Sprint 92.11):** Context Relevance Guard fully implemented with `MIN_CONTEXT_RELEVANCE_THRESHOLD = 0.3` and standardized "not found" response.
 
 **TD-102 Discovery (Sprint 85):** Multi-format ingestion testing revealed Relation Ratio of only 0.27-0.61 (target: ≥1.0). Root causes: SpaCy only as fallback, generic RELATES_TO prompts, no Gleaning. 5 iterations planned: SpaCy-first → Typed Relations → Gleaning → DSPy → KG Hygiene.
 

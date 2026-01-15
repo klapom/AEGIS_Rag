@@ -81,7 +81,7 @@ class SmartEntityExpander:
         query: str,
         namespaces: list[str],
         top_k: int = 10
-    ) -> list[str]:
+    ) -> tuple[list[str], int]:
         """Execute 3-stage entity expansion.
 
         Args:
@@ -90,7 +90,9 @@ class SmartEntityExpander:
             top_k: Target number of final entities
 
         Returns:
-            List of expanded entity names (initial + graph + synonyms)
+            Tuple of (expanded entity names, hops_used)
+            - List of expanded entity names (initial + graph + synonyms)
+            - Number of graph hops used (0 if graph expansion not used)
         """
         # STAGE 1: LLM Entity Extraction
         initial_entities = await self._extract_entities_llm(query)
@@ -137,14 +139,14 @@ class SmartEntityExpander:
                 threshold=self.min_entities_threshold,
             )
 
-        return final_entities
+        return final_entities, self.graph_expansion_hops
 
     async def expand_and_rerank(
         self,
         query: str,
         namespaces: list[str],
         top_k: int = 10
-    ) -> list[tuple[str, float]]:
+    ) -> tuple[list[tuple[str, float]], int]:
         """Expand entities and rerank by semantic similarity.
 
         Sprint 78 Feature 78.3: Semantic Entity Reranking
@@ -155,13 +157,15 @@ class SmartEntityExpander:
             top_k: Number of top entities to return
 
         Returns:
-            List of (entity_name, semantic_score) tuples, sorted by score
+            Tuple of (scored_entities, hops_used)
+            - List of (entity_name, semantic_score) tuples, sorted by score
+            - Number of graph hops used
         """
         # Stages 1-3: Expansion
-        expanded_entities = await self.expand_entities(query, namespaces, top_k * 3)
+        expanded_entities, hops_used = await self.expand_entities(query, namespaces, top_k * 3)
 
         if not expanded_entities:
-            return []
+            return [], hops_used
 
         # Stage 4: Semantic Reranking
         query_embedding = await self.embedding_service.encode(query)
@@ -184,9 +188,10 @@ class SmartEntityExpander:
             total_entities=len(expanded_entities),
             reranked_top_k=min(top_k, len(scored_entities)),
             top_score=scored_entities[0][1] if scored_entities else 0.0,
+            hops_used=hops_used,
         )
 
-        return scored_entities[:top_k]
+        return scored_entities[:top_k], hops_used
 
     async def _extract_entities_llm(self, query: str) -> list[str]:
         """Stage 1: Extract entities from query using LLM.

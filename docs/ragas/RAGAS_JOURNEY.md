@@ -1,8 +1,65 @@
 # RAGAS Journey - Continuous RAG Metrics Optimization
 
 **Status:** 🔄 Active Development
-**Sprint:** 79+ (Current: Sprint 88)
+**Sprint:** 79+ (Current: Sprint 92)
 **Goal:** Achieve SOTA-level RAGAS metrics (F ≥ 0.90, AR ≥ 0.95, CP ≥ 0.85, CR ≥ 0.75)
+
+---
+
+## Sprint 92: Extraction Pipeline Critical Bug Fixes (2026-01-14)
+
+### Problem Discovery
+
+During Sprint 88 ingestion (Phase 1: 500 samples), severe extraction issues were identified:
+
+1. **30-Minute Timeouts:** Documents timing out despite small size (2.8KB)
+2. **Zero Relations Extracted:** No relationships despite rich biomedical content
+3. **Invalid Entity Types:** 1,062 entities with type "ENTITY" (should be filtered)
+4. **Wrong SpaCy Model:** English text processed with Spanish model
+
+### Root Cause Analysis (via Feature 92.17: Debug Logging)
+
+**Bug 92.18: Language Detection Failure**
+- `_detect_language()` returned "es" for English text
+- Root cause: NO English indicators (score=0), Spanish indicators included false positives ("de ", "es ", "en ")
+
+**Bug 92.19: Entity Consolidation Not Applied**
+- SpaCy entities bypassed type filtering (`check_types=False`)
+- Generic "ENTITY" type from SpaCy's MISC label passed through
+
+**Bug 92.20: LLM Stages Silently Failing**
+- `time` module imported inside function, not accessible in nested methods
+- Error: `name 'time' is not defined` caught silently, returning empty lists
+
+### Fixes Applied
+
+| Bug | Issue | Fix | File |
+|-----|-------|-----|------|
+| 92.18 | English detected as Spanish | Added 20+ English indicators | `hybrid_extraction_service.py:157-218` |
+| 92.19 | "ENTITY" type not filtered | Enable type check for SpaCy | `entity_consolidator.py:186-191` |
+| 92.20 | LLM stages fail silently | Move `import time` to module level | `extraction_service.py:30-36` |
+
+### Results After Fixes
+
+**Test Document:** `ragas_phase1_0045_ragbench_964.txt` (HIV vaccine research, 2.8KB)
+
+| Metric | Before | After | Improvement |
+|--------|--------|-------|-------------|
+| Language | "es" (wrong) | "en" (correct) | ✅ Fixed |
+| Duration | 30min timeout | **46 seconds** | **40x faster** |
+| Entity Types | 45 (many invalid) | 10 (clean) | ✅ Fixed |
+| Relations | 0 | **7 semantic** | ✅ Fixed |
+
+**Sample Extracted Relations:**
+- Adjuvanted F4 → HIV-1 (RELATES_TO): "used in HIV-1 vaccine regimens"
+- SIV → HIV-1 (RELATES_TO): "both studied in primate vaccine research"
+- Adjuvanted F4 → NHP (RELATES_TO): "tested in NHP models for immunogenicity"
+
+### Next Steps
+
+1. Resume full ingestion from file #24 (file #23 already tested)
+2. Monitor extraction quality via debug logs
+3. Target: Complete 500 documents with <1min/doc and semantic relations
 
 ---
 

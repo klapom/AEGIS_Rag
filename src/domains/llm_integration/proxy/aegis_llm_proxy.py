@@ -386,7 +386,6 @@ class AegisLLMProxy:
             phase_type = self._get_phase_type_from_task(task)
             if phase_type:
                 try:
-                    from datetime import datetime
                     from src.agents.phase_events_queue import stream_phase_event
                     from src.models.phase_event import PhaseStatus
 
@@ -442,9 +441,9 @@ class AegisLLMProxy:
                     stream_phase_event(
                         phase_type=phase_type,
                         status=PhaseStatus.COMPLETED,
+                        duration_ms=result.latency_ms,  # Pass as parameter, not in metadata
                         metadata={
                             "prompt_name": task.metadata.get("prompt_name", "unknown"),
-                            "duration_ms": result.latency_ms,
                             "provider": result.provider,
                             "model": result.model,
                             "tokens_used": result.tokens_used,
@@ -498,9 +497,9 @@ class AegisLLMProxy:
                         stream_phase_event(
                             phase_type=phase_type,
                             status=PhaseStatus.COMPLETED,
+                            duration_ms=result.latency_ms,  # Pass as parameter, not in metadata
                             metadata={
                                 "prompt_name": task.metadata.get("prompt_name", "unknown"),
-                                "duration_ms": result.latency_ms,
                                 "provider": result.provider,
                                 "model": result.model,
                                 "fallback_used": True,

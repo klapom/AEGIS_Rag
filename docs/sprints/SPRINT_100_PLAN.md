@@ -5,7 +5,7 @@
 **ADR Reference:** [ADR-048](../adr/ADR-048-ragas-1000-sample-benchmark.md)
 **Prerequisite:** Sprint 88 (Phase 2 complete)
 **Duration:** 10-14 days
-**Total Story Points:** 32 SP (21 SP RAGAS + 11 SP LightRAG CRUD)
+**Total Story Points:** 41 SP (21 SP Visual Assets + 11 SP LightRAG CRUD + 9 SP RAGAS Quality)
 **Status:** 📝 Planned
 
 ---
@@ -857,6 +857,82 @@ Sprint 87 analysis revealed LightRAG v1.4.9.8 provides 18+ methods not exposed b
 - Document management (delete by doc_id)
 
 See [TD-104: LightRAG CRUD Feature Gap](../technical-debt/TD-104_LIGHTRAG_CRUD_FEATURE_GAP.md) for full comparison.
+
+---
+
+## RAGAS Quality Improvements (Sprint 92 Baseline)
+
+Based on RAGAS evaluation results from Sprint 92 (2026-01-15, 20 samples, Hybrid mode):
+
+### Current Baseline
+
+| Metric | Result | Target | Status |
+|--------|--------|--------|--------|
+| **Context Precision** | 86.2% | >75% | ✅ Met |
+| **Context Recall** | 77.5% | >70% | ✅ Met |
+| **Faithfulness** | 73.7% | >90% | ⚠️ Gap: -16.3% |
+| **Answer Relevancy** | 78.9% | >80% | ⚠️ Gap: -1.1% |
+
+### Improvement Opportunities
+
+#### P0: Faithfulness Improvement (+16% needed)
+
+**Problem:** LLM generates content not grounded in retrieved contexts (hallucination)
+
+**Root Causes:**
+1. NO_HEDGING prompt encourages assertive answers even with weak evidence
+2. Context Relevance Guard threshold (0.3) may be too permissive
+3. Cross-document synthesis introduces unsupported claims
+
+**Proposed Solutions:**
+| Solution | Expected Impact | Sprint |
+|----------|-----------------|--------|
+| Increase Context Relevance threshold to 0.5 | +5-10% | 100 |
+| Add source citation validation step | +5-8% | 100 |
+| Cite-sources prompt engineering | +3-5% | 100 |
+| Disable NO_HEDGING for low-confidence contexts | +3-5% | 100 |
+
+**Implementation:**
+```python
+# Feature 100.1: Enhanced Faithfulness Guard
+MIN_CONTEXT_RELEVANCE_THRESHOLD = 0.5  # was 0.3
+REQUIRE_INLINE_CITATIONS = True
+HEDGING_THRESHOLD = 0.6  # Allow hedging below this score
+```
+
+#### P1: Answer Relevancy Improvement (+2% needed)
+
+**Problem:** Answers occasionally include tangential information
+
+**Root Causes:**
+1. Retrieved contexts contain relevant but off-topic sections
+2. LLM generation prompt doesn't emphasize focus
+
+**Proposed Solutions:**
+| Solution | Expected Impact | Sprint |
+|----------|-----------------|--------|
+| Question-focused generation prompt | +1-2% | 100 |
+| Post-generation relevancy check | +1-2% | 101 |
+| Chunk relevancy pre-filtering | +0.5-1% | 101 |
+
+### Sprint 100 RAGAS Features
+
+| # | Feature | SP | Priority | Description |
+|---|---------|-----|----------|-------------|
+| 100.1 | Context Relevance Threshold Increase | 2 | P0 | 0.3 → 0.5 threshold |
+| 100.2 | Cite-Sources Prompt Engineering | 3 | P0 | Enforce inline citations |
+| 100.3 | Conditional Hedging | 2 | P1 | Allow uncertainty for weak contexts |
+| 100.4 | Relevancy-Focused Prompt | 2 | P1 | "Answer ONLY the question asked" |
+
+**Total RAGAS Improvements: 9 SP**
+
+### Success Criteria (Updated)
+
+- [ ] Faithfulness ≥ 85% (from 73.7%)
+- [ ] Answer Relevancy ≥ 80% (from 78.9%)
+- [ ] Context Precision maintained ≥ 85%
+- [ ] Context Recall maintained ≥ 75%
+- [ ] No regression in query latency
 
 ---
 

@@ -48,6 +48,28 @@ from src.utils.fusion import weighted_reciprocal_rank_fusion
 logger = structlog.get_logger(__name__)
 
 
+# Sprint 92.21: Reuse multilingual stopwords from BM25 module (stop-words package)
+# These common words don't help users understand why a document matched
+from src.components.vector_search.bm25_search import MULTILINGUAL_STOPWORDS
+
+
+def filter_stop_words(terms: list[str], min_length: int = 2) -> list[str]:
+    """Filter stop words and very short terms from query terms.
+
+    Args:
+        terms: List of query terms
+        min_length: Minimum term length to keep (default: 2)
+
+    Returns:
+        Filtered list with meaningful terms only
+
+    Note:
+        Uses MULTILINGUAL_STOPWORDS from bm25_search.py which loads from
+        the stop-words package (55+ languages supported).
+    """
+    return [t for t in terms if t.lower() not in MULTILINGUAL_STOPWORDS and len(t) >= min_length]
+
+
 @dataclass
 class ChannelSample:
     """Sample result from a search channel for display."""
@@ -63,10 +85,15 @@ class ChannelSample:
 
 @dataclass
 class FourWaySearchMetadata:
-    """Metadata from 4-Way Hybrid Search execution."""
+    """Metadata from 4-Way Hybrid Search execution.
 
-    vector_results_count: int
-    bm25_results_count: int
+    Sprint 92: Updated to expose dense/sparse counts instead of vector/bm25.
+    BGE-M3 provides both dense (1024-dim semantic) and sparse (lexical) vectors.
+    """
+
+    # Sprint 92: Expose dense/sparse counts from multi-vector search
+    dense_results_count: int  # Dense vector (semantic) search results
+    sparse_results_count: int  # Sparse vector (lexical) search results
     graph_local_results_count: int
     graph_global_results_count: int
     intent: str
@@ -79,6 +106,9 @@ class FourWaySearchMetadata:
     namespaces_searched: list[str]
     # Sprint 52: Channel samples for UI display (extracted before fusion)
     channel_samples: dict[str, list[dict[str, Any]]] | None = None
+    # Deprecated fields (kept for backward compatibility)
+    vector_results_count: int = 0  # DEPRECATED: Use dense_results_count
+    bm25_results_count: int = 0  # DEPRECATED: Use sparse_results_count
 
 
 class FourWayHybridSearch:
@@ -276,7 +306,7 @@ class FourWayHybridSearch:
 
         # Sprint 52: Extract channel samples BEFORE fusion for UI display
         # This preserves the source_channel information that would be lost after RRF
-        query_terms = query.lower().split()  # For BM25 keyword display
+        query_terms = filter_stop_words(query.lower().split())  # Sprint 92.21: Filter stop words
         channel_samples = self._extract_channel_samples(
             channel_results, query_terms, max_per_channel=3
         )
@@ -336,8 +366,9 @@ class FourWayHybridSearch:
                 )
 
                 # Reorder results based on reranking
+                # Sprint 92 Fix: Use 1-indexed ranks for consistency with RRF (rank 1 = best)
                 final_results = []
-                for rank, (doc_idx, score) in enumerate(reranked_indices):
+                for rank, (doc_idx, score) in enumerate(reranked_indices, start=1):
                     original = fused_results[doc_idx]
                     final_results.append(
                         {
@@ -374,11 +405,13 @@ class FourWayHybridSearch:
         total_latency_ms = (time.perf_counter() - start_time) * 1000
 
         # Build metadata
-        # Sprint 88: multivector_results_count replaces vector + bm25
+        # Sprint 92: Expose dense/sparse counts separately for UI display
         multivector_count = len(channel_results.get("multivector", []))
         metadata = FourWaySearchMetadata(
-            vector_results_count=multivector_count,  # Sprint 88: multivector dense+sparse combined
-            bm25_results_count=0,  # Sprint 88: Deprecated, sparse vectors included in multivector
+            # Sprint 92: BGE-M3 provides both dense (semantic) and sparse (lexical) vectors
+            # We report the same count for both since they're fused server-side in Qdrant
+            dense_results_count=multivector_count,  # Dense vector (1024-dim semantic)
+            sparse_results_count=multivector_count,  # Sparse vector (learned lexical weights)
             graph_local_results_count=len(channel_results.get("graph_local", [])),
             graph_global_results_count=len(channel_results.get("graph_global", [])),
             intent=intent.value,
@@ -388,14 +421,19 @@ class FourWayHybridSearch:
             weights={
                 "vector": weights.vector,
                 "bm25": weights.bm25,
+                "dense": weights.vector,  # Sprint 92: Map vector weight to dense
+                "sparse": weights.bm25,  # Sprint 92: Map bm25 weight to sparse
                 "local": weights.local,
                 "global": weights.global_,
-                "multivector": max(weights.vector, weights.bm25),  # Sprint 88
+                "multivector": max(weights.vector, weights.bm25),  # Sprint 88 (legacy)
             },
             total_latency_ms=total_latency_ms,
             channels_executed=channels_executed,
             namespaces_searched=allowed_namespaces,
             channel_samples=channel_samples,  # Sprint 52: Pass through for UI display
+            # Deprecated fields (for backward compatibility)
+            vector_results_count=multivector_count,
+            bm25_results_count=0,  # Deprecated: sparse vectors replace BM25
         )
 
         logger.info(
@@ -674,7 +712,7 @@ class FourWayHybridSearch:
         try:
             # Extract potential entity names from query (simple approach)
             # More sophisticated: use NER or entity linking
-            query_terms = query.lower().split()
+            query_terms = filter_stop_words(query.lower().split())
 
             # Search for entities matching query terms with namespace filtering
             if allowed_namespaces:
@@ -782,7 +820,7 @@ class FourWayHybridSearch:
         """
         try:
             # First, find communities whose entities match the query
-            query_terms = query.lower().split()
+            query_terms = filter_stop_words(query.lower().split())
 
             if allowed_namespaces:
                 cypher = """
@@ -887,15 +925,17 @@ class FourWayHybridSearch:
         """Extract sample results from each channel before RRF fusion.
 
         Sprint 52: This preserves source_channel info that would be lost after fusion.
+        Sprint 92: Updated to expose dense/sparse channels instead of vector/bm25.
         Used to display channel-specific samples in the UI ReasoningPanel.
 
         Args:
-            channel_results: Results from each channel (vector, bm25, graph_local, graph_global)
-            query_terms: Query terms for BM25 keyword display
+            channel_results: Results from each channel (multivector, graph_local, graph_global)
+            query_terms: Query terms for sparse vector keyword display
             max_per_channel: Maximum samples per channel (default: 3)
 
         Returns:
             Dictionary mapping channel names to sample lists with channel-specific metadata
+            Keys: "dense", "sparse", "graph_local", "graph_global"
         """
         samples: dict[str, list[dict[str, Any]]] = {}
 
@@ -912,13 +952,27 @@ class FourWayHybridSearch:
 
                 # Add channel-specific metadata
                 if channel == "multivector":
-                    # Sprint 88: Multi-vector shows both semantic + lexical info
-                    sample["search_type"] = "dense+sparse"
-                    sample["keywords"] = query_terms[:5]  # Sparse vector keywords
+                    # Sprint 92: Split multivector into dense + sparse for UI display
+                    # Both get the same samples since they're fused server-side
+                    sample_dense = {**sample, "search_type": "dense"}
+                    sample_sparse = {**sample, "search_type": "sparse", "keywords": query_terms[:5]}
+
+                    # Add to both dense and sparse channels
+                    if "dense" not in samples:
+                        samples["dense"] = []
+                    if "sparse" not in samples:
+                        samples["sparse"] = []
+                    samples["dense"].append(sample_dense)
+                    samples["sparse"].append(sample_sparse)
+                    continue  # Skip appending to channel_samples
 
                 elif channel == "bm25":
-                    # [DEPRECATED] For BM25: Show the query keywords
-                    sample["keywords"] = query_terms[:5]  # Limit to 5 keywords
+                    # [DEPRECATED] Legacy BM25: Map to sparse channel
+                    sample["keywords"] = query_terms[:5]
+                    if "sparse" not in samples:
+                        samples["sparse"] = []
+                    samples["sparse"].append(sample)
+                    continue
 
                 elif channel == "graph_local":
                     # For Graph Local: Show matched entities

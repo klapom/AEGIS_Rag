@@ -122,10 +122,11 @@ class DualLevelSearch:
     )
     async def local_search(
         self, query: str, top_k: int = 5, namespaces: list[str] | None = None
-    ) -> list[GraphEntity]:
+    ) -> tuple[list[GraphEntity], dict[str, Any]]:
         """Execute entity-level (local) search with chunk expansion.
 
         Sprint 78 Feature 78.1: Entity → Chunk Expansion
+        Sprint 92: Returns metadata including graph_hops_used
 
         Finds entities matching the query, then expands to full document chunks
         via MENTIONED_IN relationships. Returns chunks as GraphEntity objects
@@ -137,19 +138,24 @@ class DualLevelSearch:
             namespaces: List of namespaces to filter by (default: None = all namespaces)
 
         Returns:
-            list of GraphEntity objects (containing chunk data in description field)
+            Tuple of (entities, metadata)
+            - list of GraphEntity objects (containing chunk data in description field)
+            - metadata dict with execution_time_ms, graph_hops_used, and phase_timings
         """
         start_time = time.time()
+        phase_timings = {}  # Sprint 92: Track sub-phase timings
 
         logger.info("local_search_started", query=query[:100], top_k=top_k)
 
         try:
             # Sprint 78 Feature 78.2 & 78.4: Use SmartEntityExpander instead of manual stop words
             # LLM extracts entities directly → stop words filtering not needed anymore
+            # Sprint 92 Performance: Skip semantic reranking to avoid expensive embedding calls
             from src.components.graph_rag.entity_expansion import SmartEntityExpander
             from src.core.config import settings
 
             # Sprint 78 Feature 78.5: Load config from settings (UI-configurable via env vars)
+            phase_start = time.time()
             expander = SmartEntityExpander(
                 neo4j_client=self.neo4j_client,
                 graph_expansion_hops=settings.graph_expansion_hops,
@@ -158,11 +164,15 @@ class DualLevelSearch:
             )
 
             # Stage 1-3: Expand entities (LLM → Graph → Synonyms)
-            expanded_entity_names = await expander.expand_entities(
+            # Sprint 92: Use expand_entities() instead of expand_and_rerank()
+            # Semantic reranking adds 2-5s due to multiple embedding calls
+            expanded_entity_names, hops_used = await expander.expand_entities(
                 query=query,
                 namespaces=namespaces or ["default"],
                 top_k=top_k * 3
             )
+            phase_timings["entity_expansion_ms"] = (time.time() - phase_start) * 1000
+            phase_timings["graph_hops_used"] = hops_used
 
             # Sprint 78 Feature 78.1: Entity → Chunk Expansion
             # Use expanded entity names to find chunks they're mentioned in
@@ -204,7 +214,10 @@ class DualLevelSearch:
             if namespaces:
                 params["namespaces"] = namespaces
 
+            # Sprint 92: Time Neo4j query
+            phase_start = time.time()
             results = await self.neo4j_client.execute_read(cypher_query, params)
+            phase_timings["neo4j_chunk_query_ms"] = (time.time() - phase_start) * 1000
 
             # Sprint 78: Convert chunks to GraphEntity objects for backward compatibility
             # The "description" field now contains the full chunk text instead of entity description
@@ -232,14 +245,24 @@ class DualLevelSearch:
 
             execution_time = (time.time() - start_time) * 1000
 
+            # Sprint 92: Build metadata with graph_hops_used
+            metadata = {
+                "execution_time_ms": execution_time,
+                "chunks_found": len(entities),
+                "graph_hops_used": hops_used,
+                **phase_timings,
+            }
+
             logger.info(
                 "local_search_completed",
                 query=query[:100],
                 chunks_found=len(entities),
                 execution_time_ms=execution_time,
+                graph_hops_used=hops_used,
+                phase_timings=phase_timings,  # Sprint 92: Detailed sub-phase timings
             )
 
-            return entities
+            return entities, metadata
 
         except Exception as e:
             logger.error("local_search_failed", query=query[:100], error=str(e))
@@ -491,7 +514,7 @@ Answer:"""
             global_k = max(top_k - local_k, 2)
 
             # Execute both searches in parallel would be ideal, but for simplicity:
-            entities = await self.local_search(query, top_k=local_k, namespaces=namespaces)
+            entities, local_metadata = await self.local_search(query, top_k=local_k, namespaces=namespaces)
             topics = await self.global_search(query, top_k=global_k, namespaces=namespaces)
 
             # Retrieve relationships for found entities
@@ -507,6 +530,7 @@ Answer:"""
 
             execution_time = (time.time() - start_time) * 1000
 
+            # Sprint 92: Include graph_hops_used from local_metadata
             result = GraphQueryResult(
                 query=query,
                 answer=answer,
@@ -520,6 +544,7 @@ Answer:"""
                     "entities_found": len(entities),
                     "relationships_found": len(relationships),
                     "topics_found": len(topics),
+                    "graph_hops_used": local_metadata.get("graph_hops_used", 0),
                 },
             )
 

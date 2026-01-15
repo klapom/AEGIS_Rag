@@ -28,9 +28,10 @@ Coreference Resolution (Sprint 86.7):
 """
 
 import asyncio
-import os
 import json
+import os
 import re
+import time
 import uuid
 from typing import Any
 
@@ -1035,10 +1036,14 @@ class ExtractionService:
         Returns:
             Tuple of (entities, relations)
         """
-        import time
+        from src.components.graph_rag.extraction_debug_logger import get_debug_logger
 
         pipeline_start = time.time()
         pipeline = get_pipeline_config()
+
+        # Sprint 92 Feature 92.17: Comprehensive debug logging
+        debug_logger = get_debug_logger(document_id or "unknown", chunk_index=0)
+        debug_logger.log_input_text(text)
 
         logger.info(
             "spacy_first_pipeline_started",
@@ -1048,9 +1053,12 @@ class ExtractionService:
         )
 
         # Stage 1: SpaCy NER Entities
+        debug_logger.start_stage("spacy_ner", model="spacy")
         stage1_start = time.time()
         spacy_entities = await self._pipeline_stage1_spacy_ner(text, document_id, pipeline[0])
         stage1_duration = (time.time() - stage1_start) * 1000
+        debug_logger.end_stage("spacy_ner", entities_count=len(spacy_entities))
+        debug_logger.log_entities(spacy_entities, source="spacy")
 
         logger.info(
             "pipeline_stage1_complete",
@@ -1061,33 +1069,68 @@ class ExtractionService:
         )
 
         # Stage 2: LLM Entity Enrichment (MANDATORY)
+        debug_logger.start_stage("llm_entity_enrichment", model=self._explicit_llm_model)
         stage2_start = time.time()
         enriched_entities = await self._pipeline_stage2_entity_enrichment(
-            text, spacy_entities, document_id, domain, pipeline[1]
+            text, spacy_entities, document_id, domain, pipeline[1], debug_logger=debug_logger
         )
         stage2_duration = (time.time() - stage2_start) * 1000
-
-        # Merge SpaCy + Enriched entities
-        all_entities = self._merge_entities(spacy_entities, enriched_entities)
+        debug_logger.end_stage("llm_entity_enrichment", entities_count=len(enriched_entities))
+        debug_logger.log_entities(enriched_entities, source="llm_enrichment")
 
         logger.info(
             "pipeline_stage2_complete",
             stage="LLM Entity Enrichment",
             spacy_entities=len(spacy_entities),
             enriched_entities=len(enriched_entities),
-            total_entities=len(all_entities),
             duration_ms=round(stage2_duration, 2),
             document_id=document_id,
         )
 
+        # Sprint 92 Feature 92.14: Entity Consolidation (NEW STEP!)
+        # Consolidate entities BEFORE relation extraction:
+        # - Filter invalid types (reject generic "ENTITY")
+        # - Filter by length (max 80 chars to remove sentence-like entities)
+        # - Deduplicate (prefer SpaCy over LLM)
+        consolidation_start = time.time()
+        from src.components.graph_rag.entity_consolidator import get_entity_consolidator
+
+        consolidator = get_entity_consolidator()
+        all_entities, consolidation_stats = await consolidator.consolidate(
+            spacy_entities=spacy_entities,
+            llm_entities=enriched_entities,
+        )
+        consolidation_duration = (time.time() - consolidation_start) * 1000
+
+        logger.info(
+            "pipeline_consolidation_complete",
+            stage="Entity Consolidation",
+            spacy_input=consolidation_stats.spacy_input,
+            llm_input=consolidation_stats.llm_input,
+            filtered_by_type=consolidation_stats.filtered_by_type,
+            filtered_by_length=consolidation_stats.filtered_by_length,
+            filtered_by_duplicate=consolidation_stats.filtered_by_duplicate,
+            total_output=len(all_entities),
+            filter_rate=f"{consolidation_stats.filter_rate:.1f}%",
+            duration_ms=round(consolidation_duration, 2),
+            document_id=document_id,
+        )
+
         # Stage 3: LLM Relation Extraction
+        debug_logger.start_stage("llm_relation_extraction", model=self._explicit_llm_model)
         stage3_start = time.time()
         relations = await self._pipeline_stage3_relation_extraction(
-            text, all_entities, document_id, domain, pipeline[2]
+            text, all_entities, document_id, domain, pipeline[2], debug_logger=debug_logger
         )
         stage3_duration = (time.time() - stage3_start) * 1000
+        debug_logger.end_stage("llm_relation_extraction", relations_count=len(relations))
+        debug_logger.log_relations(relations, source="llm")
 
         pipeline_duration = (time.time() - pipeline_start) * 1000
+
+        # Sprint 92.17: Log final summary
+        debug_logger.log_entities(all_entities, source="consolidated_final")
+        summary = debug_logger.log_summary()
 
         logger.info(
             "spacy_first_pipeline_complete",
@@ -1097,6 +1140,7 @@ class ExtractionService:
             er_ratio=round(len(relations) / max(1, len(all_entities)), 2),
             stage1_ms=round(stage1_duration, 2),
             stage2_ms=round(stage2_duration, 2),
+            consolidation_ms=round(consolidation_duration, 2),
             stage3_ms=round(stage3_duration, 2),
             total_ms=round(pipeline_duration, 2),
         )
@@ -1160,6 +1204,7 @@ class ExtractionService:
         document_id: str | None,
         domain: str | None,
         stage_config: PipelineStageConfig,
+        debug_logger: any = None,  # Sprint 92.17: Debug logger
     ) -> list[GraphEntity]:
         """Stage 2: Enrich SpaCy entities with LLM (find CONCEPT, TECHNOLOGY, etc.).
 
@@ -1169,6 +1214,7 @@ class ExtractionService:
             document_id: Document ID
             domain: Domain for prompts
             stage_config: Stage configuration
+            debug_logger: Optional debug logger for comprehensive logging
 
         Returns:
             List of NEW entities found by LLM (not in SpaCy list)
@@ -1192,6 +1238,15 @@ class ExtractionService:
             text=text[:8000],  # Limit text length for LLM
         )
 
+        # Sprint 92.17: Log full prompt for debugging
+        if debug_logger:
+            debug_logger.log_llm_request(
+                "llm_entity_enrichment",
+                prompt,
+                stage_config.model,
+                system_prompt=None,
+            )
+
         logger.info(
             "stage2_prompt_formatted",
             document_id=document_id,
@@ -1201,6 +1256,7 @@ class ExtractionService:
 
         try:
             logger.info("stage2_calling_llm_proxy", document_id=document_id)
+            llm_start = time.time()
             # Use LLM for enrichment
             response = await asyncio.wait_for(
                 self.llm_proxy.generate(
@@ -1217,11 +1273,23 @@ class ExtractionService:
                 timeout=stage_config.timeout_s,
             )
 
+            llm_duration_ms = (time.time() - llm_start) * 1000
+
+            # Sprint 92.17: Log full response for debugging
+            if debug_logger:
+                debug_logger.log_llm_response(
+                    "llm_entity_enrichment",
+                    response.content if response else "",
+                    llm_duration_ms,
+                    is_valid_json=True,  # Will be updated if parsing fails
+                )
+
             logger.info(
                 "stage2_llm_response_received",
                 document_id=document_id,
                 response_length=len(response.content) if response else 0,
                 response_preview=response.content[:200] if response else "None",
+                duration_ms=round(llm_duration_ms, 2),
             )
 
             # Parse enriched entities
@@ -1272,6 +1340,7 @@ class ExtractionService:
         document_id: str | None,
         domain: str | None,
         stage_config: PipelineStageConfig,
+        debug_logger: any = None,  # Sprint 92.17: Debug logger
     ) -> list[GraphRelationship]:
         """Stage 3: Extract relations between all entities using LLM.
 
@@ -1281,6 +1350,7 @@ class ExtractionService:
             document_id: Document ID
             domain: Domain for prompts
             stage_config: Stage configuration
+            debug_logger: Optional debug logger for comprehensive logging
 
         Returns:
             List of GraphRelationship
@@ -1312,6 +1382,15 @@ class ExtractionService:
             text=text[:8000],  # Limit text length for LLM
         )
 
+        # Sprint 92.17: Log full prompt for debugging
+        if debug_logger:
+            debug_logger.log_llm_request(
+                "llm_relation_extraction",
+                prompt,
+                stage_config.model,
+                system_prompt=None,
+            )
+
         logger.info(
             "stage3_prompt_formatted",
             document_id=document_id,
@@ -1321,6 +1400,7 @@ class ExtractionService:
 
         try:
             logger.info("stage3_calling_llm_proxy", document_id=document_id)
+            llm_start = time.time()
             response = await asyncio.wait_for(
                 self.llm_proxy.generate(
                     LLMTask(
@@ -1336,11 +1416,23 @@ class ExtractionService:
                 timeout=stage_config.timeout_s,
             )
 
+            llm_duration_ms = (time.time() - llm_start) * 1000
+
+            # Sprint 92.17: Log full response for debugging
+            if debug_logger:
+                debug_logger.log_llm_response(
+                    "llm_relation_extraction",
+                    response.content if response else "",
+                    llm_duration_ms,
+                    is_valid_json=True,  # Will be updated if parsing fails
+                )
+
             logger.info(
                 "stage3_llm_response_received",
                 document_id=document_id,
                 response_length=len(response.content) if response else 0,
                 response_preview=response.content[:200] if response else "None",
+                duration_ms=round(llm_duration_ms, 2),
             )
 
             # Parse relations

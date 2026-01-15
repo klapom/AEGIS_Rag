@@ -284,7 +284,8 @@ async def query_aegis_rag(
     api_base = "http://localhost:8000"
 
     # Sprint 79.8.1: Increased timeout to 300s for complex graph queries
-    async with httpx.AsyncClient(timeout=300.0, follow_redirects=True) as client:
+    # Sprint 92: Increased to 600s for parallel ingestion scenarios
+    async with httpx.AsyncClient(timeout=600.0, follow_redirects=True) as client:
         # Call chat endpoint
         response = await client.post(
             f"{api_base}/api/v1/chat/",
@@ -470,7 +471,8 @@ async def compute_ragas_metrics_for_sample(
     answer_relevancy = AnswerRelevancy(llm=ragas_llm, embeddings=ragas_embeddings)
 
     # Sprint 79.8.1: Added asyncio.wait_for with 240s timeout per metric
-    metric_timeout = 240.0  # 240s per metric (GPT-OSS:20b measured at ~47s/metric)
+    # Sprint 92: Increased to 600s for parallel ingestion scenarios (GPU at 88%)
+    metric_timeout = 600.0  # 600s per metric (10 min, allows for GPU contention)
 
     logger.info(f"  Computing 4 RAGAS metrics (timeout: {metric_timeout}s each)...")
 
@@ -641,7 +643,8 @@ async def run_ragas_evaluation(
     for i, q_data in enumerate(questions_data):
         question = q_data["question"]
         ground_truth = q_data["ground_truth"]
-        expected_contexts = q_data["contexts"]
+        # Sprint 92: contexts may not be in dataset (retrieved from system instead)
+        expected_contexts = q_data.get("contexts", [])
 
         logger.info(f"\n[{i+1}/{len(questions_data)}] {question[:80]}...")
 

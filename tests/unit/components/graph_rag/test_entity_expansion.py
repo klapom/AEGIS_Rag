@@ -252,7 +252,7 @@ class TestSmartEntityExpander:
 
         # Execute
         entity_expander.min_entities_threshold = 10
-        expanded = await entity_expander.expand_entities(
+        expanded, hops_used = await entity_expander.expand_entities(
             query="What are the global implications of abortion?",
             namespaces=["amnesty_qa"],
             top_k=10
@@ -260,6 +260,7 @@ class TestSmartEntityExpander:
 
         # Verify - should NOT call LLM for synonyms (graph gave enough)
         assert len(expanded) == 12
+        assert hops_used == 1  # Sprint 92: Verify hops_used is returned
         assert mock_llm_proxy.generate.call_count == 1  # Only Stage 1, not Stage 3
 
     @pytest.mark.asyncio
@@ -300,7 +301,7 @@ class TestSmartEntityExpander:
 
         # Execute
         entity_expander.min_entities_threshold = 10
-        expanded = await entity_expander.expand_entities(
+        expanded, hops_used = await entity_expander.expand_entities(
             query="What are the global implications of abortion?",
             namespaces=["amnesty_qa"],
             top_k=10
@@ -310,6 +311,7 @@ class TestSmartEntityExpander:
         assert mock_llm_proxy.generate.call_count == 2
         # Should have graph entities + synonyms
         assert len(expanded) == 8  # 5 from graph + 3 synonyms
+        assert hops_used == 1  # Sprint 92: Verify hops_used is returned
 
     @pytest.mark.asyncio
     async def test_expand_and_rerank_semantic(self, entity_expander, mock_llm_proxy, mock_neo4j_client, mock_embedding_service):
@@ -351,7 +353,7 @@ class TestSmartEntityExpander:
         mock_embedding_service.encode.side_effect = mock_encode
 
         # Execute
-        ranked_entities = await entity_expander.expand_and_rerank(
+        ranked_entities, hops_used = await entity_expander.expand_and_rerank(
             query="What are the global implications of abortion?",
             namespaces=["amnesty_qa"],
             top_k=3
@@ -359,6 +361,7 @@ class TestSmartEntityExpander:
 
         # Verify semantic ranking
         assert len(ranked_entities) == 3
+        assert hops_used == 1  # Sprint 92: Verify hops_used is returned
         # Should be ranked by cosine similarity
         entity_names = [e[0] for e in ranked_entities]
         entity_scores = [e[1] for e in ranked_entities]

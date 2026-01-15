@@ -324,12 +324,12 @@ class CommunityDetector:
             # Create in-memory graph projection
             projection_name = f"community_graph_{uuid.uuid4().hex[:8]}"
 
-            # Project graph
+            # Project graph - Sprint 92.22: Use 'base' label (not 'Entity')
             await self.neo4j_client.execute_query(
                 """
                 CALL gds.graph.project(
                     $projectionName,
-                    'Entity',
+                    'base',
                     {
                         RELATES_TO: {
                             orientation: 'UNDIRECTED'

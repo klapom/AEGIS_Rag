@@ -65,8 +65,8 @@ export const CLOUD_PROVIDERS = [
 export const RETRIEVAL_METHODS = [
   {
     value: 'hybrid',
-    label: 'Hybrid (Vector + BM25)',
-    description: 'Best overall: Combines semantic search and keyword matching using RRF fusion',
+    label: 'Hybrid (Vector + Sparse)',
+    description: 'Best overall: Combines semantic search and lexical matching using RRF fusion',
   },
   {
     value: 'vector',
@@ -75,8 +75,8 @@ export const RETRIEVAL_METHODS = [
   },
   {
     value: 'bm25',
-    label: 'BM25 (Keyword)',
-    description: 'Best for exact matches: Traditional keyword search for specific terms/numbers',
+    label: 'Sparse (Lexikalisch)',
+    description: 'Best for exact matches: BGE-M3 learned lexical weights for specific terms/numbers',
   },
 ] as const;
 

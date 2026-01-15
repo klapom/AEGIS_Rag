@@ -223,7 +223,8 @@ function PhasesSection({ phases }: { phases: PhaseEvent[] }) {
 
 /**
  * Sprint 52: Individual channel sample display
- * Enhanced to show keywords (BM25) and entities (Graph)
+ * Enhanced to show keywords (Sparse) and entities (Graph)
+ * Sprint 87: BM25 replaced with Sparse (BGE-M3 learned lexical weights)
  */
 function ChannelSampleItem({ sample }: { sample: ChannelSample }) {
   const hasKeywords = sample.keywords && sample.keywords.length > 0;
@@ -235,7 +236,7 @@ function ChannelSampleItem({ sample }: { sample: ChannelSample }) {
         <span className="text-gray-400 shrink-0">•</span>
         <div className="flex-1 min-w-0">
           <p className="line-clamp-2 break-words">{sample.text}</p>
-          {/* Keywords (BM25 channel) */}
+          {/* Keywords (Sparse channel - BGE-M3 learned lexical weights) */}
           {hasKeywords && (
             <div className="flex flex-wrap gap-1 mt-1">
               <span className="text-gray-400 text-[10px]">Keywords:</span>
@@ -350,21 +351,25 @@ function FourWaySection({
     return null;
   }
 
+  // Sprint 92: Support both new (dense/sparse) and legacy (vector/bm25) field names
+  const denseCount = results?.dense_count ?? results?.vector_count ?? 0;
+  const sparseCount = results?.sparse_count ?? results?.bm25_count ?? 0;
   const totalResults = results?.total_count ?? (results
-    ? results.vector_count + results.bm25_count + results.graph_local_count + results.graph_global_count
+    ? denseCount + sparseCount + (results.graph_local_count ?? 0) + (results.graph_global_count ?? 0)
     : 0);
 
   // Map channel keys to sample arrays
+  // Sprint 92: Support dense/sparse (new), vector/bm25 (legacy) keys
   const channelSampleMap: Record<string, ChannelSample[]> = {
-    'Vector (Embedding)': channelSamples?.vector ?? [],
-    'BM25 (Keyword)': channelSamples?.bm25 ?? [],
+    'Dense (Semantisch)': channelSamples?.dense ?? channelSamples?.vector ?? [],
+    'Sparse (Lexikalisch)': channelSamples?.sparse ?? channelSamples?.bm25 ?? [],
     'Graph Local': channelSamples?.graph_local ?? [],
     'Graph Global': channelSamples?.graph_global ?? [],
   };
 
   const channels = [
-    { name: 'Vector (Embedding)', count: results?.vector_count ?? 0, weight: weights?.vector ?? 0, color: 'bg-blue-500', icon: '🔍' },
-    { name: 'BM25 (Keyword)', count: results?.bm25_count ?? 0, weight: weights?.bm25 ?? 0, color: 'bg-amber-500', icon: '📝' },
+    { name: 'Dense (Semantisch)', count: denseCount, weight: weights?.dense ?? weights?.vector ?? 0, color: 'bg-blue-500', icon: '🔍' },
+    { name: 'Sparse (Lexikalisch)', count: sparseCount, weight: weights?.sparse ?? weights?.bm25 ?? 0, color: 'bg-amber-500', icon: '📝' },
     { name: 'Graph Local', count: results?.graph_local_count ?? 0, weight: weights?.local ?? 0, color: 'bg-purple-500', icon: '🔗' },
     { name: 'Graph Global', count: results?.graph_global_count ?? 0, weight: weights?.global ?? 0, color: 'bg-green-500', icon: '🌐' },
   ];

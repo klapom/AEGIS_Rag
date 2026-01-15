@@ -171,45 +171,46 @@ class TestFourWaySearchMetadata:
     """Test FourWaySearchMetadata dataclass."""
 
     def test_metadata_creation(self):
-        """Test creating FourWaySearchMetadata."""
+        """Test creating FourWaySearchMetadata - Sprint 92: Updated to use dense/sparse."""
         metadata = FourWaySearchMetadata(
-            vector_results_count=3,
-            bm25_results_count=2,
+            dense_results_count=3,  # Sprint 92: Use dense instead of vector
+            sparse_results_count=2,  # Sprint 92: Use sparse instead of bm25
             graph_local_results_count=2,
             graph_global_results_count=2,
             intent="factual",
             intent_confidence=0.95,
             intent_method="rule_based",
             intent_latency_ms=2.5,
-            weights={"vector": 0.3, "bm25": 0.3, "local": 0.4, "global": 0.0},
+            weights={"dense": 0.3, "sparse": 0.3, "local": 0.4, "global": 0.0},
             total_latency_ms=150.5,
-            channels_executed=["vector", "bm25", "graph_local"],
+            channels_executed=["multivector", "graph_local"],  # Sprint 88: multivector replaces vector+bm25
             namespaces_searched=["default"],  # Sprint 41: Namespace isolation
         )
 
-        assert metadata.vector_results_count == 3
+        assert metadata.dense_results_count == 3
+        assert metadata.sparse_results_count == 2
         assert metadata.intent == "factual"
         assert metadata.total_latency_ms == 150.5
 
     def test_metadata_channels_executed(self):
-        """Test channels_executed field."""
+        """Test channels_executed field - Sprint 92: Updated to use multivector."""
         metadata = FourWaySearchMetadata(
-            vector_results_count=5,
-            bm25_results_count=0,
+            dense_results_count=5,  # Sprint 92
+            sparse_results_count=0,  # Sprint 92
             graph_local_results_count=3,
             graph_global_results_count=0,
             intent="keyword",
             intent_confidence=0.8,
             intent_method="llm",
             intent_latency_ms=5.0,
-            weights={"vector": 0.1, "bm25": 0.6, "local": 0.3, "global": 0.0},
+            weights={"dense": 0.1, "sparse": 0.6, "local": 0.3, "global": 0.0},
             total_latency_ms=200.0,
-            channels_executed=["vector", "graph_local"],
+            channels_executed=["multivector", "graph_local"],  # Sprint 88
             namespaces_searched=["default"],  # Sprint 41: Namespace isolation
         )
 
         assert len(metadata.channels_executed) == 2
-        assert "vector" in metadata.channels_executed
+        assert "multivector" in metadata.channels_executed  # Sprint 88: multivector replaces vector
         assert "bm25" not in metadata.channels_executed
 
 
@@ -351,12 +352,12 @@ class TestSearchAllChannelsWorking:
             result = await four_way_search_engine.search("How does X work?", top_k=5)
 
         # EXPLORATORY intent has all weights > 0, so all channels execute
+        # Sprint 88/92: multivector replaces separate vector+bm25 channels
         metadata = result["metadata"]
-        assert "vector" in metadata.channels_executed
-        assert "bm25" in metadata.channels_executed
+        assert "multivector" in metadata.channels_executed  # Sprint 88: vector+bm25 → multivector
         assert "graph_local" in metadata.channels_executed
         assert "graph_global" in metadata.channels_executed
-        assert len(metadata.channels_executed) == 4
+        assert len(metadata.channels_executed) == 3  # Sprint 88: 4→3 (multivector, graph_local, graph_global)
 
     @pytest.mark.asyncio
     async def test_search_respects_top_k(
@@ -471,9 +472,10 @@ class TestGracefulDegradation:
             result = await four_way_search_engine.search("Find X", top_k=5)
 
         # Should still return results from other channels
+        # Sprint 92: Use dense/sparse counts instead of vector/bm25
         assert "results" in result
-        assert result["metadata"].vector_results_count == 0
-        assert result["metadata"].bm25_results_count > 0
+        assert result["metadata"].dense_results_count == 0
+        assert result["metadata"].sparse_results_count == 0  # Sprint 92: multivector fails completely (no separate sparse)
 
     @pytest.mark.skip(reason="Mock structure needs refactoring for Sprint 56 domains/ migration")
     @pytest.mark.asyncio
@@ -518,12 +520,14 @@ class TestGracefulDegradation:
         sample_vector_results,
         sample_bm25_results,
     ):
-        """Test search when both graph channels fail."""
-        four_way_search_engine.hybrid_search.vector_search.return_value = sample_vector_results
-        four_way_search_engine.hybrid_search.keyword_search.return_value = sample_bm25_results
+        """Test search when both graph channels fail - Sprint 88/92: Updated for multivector."""
+        # Sprint 88: Mock multivector_search instead of separate vector/keyword
+        four_way_search_engine.multi_vector_search.hybrid_search = AsyncMock(
+            return_value=sample_vector_results
+        )
         four_way_search_engine.neo4j_client.execute_read.side_effect = [
-            Exception("Neo4j error"),
-            Exception("Neo4j error"),
+            Exception("Neo4j error - graph_local"),
+            Exception("Neo4j error - graph_global"),
         ]
 
         with patch(
@@ -539,8 +543,9 @@ class TestGracefulDegradation:
 
             result = await four_way_search_engine.search("How does X work?", top_k=5)
 
-        # Should still have results from vector/BM25
+        # Should still have results from multivector (Sprint 88: vector+bm25 → multivector)
         assert len(result["results"]) > 0
+        # Graph channels should have failed
         assert result["metadata"].graph_local_results_count == 0
         assert result["metadata"].graph_global_results_count == 0
 
