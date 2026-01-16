@@ -38,7 +38,7 @@ Following Sprint 107's successful MCP Auto-Discovery implementation (26 SP, 100%
 | Group 13 | ❌ Critical | 2 | 6 | 0 | **Critical** | 108.2 |
 | Group 14 | ❌ Critical | 4 | 10 | 0 | **Critical** | 108.3 |
 | Group 15 | ❌ Critical | 4 | 10 | 0 | **Critical** | 108.4 |
-| Group 16 | ❌ Critical | 0 | 6 | 0 | **Critical** | 108.0A, 108.0B |
+| Group 16 | ⚠️ Improving | 1 | 5 | 0 | **Critical** | 108.0B (Fixed: 108.0A, 108.0C) |
 
 **Total:** 120 passed, 49 failed, 31 skipped (200 tests total)
 **Test Duration:** 18.9 minutes
@@ -419,6 +419,58 @@ Call log: waiting for getByPlaceholder('Enter your username') to be visible
 
 ---
 
+#### BUG 108.0C: Critical React App Crash - TypeScript Interface Exports
+**Priority:** 🔥 **CRITICAL - App Breaking**
+**Story Points:** 3 SP
+**Status:** ✅ **FIXED** (Commit: 62ac7d3)
+**Test Group:** ALL GROUPS (App-wide failure)
+
+**Problem:**
+Entire React app failed to render (blank white screen) due to TypeScript interface being imported at runtime.
+
+**Root Cause:**
+- `MCPServerDefinition` interface exported from `MCPServerBrowser.tsx`
+- TypeScript interfaces are compile-time only, get stripped during transpilation to JavaScript
+- Browser tried to import interface at runtime → module not found error
+- React app crashed before mounting, causing blank page for ALL tests
+
+**Error:**
+```
+PAGE ERROR: The requested module '/src/components/admin/MCPServerBrowser.tsx'
+does not provide an export named 'MCPServerDefinition'
+```
+
+**Impact:**
+- **ALL E2E tests** failing with auth timeouts (no login page visible)
+- Group 16: 0/6 tests passing
+- Groups 1-15: Intermittent failures due to blank page
+- Body text only 15 characters (HTML skeleton only)
+
+**Fix Applied:**
+1. Created `frontend/src/types/mcp.ts` for shared type definitions
+2. Updated all imports to use `import type { MCPServerDefinition }`
+3. Separated runtime exports (components) from compile-time exports (types)
+
+**Files Changed:**
+- `frontend/src/types/mcp.ts` (new file)
+- `frontend/src/components/admin/MCPServerBrowser.tsx`
+- `frontend/src/components/admin/MCPServerInstaller.tsx`
+- `frontend/src/pages/admin/MCPMarketplace.tsx`
+
+**Result:**
+- ✅ React app now renders correctly
+- ✅ Auth flow working (login page visible)
+- ✅ Group 16: 1/6 tests now passing (Test 16.5)
+- ✅ All other groups unblocked
+- Remaining Group 16 failures are test data issues (mock API returns 2 servers instead of 5)
+
+**Lessons Learned:**
+- Never export TypeScript interfaces/types from modules that also export runtime values
+- Use dedicated type files (`types/*.ts`) for shared type definitions
+- Use `import type` syntax for type-only imports
+
+---
+
 #### BUG 108.1: Group 07 Memory Management - 12 Test Failures
 **Priority:** Critical
 **Story Points:** 8 SP
@@ -692,9 +744,9 @@ PLAYWRIGHT_BASE_URL=http://192.168.178.10 npx playwright test e2e/group*.spec.ts
 - Group 15 (Explainability): 4 passed, 10 failed, 0 skipped ❌ Critical
 - Group 16 (MCP Marketplace): 0 passed, 6 failed, 0 skipped ❌ Critical (Sprint 107)
 
-**Bugs Identified:** 9 issues (BUG 108.0A - 108.0B, 108.1 - 108.8)
-**Bugs Fixed:** 1 issue (BUG 108.0A - Route registration)
-**Estimated Total SP:** 37 SP for all bug fixes
+**Bugs Identified:** 10 issues (BUG 108.0A - 108.0C, 108.1 - 108.8)
+**Bugs Fixed:** 2 issues (BUG 108.0A - Route registration, BUG 108.0C - React crash)
+**Estimated Total SP:** 40 SP for all bug fixes (4 SP already delivered)
 
 ---
 
