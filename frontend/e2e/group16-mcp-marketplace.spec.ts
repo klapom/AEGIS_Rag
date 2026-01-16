@@ -91,13 +91,15 @@ async function setupApiMocks(page: Page) {
 
 test.describe('Group 16: MCP Marketplace', () => {
   test.beforeEach(async ({ page }) => {
-    // Setup API mocks FIRST (before navigation)
+    // Auth FIRST (Group 03 pattern)
+    await setupAuthMocking(page);
+
+    // Then setup API mocks
     await setupApiMocks(page);
   });
 
   test('16.1: should display marketplace page with server browser', async ({ page }) => {
-    // Navigate and perform real login
-    await setupAuthMocking(page);
+    // Navigate directly to page (auth already done in beforeEach)
 
     await page.goto('/admin/mcp-marketplace');
     await page.waitForLoadState('networkidle');
