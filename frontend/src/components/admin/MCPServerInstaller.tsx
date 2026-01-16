@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { X, AlertCircle, CheckCircle, Loader, Package } from 'lucide-react';
-import { MCPServerDefinition } from './MCPServerBrowser';
+import type { MCPServerDefinition } from '../../types/mcp';
 
 interface MCPServerInstallerProps {
   server: MCPServerDefinition | null;

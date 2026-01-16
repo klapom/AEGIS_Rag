@@ -5,27 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Search, Star, Download, ExternalLink, Package } from 'lucide-react';
-
-export interface MCPServerDefinition {
-  id: string;
-  name: string;
-  description: string;
-  transport: string;
-  command?: string;
-  args?: string[];
-  url?: string;
-  dependencies?: {
-    npm?: string[];
-    pip?: string[];
-    env?: string[];
-  };
-  repository?: string;
-  homepage?: string;
-  version: string;
-  stars: number;
-  downloads: number;
-  tags: string[];
-}
+import type { MCPServerDefinition } from '../../types/mcp';
 
 interface MCPServerBrowserProps {
   registry?: string;

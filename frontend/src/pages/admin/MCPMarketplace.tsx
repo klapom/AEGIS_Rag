@@ -5,11 +5,9 @@
 
 import React, { useState } from 'react';
 import { Store, RefreshCw } from 'lucide-react';
-import {
-  MCPServerBrowser,
-  MCPServerDefinition,
-} from '../../components/admin/MCPServerBrowser';
+import { MCPServerBrowser } from '../../components/admin/MCPServerBrowser';
 import { MCPServerInstaller } from '../../components/admin/MCPServerInstaller';
+import type { MCPServerDefinition } from '../../types/mcp';
 
 export const MCPMarketplace: React.FC = () => {
   const [selectedServer, setSelectedServer] = useState<MCPServerDefinition | null>(null);
