@@ -113,7 +113,7 @@ test.describe('Admin LLM Configuration - Page 36.3', () => {
 
   test('should persist configuration on page reload', async ({ adminLLMConfigPage, page }) => {
     // Set a specific configuration
-    const targetModel = 'ollama/llama3.2:8b';
+    const targetModel = 'ollama/qwen3:8b';
     await adminLLMConfigPage.selectModel('entity_extraction', targetModel);
 
     // Save
@@ -172,9 +172,9 @@ test.describe('Admin LLM Configuration - Page 36.3', () => {
 
   test('should allow multiple model selections', async ({ adminLLMConfigPage }) => {
     // Change multiple use cases
-    await adminLLMConfigPage.selectModel('intent_classification', 'ollama/llama3.2:8b');
+    await adminLLMConfigPage.selectModel('intent_classification', 'ollama/qwen3:8b');
     await adminLLMConfigPage.selectModel('entity_extraction', 'ollama/qwen3:32b');
-    await adminLLMConfigPage.selectModel('answer_generation', 'ollama/llama3.2:8b');
+    await adminLLMConfigPage.selectModel('answer_generation', 'ollama/qwen3:8b');
 
     // Save
     await adminLLMConfigPage.saveConfig();
@@ -188,20 +188,20 @@ test.describe('Admin LLM Configuration - Page 36.3', () => {
     const entityConfig = config.find((c: any) => c.useCase === 'entity_extraction');
     const answerConfig = config.find((c: any) => c.useCase === 'answer_generation');
 
-    expect(intentConfig.modelId).toBe('ollama/llama3.2:8b');
+    expect(intentConfig.modelId).toBe('ollama/qwen3:8b');
     expect(entityConfig.modelId).toBe('ollama/qwen3:32b');
-    expect(answerConfig.modelId).toBe('ollama/llama3.2:8b');
+    expect(answerConfig.modelId).toBe('ollama/qwen3:8b');
   });
 
   test('should maintain form state during user interaction', async ({
     adminLLMConfigPage,
   }) => {
     // Select a model
-    await adminLLMConfigPage.selectModel('followup_titles', 'ollama/llama3.2:8b');
+    await adminLLMConfigPage.selectModel('followup_titles', 'ollama/qwen3:8b');
 
     // Verify selection is maintained
     const selectedModel = await adminLLMConfigPage.getSelectedModel('followup_titles');
-    expect(selectedModel).toBe('ollama/llama3.2:8b');
+    expect(selectedModel).toBe('ollama/qwen3:8b');
 
     // Change to another model
     const availableModels = await adminLLMConfigPage.getAvailableModels('followup_titles');
@@ -232,9 +232,9 @@ test.describe('Admin LLM Configuration - Page 36.3', () => {
 
   test('should handle rapid model changes', async ({ adminLLMConfigPage }) => {
     // Rapidly change multiple models
-    await adminLLMConfigPage.selectModel('intent_classification', 'ollama/llama3.2:8b');
+    await adminLLMConfigPage.selectModel('intent_classification', 'ollama/qwen3:8b');
     await adminLLMConfigPage.selectModel('entity_extraction', 'ollama/qwen3:32b');
-    await adminLLMConfigPage.selectModel('answer_generation', 'ollama/llama3.2:8b');
+    await adminLLMConfigPage.selectModel('answer_generation', 'ollama/qwen3:8b');
     await adminLLMConfigPage.selectModel('followup_titles', 'ollama/qwen3:32b');
 
     // Save once at the end
@@ -244,7 +244,7 @@ test.describe('Admin LLM Configuration - Page 36.3', () => {
     // Verify all changes were saved correctly
     const config = await adminLLMConfigPage.getStoredConfig();
     expect(config.find((c: any) => c.useCase === 'intent_classification').modelId).toBe(
-      'ollama/llama3.2:8b'
+      'ollama/qwen3:8b'
     );
     expect(config.find((c: any) => c.useCase === 'entity_extraction').modelId).toBe(
       'ollama/qwen3:32b'
@@ -255,7 +255,7 @@ test.describe('Admin LLM Configuration - Page 36.3', () => {
     adminLLMConfigPage,
   }) => {
     // Try to select non-default model
-    await adminLLMConfigPage.selectModel('intent_classification', 'ollama/llama3.2:8b');
+    await adminLLMConfigPage.selectModel('intent_classification', 'ollama/qwen3:8b');
     await adminLLMConfigPage.saveConfig();
     await adminLLMConfigPage.waitForSaveSuccess();
 
@@ -326,11 +326,11 @@ test.describe('Admin LLM Config - Dark Mode', () => {
     await adminLLMConfigPage.toggleDarkMode();
 
     // Try to select a model
-    await adminLLMConfigPage.selectModel('intent_classification', 'ollama/llama3.2:8b');
+    await adminLLMConfigPage.selectModel('intent_classification', 'ollama/qwen3:8b');
 
     // Verify selection worked
     const selected = await adminLLMConfigPage.getSelectedModel('intent_classification');
-    expect(selected).toBe('ollama/llama3.2:8b');
+    expect(selected).toBe('ollama/qwen3:8b');
 
     // Save should still work
     await adminLLMConfigPage.saveConfig();

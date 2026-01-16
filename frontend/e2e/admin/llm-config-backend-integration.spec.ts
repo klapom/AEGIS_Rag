@@ -27,11 +27,11 @@ test.describe('Admin LLM Config - Backend Integration (Sprint 64.6)', () => {
       headers: { 'Content-Type': 'application/json' },
       data: {
         use_cases: {
-          intent_classification: { model: 'qwen3:32b', enabled: true },
-          entity_extraction: { model: 'qwen3:32b', enabled: true },
-          answer_generation: { model: 'qwen3:32b', enabled: true },
-          followup_titles: { model: 'qwen3:32b', enabled: true },
-          query_decomposition: { model: 'qwen3:32b', enabled: true },
+          intent_classification: { model: 'nemotron-no-think:latest', enabled: true },
+          entity_extraction: { model: 'nemotron-no-think:latest', enabled: true },
+          answer_generation: { model: 'nemotron-no-think:latest', enabled: true },
+          followup_titles: { model: 'nemotron-no-think:latest', enabled: true },
+          query_decomposition: { model: 'nemotron-no-think:latest', enabled: true },
           vision_vlm: { model: 'qwen3-vl:32b', enabled: true },
         },
       },
@@ -42,9 +42,11 @@ test.describe('Admin LLM Config - Backend Integration (Sprint 64.6)', () => {
     // Clear backend config
     await clearBackendConfig(page);
 
-    // Clear ALL localStorage (including migration flag) to ensure clean state
+    // Clear LLM config localStorage but PRESERVE auth token
+    // Sprint 106 Fix: Don't clear aegis_auth_token or auth will fail
     await adminLLMConfigPage.page.evaluate(() => {
-      localStorage.clear();
+      localStorage.removeItem('aegis-rag-llm-config');
+      localStorage.removeItem('aegis-rag-llm-config-migrated');
     });
   });
 
@@ -61,7 +63,7 @@ test.describe('Admin LLM Config - Backend Integration (Sprint 64.6)', () => {
 
     // Verify default models are loaded from backend
     const intentModel = await adminLLMConfigPage.getSelectedModel('intent_classification');
-    expect(intentModel).toBe('ollama/qwen3:32b'); // Frontend format
+    expect(intentModel).toBe('ollama/nemotron-no-think:latest'); // Frontend format
 
     // Verify localStorage is NOT used for config (only migration flag)
     const storedConfig = await adminLLMConfigPage.page.evaluate(() =>
@@ -79,7 +81,7 @@ test.describe('Admin LLM Config - Backend Integration (Sprint 64.6)', () => {
     await adminLLMConfigPage.llmConfigPage.waitFor({ state: 'visible', timeout: 10000 });
 
     // Change a model
-    await adminLLMConfigPage.selectModel('entity_extraction', 'ollama/llama3.2:8b');
+    await adminLLMConfigPage.selectModel('entity_extraction', 'ollama/qwen3:8b');
 
     // Save
     await adminLLMConfigPage.saveConfig();
@@ -99,7 +101,7 @@ test.describe('Admin LLM Config - Backend Integration (Sprint 64.6)', () => {
     expect(response.ok()).toBe(true);
 
     const backendConfig = await response.json();
-    expect(backendConfig.use_cases.entity_extraction.model).toBe('llama3.2:8b'); // Backend format
+    expect(backendConfig.use_cases.entity_extraction.model).toBe('qwen3:8b'); // Backend format
   });
 
   test('should migrate localStorage config to backend on first load', async ({
@@ -112,11 +114,11 @@ test.describe('Admin LLM Config - Backend Integration (Sprint 64.6)', () => {
     // Step 1: Manually set OLD localStorage config (simulate pre-Sprint 64 state)
     await adminLLMConfigPage.page.evaluate(() => {
       const oldConfig = [
-        { useCase: 'intent_classification', modelId: 'ollama/llama3.2:8b', enabled: true },
-        { useCase: 'entity_extraction', modelId: 'ollama/llama3.2:8b', enabled: true },
-        { useCase: 'answer_generation', modelId: 'ollama/qwen3:32b', enabled: true },
-        { useCase: 'followup_titles', modelId: 'ollama/qwen3:32b', enabled: true },
-        { useCase: 'query_decomposition', modelId: 'ollama/qwen3:32b', enabled: true },
+        { useCase: 'intent_classification', modelId: 'ollama/qwen3:8b', enabled: true },
+        { useCase: 'entity_extraction', modelId: 'ollama/qwen3:8b', enabled: true },
+        { useCase: 'answer_generation', modelId: 'ollama/nemotron-no-think:latest', enabled: true },
+        { useCase: 'followup_titles', modelId: 'ollama/nemotron-no-think:latest', enabled: true },
+        { useCase: 'query_decomposition', modelId: 'ollama/nemotron-no-think:latest', enabled: true },
         { useCase: 'vision_vlm', modelId: 'ollama/qwen3-vl:32b', enabled: true },
       ];
       localStorage.setItem('aegis-rag-llm-config', JSON.stringify(oldConfig));
@@ -148,12 +150,12 @@ test.describe('Admin LLM Config - Backend Integration (Sprint 64.6)', () => {
     expect(response.ok()).toBe(true);
 
     const backendConfig = await response.json();
-    expect(backendConfig.use_cases.intent_classification.model).toBe('llama3.2:8b'); // Migrated value
-    expect(backendConfig.use_cases.entity_extraction.model).toBe('llama3.2:8b'); // Migrated value
+    expect(backendConfig.use_cases.intent_classification.model).toBe('qwen3:8b'); // Migrated value
+    expect(backendConfig.use_cases.entity_extraction.model).toBe('qwen3:8b'); // Migrated value
 
     // Step 6: Verify UI shows migrated config
     const intentModel = await adminLLMConfigPage.getSelectedModel('intent_classification');
-    expect(intentModel).toBe('ollama/llama3.2:8b'); // Frontend format
+    expect(intentModel).toBe('ollama/qwen3:8b'); // Frontend format
   });
 
   test('should persist config across reloads (from backend)', async ({
@@ -164,13 +166,15 @@ test.describe('Admin LLM Config - Backend Integration (Sprint 64.6)', () => {
     await page.goto('/admin/llm-config');
     await adminLLMConfigPage.llmConfigPage.waitFor({ state: 'visible', timeout: 10000 });
 
-    await adminLLMConfigPage.selectModel('answer_generation', 'ollama/llama3.2:8b');
+    await adminLLMConfigPage.selectModel('answer_generation', 'ollama/qwen3:8b');
     await adminLLMConfigPage.saveConfig();
     await adminLLMConfigPage.waitForSaveSuccess();
 
-    // Clear ALL localStorage to prove config comes from backend
+    // Clear LLM config from localStorage to prove config comes from backend
+    // Sprint 106 Fix: Preserve auth token or reload will redirect to login
     await adminLLMConfigPage.page.evaluate(() => {
-      localStorage.clear();
+      localStorage.removeItem('aegis-rag-llm-config');
+      localStorage.removeItem('aegis-rag-llm-config-migrated');
     });
 
     // Reload page
@@ -182,7 +186,7 @@ test.describe('Admin LLM Config - Backend Integration (Sprint 64.6)', () => {
 
     // Verify config persisted (from backend, NOT localStorage)
     const answerModel = await adminLLMConfigPage.getSelectedModel('answer_generation');
-    expect(answerModel).toBe('ollama/llama3.2:8b');
+    expect(answerModel).toBe('ollama/qwen3:8b');
 
     // Verify migration flag is reset after reload
     const migrationFlag = await adminLLMConfigPage.page.evaluate(() =>
@@ -200,9 +204,9 @@ test.describe('Admin LLM Config - Backend Integration (Sprint 64.6)', () => {
     await adminLLMConfigPage.llmConfigPage.waitFor({ state: 'visible', timeout: 10000 });
 
     // Change multiple models
-    await adminLLMConfigPage.selectModel('intent_classification', 'ollama/llama3.2:8b');
-    await adminLLMConfigPage.selectModel('entity_extraction', 'ollama/llama3.2:8b');
-    await adminLLMConfigPage.selectModel('answer_generation', 'ollama/llama3.2:8b');
+    await adminLLMConfigPage.selectModel('intent_classification', 'ollama/qwen3:8b');
+    await adminLLMConfigPage.selectModel('entity_extraction', 'ollama/qwen3:8b');
+    await adminLLMConfigPage.selectModel('answer_generation', 'ollama/qwen3:8b');
 
     // Save
     await adminLLMConfigPage.saveConfig();
@@ -229,7 +233,7 @@ test.describe('Admin LLM Config - Backend Integration (Sprint 64.6)', () => {
     await adminLLMConfigPage.llmConfigPage.waitFor({ state: 'visible', timeout: 10000 });
 
     // Change a model
-    await adminLLMConfigPage.selectModel('intent_classification', 'ollama/llama3.2:8b');
+    await adminLLMConfigPage.selectModel('intent_classification', 'ollama/qwen3:8b');
 
     // Intercept API request and simulate failure
     await page.route('**/api/v1/admin/llm/config', (route) => {
@@ -257,7 +261,7 @@ test.describe('Admin LLM Config - Backend Integration (Sprint 64.6)', () => {
     await adminLLMConfigPage.llmConfigPage.waitFor({ state: 'visible', timeout: 10000 });
 
     // Change model
-    await adminLLMConfigPage.selectModel('intent_classification', 'ollama/llama3.2:8b');
+    await adminLLMConfigPage.selectModel('intent_classification', 'ollama/qwen3:8b');
 
     // Click save twice rapidly
     await adminLLMConfigPage.saveConfig();
@@ -269,7 +273,7 @@ test.describe('Admin LLM Config - Backend Integration (Sprint 64.6)', () => {
     // Verify config was saved correctly
     const response = await page.request.get('http://localhost:8000/api/v1/admin/llm/config');
     const backendConfig = await response.json();
-    expect(backendConfig.use_cases.intent_classification.model).toBe('llama3.2:8b');
+    expect(backendConfig.use_cases.intent_classification.model).toBe('qwen3:8b');
   });
 
   test('should correctly transform model IDs between frontend and backend formats', async ({
@@ -281,14 +285,14 @@ test.describe('Admin LLM Config - Backend Integration (Sprint 64.6)', () => {
     await adminLLMConfigPage.llmConfigPage.waitFor({ state: 'visible', timeout: 10000 });
 
     // Test Ollama model transformation
-    await adminLLMConfigPage.selectModel('intent_classification', 'ollama/llama3.2:8b');
+    await adminLLMConfigPage.selectModel('intent_classification', 'ollama/qwen3:8b');
     await adminLLMConfigPage.saveConfig();
     await adminLLMConfigPage.waitForSaveSuccess();
 
     // Verify backend format (no "ollama/" prefix)
     let response = await page.request.get('http://localhost:8000/api/v1/admin/llm/config');
     let backendConfig = await response.json();
-    expect(backendConfig.use_cases.intent_classification.model).toBe('llama3.2:8b'); // No prefix
+    expect(backendConfig.use_cases.intent_classification.model).toBe('qwen3:8b'); // No prefix
 
     // Test Alibaba Cloud model transformation
     const alibabaModels = await adminLLMConfigPage.getAvailableModels('entity_extraction');
@@ -317,7 +321,7 @@ test.describe('Admin LLM Config - Backend Integration Verification', () => {
     await adminLLMConfigPage.llmConfigPage.waitFor({ state: 'visible', timeout: 10000 });
 
     // Configure a specific model for intent classification
-    await adminLLMConfigPage.selectModel('intent_classification', 'ollama/qwen3:32b');
+    await adminLLMConfigPage.selectModel('intent_classification', 'ollama/nemotron-no-think:latest');
     await adminLLMConfigPage.saveConfig();
     await adminLLMConfigPage.waitForSaveSuccess();
 
@@ -329,7 +333,7 @@ test.describe('Admin LLM Config - Backend Integration Verification', () => {
     expect(response.ok()).toBe(true);
 
     const config = await response.json();
-    expect(config.use_cases.intent_classification.model).toBe('qwen3:32b');
+    expect(config.use_cases.intent_classification.model).toBe('nemotron-no-think:latest');
     expect(config.use_cases.intent_classification.enabled).toBe(true);
   });
 
@@ -342,11 +346,11 @@ test.describe('Admin LLM Config - Backend Integration Verification', () => {
     await adminLLMConfigPage.llmConfigPage.waitFor({ state: 'visible', timeout: 10000 });
 
     // Configure all use cases
-    await adminLLMConfigPage.selectModel('intent_classification', 'ollama/qwen3:32b');
-    await adminLLMConfigPage.selectModel('entity_extraction', 'ollama/qwen3:32b');
-    await adminLLMConfigPage.selectModel('answer_generation', 'ollama/qwen3:32b');
-    await adminLLMConfigPage.selectModel('followup_titles', 'ollama/qwen3:32b');
-    await adminLLMConfigPage.selectModel('query_decomposition', 'ollama/qwen3:32b');
+    await adminLLMConfigPage.selectModel('intent_classification', 'ollama/nemotron-no-think:latest');
+    await adminLLMConfigPage.selectModel('entity_extraction', 'ollama/nemotron-no-think:latest');
+    await adminLLMConfigPage.selectModel('answer_generation', 'ollama/nemotron-no-think:latest');
+    await adminLLMConfigPage.selectModel('followup_titles', 'ollama/nemotron-no-think:latest');
+    await adminLLMConfigPage.selectModel('query_decomposition', 'ollama/nemotron-no-think:latest');
     await adminLLMConfigPage.selectModel('vision_vlm', 'ollama/qwen3-vl:32b');
 
     // Save

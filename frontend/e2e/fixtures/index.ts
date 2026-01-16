@@ -19,11 +19,20 @@ import { AdminDomainTrainingPage } from '../pom/AdminDomainTrainingPage';
  */
 
 /**
- * Mock auth data for test user
+ * Test credentials for real authentication
+ * Sprint 106: Use real login instead of mocking for more robust tests
+ */
+const TEST_CREDENTIALS = {
+  username: 'admin',
+  password: 'admin123',
+};
+
+/**
+ * Mock auth data (fallback for some tests)
  */
 const TEST_USER = {
-  username: 'testuser',
-  email: 'test@example.com',
+  username: 'admin',
+  email: 'admin@aegis.local',
   created_at: '2024-01-01T00:00:00Z',
 };
 
@@ -39,12 +48,13 @@ const TEST_TOKEN = {
  * This mocks the auth endpoints and sets up localStorage with auth token
  *
  * IMPORTANT: Token storage key is 'aegis_auth_token' (from src/lib/api.ts)
- * Token is stored as JSON with access_token, refresh_token, and expires_at fields
+ * Token format: { token: string, expiresAt: number }
  *
- * Sprint 66 Fix: Navigate to valid origin BEFORE setting localStorage to avoid SecurityError
+ * Sprint 66 Fix: Navigate to valid origin BEFORE setting localStorage
+ * Sprint 106 Note: Real login attempted but too slow for test timeouts
  */
 async function setupAuthMocking(page: Page): Promise<void> {
-  // Mock /auth/me endpoint for auth check
+  // Mock auth endpoints
   await page.route('**/api/v1/auth/me', (route) => {
     route.fulfill({
       status: 200,
@@ -53,7 +63,6 @@ async function setupAuthMocking(page: Page): Promise<void> {
     });
   });
 
-  // Mock /auth/refresh endpoint
   await page.route('**/api/v1/auth/refresh', (route) => {
     route.fulfill({
       status: 200,
@@ -62,18 +71,14 @@ async function setupAuthMocking(page: Page): Promise<void> {
     });
   });
 
-  // Sprint 66 Fix: Navigate to valid origin FIRST to avoid localStorage SecurityError
-  // Must navigate before accessing localStorage (can't access on about:blank)
   await page.goto('/');
 
-  // Set auth token in localStorage AFTER navigation
-  // Key: 'aegis_auth_token' (see src/lib/api.ts TOKEN_STORAGE_KEY)
-  // Format: JSON with access_token, refresh_token, expires_at
+  // Set auth token in localStorage
+  // Format must match TokenData: { token: string, expiresAt: number }
   await page.evaluate(() => {
     const tokenData = {
-      access_token: 'test-jwt-token-for-e2e-tests',
-      refresh_token: 'test-refresh-token-for-e2e-tests',
-      expires_at: new Date(Date.now() + 3600 * 1000).toISOString(), // 1 hour from now
+      token: 'test-jwt-token-for-e2e-tests',
+      expiresAt: Date.now() + 3600 * 1000, // 1 hour from now (as timestamp)
     };
     localStorage.setItem('aegis_auth_token', JSON.stringify(tokenData));
   });

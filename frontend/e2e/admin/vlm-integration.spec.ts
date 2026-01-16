@@ -285,7 +285,7 @@ test.describe('VLM Model Capabilities', () => {
     adminLLMConfigPage,
   }) => {
     // Set text model for entity extraction
-    await adminLLMConfigPage.selectModel('entity_extraction', 'ollama/llama3.2:8b');
+    await adminLLMConfigPage.selectModel('entity_extraction', 'ollama/qwen3:8b');
 
     // Set vision model for VLM
     await adminLLMConfigPage.selectModel('vision_vlm', 'ollama/qwen3-vl:32b');
@@ -298,7 +298,7 @@ test.describe('VLM Model Capabilities', () => {
     const entityModel = await adminLLMConfigPage.getSelectedModel('entity_extraction');
     const visionModel = await adminLLMConfigPage.getSelectedModel('vision_vlm');
 
-    expect(entityModel).toBe('ollama/llama3.2:8b');
+    expect(entityModel).toBe('ollama/qwen3:8b');
     expect(visionModel).toBe('ollama/qwen3-vl:32b');
   });
 });

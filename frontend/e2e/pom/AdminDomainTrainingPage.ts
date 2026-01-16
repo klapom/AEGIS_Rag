@@ -100,7 +100,8 @@ export class AdminDomainTrainingPage extends BasePage {
     this.domainTrainingPage = page.locator('[data-testid="domain-training-page"]');
     this.pageTitle = page.getByRole('heading', { name: /Domain Training/i });
     this.newDomainButton = page.locator('[data-testid="new-domain-button"]');
-    this.domainList = page.locator('[data-testid="domain-list"]');
+    // Sprint 106 Fix: Domain list can be empty or populated - handle both testids
+    this.domainList = page.locator('[data-testid^="domain-list"]');
     this.domainRow = (domainName: string) =>
       page.locator(`[data-testid="domain-row-${domainName}"]`);
 

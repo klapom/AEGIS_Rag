@@ -31,12 +31,12 @@ export default defineConfig({
     ['junit', { outputFile: 'test-results/junit.xml' }],
   ],
 
-  /* Shared timeout for all tests (30s for LLM responses) */
-  timeout: 30 * 1000,
+  /* Shared timeout for all tests (Sprint 106: 10s for real auth + fast-fail) */
+  timeout: 10 * 1000,
 
-  /* Shared expectation timeout */
+  /* Shared expectation timeout (Sprint 106: reduced from 10s to 3s) */
   expect: {
-    timeout: 10 * 1000,
+    timeout: 3 * 1000,
   },
 
   use: {

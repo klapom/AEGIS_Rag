@@ -36,7 +36,7 @@ test.describe('Sprint 46 - Feature 46.5: Domain Auto Discovery', () => {
     await expect(component).toBeVisible({ timeout: 10000 });
 
     // Verify drop zone is visible
-    const dropZone = page.locator('[data-testid="drop-zone"]');
+    const dropZone = page.locator('[data-testid="domain-discovery-upload-area"]');
     await expect(dropZone).toBeVisible({ timeout: 10000 });
 
     // Verify it has drag-drop instructions
@@ -47,14 +47,14 @@ test.describe('Sprint 46 - Feature 46.5: Domain Auto Discovery', () => {
     await expect(dropZone).toBeTruthy();
 
     // Verify upload input exists
-    const fileInput = page.locator('[data-testid="file-input"]');
+    const fileInput = page.locator('[data-testid="domain-discovery-file-input"]');
     await expect(fileInput).toHaveAttribute('type', 'file');
   });
 
   test('TC-46.5.2: should accept TXT, MD, DOCX, HTML file types', async ({ page }) => {
     await page.goto('/admin/domain-discovery');
 
-    const fileInput = page.locator('[data-testid="file-input"]');
+    const fileInput = page.locator('[data-testid="domain-discovery-file-input"]');
 
     // Verify accept attribute includes supported formats
     const acceptAttr = await fileInput.getAttribute('accept');
@@ -98,7 +98,7 @@ test.describe('Sprint 46 - Feature 46.5: Domain Auto Discovery', () => {
     });
 
     // Try to upload unsupported file
-    const fileInput = page.locator('[data-testid="file-input"]');
+    const fileInput = page.locator('[data-testid="domain-discovery-file-input"]');
 
     await fileInput.setInputFiles({
       name: 'image.png',

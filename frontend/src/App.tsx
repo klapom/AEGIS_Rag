@@ -47,6 +47,8 @@ import { AgentCommunicationPage } from './pages/admin/AgentCommunicationPage';
 import { AgentHierarchyPage } from './pages/admin/AgentHierarchyPage';
 import { GDPRConsentPage } from './pages/admin/GDPRConsent';
 import { AuditTrailPage } from './pages/admin/AuditTrail';
+import { BrowserToolsPage } from './pages/admin/BrowserToolsPage';
+import { DomainDiscoveryPage } from './pages/admin/DomainDiscoveryPage';
 
 function App() {
   // Sprint 46: Sidebar state moved to individual pages (HomePage, etc.)
@@ -76,6 +78,7 @@ function App() {
                       <Route path="/admin/costs" element={<CostDashboardPage />} />
                       <Route path="/admin/llm-config" element={<AdminLLMConfigPage />} />
                       <Route path="/admin/domain-training" element={<DomainTrainingPage />} />
+                      <Route path="/admin/domain-discovery" element={<DomainDiscoveryPage />} />
                       <Route path="/admin/upload" element={<UploadPage />} />
                       <Route path="/admin/jobs" element={<IngestionJobsPage />} />
                       <Route path="/admin/tools" element={<MCPToolsPage />} />
@@ -92,6 +95,7 @@ function App() {
                       <Route path="/admin/agent-hierarchy" element={<AgentHierarchyPage />} />
                       <Route path="/admin/gdpr" element={<GDPRConsentPage />} />
                       <Route path="/admin/audit" element={<AuditTrailPage />} />
+                      <Route path="/admin/browser-tools" element={<BrowserToolsPage />} />
                       <Route path="/dashboard/costs" element={<CostDashboardPage />} />
                       <Route path="/settings" element={<Settings />} />
                     </Routes>
