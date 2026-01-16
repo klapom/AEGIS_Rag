@@ -5,7 +5,7 @@
  * Test Group 16: MCP Server Marketplace (6 tests)
  */
 
-import { test, expect, Page } from '@playwright/test';
+import { test, expect, Page, setupAuthMocking } from './fixtures';
 
 // Test data
 const mockServers = {
@@ -91,18 +91,16 @@ async function setupApiMocks(page: Page) {
 
 test.describe('Group 16: MCP Marketplace', () => {
   test.beforeEach(async ({ page }) => {
-    // Setup authentication
-    await page.goto('/');
-    await page.evaluate(() => {
-      localStorage.setItem('token', 'mock-jwt-token');
-    });
-
-    // Setup API mocks
+    // Setup API mocks FIRST (before navigation)
     await setupApiMocks(page);
   });
 
   test('16.1: should display marketplace page with server browser', async ({ page }) => {
+    // Navigate and perform real login
+    await setupAuthMocking(page);
+
     await page.goto('/admin/mcp-marketplace');
+    await page.waitForLoadState('networkidle');
 
     // Check page title and subtitle
     await expect(page.getByTestId('page-title')).toHaveText('MCP Server Marketplace');

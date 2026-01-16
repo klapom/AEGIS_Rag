@@ -49,6 +49,7 @@ import { GDPRConsentPage } from './pages/admin/GDPRConsent';
 import { AuditTrailPage } from './pages/admin/AuditTrail';
 import { BrowserToolsPage } from './pages/admin/BrowserToolsPage';
 import { DomainDiscoveryPage } from './pages/admin/DomainDiscoveryPage';
+import { MCPMarketplace } from './pages/admin/MCPMarketplace';
 
 function App() {
   // Sprint 46: Sidebar state moved to individual pages (HomePage, etc.)
@@ -96,6 +97,7 @@ function App() {
                       <Route path="/admin/gdpr" element={<GDPRConsentPage />} />
                       <Route path="/admin/audit" element={<AuditTrailPage />} />
                       <Route path="/admin/browser-tools" element={<BrowserToolsPage />} />
+                      <Route path="/admin/mcp-marketplace" element={<MCPMarketplace />} />
                       <Route path="/dashboard/costs" element={<CostDashboardPage />} />
                       <Route path="/settings" element={<Settings />} />
                     </Routes>
