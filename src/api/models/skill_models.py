@@ -611,3 +611,66 @@ class ConfigValidationResponse(BaseModel):
     valid: bool = Field(..., description="Whether config is valid")
     errors: List[str] = Field(default_factory=list, description="Validation errors")
     warnings: List[str] = Field(default_factory=list, description="Validation warnings")
+
+
+class SkillExecuteRequest(BaseModel):
+    """Request model for executing a skill.
+
+    Sprint 105 Feature 105.7: Skills Execute Endpoint
+
+    POST /api/v1/skills/:name/execute
+
+    Attributes:
+        parameters: Execution parameters (skill-specific)
+        timeout: Optional execution timeout in seconds
+        context: Optional execution context
+
+    Example:
+        >>> request = SkillExecuteRequest(
+        ...     parameters={"query": "What is RAG?", "max_tokens": 100},
+        ...     timeout=30,
+        ...     context={"user_id": "test-user", "session_id": "abc123"}
+        ... )
+    """
+
+    parameters: Dict[str, Any] = Field(
+        default_factory=dict, description="Skill execution parameters"
+    )
+    timeout: Optional[int] = Field(30, ge=1, le=300, description="Execution timeout (1-300s)")
+    context: Optional[Dict[str, Any]] = Field(
+        default_factory=dict, description="Optional execution context"
+    )
+
+
+class SkillExecuteResponse(BaseModel):
+    """Response model for skill execution.
+
+    Sprint 105 Feature 105.7: Skills Execute Endpoint
+
+    POST /api/v1/skills/:name/execute
+
+    Attributes:
+        skill_name: Executed skill name
+        status: Execution status ("success" | "error" | "timeout")
+        result: Execution result (skill-specific)
+        error: Error message if execution failed
+        executed_at: Execution timestamp
+        execution_time: Execution duration in seconds
+
+    Example:
+        >>> response = SkillExecuteResponse(
+        ...     skill_name="retrieval",
+        ...     status="success",
+        ...     result={"answer": "RAG is...", "sources": [...]},
+        ...     error=None,
+        ...     executed_at=datetime.now(),
+        ...     execution_time=1.234
+        ... )
+    """
+
+    skill_name: str
+    status: str = Field(..., description="Execution status (success/error/timeout)")
+    result: Optional[Any] = Field(None, description="Execution result")
+    error: Optional[str] = Field(None, description="Error message if failed")
+    executed_at: datetime
+    execution_time: float = Field(..., description="Execution duration in seconds")

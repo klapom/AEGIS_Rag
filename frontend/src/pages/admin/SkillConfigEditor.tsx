@@ -244,7 +244,10 @@ export function SkillConfigEditor() {
                   <div className="space-y-3">
                     {/* Valid Status */}
                     {validation.valid && (
-                      <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
+                      <div
+                        className="flex items-center gap-2 text-green-700 dark:text-green-400"
+                        data-testid="validation-status"
+                      >
                         <CheckCircle className="w-5 h-5" />
                         <span className="font-medium">YAML syntax valid</span>
                       </div>
@@ -252,7 +255,7 @@ export function SkillConfigEditor() {
 
                     {/* Errors */}
                     {validation.errors.length > 0 && (
-                      <div className="space-y-2">
+                      <div className="space-y-2" data-testid="validation-errors">
                         <h4 className="font-medium text-red-700 dark:text-red-400">
                           Errors ({validation.errors.length})
                         </h4>

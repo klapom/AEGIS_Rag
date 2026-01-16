@@ -163,7 +163,7 @@ function ExitCodeBadge({ exitCode }: { exitCode?: number }) {
   return (
     <span
       className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${bgColor} ${textColor}`}
-      data-testid="exit-code-badge"
+      data-testid={isSuccess ? "tool-status-success" : "tool-status-error"}
     >
       {icon}
       Exit: {exitCode}
@@ -192,11 +192,16 @@ export function ToolExecutionDisplay({ step }: ToolExecutionDisplayProps) {
     }
   }, [inputCode]);
 
+  // Determine execution status based on output
+  const executionStatus = step.output.exit_code === 0 ? 'completed' :
+                         step.output.error ? 'error' : 'completed';
+
   return (
     <div
       className="bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden"
-      data-testid="tool-execution-display"
+      data-testid={`tool-execution-${step.tool_name}`}
       data-tool={step.tool_name}
+      data-status={executionStatus}
     >
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-2 bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">

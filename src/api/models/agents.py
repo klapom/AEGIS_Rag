@@ -462,3 +462,61 @@ class AgentDetails(BaseModel):
     skills: list[str] = Field(default_factory=list, description="Available skills")
     active_tasks: list[ActiveTask] = Field(default_factory=list, description="Currently active tasks")
     performance: AgentPerformance | None = Field(None, description="Performance metrics")
+
+
+# =============================================================================
+# Agent Stats Models (Sprint 105)
+# =============================================================================
+
+
+class AgentRoleStats(BaseModel):
+    """Statistics for a single agent role/level.
+
+    Example:
+        ```json
+        {
+          "level": "MANAGER",
+          "total": 3,
+          "active": 2,
+          "idle": 1,
+          "busy": 0
+        }
+        ```
+    """
+
+    level: str = Field(..., description="Agent level/role (EXECUTIVE, MANAGER, WORKER)")
+    total: int = Field(..., description="Total agents at this level")
+    active: int = Field(0, description="Agents in active status")
+    idle: int = Field(0, description="Agents in idle status")
+    busy: int = Field(0, description="Agents in busy status")
+
+
+class AgentStats(BaseModel):
+    """Agent hierarchy statistics.
+
+    Sprint 105 Feature 105.8: Agent Stats Endpoint
+    Endpoint: GET /api/v1/agents/stats
+
+    Example:
+        ```json
+        {
+          "total_agents": 7,
+          "by_role": [
+            {"level": "EXECUTIVE", "total": 1, "active": 1, "idle": 0, "busy": 0},
+            {"level": "MANAGER", "total": 2, "active": 1, "idle": 1, "busy": 0},
+            {"level": "WORKER", "total": 4, "active": 2, "idle": 1, "busy": 1}
+          ],
+          "active_count": 4,
+          "idle_count": 2,
+          "busy_count": 1,
+          "timestamp": "2026-01-16T12:00:00Z"
+        }
+        ```
+    """
+
+    total_agents: int = Field(..., description="Total number of agents")
+    by_role: list[AgentRoleStats] = Field(..., description="Statistics by agent role/level")
+    active_count: int = Field(0, description="Total agents in active status")
+    idle_count: int = Field(0, description="Total agents in idle status")
+    busy_count: int = Field(0, description="Total agents in busy status")
+    timestamp: datetime = Field(..., description="Statistics generation timestamp")

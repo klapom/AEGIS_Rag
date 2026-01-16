@@ -2,13 +2,15 @@
 
 Sprint 99 Feature 99.4: Audit Trail APIs (8 SP)
 Implements EU AI Act Article 12 compliance with SHA-256 cryptographic chain.
+
+Sprint 100 Fix #4: ISO 8601 datetime serialization with Z suffix.
 """
 
 from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_serializer
 
 
 class AuditEventTypeEnum(str, Enum):
@@ -80,6 +82,11 @@ class AuditEvent(BaseModel):
     previous_hash: Optional[str] = None
     event_hash: str = Field(..., description="SHA-256 hash of event")
 
+    @field_serializer("timestamp")
+    def serialize_timestamp(self, value: datetime, _info) -> str:
+        """Serialize datetime to ISO 8601 with Z suffix (Sprint 100 Fix #4)."""
+        return value.isoformat() + "Z" if not value.isoformat().endswith("Z") else value.isoformat()
+
 
 class AuditEventListResponse(BaseModel):
     """Paginated list of audit events."""
@@ -101,6 +108,11 @@ class AuditReportSummary(BaseModel):
     total_events: int
     integrity_verified: bool
     integrity_errors: List[str] = Field(default_factory=list)
+
+    @field_serializer("start_time", "end_time", "generated_at")
+    def serialize_datetime(self, value: datetime, _info) -> str:
+        """Serialize datetime to ISO 8601 with Z suffix (Sprint 100 Fix #4)."""
+        return value.isoformat() + "Z" if not value.isoformat().endswith("Z") else value.isoformat()
 
 
 class GDPRComplianceReportData(BaseModel):
@@ -132,6 +144,11 @@ class AuditReportResponse(BaseModel):
     # Type-specific data
     data: Dict[str, Any] = Field(default_factory=dict)
 
+    @field_serializer("generated_at")
+    def serialize_datetime(self, value: datetime, _info) -> str:
+        """Serialize datetime to ISO 8601 with Z suffix (Sprint 100 Fix #4)."""
+        return value.isoformat() + "Z" if not value.isoformat().endswith("Z") else value.isoformat()
+
 
 class IntegrityCheckResponse(BaseModel):
     """Audit trail integrity verification response."""
@@ -147,3 +164,8 @@ class IntegrityCheckResponse(BaseModel):
     verification_duration_ms: float = Field(
         ..., description="Time taken to verify chain"
     )
+
+    @field_serializer("last_verified_at")
+    def serialize_datetime(self, value: datetime, _info) -> str:
+        """Serialize datetime to ISO 8601 with Z suffix (Sprint 100 Fix #4)."""
+        return value.isoformat() + "Z" if not value.isoformat().endswith("Z") else value.isoformat()

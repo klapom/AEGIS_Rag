@@ -124,6 +124,7 @@ def get_request_id(request: Request) -> str:
 
 
 async def get_current_user(
+    request: Request,
     credentials: HTTPAuthorizationCredentials | None = Depends(security),
 ) -> User:
     """
@@ -133,7 +134,12 @@ async def get_current_user(
     and returns the authenticated user. User information is automatically
     bound to the structlog context for request correlation.
 
+    Sprint 105 Feature 105.5: Test Auth Bypass
+    For localhost/test environments, authentication is bypassed to enable
+    E2E testing without JWT token management.
+
     Args:
+        request: FastAPI request object (auto-injected)
         credentials: HTTP Bearer token from Authorization header (auto-injected)
 
     Returns:
@@ -165,6 +171,7 @@ async def get_current_user(
         - Token signature is validated using JWT_SECRET_KEY
         - Expired tokens are rejected with 401 Unauthorized
         - User info is bound to structlog context for correlation
+        - Localhost requests bypass authentication (test environments only)
 
     Performance:
         - Overhead: <5ms per request (JWT decode + validation)
@@ -175,6 +182,40 @@ async def get_current_user(
         - get_optional_user: Optional authentication
         - src/core/auth.py: Token creation and validation
     """
+    # Sprint 105 Feature 105.5: Test Auth Bypass
+    # Bypass authentication for localhost/test environments
+    client_host = request.client.host if request.client else None
+
+    # List of allowed localhost IPs (IPv4, IPv6, Docker bridge network)
+    localhost_ips = ["127.0.0.1", "localhost", "::1", "172.26.0.10", "172.26.0.1"]
+
+    if client_host in localhost_ips:
+        # Return test user for localhost requests (E2E testing)
+        test_user = User(
+            user_id="test-user-id",
+            username="test-user",
+            role="admin",  # Admin role to allow testing all endpoints
+            email="test@localhost",
+        )
+
+        # Bind test user to structlog context
+        structlog.contextvars.bind_contextvars(
+            user_id=test_user.user_id,
+            username=test_user.username,
+            role=test_user.role,
+            auth_bypassed=True,
+        )
+
+        logger.debug(
+            "auth_bypassed",
+            client_host=client_host,
+            user_id=test_user.user_id,
+            reason="Localhost/test environment",
+        )
+
+        return test_user
+
+    # Normal JWT authentication for non-localhost requests
     if credentials is None:
         logger.warning("auth_missing", reason="No Authorization header")
         raise HTTPException(

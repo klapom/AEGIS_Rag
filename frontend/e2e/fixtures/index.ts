@@ -44,44 +44,38 @@ const TEST_TOKEN = {
 };
 
 /**
- * Setup authentication mocking for a page
- * This mocks the auth endpoints and sets up localStorage with auth token
+ * Setup authentication for a page using real UI login
  *
- * IMPORTANT: Token storage key is 'aegis_auth_token' (from src/lib/api.ts)
- * Token format: { token: string, expiresAt: number }
- *
- * Sprint 66 Fix: Navigate to valid origin BEFORE setting localStorage
- * Sprint 106 Note: Real login attempted but too slow for test timeouts
+ * Sprint 106 Fix: Perform actual login via UI form instead of localStorage manipulation
+ * This ensures the auth state is properly managed by the React app
  */
 async function setupAuthMocking(page: Page): Promise<void> {
-  // Mock auth endpoints
-  await page.route('**/api/v1/auth/me', (route) => {
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify(TEST_USER),
-    });
-  });
-
-  await page.route('**/api/v1/auth/refresh', (route) => {
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify(TEST_TOKEN),
-    });
-  });
-
+  // Navigate to login page
   await page.goto('/');
+  await page.waitForLoadState('networkidle');
 
-  // Set auth token in localStorage
-  // Format must match TokenData: { token: string, expiresAt: number }
-  await page.evaluate(() => {
-    const tokenData = {
-      token: 'test-jwt-token-for-e2e-tests',
-      expiresAt: Date.now() + 3600 * 1000, // 1 hour from now (as timestamp)
-    };
-    localStorage.setItem('aegis_auth_token', JSON.stringify(tokenData));
-  });
+  // Wait for login form to be visible (React might need time to render)
+  const usernameInput = page.getByPlaceholder('Enter your username');
+  const passwordInput = page.getByPlaceholder('Enter your password');
+  const signInButton = page.getByRole('button', { name: 'Sign In' });
+
+  await usernameInput.waitFor({ state: 'visible', timeout: 5000 });
+  await passwordInput.waitFor({ state: 'visible', timeout: 5000 });
+
+  // Fill login form
+  await usernameInput.fill(TEST_CREDENTIALS.username);
+  await passwordInput.fill(TEST_CREDENTIALS.password);
+
+  // Wait for button to be enabled (form validates on input)
+  await signInButton.waitFor({ state: 'visible', timeout: 5000 });
+  await expect(signInButton).toBeEnabled({ timeout: 5000 });
+
+  // Click Sign In button
+  await signInButton.click();
+
+  // Wait for navigation away from login page (auth success)
+  await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 10000 });
+  await page.waitForLoadState('networkidle');
 }
 
 type Fixtures = {
@@ -232,5 +226,33 @@ export const test = base.extend<Fixtures>({
   },
 });
 
-// Export setupAuthMocking for use in individual test files
-export { expect, setupAuthMocking };
+/**
+ * Navigate to a protected route with proper auth handling
+ *
+ * Sprint 106 Discovery: When navigating directly to a protected route,
+ * the app saves the target URL and redirects back after login.
+ * No need for complex navigation - just login and the app handles the redirect.
+ */
+async function navigateClientSide(page: Page, path: string): Promise<void> {
+  // Navigate directly to target - will redirect to login with returnUrl
+  await page.goto(path);
+  await page.waitForLoadState('networkidle');
+
+  // If redirected to login, perform login
+  if (page.url().includes('/login')) {
+    await page.getByPlaceholder('Enter your username').fill('admin');
+    await page.getByPlaceholder('Enter your password').fill('admin123');
+    await page.getByRole('button', { name: 'Sign In' }).click();
+
+    // Wait for redirect back to the target page (app remembers the intended destination)
+    await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 10000 });
+    await page.waitForLoadState('networkidle');
+  }
+
+  // Give React a moment to fully render the page
+  await page.waitForTimeout(500);
+}
+
+// Export expect, setupAuthMocking and navigateClientSide for use in individual test files
+// Note: 'test' is already exported above via 'export const test = base.extend<Fixtures>({...})'
+export { expect, setupAuthMocking, navigateClientSide };

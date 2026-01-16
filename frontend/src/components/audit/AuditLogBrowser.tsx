@@ -44,7 +44,7 @@ export function AuditLogBrowser({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" data-testid="audit-events-list">
       {/* Header with Search and Filters */}
       <div className="space-y-3">
         {/* Search Bar */}
@@ -56,6 +56,7 @@ export function AuditLogBrowser({
             value={filters.searchQuery || ''}
             onChange={(e) => handleFilterChange({ searchQuery: e.target.value })}
             className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
+            data-testid="audit-search-input"
           />
         </div>
 
@@ -87,6 +88,7 @@ export function AuditLogBrowser({
                     })
                   }
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
+                  data-testid="audit-filter-action"
                 >
                   <option value="">All</option>
                   <option value="AUTH_SUCCESS">Auth Success</option>
@@ -253,7 +255,10 @@ function EventCard({ event, onViewDetails }: EventCardProps) {
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-2">
+    <div
+      className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-2"
+      data-testid={`audit-event-${event.id}`}
+    >
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-start gap-3">
@@ -266,11 +271,11 @@ function EventCard({ event, onViewDetails }: EventCardProps) {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+              <span className="text-sm font-medium text-gray-900 dark:text-gray-100" data-testid={`event-timestamp-${event.id}`}>
                 {new Date(event.timestamp).toLocaleString()}
               </span>
               <span className="text-xs text-gray-600 dark:text-gray-400">|</span>
-              <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+              <span className="text-sm font-semibold text-gray-900 dark:text-gray-100" data-testid={`event-action-${event.id}`}>
                 {formatEventType(event.eventType)}
               </span>
             </div>
@@ -282,7 +287,7 @@ function EventCard({ event, onViewDetails }: EventCardProps) {
 
       {/* Details */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs text-gray-600 dark:text-gray-400">
-        <div>
+        <div data-testid={`event-user-${event.id}`}>
           <span className="font-medium">Actor:</span> {event.actorName || event.actorId}
         </div>
         <div>
@@ -310,6 +315,7 @@ function EventCard({ event, onViewDetails }: EventCardProps) {
         <button
           onClick={() => onViewDetails(event)}
           className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+          data-testid={`event-details-${event.id}`}
         >
           View Details
         </button>

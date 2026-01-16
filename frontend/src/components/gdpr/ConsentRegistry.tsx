@@ -53,7 +53,7 @@ export function ConsentRegistry({
   const expiringConsents = activeConsents.filter(isConsentExpiringSoon);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" data-testid="gdpr-consents-list">
       {/* Header with Summary */}
       <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
         <div className="flex items-center justify-between">
@@ -154,21 +154,26 @@ function ConsentCard({ consent, onRevoke, onEdit, onView, onRenew }: ConsentCard
     : null;
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-3">
+    <div
+      className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-3"
+      data-testid={`consent-row-${consent.id}`}
+    >
       {/* Header: Status Icon + User ID + Purpose */}
       <div className="flex items-start justify-between">
         <div className="flex items-start gap-3">
           <StatusIcon status={consent.status} />
           <div>
             <h4 className="font-semibold text-gray-900 dark:text-gray-100">
-              {consent.userId} - {consent.purpose}
+              {consent.userId} - <span data-testid={`consent-purpose-${consent.id}`}>{consent.purpose}</span>
             </h4>
             <p className="text-sm text-gray-600 dark:text-gray-400">
               Legal Basis: {getLegalBasisText(consent.legalBasis)}
             </p>
           </div>
         </div>
-        <StatusBadge status={consent.status} isExpiring={isExpiring} />
+        <span data-testid={`consent-status-${consent.id}`}>
+          <StatusBadge status={consent.status} isExpiring={isExpiring} />
+        </span>
       </div>
 
       {/* Data Categories */}
@@ -231,6 +236,7 @@ function ConsentCard({ consent, onRevoke, onEdit, onView, onRenew }: ConsentCard
           <button
             onClick={() => onRevoke(consent.id)}
             className="px-3 py-1.5 text-sm font-medium bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+            data-testid={`consent-revoke-${consent.id}`}
           >
             Revoke
           </button>

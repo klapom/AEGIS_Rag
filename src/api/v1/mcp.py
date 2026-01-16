@@ -573,6 +573,88 @@ async def execute_tool(
         ) from e
 
 
+@router.get("/servers/{server_name}/health")
+async def check_server_health(
+    server_name: str,
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Health check for a specific MCP server.
+
+    Args:
+        server_name: Name of the server to check
+
+    Returns:
+        Health status with latency measurement
+
+    Raises:
+        HTTPException: 404 if server not found
+
+    Example:
+        ```bash
+        curl -H "Authorization: Bearer $TOKEN" \\
+             "http://localhost:8000/api/v1/mcp/servers/bash-tools/health"
+        ```
+    """
+    manager = get_connection_manager()
+
+    # Check if server exists
+    if server_name not in manager.client.servers:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Server not found: {server_name}",
+        )
+
+    # Get connection status
+    connection = manager.client.connections.get(server_name)
+    if not connection:
+        return {
+            "status": "unhealthy",
+            "latency_ms": None,
+            "error": "Not connected",
+        }
+
+    # Check if connected
+    if connection.status != ServerStatus.CONNECTED:
+        return {
+            "status": "unhealthy",
+            "latency_ms": None,
+            "error": f"Status: {connection.status.value}",
+        }
+
+    # Measure latency by listing tools
+    import time
+
+    start = time.time()
+    try:
+        tools = manager.get_tools_by_server(server_name)
+        latency_ms = int((time.time() - start) * 1000)
+
+        logger.info(
+            "mcp_server_health_checked",
+            user_id=current_user.user_id,
+            server_name=server_name,
+            latency_ms=latency_ms,
+        )
+
+        return {
+            "status": "healthy",
+            "latency_ms": latency_ms,
+        }
+
+    except Exception as e:
+        logger.error(
+            "mcp_server_health_check_failed",
+            user_id=current_user.user_id,
+            server_name=server_name,
+            error=str(e),
+        )
+        return {
+            "status": "unhealthy",
+            "latency_ms": None,
+            "error": str(e),
+        }
+
+
 @router.get("/health")
 async def mcp_health_check(
     current_user: User = Depends(get_current_user),

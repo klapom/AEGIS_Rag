@@ -2,13 +2,15 @@
 
 Sprint 99 Feature 99.3: GDPR & Compliance APIs (12 SP)
 Implements GDPR Article 6,7,13-22,30 compliance for EU legal requirements.
+
+Sprint 100 Fix #4: ISO 8601 datetime serialization with Z suffix.
 """
 
 from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, field_serializer
 
 
 class LegalBasisEnum(str, Enum):
@@ -141,6 +143,13 @@ class ConsentRecord(BaseModel):
     status: ConsentStatusEnum
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
+    @field_serializer("granted_at", "expires_at", "withdrawn_at")
+    def serialize_datetime(self, value: Optional[datetime], _info) -> Optional[str]:
+        """Serialize datetime to ISO 8601 with Z suffix (Sprint 100 Fix #4)."""
+        if value is None:
+            return None
+        return value.isoformat() + "Z" if not value.isoformat().endswith("Z") else value.isoformat()
+
 
 class ConsentListResponse(BaseModel):
     """Paginated list of consent records."""
@@ -164,6 +173,11 @@ class DataSubjectRequestResponse(BaseModel):
     updated_at: datetime
     response_data: Optional[Dict[str, Any]] = None
 
+    @field_serializer("created_at", "updated_at")
+    def serialize_datetime(self, value: datetime, _info) -> str:
+        """Serialize datetime to ISO 8601 with Z suffix (Sprint 100 Fix #4)."""
+        return value.isoformat() + "Z" if not value.isoformat().endswith("Z") else value.isoformat()
+
 
 class ProcessingActivity(BaseModel):
     """Processing activity record (Article 30)."""
@@ -179,6 +193,11 @@ class ProcessingActivity(BaseModel):
     security_measures: List[str]
     processed_at: datetime
     metadata: Dict[str, Any] = Field(default_factory=dict)
+
+    @field_serializer("processed_at")
+    def serialize_datetime(self, value: datetime, _info) -> str:
+        """Serialize datetime to ISO 8601 with Z suffix (Sprint 100 Fix #4)."""
+        return value.isoformat() + "Z" if not value.isoformat().endswith("Z") else value.isoformat()
 
 
 class ProcessingActivityResponse(BaseModel):

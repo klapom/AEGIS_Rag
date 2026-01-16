@@ -87,7 +87,7 @@ export function SkillRegistry() {
   const hasPrevPage = page > 1;
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div data-testid="skills-page" className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
       <header className="bg-white dark:bg-gray-800 border-b-2 border-gray-200 dark:border-gray-700 px-6 py-4">
         <div className="max-w-7xl mx-auto">
@@ -127,6 +127,7 @@ export function SkillRegistry() {
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
+                data-testid="skill-search-input"
                 type="text"
                 placeholder="Search skills by name or description..."
                 value={searchQuery}
@@ -139,6 +140,7 @@ export function SkillRegistry() {
             <div className="flex items-center gap-2">
               <Filter className="w-4 h-4 text-gray-500" />
               <select
+                data-testid="skill-filter-status"
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as 'all' | 'active' | 'inactive')}
                 className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -194,6 +196,7 @@ export function SkillRegistry() {
               </p>
               <div className="flex items-center gap-2">
                 <button
+                  data-testid="skills-prev-page"
                   onClick={() => setPage(page - 1)}
                   disabled={!hasPrevPage}
                   className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
@@ -204,6 +207,7 @@ export function SkillRegistry() {
                   Page {page} of {totalPages}
                 </span>
                 <button
+                  data-testid="skills-next-page"
                   onClick={() => setPage(page + 1)}
                   disabled={!hasNextPage}
                   className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
@@ -242,7 +246,10 @@ interface SkillCardProps {
 
 function SkillCard({ skill, onToggle }: SkillCardProps) {
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg border-2 border-gray-200 dark:border-gray-700 p-6 hover:shadow-lg transition-shadow">
+    <div
+      data-testid={`skill-card-${skill.name}`}
+      className="bg-white dark:bg-gray-800 rounded-lg border-2 border-gray-200 dark:border-gray-700 p-6 hover:shadow-lg transition-shadow"
+    >
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <span className="text-3xl" role="img" aria-label="skill icon">
@@ -268,6 +275,7 @@ function SkillCard({ skill, onToggle }: SkillCardProps) {
       {/* Actions */}
       <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
         <button
+          data-testid={`skill-toggle-${skill.name}`}
           onClick={() => onToggle(skill.name, skill.is_active)}
           className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
             skill.is_active
@@ -275,12 +283,15 @@ function SkillCard({ skill, onToggle }: SkillCardProps) {
               : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400'
           }`}
         >
-          {skill.is_active ? '🟢 Active' : '⚪ Inactive'}
+          <span data-testid={`skill-status-${skill.name}`}>
+            {skill.is_active ? '🟢 Active' : '⚪ Inactive'}
+          </span>
         </button>
 
         <div className="flex gap-2">
           <Link
             to={`/admin/skills/${skill.name}/config`}
+            data-testid={`skill-config-link-${skill.name}`}
             className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm font-medium"
           >
             Config

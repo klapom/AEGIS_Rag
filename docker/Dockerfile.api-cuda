@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 # Dockerfile.api-cuda - API with CUDA Support for BGE-M3 Embeddings
 # ============================================================================
 # Sprint 65 Feature 65.2: CUDA-enabled API container
@@ -60,10 +61,17 @@ RUN pip uninstall -y apex || true
 
 # Sprint 83/84: Install SpaCy language models for hybrid extraction (Rank 3 fallback)
 # Models: de (German), en (English), fr (French), es (Spanish)
-RUN pip install https://github.com/explosion/spacy-models/releases/download/de_core_news_lg-3.8.0/de_core_news_lg-3.8.0-py3-none-any.whl && \
-    pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.8.0/en_core_web_lg-3.8.0-py3-none-any.whl && \
-    pip install https://github.com/explosion/spacy-models/releases/download/fr_core_news_lg-3.8.0/fr_core_news_lg-3.8.0-py3-none-any.whl && \
-    pip install https://github.com/explosion/spacy-models/releases/download/es_core_news_lg-3.8.0/es_core_news_lg-3.8.0-py3-none-any.whl
+# Sprint 105: Use BuildKit cache mount to persist pip downloads across builds (~2.3GB saved)
+# Cache survives rebuilds even when source code changes
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --root-user-action=ignore \
+    https://github.com/explosion/spacy-models/releases/download/de_core_news_lg-3.8.0/de_core_news_lg-3.8.0-py3-none-any.whl && \
+    pip install --root-user-action=ignore \
+    https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.8.0/en_core_web_lg-3.8.0-py3-none-any.whl && \
+    pip install --root-user-action=ignore \
+    https://github.com/explosion/spacy-models/releases/download/fr_core_news_lg-3.8.0/fr_core_news_lg-3.8.0-py3-none-any.whl && \
+    pip install --root-user-action=ignore \
+    https://github.com/explosion/spacy-models/releases/download/es_core_news_lg-3.8.0/es_core_news_lg-3.8.0-py3-none-any.whl
 
 # Create non-root user for security BEFORE copying files
 # NGC container may already have UID 1000, so use 1001 instead

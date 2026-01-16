@@ -89,7 +89,7 @@ export function IntegrityVerification({ onVerify }: IntegrityVerificationProps) 
                 </div>
               </div>
 
-              {result.brokenChains.length > 0 && (
+              {result.brokenChains && result.brokenChains.length > 0 && (
                 <div className="mt-3 space-y-2">
                   <h5 className="font-medium text-red-900 dark:text-red-100 flex items-center gap-2">
                     <AlertCircle className="w-4 h-4" />

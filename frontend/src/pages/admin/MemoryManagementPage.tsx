@@ -116,7 +116,11 @@ export function MemoryManagementPage() {
               Debug and manage the 3-layer memory system (Redis, Qdrant, Graphiti)
             </p>
           </div>
-          <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1" role="tablist">
+          <div
+            className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1"
+            role="tablist"
+            data-testid="memory-tabs-container"
+          >
             {tabs.map((tab) => (
               <TabButton
                 key={tab.id}
@@ -130,7 +134,7 @@ export function MemoryManagementPage() {
       </div>
 
       {/* Tab Content */}
-      <div className="p-6">
+      <div className="p-6" data-testid="tab-content-wrapper">
         <div className="max-w-7xl mx-auto">
           {/* Tab Description */}
           <div className="mb-6">
@@ -145,7 +149,10 @@ export function MemoryManagementPage() {
               <MemoryStatsCard />
 
               {/* Additional Info Section */}
-              <div className="mt-6 bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-800 rounded-xl p-6">
+              <div
+                className="mt-6 bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-800 rounded-xl p-6"
+                data-testid="memory-layers-info"
+              >
                 <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">About the Memory Layers</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                   <div>
@@ -180,7 +187,10 @@ export function MemoryManagementPage() {
               <MemorySearchPanel />
 
               {/* Search Tips */}
-              <div className="mt-6 bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-xl p-6">
+              <div
+                className="mt-6 bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-xl p-6"
+                data-testid="memory-search-tips"
+              >
                 <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">Search Tips</h3>
                 <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
                   <li className="flex items-start gap-2">
@@ -214,7 +224,10 @@ export function MemoryManagementPage() {
               <ConsolidationControl sessionId={sessionId} />
 
               {/* Consolidation Info */}
-              <div className="mt-6 bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-xl p-6">
+              <div
+                className="mt-6 bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-xl p-6"
+                data-testid="consolidation-info"
+              >
                 <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">What is Memory Consolidation?</h3>
                 <div className="space-y-3 text-sm text-gray-600 dark:text-gray-400">
                   <p>

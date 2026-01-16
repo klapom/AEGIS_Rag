@@ -1,6 +1,7 @@
 /**
  * MemoryStatsCard Component
  * Sprint 72 Feature 72.3: Memory Management UI
+ * Sprint 106 Fix: Aligned with actual backend API response structure
  *
  * Displays memory statistics for all 3 layers (Redis, Qdrant, Graphiti)
  * with real-time metrics and visual indicators.
@@ -8,7 +9,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { Database, HardDrive, Network, RefreshCw } from 'lucide-react';
+import { Database, HardDrive, Network, RefreshCw, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
 import type { MemoryStats } from '../../types/admin';
 import { getMemoryStats } from '../../api/admin';
 
@@ -23,40 +24,20 @@ interface MemoryStatsCardProps {
 }
 
 /**
- * Progress bar component for displaying metrics
+ * Status badge component
  */
-function ProgressBar({
-  value,
-  max,
-  label,
-  color = 'blue',
-}: {
-  value: number;
-  max: number;
-  label: string;
-  color?: 'blue' | 'green' | 'purple' | 'orange';
-}) {
-  const percentage = max > 0 ? Math.min((value / max) * 100, 100) : 0;
-  const colorClasses = {
-    blue: 'bg-blue-500',
-    green: 'bg-green-500',
-    purple: 'bg-purple-500',
-    orange: 'bg-orange-500',
-  };
+function StatusBadge({ connected, label }: { connected: boolean; label: string }) {
+  const icon = connected ? <CheckCircle className="w-3 h-3" /> : <XCircle className="w-3 h-3" />;
+  const bgColor = connected ? 'bg-green-100 dark:bg-green-900/30' : 'bg-red-100 dark:bg-red-900/30';
+  const textColor = connected ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400';
 
   return (
-    <div className="space-y-1">
-      <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400">
-        <span>{label}</span>
-        <span>{value.toLocaleString()}</span>
-      </div>
-      <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-        <div
-          className={`h-full ${colorClasses[color]} rounded-full transition-all duration-500`}
-          style={{ width: `${percentage}%` }}
-        />
-      </div>
-    </div>
+    <span
+      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${bgColor} ${textColor}`}
+    >
+      {icon}
+      {label}
+    </span>
   );
 }
 
@@ -66,19 +47,16 @@ function ProgressBar({
 function MetricDisplay({
   label,
   value,
-  unit,
   subtext,
 }: {
   label: string;
   value: string | number;
-  unit?: string;
   subtext?: string;
 }) {
   return (
     <div className="text-center">
       <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
         {typeof value === 'number' ? value.toLocaleString() : value}
-        {unit && <span className="text-sm font-normal text-gray-500 ml-1">{unit}</span>}
       </div>
       <div className="text-xs text-gray-500 dark:text-gray-400">{label}</div>
       {subtext && <div className="text-xs text-gray-400 dark:text-gray-500">{subtext}</div>}
@@ -146,7 +124,7 @@ export function MemoryStatsCard({ onStatsLoaded, disableAutoRefresh = false }: M
     return (
       <div className="bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800 rounded-xl p-6">
         <div className="flex items-center gap-3">
-          <div className="text-red-500 text-2xl">!</div>
+          <div className="text-red-500 text-2xl">⚠️</div>
           <div>
             <h3 className="font-semibold text-red-700 dark:text-red-400">Failed to Load Memory Stats</h3>
             <p className="text-sm text-red-600 dark:text-red-300">{error.message}</p>
@@ -165,6 +143,9 @@ export function MemoryStatsCard({ onStatsLoaded, disableAutoRefresh = false }: M
   if (!stats) {
     return null;
   }
+
+  // Extract Redis key count from keyspace_info
+  const redisKeys = stats.short_term.keyspace_info?.db0?.keys || 0;
 
   return (
     <div className="space-y-4" data-testid="memory-stats-card">
@@ -191,7 +172,7 @@ export function MemoryStatsCard({ onStatsLoaded, disableAutoRefresh = false }: M
 
       {/* Stats Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Redis Stats */}
+        {/* Redis (Short-term) Stats */}
         <div
           className="bg-white dark:bg-gray-800 rounded-xl border-2 border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition-shadow"
           data-testid="redis-stats"
@@ -201,38 +182,33 @@ export function MemoryStatsCard({ onStatsLoaded, disableAutoRefresh = false }: M
               <Database className="w-5 h-5 text-red-600 dark:text-red-400" />
             </div>
             <div>
-              <h4 className="font-semibold text-gray-900 dark:text-gray-100">Redis</h4>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Session Cache</p>
+              <h4 className="font-semibold text-gray-900 dark:text-gray-100">Redis (Layer 1)</h4>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Short-term session cache</p>
             </div>
           </div>
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <MetricDisplay label="Keys" value={stats.redis.keys} />
-              <MetricDisplay label="Memory" value={stats.redis.memory_mb.toFixed(1)} unit="MB" />
-            </div>
-            <ProgressBar
-              value={stats.redis.hit_rate * 100}
-              max={100}
-              label="Cache Hit Rate"
-              color="green"
+            <StatusBadge
+              connected={stats.short_term.connected}
+              label={stats.short_term.connected ? 'Connected' : 'Disconnected'}
             />
-            <div className="text-center">
-              <span
-                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  stats.redis.hit_rate >= 0.8
-                    ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                    : stats.redis.hit_rate >= 0.5
-                    ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
-                    : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-                }`}
-              >
-                {(stats.redis.hit_rate * 100).toFixed(1)}% Hit Rate
-              </span>
+            <div className="grid grid-cols-1 gap-4">
+              <MetricDisplay label="Keys Stored" value={redisKeys} />
+              {stats.short_term.default_ttl_seconds && (
+                <MetricDisplay
+                  label="Default TTL"
+                  value={`${Math.floor(stats.short_term.default_ttl_seconds / 60)} min`}
+                />
+              )}
             </div>
+            {stats.short_term.connection_url && (
+              <div className="text-xs text-gray-400 dark:text-gray-500 font-mono truncate">
+                {stats.short_term.connection_url}
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Qdrant Stats */}
+        {/* Qdrant (Long-term) Stats */}
         <div
           className="bg-white dark:bg-gray-800 rounded-xl border-2 border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition-shadow"
           data-testid="qdrant-stats"
@@ -242,42 +218,24 @@ export function MemoryStatsCard({ onStatsLoaded, disableAutoRefresh = false }: M
               <HardDrive className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
-              <h4 className="font-semibold text-gray-900 dark:text-gray-100">Qdrant</h4>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Vector Store</p>
+              <h4 className="font-semibold text-gray-900 dark:text-gray-100">Qdrant (Layer 2)</h4>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Vector store for semantic search</p>
             </div>
           </div>
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <MetricDisplay label="Documents" value={stats.qdrant.documents} />
-              <MetricDisplay label="Size" value={stats.qdrant.size_mb.toFixed(1)} unit="MB" />
-            </div>
-            <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 text-center">
-              <div className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                {stats.qdrant.avg_search_latency_ms.toFixed(1)} ms
+            <StatusBadge
+              connected={stats.long_term.available}
+              label={stats.long_term.available ? 'Available' : 'Unavailable'}
+            />
+            {stats.long_term.note && (
+              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 text-center">
+                <p className="text-xs text-blue-600 dark:text-blue-400">{stats.long_term.note}</p>
               </div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">Avg Search Latency</div>
-            </div>
-            <div className="text-center">
-              <span
-                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  stats.qdrant.avg_search_latency_ms <= 50
-                    ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                    : stats.qdrant.avg_search_latency_ms <= 200
-                    ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
-                    : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-                }`}
-              >
-                {stats.qdrant.avg_search_latency_ms <= 50
-                  ? 'Excellent'
-                  : stats.qdrant.avg_search_latency_ms <= 200
-                  ? 'Good'
-                  : 'Slow'}
-              </span>
-            </div>
+            )}
           </div>
         </div>
 
-        {/* Graphiti Stats */}
+        {/* Graphiti (Episodic) Stats */}
         <div
           className="bg-white dark:bg-gray-800 rounded-xl border-2 border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition-shadow"
           data-testid="graphiti-stats"
@@ -287,41 +245,51 @@ export function MemoryStatsCard({ onStatsLoaded, disableAutoRefresh = false }: M
               <Network className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             </div>
             <div>
-              <h4 className="font-semibold text-gray-900 dark:text-gray-100">Graphiti</h4>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Temporal Memory</p>
+              <h4 className="font-semibold text-gray-900 dark:text-gray-100">Graphiti (Layer 3)</h4>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Temporal memory graph</p>
             </div>
           </div>
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <MetricDisplay label="Episodes" value={stats.graphiti.episodes} />
-              <MetricDisplay label="Entities" value={stats.graphiti.entities} />
-            </div>
-            <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 text-center">
-              <div className="text-lg font-bold text-purple-600 dark:text-purple-400">
-                {stats.graphiti.avg_search_latency_ms.toFixed(1)} ms
+            <StatusBadge
+              connected={stats.episodic.enabled && stats.episodic.available}
+              label={stats.episodic.enabled ? 'Enabled' : 'Disabled'}
+            />
+            {stats.episodic.error && (
+              <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-3">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-yellow-700 dark:text-yellow-300">{stats.episodic.error}</p>
+                </div>
               </div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">Avg Search Latency</div>
-            </div>
-            <div className="text-center">
-              <span
-                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  stats.graphiti.avg_search_latency_ms <= 100
-                    ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                    : stats.graphiti.avg_search_latency_ms <= 300
-                    ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
-                    : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-                }`}
-              >
-                {stats.graphiti.avg_search_latency_ms <= 100
-                  ? 'Excellent'
-                  : stats.graphiti.avg_search_latency_ms <= 300
-                  ? 'Good'
-                  : 'Slow'}
-              </span>
-            </div>
+            )}
           </div>
         </div>
       </div>
+
+      {/* Consolidation Status */}
+      {stats.consolidation && (
+        <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <RefreshCw className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+              <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Memory Consolidation</span>
+            </div>
+            <div className="flex items-center gap-4 text-xs text-gray-600 dark:text-gray-400">
+              <span>
+                Status: <span className={stats.consolidation.enabled ? 'text-green-600' : 'text-gray-500'}>
+                  {stats.consolidation.enabled ? 'Enabled' : 'Disabled'}
+                </span>
+              </span>
+              {stats.consolidation.interval_minutes && (
+                <span>Interval: {stats.consolidation.interval_minutes} min</span>
+              )}
+              {stats.consolidation.min_access_count && (
+                <span>Min access: {stats.consolidation.min_access_count}</span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

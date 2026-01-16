@@ -301,7 +301,7 @@ export function DomainAutoDiscovery({
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onClick={handleDropZoneClick}
-        data-testid="drop-zone"
+        data-testid="domain-discovery-upload-area"
         role="button"
         tabIndex={0}
         onKeyDown={(e) => {
@@ -318,7 +318,7 @@ export function DomainAutoDiscovery({
           multiple
           onChange={handleFileInputChange}
           className="hidden"
-          data-testid="file-input"
+          data-testid="domain-discovery-file-input"
           aria-label="Datei auswählen"
         />
         <div className="flex flex-col items-center text-center">
@@ -342,7 +342,7 @@ export function DomainAutoDiscovery({
       {uploadError && (
         <div
           className="flex items-center gap-2 p-4 bg-red-50 border border-red-200 rounded-lg"
-          data-testid="upload-error"
+          data-testid="domain-discovery-error"
           role="alert"
         >
           <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" aria-hidden="true" />
@@ -352,7 +352,7 @@ export function DomainAutoDiscovery({
 
       {/* Uploaded Files List */}
       {uploadedFiles.length > 0 && (
-        <div className="space-y-2" data-testid="uploaded-files">
+        <div className="space-y-2" data-testid="domain-discovery-file-list">
           <h3 className="text-sm font-medium text-gray-700">Hochgeladen:</h3>
           <div className="space-y-2">
             {uploadedFiles.map((file) => (
@@ -390,13 +390,13 @@ export function DomainAutoDiscovery({
           onClick={handleAnalyzeDocuments}
           disabled={isAnalyzing}
           className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-          data-testid="analyze-button"
+          data-testid="domain-discovery-analyze-button"
         >
           {isAnalyzing ? (
-            <>
+            <span data-testid="domain-discovery-loading">
               <Loader2 className="w-5 h-5 animate-spin" aria-hidden="true" />
               Analysiere Dokumente... (5-15 Sekunden)
-            </>
+            </span>
           ) : (
             <>
               <Search className="w-5 h-5" aria-hidden="true" />
@@ -410,7 +410,7 @@ export function DomainAutoDiscovery({
       {analysisError && (
         <div
           className="flex items-center gap-2 p-4 bg-red-50 border border-red-200 rounded-lg"
-          data-testid="analysis-error"
+          data-testid="domain-discovery-error"
           role="alert"
         >
           <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" aria-hidden="true" />
@@ -422,7 +422,7 @@ export function DomainAutoDiscovery({
       {suggestion && (
         <div
           className="space-y-4 p-4 bg-gray-50 border border-gray-200 rounded-lg"
-          data-testid="suggestion-panel"
+          data-testid="domain-discovery-suggestion"
         >
           <h3 className="text-lg font-semibold text-gray-900">Vorgeschlagene Domain:</h3>
 
@@ -453,7 +453,7 @@ export function DomainAutoDiscovery({
             ) : (
               <p
                 className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-900"
-                data-testid="suggested-title"
+                data-testid="domain-discovery-suggestion-title"
               >
                 {suggestion.title}
               </p>
@@ -485,7 +485,7 @@ export function DomainAutoDiscovery({
             ) : (
               <p
                 className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-900 whitespace-pre-wrap"
-                data-testid="suggested-description"
+                data-testid="domain-discovery-suggestion-description"
               >
                 {suggestion.description}
               </p>
@@ -541,7 +541,7 @@ export function DomainAutoDiscovery({
             <button
               onClick={handleAcceptSuggestion}
               className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-              data-testid="accept-button"
+              data-testid="domain-discovery-accept-button"
             >
               <Check className="w-4 h-4" aria-hidden="true" />
               Akzeptieren & Domain erstellen

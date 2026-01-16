@@ -7,11 +7,13 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Shield } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Shield, ArrowLeft } from 'lucide-react';
 import { AuditLogBrowser } from '../../components/audit/AuditLogBrowser';
 import { ComplianceReports } from '../../components/audit/ComplianceReports';
 import { IntegrityVerification } from '../../components/audit/IntegrityVerification';
 import { AuditExport } from '../../components/audit/AuditExport';
+import { EventDetailsModal } from '../../components/audit/EventDetailsModal';
 import type {
   AuditEvent,
   AuditEventFilters,
@@ -28,6 +30,7 @@ export function AuditTrailPage() {
   const [filters, setFilters] = useState<AuditEventFilters>({ page: 1, pageSize: 50 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<AuditEvent | null>(null);
 
   // Fetch events on mount and filter change
   useEffect(() => {
@@ -189,15 +192,21 @@ export function AuditTrailPage() {
   };
 
   const handleViewEventDetails = (event: AuditEvent) => {
-    // Show event details in modal (implementation depends on your modal system)
-    alert(`Event Details:\n\n${JSON.stringify(event, null, 2)}`);
+    setSelectedEvent(event);
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900" data-testid="audit-trail-page">
       <div className="max-w-7xl mx-auto py-8 px-6 space-y-6">
         {/* Header */}
         <header className="space-y-2">
+          <Link
+            to="/admin"
+            className="inline-flex items-center gap-1 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 mb-3"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Admin
+          </Link>
           <div className="flex items-center gap-3">
             <Shield className="w-8 h-8 text-blue-600 dark:text-blue-400" />
             <div>
@@ -235,6 +244,7 @@ export function AuditTrailPage() {
                     ? 'border-blue-600 text-blue-600 dark:text-blue-400'
                     : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
                 }`}
+                data-testid={`tab-${tab.id}`}
               >
                 {tab.label}
                 {tab.count !== undefined && (
@@ -276,6 +286,9 @@ export function AuditTrailPage() {
             </>
           )}
         </div>
+
+        {/* Event Details Modal */}
+        <EventDetailsModal event={selectedEvent} onClose={() => setSelectedEvent(null)} />
       </div>
     </div>
   );

@@ -632,7 +632,7 @@ export async function* streamBatchProgress(
  * @returns MCPHealthStatus with server connectivity and tool counts
  */
 export async function getMCPHealth(): Promise<MCPHealthStatus> {
-  const response = await fetch(`${API_BASE_URL}/mcp/health`, {
+  const response = await fetch(`${API_BASE_URL}/api/v1/mcp/health`, {
     method: 'GET',
     headers: { 'Content-Type': 'application/json' },
   });
@@ -650,7 +650,7 @@ export async function getMCPHealth(): Promise<MCPHealthStatus> {
  * @returns Array of MCPServer objects
  */
 export async function getMCPServers(): Promise<MCPServer[]> {
-  const response = await fetch(`${API_BASE_URL}/mcp/servers`, {
+  const response = await fetch(`${API_BASE_URL}/api/v1/mcp/servers`, {
     method: 'GET',
     headers: { 'Content-Type': 'application/json' },
   });
@@ -669,7 +669,7 @@ export async function getMCPServers(): Promise<MCPServer[]> {
  * @returns Updated MCPServer object
  */
 export async function connectMCPServer(serverName: string): Promise<MCPServer> {
-  const response = await fetch(`${API_BASE_URL}/mcp/servers/${encodeURIComponent(serverName)}/connect`, {
+  const response = await fetch(`${API_BASE_URL}/api/v1/mcp/servers/${encodeURIComponent(serverName)}/connect`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
   });
@@ -688,7 +688,7 @@ export async function connectMCPServer(serverName: string): Promise<MCPServer> {
  * @returns Updated MCPServer object
  */
 export async function disconnectMCPServer(serverName: string): Promise<MCPServer> {
-  const response = await fetch(`${API_BASE_URL}/mcp/servers/${encodeURIComponent(serverName)}/disconnect`, {
+  const response = await fetch(`${API_BASE_URL}/api/v1/mcp/servers/${encodeURIComponent(serverName)}/disconnect`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
   });
@@ -706,7 +706,7 @@ export async function disconnectMCPServer(serverName: string): Promise<MCPServer
  * @returns Array of MCPTool objects
  */
 export async function getMCPTools(): Promise<MCPTool[]> {
-  const response = await fetch(`${API_BASE_URL}/mcp/tools`, {
+  const response = await fetch(`${API_BASE_URL}/api/v1/mcp/tools`, {
     method: 'GET',
     headers: { 'Content-Type': 'application/json' },
   });
@@ -725,7 +725,7 @@ export async function getMCPTools(): Promise<MCPTool[]> {
  * @returns MCPTool object with full details
  */
 export async function getMCPTool(toolName: string): Promise<MCPTool> {
-  const response = await fetch(`${API_BASE_URL}/mcp/tools/${encodeURIComponent(toolName)}`, {
+  const response = await fetch(`${API_BASE_URL}/api/v1/mcp/tools/${encodeURIComponent(toolName)}`, {
     method: 'GET',
     headers: { 'Content-Type': 'application/json' },
   });
@@ -748,7 +748,7 @@ export async function executeMCPTool(
   toolName: string,
   parameters: Record<string, unknown>
 ): Promise<MCPExecutionResult> {
-  const response = await fetch(`${API_BASE_URL}/mcp/tools/${encodeURIComponent(toolName)}/execute`, {
+  const response = await fetch(`${API_BASE_URL}/api/v1/mcp/tools/${encodeURIComponent(toolName)}/execute`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ parameters }),

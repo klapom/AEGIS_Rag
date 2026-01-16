@@ -717,6 +717,32 @@ async def bash_execute(command: str, timeout: int = 30):
 | Prometheus | prom/prometheus:latest |
 | Grafana | grafana/grafana:latest |
 
+### Docker Container Configuration (Sprint 105)
+
+**Shared Memory (SHMEM):**
+
+| Container   | shm_size | Reason |
+|-------------|----------|--------|
+| **ollama**  | 2GB      | Large context (32K tokens) + parallel inference (2 requests) |
+| **api**     | 2GB      | BGE-M3 embeddings with PyTorch CUDA operations |
+| **docling** | 1GB      | EasyOCR + PyTorch for GPU-based document processing |
+
+**Why SHMEM matters:**
+- Docker default: 64MB `/dev/shm`
+- PyTorch uses SHMEM for multi-threaded tensor operations
+- Insufficient SHMEM causes sporadic hangs/timeouts with large models
+
+**Configuration in docker-compose.yml:**
+```yaml
+services:
+  ollama:
+    shm_size: "2g"  # Large context + parallel requests
+  api:
+    shm_size: "2g"  # BGE-M3 embeddings
+  docling:
+    shm_size: "1g"  # OCR processing
+```
+
 ### Monitoring Stack
 
 | Component | Tool | Purpose |

@@ -178,6 +178,7 @@ export function OrchestrationTimeline({ className = '' }: OrchestrationTimelineP
 
               <span
                 className={`text-xs px-2 py-1 rounded font-medium ${getStatusColor(orchestration.status)}`}
+                data-testid="orchestration-phase"
               >
                 {orchestration.status}
               </span>

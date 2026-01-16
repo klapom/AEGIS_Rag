@@ -398,40 +398,49 @@ export interface MCPServerHealthInfo {
 // ============================================================================
 
 /**
- * Redis layer statistics
+ * Short-term (Redis) layer statistics - matches backend API
  */
-export interface RedisMemoryStats {
-  keys: number;
-  memory_mb: number;
-  hit_rate: number;
+export interface ShortTermMemoryStats {
+  connected: boolean;
+  connection_url?: string;
+  default_ttl_seconds?: number;
+  keyspace_info?: Record<string, any>;
 }
 
 /**
- * Qdrant layer statistics
+ * Long-term (Qdrant) layer statistics - matches backend API
  */
-export interface QdrantMemoryStats {
-  documents: number;
-  size_mb: number;
-  avg_search_latency_ms: number;
+export interface LongTermMemoryStats {
+  available: boolean;
+  note?: string;
 }
 
 /**
- * Graphiti layer statistics
+ * Episodic (Graphiti) layer statistics - matches backend API
  */
-export interface GraphitiMemoryStats {
-  episodes: number;
-  entities: number;
-  avg_search_latency_ms: number;
+export interface EpisodicMemoryStats {
+  enabled: boolean;
+  available: boolean;
+  error?: string;
 }
 
 /**
- * Combined memory statistics for all layers
+ * Consolidation statistics
+ */
+export interface ConsolidationStats {
+  enabled: boolean;
+  interval_minutes?: number;
+  min_access_count?: number;
+}
+
+/**
+ * Combined memory statistics for all layers - matches backend MemoryStatsResponse
  */
 export interface MemoryStats {
-  redis: RedisMemoryStats;
-  qdrant: QdrantMemoryStats;
-  graphiti: GraphitiMemoryStats;
-  timestamp: string;
+  short_term: ShortTermMemoryStats;
+  long_term: LongTermMemoryStats;
+  episodic: EpisodicMemoryStats;
+  consolidation: ConsolidationStats;
 }
 
 /**

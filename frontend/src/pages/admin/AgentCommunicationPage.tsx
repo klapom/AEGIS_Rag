@@ -65,7 +65,7 @@ export function AgentCommunicationPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900" data-testid="agent-communication-page">
       {/* Header */}
       <header className="bg-white dark:bg-gray-800 border-b-2 border-gray-200 dark:border-gray-700 px-6 py-4">
         <div className="max-w-7xl mx-auto">
@@ -150,19 +150,27 @@ export function AgentCommunicationPage() {
         {activeTab === 'all' && (
           <div className="space-y-8">
             {/* Performance Metrics - Full Width */}
-            <CommunicationMetrics />
+            <div data-testid="communication-metrics">
+              <CommunicationMetrics />
+            </div>
 
             {/* Two Column Layout */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               {/* Left Column */}
               <div className="space-y-8">
-                <MessageBusMonitor />
-                <BlackboardViewer />
+                <div data-testid="message-bus-monitor">
+                  <MessageBusMonitor />
+                </div>
+                <div data-testid="blackboard-viewer">
+                  <BlackboardViewer />
+                </div>
               </div>
 
               {/* Right Column */}
               <div>
-                <OrchestrationTimeline />
+                <div data-testid="orchestration-timeline">
+                  <OrchestrationTimeline />
+                </div>
               </div>
             </div>
 
@@ -218,24 +226,36 @@ export function AgentCommunicationPage() {
         {/* MessageBus Only View */}
         {activeTab === 'messages' && (
           <div className="space-y-8">
-            <CommunicationMetrics />
-            <MessageBusMonitor />
+            <div data-testid="communication-metrics">
+              <CommunicationMetrics />
+            </div>
+            <div data-testid="message-bus-monitor">
+              <MessageBusMonitor />
+            </div>
           </div>
         )}
 
         {/* Blackboard Only View */}
         {activeTab === 'blackboard' && (
           <div className="space-y-8">
-            <CommunicationMetrics />
-            <BlackboardViewer />
+            <div data-testid="communication-metrics">
+              <CommunicationMetrics />
+            </div>
+            <div data-testid="blackboard-viewer">
+              <BlackboardViewer />
+            </div>
           </div>
         )}
 
         {/* Orchestrations Only View */}
         {activeTab === 'orchestrations' && (
           <div className="space-y-8">
-            <CommunicationMetrics />
-            <OrchestrationTimeline />
+            <div data-testid="communication-metrics">
+              <CommunicationMetrics />
+            </div>
+            <div data-testid="orchestration-timeline">
+              <OrchestrationTimeline />
+            </div>
           </div>
         )}
       </main>

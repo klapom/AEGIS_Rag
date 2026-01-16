@@ -156,6 +156,7 @@ export function AgentDetailsPanel({ agentId, onClose, className = '' }: AgentDet
   return (
     <div
       className={`bg-white dark:bg-gray-800 rounded-xl border-2 border-gray-200 dark:border-gray-700 p-6 ${className}`}
+      data-testid={`agent-details-${details.agent_id}`}
     >
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
@@ -164,7 +165,7 @@ export function AgentDetailsPanel({ agentId, onClose, className = '' }: AgentDet
             <User className="w-6 h-6 text-blue-600 dark:text-blue-400" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100" data-testid="agent-name">
               {details.agent_name}
             </h3>
             <p className="text-xs font-mono text-gray-500 dark:text-gray-400">{details.agent_id}</p>
@@ -184,10 +185,10 @@ export function AgentDetailsPanel({ agentId, onClose, className = '' }: AgentDet
 
       {/* Status Badges */}
       <div className="flex gap-2 mb-4">
-        <span className={`text-xs px-2 py-1 rounded font-medium ${LEVEL_COLORS[details.agent_level]}`}>
+        <span className={`text-xs px-2 py-1 rounded font-medium ${LEVEL_COLORS[details.agent_level]}`} data-testid="agent-level">
           {details.agent_level}
         </span>
-        <span className={`text-xs px-2 py-1 rounded font-medium ${STATUS_COLORS[details.status]}`}>
+        <span className={`text-xs px-2 py-1 rounded font-medium ${STATUS_COLORS[details.status]}`} data-testid="agent-status">
           {details.status}
         </span>
       </div>
@@ -195,11 +196,12 @@ export function AgentDetailsPanel({ agentId, onClose, className = '' }: AgentDet
       {/* Skills */}
       <div className="mb-4">
         <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Skills:</div>
-        <div className="flex flex-wrap gap-1">
+        <div className="flex flex-wrap gap-1" data-testid="agent-skills">
           {details.skills.map((skill, index) => (
             <span
               key={index}
               className="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded"
+              data-testid={`agent-skill-${skill}`}
             >
               {skill}
             </span>
@@ -208,7 +210,10 @@ export function AgentDetailsPanel({ agentId, onClose, className = '' }: AgentDet
       </div>
 
       {/* Performance Metrics */}
-      <div className="mb-4 pb-4 border-b border-gray-200 dark:border-gray-700">
+      <div
+        className="mb-4 pb-4 border-b border-gray-200 dark:border-gray-700"
+        data-testid="performance-metrics"
+      >
         <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-3">
           Performance:
         </div>

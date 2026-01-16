@@ -193,7 +193,7 @@ export function ExplainabilityPage() {
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
                 Recent Queries
               </h2>
-              <div className="space-y-2 max-h-[600px] overflow-y-auto">
+              <div className="space-y-2 max-h-[600px] overflow-y-auto" data-testid="decision-traces-list">
                 {recentTraces.length === 0 ? (
                   <p className="text-sm text-gray-500 dark:text-gray-400">
                     No recent traces available. Submit queries to see traces here.
@@ -210,14 +210,14 @@ export function ExplainabilityPage() {
                       }`}
                       data-testid={`trace-item-${trace.trace_id}`}
                     >
-                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate" data-testid={`trace-query-${trace.trace_id}`}>
                         {trace.query}
                       </p>
                       <div className="flex items-center justify-between mt-1">
                         <span className="text-xs text-gray-500 dark:text-gray-400">
                           {new Date(trace.timestamp).toLocaleString()}
                         </span>
-                        <span className={`text-xs font-semibold ${getConfidenceColor(trace.confidence)}`}>
+                        <span className={`text-xs font-semibold ${getConfidenceColor(trace.confidence)}`} data-testid={`trace-confidence-${trace.trace_id}`}>
                           {(trace.confidence * 100).toFixed(0)}%
                         </span>
                       </div>
@@ -313,12 +313,12 @@ export function ExplainabilityPage() {
 
                 {/* Explanation Content */}
                 {explanation && (
-                  <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border-2 border-gray-200 dark:border-gray-700 p-6">
+                  <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border-2 border-gray-200 dark:border-gray-700 p-6" data-testid={`explanation-${explanationLevel}-${selectedTrace.trace_id}`}>
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
                       How this answer was generated
                     </h3>
                     <div className="prose dark:prose-invert max-w-none">
-                      <p className="text-gray-700 dark:text-gray-300">{explanation.summary}</p>
+                      <p className="text-gray-700 dark:text-gray-300" data-testid={`explanation-summary-${selectedTrace.trace_id}`}>{explanation.summary}</p>
 
                       {explanation.capabilities_list && (
                         <div className="mt-4">
@@ -422,13 +422,13 @@ export function ExplainabilityPage() {
                 )}
 
                 {/* Decision Flow */}
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border-2 border-gray-200 dark:border-gray-700 p-6">
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border-2 border-gray-200 dark:border-gray-700 p-6" data-testid="decision-flow-section">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
                     Decision Flow
                   </h3>
-                  <div className="space-y-3">
+                  <div className="space-y-3" data-testid={`decision-flow-${selectedTrace.trace_id}`}>
                     {selectedTrace.decision_flow.map((stage, idx) => (
-                      <div key={idx} className="flex items-start gap-3">
+                      <div key={idx} className="flex items-start gap-3" data-testid={`decision-step-${idx}`}>
                         <div className="flex-shrink-0 mt-1">
                           {stage.status === 'completed' ? (
                             <CheckCircle2 className="w-5 h-5 text-green-500" />
@@ -439,10 +439,10 @@ export function ExplainabilityPage() {
                           )}
                         </div>
                         <div className="flex-1">
-                          <p className="font-medium text-gray-900 dark:text-gray-100">
+                          <p className="font-medium text-gray-900 dark:text-gray-100" data-testid={`decision-step-name-${idx}`}>
                             {idx + 1}. {stage.stage.charAt(0).toUpperCase() + stage.stage.slice(1)}
                           </p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1" data-testid={`decision-step-details-${idx}`}>
                             {stage.details}
                           </p>
                           {stage.timestamp && (
@@ -458,19 +458,20 @@ export function ExplainabilityPage() {
 
                 {/* Source Attribution */}
                 {sources.length > 0 && (
-                  <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border-2 border-gray-200 dark:border-gray-700 p-6">
+                  <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border-2 border-gray-200 dark:border-gray-700 p-6" data-testid="source-attribution-section">
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
                       Source Attribution
                     </h3>
-                    <div className="space-y-3">
+                    <div className="space-y-3" data-testid={`sources-${selectedTrace.trace_id}`}>
                       {sources.map((source, idx) => (
                         <div
                           key={idx}
                           className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
+                          data-testid={`source-${idx}`}
                         >
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
-                              <p className="font-medium text-gray-900 dark:text-gray-100">
+                              <p className="font-medium text-gray-900 dark:text-gray-100" data-testid={`source-name-${idx}`}>
                                 {source.name}
                                 {source.page && (
                                   <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
@@ -479,13 +480,13 @@ export function ExplainabilityPage() {
                                 )}
                               </p>
                               {source.snippet && (
-                                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1" data-testid={`source-snippet-${idx}`}>
                                   "{source.snippet}"
                                 </p>
                               )}
                             </div>
                             <div className="flex-shrink-0 ml-4 text-right">
-                              <p className="text-sm font-semibold text-purple-600 dark:text-purple-400">
+                              <p className="text-sm font-semibold text-purple-600 dark:text-purple-400" data-testid={`source-relevance-${idx}`}>
                                 {(source.relevance * 100).toFixed(0)}%
                               </p>
                               {source.confidence && (
@@ -509,7 +510,7 @@ export function ExplainabilityPage() {
                 )}
 
                 {/* Confidence & Hallucination Metrics */}
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border-2 border-gray-200 dark:border-gray-700 p-6">
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border-2 border-gray-200 dark:border-gray-700 p-6" data-testid="confidence-metrics-section">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
                     Confidence Metrics
                   </h3>
@@ -518,7 +519,7 @@ export function ExplainabilityPage() {
                       <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
                         Overall Confidence
                       </p>
-                      <p className={`text-4xl font-bold ${getConfidenceColor(selectedTrace.confidence_overall)}`}>
+                      <p className={`text-4xl font-bold ${getConfidenceColor(selectedTrace.confidence_overall)}`} data-testid={`confidence-score-${selectedTrace.trace_id}`}>
                         {(selectedTrace.confidence_overall * 100).toFixed(0)}%
                       </p>
                       <div className="mt-2 w-full bg-gray-200 dark:bg-gray-600 rounded-full h-3">
@@ -532,7 +533,7 @@ export function ExplainabilityPage() {
                       <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
                         Hallucination Risk
                       </p>
-                      <p className={`text-4xl font-bold ${getHallucinationColor(selectedTrace.hallucination_risk)}`}>
+                      <p className={`text-4xl font-bold ${getHallucinationColor(selectedTrace.hallucination_risk)}`} data-testid={`hallucination-risk-${selectedTrace.trace_id}`}>
                         {(selectedTrace.hallucination_risk * 100).toFixed(0)}%
                       </p>
                       <div className="mt-2 w-full bg-gray-200 dark:bg-gray-600 rounded-full h-3">

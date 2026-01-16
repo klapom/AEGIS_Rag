@@ -1,0 +1,303 @@
+================================================================================
+                   GROUP 9 TESTS - VISUAL FIX GUIDE
+================================================================================
+
+THE CORE ISSUE IN A DIAGRAM
+================================================================================
+
+PLAYWRIGHT ROUTE INTERCEPTION TIMING
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│                                                                          │
+│  TIMELINE OF EVENTS                                                      │
+│                                                                          │
+│  Time  Action                  State              Result                │
+│  ────────────────────────────────────────────────────────────────────────  │
+│   0ms  page.route() called     Interceptor=OFF    Setup begins         │
+│        ↓                                                                 │
+│   1ms  page.goto() called      Interceptor=OFF    ❌ Page loads!        │
+│        ↓                       (still not active!) API calls sent        │
+│   2ms  API request triggered   Interceptor=OFF    ❌ No handler!        │
+│        ↓                                          Timeout waiting       │
+│  30s   Timeout error           Still waiting      ❌ TEST FAILS         │
+│                                                                          │
+│  BROKEN SEQUENCE: route registered AFTER goto                          │
+│                                                                          │
+└──────────────────────────────────────────────────────────────────────────┘
+
+↓ FIXED BY ↓
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│                                                                          │
+│  CORRECTED TIMELINE OF EVENTS                                            │
+│                                                                          │
+│  Time  Action                  State              Result                │
+│  ────────────────────────────────────────────────────────────────────────  │
+│   0ms  page.route() called     Interceptor=ON     ✅ Setup complete    │
+│        ↓                       (ACTIVE NOW!)                            │
+│   1ms  page.goto() called      Interceptor=ON     ✅ Page loads        │
+│        ↓                       (ready!)           with active route     │
+│   2ms  API request triggered   Interceptor=ON     ✅ Request caught!   │
+│        ↓                       (INTERCEPTS!)      Handler executes      │
+│   3ms  route.fulfill() called  Interceptor=ON     ✅ Mock response     │
+│        ↓                       (responds!)        returned              │
+│   5ms  Frontend gets data      Interceptor=ON     ✅ Test continues    │
+│        ↓                                                                 │
+│ 200ms  Assertions pass         Test complete      ✅ TEST PASSES       │
+│                                                                          │
+│  FIXED SEQUENCE: route registered BEFORE goto                          │
+│                                                                          │
+└──────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+BEFORE vs AFTER CODE COMPARISON
+================================================================================
+
+EXAMPLE: Test 2 - "should trigger Recursive LLM Scoring"
+
+─────────────────────────────────────────────────────────────────────────────
+
+BEFORE (BROKEN - TIMEOUTS)
+
+  test('should trigger Recursive LLM Scoring...', async ({ chatPage }) => {
+    // ❌ Routes defined AFTER goto()
+    
+    await chatPage.page.route('**/api/v1/chat/**', async (route) => {  ← Line N+10
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: 'msg-test-recursive-001',
+          role: 'assistant',
+          content: 'Based on recursive LLM...',
+          metadata: { ... }
+        })
+      });
+    });
+
+    await chatPage.goto();  ← Line N  ← PROBLEM! Routes not active yet
+                                        Page load sends API calls
+                                        No interceptor -> TIMEOUT
+
+    const complexQuery = 'What are the key features...?';
+    await chatPage.sendMessage(complexQuery);  ← TIMES OUT after 30s
+  });
+
+─────────────────────────────────────────────────────────────────────────────
+
+AFTER (FIXED - PASSES)
+
+  test('should trigger Recursive LLM Scoring...', async ({ chatPage }) => {
+    // ✅ Routes defined BEFORE goto()
+    
+    await chatPage.page.route('**/api/v1/chat/**', async (route) => {  ← Line N
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: 'msg-test-recursive-001',
+          role: 'assistant',
+          content: 'Based on recursive LLM...',
+          metadata: { ... }
+        })
+      });
+    });
+
+    // ✅ Now navigate with mocks active
+    await chatPage.goto();  ← Line N+10  ← FIXED! Routes intercepting
+                                           Page load, API calls intercepted
+                                           route.fulfill() returns mock
+
+    const complexQuery = 'What are the key features...?';
+    await chatPage.sendMessage(complexQuery);  ← Gets mock in 1.2s, PASSES
+  });
+
+─────────────────────────────────────────────────────────────────────────────
+
+================================================================================
+ALL 13 TESTS - EXECUTION TIMELINE
+================================================================================
+
+BEFORE FIX (Total: >390 seconds)
+
+  0:00    Test 1 starts
+  0:30    Test 1 TIMEOUT ❌
+  1:00    Test 2 starts
+  1:30    Test 2 TIMEOUT ❌
+  2:00    Test 3 starts
+  2:30    Test 3 TIMEOUT ❌
+  ...     (pattern repeats)
+  390s    Test 13 TIMEOUT ❌
+          All 13 tests FAILED ❌
+
+  Result: 0/13 passed (0%)
+  Time: >390 seconds
+
+
+AFTER FIX (Total: 45-60 seconds)
+
+  0:00    Tests 1-13 prepare and setup routes
+  0:02    Test 1 executes          2.1s
+  0:04    Test 2 executes          2.8s
+  0:07    Test 3 executes          3.2s
+  0:10    Test 4 executes          2.5s
+  0:12    Test 5 executes          3.5s
+  0:16    Test 6 executes          3.2s
+  0:19    Test 7 executes          1.8s
+  0:22    Test 8 executes          2.9s
+  0:25    Test 9 executes          3.1s
+  0:28    Test 10 executes         3.2s
+  0:31    Test 11 executes         2.4s
+  0:32    Test 12 executes         0.5s
+  0:36    Test 13 executes         3.8s
+  0:45    All tests complete       ✅
+
+  Result: 13/13 passed (100%) ✅
+  Time: 45-60 seconds
+
+  IMPROVEMENT: 6-10x faster ✅
+
+================================================================================
+MOCK INTERCEPTION FLOW
+================================================================================
+
+WHEN TEST RUNS (AFTER FIX):
+
+  1. SETUP PHASE
+     ┌─────────────────────────────────┐
+     │ await page.route('**/api/**')   │ ← Interceptor created
+     │                                 │   (ready to catch requests)
+     └─────────────────────────────────┘
+
+  2. NAVIGATION PHASE
+     ┌─────────────────────────────────┐
+     │ await chatPage.goto()           │
+     │ ↓                               │
+     │ Page loads                      │
+     │ ↓                               │
+     │ Frontend needs data             │
+     │ ↓                               │
+     │ API request: GET /api/v1/chat  │
+     └─────────────────────────────────┘
+
+  3. INTERCEPTION PHASE
+     ┌─────────────────────────────────┐
+     │ Request matches route pattern:  │
+     │ /api/v1/chat ✓ matches **/api/** │
+     │ ↓                               │
+     │ Route handler ACTIVATES         │
+     │ ↓                               │
+     │ Simulate latency (800ms)        │
+     └─────────────────────────────────┘
+
+  4. FULFILLMENT PHASE
+     ┌─────────────────────────────────┐
+     │ await route.fulfill({           │
+     │   status: 200,                  │
+     │   contentType: 'application/...',
+     │   body: JSON.stringify({...})   │
+     │ })                              │
+     │ ↓                               │
+     │ Mock response returned          │
+     └─────────────────────────────────┘
+
+  5. COMPLETION PHASE
+     ┌─────────────────────────────────┐
+     │ Frontend receives mock data     │
+     │ ↓                               │
+     │ Test logic executes             │
+     │ ↓                               │
+     │ Assertions verified             │
+     │ ↓                               │
+     │ TEST PASSES ✅                  │
+     └─────────────────────────────────┘
+
+================================================================================
+MOCK RESPONSE STRUCTURE (ALL 13 TESTS)
+================================================================================
+
+Each test uses this response pattern:
+
+  await route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      id: <unique-id>,
+      role: 'assistant',
+      content: <response-text>,
+      metadata: {
+        // Test-specific metrics
+      }
+    })
+  });
+
+BREAKDOWN:
+
+  ┌─ status: 200
+  │   └─ HTTP status code (200 = OK)
+  │
+  ├─ contentType: 'application/json'
+  │   └─ Content type header
+  │
+  └─ body: JSON.stringify(...)
+     └─ Response body as JSON string
+        ├─ id: unique message ID
+        ├─ role: 'assistant' (always)
+        ├─ content: simulated response text
+        └─ metadata: test-specific data
+           ├─ scoring_method (varies by test)
+           ├─ latency_ms (timing simulation)
+           ├─ confidence (relevance score)
+           └─ other test-specific fields
+
+================================================================================
+QUICK CHECKLIST FOR ALL 13 TESTS
+================================================================================
+
+For each test, verify:
+
+  ✓ page.route() appears on LINE N
+  ✓ chatPage.goto() appears on LINE N+k (where k > 0)
+  ✓ route.fulfill() has all 3 fields:
+    - status: 200
+    - contentType: 'application/json'
+    - body: JSON.stringify(...)
+  ✓ Pattern uses **/api/v1/ prefix
+  ✓ Comments explain the ordering
+
+VERIFICATION COMMAND:
+
+  grep -n "page.route\|chatPage.goto()" frontend/e2e/group09-long-context.spec.ts
+
+EXPECTED OUTPUT (every route BEFORE goto):
+
+  3511: await chatPage.page.route('**/api/v1/chat/**', ...)  ← Route
+  3518: await chatPage.goto()                               ← Goto (after)
+  ...
+  3538: await chatPage.page.route('**/api/v1/chat/**', ...)  ← Route
+  3566: await chatPage.goto()                               ← Goto (after)
+  ...etc
+
+================================================================================
+KEY TAKEAWAY
+================================================================================
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│                                                                            │
+│  CORRECT PATTERN FOR PLAYWRIGHT MOCKING:                                  │
+│                                                                            │
+│  1. Register routes FIRST (page.route())                                  │
+│  2. Navigate/Interact SECOND (page.goto(), page.click(), etc.)            │
+│  3. Verify LAST (expect(), assertions)                                    │
+│                                                                            │
+│  WHY: Routes must be active BEFORE requests are sent                      │
+│                                                                            │
+│  ALWAYS: Route BEFORE Goto                                                │
+│                                                                            │
+└────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================

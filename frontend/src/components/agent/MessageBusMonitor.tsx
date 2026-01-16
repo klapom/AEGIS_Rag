@@ -236,9 +236,9 @@ export function MessageBusMonitor({ className = '' }: MessageBusMonitorProps) {
             </div>
 
             <div className="text-sm text-gray-900 dark:text-gray-100">
-              <span className="font-medium">{message.sender}</span>
+              <span className="font-medium" data-testid="message-sender">{message.sender}</span>
               <span className="text-gray-500 dark:text-gray-400 mx-2">→</span>
-              <span className="font-medium">{message.receiver}</span>
+              <span className="font-medium" data-testid="message-receiver">{message.receiver}</span>
             </div>
 
             <div className="mt-2 text-xs text-gray-600 dark:text-gray-400 line-clamp-2">

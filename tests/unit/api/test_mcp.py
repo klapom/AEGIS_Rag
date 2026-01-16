@@ -457,6 +457,117 @@ class TestMCPHealthCheck:
         assert data["total_tools"] == 5
 
 
+class TestServerHealth:
+    """Tests for GET /api/v1/mcp/servers/{server_name}/health endpoint."""
+
+    def test_server_health_healthy(self, test_client, mock_connection_manager):
+        """Test health check for healthy server."""
+        # Mock connected server
+        server = MCPServer(
+            name="bash-tools",
+            transport=TransportType.STDIO,
+            endpoint="local",
+            description="Bash tools",
+        )
+        connection = MagicMock()
+        connection.status = ServerStatus.CONNECTED
+
+        mock_connection_manager.client.servers = {"bash-tools": server}
+        mock_connection_manager.client.connections = {"bash-tools": connection}
+        mock_connection_manager.get_tools_by_server.return_value = [
+            MCPTool(
+                name="bash",
+                description="Execute bash",
+                parameters={},
+                server="bash-tools",
+            )
+        ]
+
+        response = test_client.get("/api/v1/mcp/servers/bash-tools/health")
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["status"] == "healthy"
+        assert "latency_ms" in data
+        assert isinstance(data["latency_ms"], int)
+
+    def test_server_health_not_found(self, test_client, mock_connection_manager):
+        """Test health check for non-existent server."""
+        # Ensure servers dict is empty
+        mock_connection_manager.client.servers = {}
+
+        with patch("src.api.v1.mcp.get_connection_manager", return_value=mock_connection_manager):
+            response = test_client.get("/api/v1/mcp/servers/non-existent/health")
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        data = response.json()
+        # API uses structured error format with error.message
+        assert "error" in data
+        assert "not found" in data["error"]["message"].lower()
+
+    def test_server_health_not_connected(self, test_client, mock_connection_manager):
+        """Test health check for server without connection."""
+        server = MCPServer(
+            name="test-server",
+            transport=TransportType.STDIO,
+            endpoint="test",
+            description="Test",
+        )
+        mock_connection_manager.client.servers = {"test-server": server}
+        mock_connection_manager.client.connections = {}
+
+        response = test_client.get("/api/v1/mcp/servers/test-server/health")
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["status"] == "unhealthy"
+        assert data["latency_ms"] is None
+        assert "error" in data
+
+    def test_server_health_disconnected(self, test_client, mock_connection_manager):
+        """Test health check for disconnected server."""
+        server = MCPServer(
+            name="test-server",
+            transport=TransportType.STDIO,
+            endpoint="test",
+            description="Test",
+        )
+        connection = MagicMock()
+        connection.status = ServerStatus.DISCONNECTED
+
+        mock_connection_manager.client.servers = {"test-server": server}
+        mock_connection_manager.client.connections = {"test-server": connection}
+
+        response = test_client.get("/api/v1/mcp/servers/test-server/health")
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["status"] == "unhealthy"
+        assert "disconnected" in data["error"].lower()
+
+    def test_server_health_error(self, test_client, mock_connection_manager):
+        """Test health check when tools retrieval fails."""
+        server = MCPServer(
+            name="test-server",
+            transport=TransportType.STDIO,
+            endpoint="test",
+            description="Test",
+        )
+        connection = MagicMock()
+        connection.status = ServerStatus.CONNECTED
+
+        mock_connection_manager.client.servers = {"test-server": server}
+        mock_connection_manager.client.connections = {"test-server": connection}
+        mock_connection_manager.get_tools_by_server.side_effect = Exception("Connection lost")
+
+        response = test_client.get("/api/v1/mcp/servers/test-server/health")
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["status"] == "unhealthy"
+        assert "Connection lost" in data["error"]
+
+
 class TestValidation:
     """Tests for request validation."""
 

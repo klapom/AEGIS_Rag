@@ -148,7 +148,7 @@ export function BlackboardViewer({ className = '' }: BlackboardViewerProps) {
             <div
               key={namespace.namespace}
               className="bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600 overflow-hidden"
-              data-testid={`namespace-${namespace.namespace}`}
+              data-testid={`blackboard-item-${namespace.namespace}`}
             >
               {/* Namespace Header */}
               <button
@@ -209,7 +209,7 @@ export function BlackboardViewer({ className = '' }: BlackboardViewerProps) {
                       <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
                         State Data:
                       </div>
-                      <pre className="bg-gray-100 dark:bg-gray-900 p-3 rounded-lg overflow-x-auto text-xs">
+                      <pre className="bg-gray-100 dark:bg-gray-900 p-3 rounded-lg overflow-x-auto text-xs" data-testid="blackboard-value">
                         {JSON.stringify(namespace.state, null, 2)}
                       </pre>
                     </div>

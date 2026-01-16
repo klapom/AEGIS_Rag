@@ -45,12 +45,14 @@ from src.api.v1.graph_communities import (
 )
 from src.api.v1.health import router as v1_health_router
 from src.api.v1.mcp import router as mcp_router  # Sprint 40 Feature 40.2: MCP Tool Discovery
+from src.api.v1.mcp_tools import router as mcp_tools_router  # Sprint 103 Feature 103.1: MCP Tool Execution
 from src.api.v1.memory import router as memory_router
 from src.api.v1.research import router as research_router  # Sprint 62 Feature 62.10
 from src.api.v1.retrieval import router as retrieval_router
 from src.api.v1.skills import router as skills_router  # Sprint 99 Feature 99.1: Skill Management APIs
 from src.api.v1.agents import router as agents_router  # Sprint 99 Feature 99.2: Agent Monitoring APIs (Part 1)
 from src.api.v1.orchestration import router as orchestration_router  # Sprint 99 Feature 99.2: Agent Monitoring APIs (Part 2)
+from src.api.v1.explainability import router as explainability_router  # Sprint 104 Feature 104.10: Explainability API
 from src.core.config import get_settings
 from src.core.exceptions import AegisRAGException
 from src.core.logging import get_logger, setup_logging
@@ -493,6 +495,15 @@ logger.info(
     note="Sprint 40: MCP tool discovery and execution",
 )
 
+# MCP Tool Execution API router (Sprint 103: Feature 103.1 - Internal Tool Execution)
+app.include_router(mcp_tools_router)
+logger.info(
+    "router_registered",
+    router="mcp_tools_router",
+    prefix="/api/v1/mcp/tools",
+    note="Sprint 103: Internal tool execution (bash, python, browser)",
+)
+
 # Skills Management API router (Sprint 99: Feature 99.1 - Skill Management APIs)
 app.include_router(skills_router, prefix="/api/v1")
 logger.info(
@@ -560,6 +571,14 @@ logger.info(
     router="audit_router",
     prefix="/api/v1/audit",
     note="Sprint 99 Feature 99.4: Audit trail with SHA-256 chain (EU AI Act Art. 12)",
+)
+
+app.include_router(explainability_router, prefix="/api/v1/explainability", tags=["explainability"])
+logger.info(
+    "router_registered",
+    router="explainability_router",
+    prefix="/api/v1/explainability",
+    note="Sprint 105 Feature 105.1: Fixed prefix registration (was missing in Sprint 104)",
 )
 
 # Prometheus metrics endpoint

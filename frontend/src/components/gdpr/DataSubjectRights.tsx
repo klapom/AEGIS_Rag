@@ -56,7 +56,7 @@ export function DataSubjectRights({
   const pendingRequests = requests.filter((r) => r.status === 'pending');
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" data-testid="data-subject-rights-list">
       {/* Header with Summary */}
       <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4 border border-yellow-200 dark:border-yellow-800">
         <div className="flex items-center justify-between">
@@ -144,14 +144,17 @@ function RequestCard({ request, onApprove, onReject, onView }: RequestCardProps)
   const [showRejectModal, setShowRejectModal] = useState(false);
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-3">
+    <div
+      className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-3"
+      data-testid={`right-request-${request.id}`}
+    >
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-start gap-3">
           <RequestTypeIcon type={request.requestType} />
           <div>
             <h4 className="font-semibold text-gray-900 dark:text-gray-100">
-              Request #{request.id.slice(0, 8)}: {formatRequestType(request.requestType)} (
+              Request #{request.id.slice(0, 8)}: <span data-testid={`right-type-${request.id}`}>{formatRequestType(request.requestType)}</span> (
               {request.userId})
             </h4>
             <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -159,7 +162,9 @@ function RequestCard({ request, onApprove, onReject, onView }: RequestCardProps)
             </p>
           </div>
         </div>
-        <RequestStatusBadge status={request.status} />
+        <span data-testid={`right-status-${request.id}`}>
+          <RequestStatusBadge status={request.status} />
+        </span>
       </div>
 
       {/* Dates */}

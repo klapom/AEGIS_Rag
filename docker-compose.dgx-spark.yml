@@ -40,6 +40,10 @@ services:
   ollama:
     image: ollama/ollama:latest
     container_name: aegis-ollama
+    # Sprint 105: Increase shared memory for large contexts (32K) and parallel requests
+    # Default 64MB is too small for OLLAMA_NUM_CTX=32768 + OLLAMA_NUM_PARALLEL=2
+    # Prevents sporadic hangs/timeouts with large prompts
+    shm_size: "2g"
     ports:
       - "11434:11434"
     volumes:
@@ -109,6 +113,9 @@ services:
       context: .
       dockerfile: docker/Dockerfile.docling-spark
     container_name: aegis-docling
+    # Sprint 105: Increase shared memory for PyTorch OCR operations
+    # Default 64MB is too small for GPU-based document processing
+    shm_size: "1g"
     profiles:
       - ingestion  # Only start when explicitly requested
     ports:
@@ -373,12 +380,16 @@ services:
       dockerfile: docker/Dockerfile.api-cuda
     image: aegis-rag-api-cuda:latest
     container_name: aegis-api
+    # Sprint 105: Increase shared memory for PyTorch/BGE-M3 embeddings
+    # Default 64MB is too small for GPU operations with large batches
+    shm_size: "2g"
     ports:
       - "8000:8000"
     volumes:
       - ./src:/app/src:ro
       - ./config:/app/config:ro
       - ./data:/app/data:rw  # Documents for indexing
+      - ./skills:/app/skills:rw  # Sprint 99: Skills directory for Skill Management
     environment:
       - ENVIRONMENT=development
       - DEBUG=false

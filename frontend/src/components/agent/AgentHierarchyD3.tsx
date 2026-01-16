@@ -181,6 +181,7 @@ export function AgentHierarchyD3({
       .enter()
       .append('g')
       .attr('class', 'node')
+      .attr('data-testid', (d) => `agent-node-${d.data.agent_id}`)
       .attr('transform', (d) => `translate(${d.y},${d.x})`)
       .style('cursor', 'pointer')
       .on('click', (event, d) => {
@@ -289,6 +290,7 @@ export function AgentHierarchyD3({
           onClick={handleZoomIn}
           className="p-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors shadow-sm"
           title="Zoom In"
+          aria-label="Zoom in"
           data-testid="zoom-in-button"
         >
           <ZoomIn className="w-4 h-4 text-gray-700 dark:text-gray-300" />
@@ -297,6 +299,7 @@ export function AgentHierarchyD3({
           onClick={handleZoomOut}
           className="p-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors shadow-sm"
           title="Zoom Out"
+          aria-label="Zoom out"
           data-testid="zoom-out-button"
         >
           <ZoomOut className="w-4 h-4 text-gray-700 dark:text-gray-300" />
@@ -305,6 +308,7 @@ export function AgentHierarchyD3({
           onClick={handleResetZoom}
           className="p-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors shadow-sm"
           title="Reset Zoom"
+          aria-label="Reset zoom"
           data-testid="reset-zoom-button"
         >
           <Maximize2 className="w-4 h-4 text-gray-700 dark:text-gray-300" />

@@ -102,6 +102,10 @@ scipy = "^1.11.0"  # Required by networkx.pagerank() in analytics_engine.py
 graphiti-core = "^0.3.0"  # Episodic memory with temporal graphs
 langgraph-checkpoint-redis = "^0.1.2"  # LangGraph Redis checkpointing
 
+# Browser Automation (Sprint 103: MCP Browser Tools)
+playwright = "^1.57.0"  # Browser automation for MCP tools
+pytest-playwright = "^0.7.2"  # Playwright testing support
+
 # ============================================================================
 # OPTIONAL FEATURE GROUPS (Install with: poetry install --with GROUP_NAME)
 # ============================================================================
@@ -234,8 +238,6 @@ types-passlib = "^1.7.7"
 # ============================================================================
 # BUILD SYSTEM
 # ============================================================================
-playwright = "^1.57.0"
-pytest-playwright = "^0.7.2"
 docker = "^7.1.0"
 radon = "^6.0.1"
 vulture = "^2.14"

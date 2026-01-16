@@ -123,7 +123,7 @@ export function AgentHierarchyPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900" data-testid="agent-hierarchy-page">
       {/* Header */}
       <header className="bg-white dark:bg-gray-800 border-b-2 border-gray-200 dark:border-gray-700 px-6 py-4">
         <div className="max-w-7xl mx-auto">
@@ -143,14 +143,21 @@ export function AgentHierarchyPage() {
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                   Agent Hierarchy
                 </h1>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+                <div className="text-sm text-gray-600 dark:text-gray-400" data-testid="hierarchy-stats">
                   {hierarchyData
                     ? (() => {
                         const stats = getHierarchyStats();
-                        return `${stats.total} agents (${stats.executive} Executive, ${stats.manager} Managers, ${stats.worker} Workers)`;
+                        return (
+                          <>
+                            <span data-testid="stat-total-agents">{stats.total}</span> agents (
+                            <span data-testid="stat-executive-count">{stats.executive}</span> Executive,
+                            <span data-testid="stat-manager-count">{stats.manager}</span> Managers,
+                            <span data-testid="stat-worker-count">{stats.worker}</span> Workers)
+                          </>
+                        );
                       })()
                     : 'Visualize agent organization and delegation'}
-                </p>
+                </div>
               </div>
             </div>
 
@@ -177,7 +184,10 @@ export function AgentHierarchyPage() {
 
         {/* Error State */}
         {error && (
-          <div className="flex items-center gap-2 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg mb-6">
+          <div
+            className="flex items-center gap-2 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg mb-6"
+            data-testid="empty-state"
+          >
             <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
             <span className="text-red-700 dark:text-red-300">{error.message}</span>
           </div>
@@ -188,12 +198,14 @@ export function AgentHierarchyPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Left Column: Hierarchy Tree (2/3 width) */}
             <div className="lg:col-span-2 space-y-6">
-              <AgentHierarchyD3
-                nodes={hierarchyData.nodes}
-                edges={hierarchyData.edges}
-                onNodeClick={handleNodeClick}
-                highlightedAgents={highlightedAgents}
-              />
+              <div data-testid="agent-hierarchy-tree">
+                <AgentHierarchyD3
+                  nodes={hierarchyData.nodes}
+                  edges={hierarchyData.edges}
+                  onNodeClick={handleNodeClick}
+                  highlightedAgents={highlightedAgents}
+                />
+              </div>
 
               {/* Info Card */}
               <div className="bg-white dark:bg-gray-800 rounded-xl border-2 border-gray-200 dark:border-gray-700 p-6">
@@ -249,8 +261,12 @@ export function AgentHierarchyPage() {
 
             {/* Right Column: Details & Tracer (1/3 width) */}
             <div className="space-y-6">
-              <AgentDetailsPanel agentId={selectedAgentId} />
-              <DelegationChainTracer onHighlightAgents={handleHighlightAgents} />
+              <div data-testid="agent-details">
+                <AgentDetailsPanel agentId={selectedAgentId} />
+              </div>
+              <div data-testid="delegation-chain-tracer">
+                <DelegationChainTracer onHighlightAgents={handleHighlightAgents} />
+              </div>
             </div>
           </div>
         )}

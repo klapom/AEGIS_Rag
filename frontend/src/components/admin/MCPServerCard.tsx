@@ -129,7 +129,7 @@ export function MCPServerCard({
   return (
     <div
       className="bg-white rounded-xl border-2 border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
-      data-testid={`mcp-server-card-${server.name}`}
+      data-testid={`mcp-server-${server.name}`}
     >
       {/* Header */}
       <div className="p-4 border-b border-gray-100">
@@ -217,7 +217,9 @@ export function MCPServerCard({
             data-testid={`toggle-tools-${server.name}`}
           >
             <Wrench className="w-4 h-4" />
-            <span>{server.tools.length} Tools</span>
+            <span data-testid={`tools-count-${server.name}`}>
+              {server.tools.length} Tools
+            </span>
             {expanded ? (
               <ChevronDown className="w-4 h-4" />
             ) : (
@@ -252,7 +254,7 @@ export function MCPServerCard({
                     onSelectTool?.(tool.name);
                   }
                 }}
-                data-testid={`tool-item-${tool.name}`}
+                data-testid={`tool-${tool.name}`}
               >
                 <div className="flex items-center gap-3">
                   <Wrench className="w-4 h-4 text-blue-500" />
