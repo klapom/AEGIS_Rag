@@ -622,11 +622,46 @@ async def get_memory_stats(
             logger.warning("Failed to get Redis stats", error=str(e))
             redis_stats["error"] = str(e)
 
-        # Qdrant statistics
-        long_term_stats = {
-            "available": True,
-            "note": "Qdrant collection statistics require dedicated endpoint",
+        # Qdrant statistics (Sprint 107 Issue 107.0B)
+        long_term_stats: dict[str, Any] = {
+            "available": False,
         }
+
+        try:
+            from src.components.vector_search.qdrant_client import get_qdrant_client
+
+            qdrant_client = get_qdrant_client()
+            collection_info = await qdrant_client.async_client.get_collection(
+                settings.qdrant_collection_name
+            )
+
+            # Extract collection statistics from CollectionInfo
+            long_term_stats = {
+                "available": True,
+                "collection_name": collection_info.collection_name,
+                "points_count": collection_info.points_count or 0,
+                "vectors_count": collection_info.vectors_count or 0,
+                "indexed_vectors_count": collection_info.indexed_vectors_count or 0,
+                "segments_count": len(collection_info.payload_schema) if collection_info.payload_schema else 0,
+                "status": collection_info.status.value if collection_info.status else "unknown",
+            }
+
+            # Add disk/RAM size if available
+            if hasattr(collection_info, "disk_data_size") and collection_info.disk_data_size:
+                long_term_stats["disk_data_size_mb"] = round(
+                    collection_info.disk_data_size / (1024 * 1024), 2
+                )
+            if hasattr(collection_info, "ram_data_size") and collection_info.ram_data_size:
+                long_term_stats["ram_data_size_mb"] = round(
+                    collection_info.ram_data_size / (1024 * 1024), 2
+                )
+
+            logger.debug("Qdrant collection stats retrieved", stats=long_term_stats)
+
+        except Exception as e:
+            logger.warning("Failed to get Qdrant stats", error=str(e))
+            long_term_stats["error"] = str(e)
+            long_term_stats["available"] = False
 
         # Graphiti/Neo4j statistics
         episodic_stats = {

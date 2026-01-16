@@ -273,7 +273,7 @@ qdrant_stats = {
 
 **Status:** Groups 13-14 fixed, Group 15 documented
 
-**Detailed Analysis:** See `GROUPS_13-15_E2E_FIX_SUMMARY.md` in project root
+**Detailed Analysis:** See `GROUPS_13-15_E2E_FIX_SUMMARY.md` in tests/playwright/
 
 #### Group 13: Agent Hierarchy Page ✅ Fixed (0 SP - Complete)
 

@@ -126,6 +126,24 @@ class Neo4jClient:
             logger.error("Neo4j health check failed", error=str(e))
             raise DatabaseConnectionError("Neo4j", f"Neo4j health check failed: {e}") from e
 
+    async def verify_connectivity(self) -> bool:
+        """Verify Neo4j connection is active.
+
+        Sprint 107 Issue 107.0A: Added method to fix Memory Management UI.
+
+        Uses Neo4j driver's native verify_connectivity() for lightweight check.
+
+        Returns:
+            True if connection is active, False otherwise
+        """
+        try:
+            await self.driver.verify_connectivity()
+            logger.debug("Neo4j connectivity verified")
+            return True
+        except Exception as e:
+            logger.warning("Neo4j connectivity check failed", error=str(e))
+            return False
+
     @retry(
         stop=stop_after_attempt(DEFAULT_MAX_RETRY_ATTEMPTS),
         wait=wait_exponential(multiplier=1, min=2, max=10),
