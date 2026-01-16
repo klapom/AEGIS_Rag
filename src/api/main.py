@@ -45,6 +45,7 @@ from src.api.v1.graph_communities import (
 )
 from src.api.v1.health import router as v1_health_router
 from src.api.v1.mcp import router as mcp_router  # Sprint 40 Feature 40.2: MCP Tool Discovery
+from src.api.v1.mcp_registry import router as mcp_registry_router  # Sprint 107 Feature 107.2: MCP Registry Auto-Discovery
 from src.api.v1.mcp_tools import router as mcp_tools_router  # Sprint 103 Feature 103.1: MCP Tool Execution
 from src.api.v1.memory import router as memory_router
 from src.api.v1.research import router as research_router  # Sprint 62 Feature 62.10
@@ -502,6 +503,15 @@ logger.info(
     router="mcp_tools_router",
     prefix="/api/v1/mcp/tools",
     note="Sprint 103: Internal tool execution (bash, python, browser)",
+)
+
+# MCP Registry API router (Sprint 107: Feature 107.2 - Registry Auto-Discovery)
+app.include_router(mcp_registry_router)
+logger.info(
+    "router_registered",
+    router="mcp_registry_router",
+    prefix="/api/v1/mcp/registry",
+    note="Sprint 107: MCP server registry auto-discovery and installation",
 )
 
 # Skills Management API router (Sprint 99: Feature 99.1 - Skill Management APIs)

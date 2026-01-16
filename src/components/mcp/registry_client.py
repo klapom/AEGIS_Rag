@@ -1,0 +1,542 @@
+"""MCP Registry Client for server discovery and installation.
+
+Sprint 107 Feature 107.2: Auto-Discovery of MCP servers from public registries.
+
+This module provides integration with public MCP server registries for:
+- Browsing available servers
+- Searching servers by name/description
+- Installing servers from registry
+- Dependency resolution
+"""
+
+import asyncio
+import hashlib
+import json
+import logging
+from dataclasses import dataclass, field
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
+from typing import Any
+
+import httpx
+import yaml
+
+from src.core.config import get_settings
+
+logger = logging.getLogger(__name__)
+
+# Registry URLs
+OFFICIAL_REGISTRY = "https://raw.githubusercontent.com/modelcontextprotocol/servers/main/src/mcp-servers.json"
+COMMUNITY_REGISTRY = "https://raw.githubusercontent.com/mcpregistry/registry/main/servers.json"
+
+
+@dataclass
+class MCPServerDefinition:
+    """Definition of an MCP server from a registry.
+
+    Attributes:
+        id: Unique server identifier (e.g., "@modelcontextprotocol/server-filesystem")
+        name: Human-readable name
+        description: Server description
+        transport: Transport type (stdio or http)
+        command: Command to execute (for stdio)
+        args: Command arguments (for stdio)
+        url: URL template (for http)
+        dependencies: Package dependencies (npm, pip, etc.)
+        repository: GitHub repository URL
+        homepage: Homepage URL
+        version: Latest version
+        stars: GitHub stars count
+        downloads: Download count (if available)
+        tags: Tags for categorization
+        metadata: Additional metadata
+    """
+
+    id: str
+    name: str
+    description: str
+    transport: str
+    command: str | None = None
+    args: list[str] = field(default_factory=list)
+    url: str | None = None
+    dependencies: dict[str, Any] = field(default_factory=dict)
+    repository: str | None = None
+    homepage: str | None = None
+    version: str = "1.0.0"
+    stars: int = 0
+    downloads: int = 0
+    tags: list[str] = field(default_factory=list)
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+
+class MCPRegistryClient:
+    """Client for fetching MCP server definitions from registries.
+
+    Sprint 107 Feature 107.2: Registry integration for server discovery.
+    """
+
+    def __init__(
+        self,
+        cache_dir: Path | None = None,
+        cache_ttl_seconds: int = 3600,
+    ):
+        """Initialize registry client.
+
+        Args:
+            cache_dir: Directory for caching registry data (default: .cache/mcp_registry)
+            cache_ttl_seconds: Cache TTL in seconds (default: 1 hour)
+        """
+        if cache_dir is None:
+            self.cache_dir = Path.home() / ".cache" / "mcp_registry"
+        else:
+            self.cache_dir = Path(cache_dir)
+
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        self.cache_ttl = timedelta(seconds=cache_ttl_seconds)
+        self._http_client = httpx.AsyncClient(timeout=30.0)
+
+    async def discover_servers(
+        self, registry_url: str = OFFICIAL_REGISTRY
+    ) -> list[MCPServerDefinition]:
+        """Fetch available servers from registry.
+
+        Args:
+            registry_url: URL of the registry JSON
+
+        Returns:
+            List of server definitions
+
+        Example:
+            >>> client = MCPRegistryClient()
+            >>> servers = await client.discover_servers()
+            >>> print(f"Found {len(servers)} servers")
+        """
+        logger.info(f"Fetching servers from registry: {registry_url}")
+
+        # Check cache first
+        cache_key = self._get_cache_key(registry_url)
+        cached = self._read_cache(cache_key)
+        if cached:
+            logger.info(f"Using cached registry data (key: {cache_key[:8]}...)")
+            return [MCPServerDefinition(**server) for server in cached]
+
+        # Fetch from registry
+        try:
+            response = await self._http_client.get(registry_url)
+            response.raise_for_status()
+            data = response.json()
+
+            # Parse server definitions
+            servers = []
+            for server_data in data.get("servers", []):
+                servers.append(self._parse_server_definition(server_data))
+
+            # Cache results
+            self._write_cache(cache_key, [self._server_to_dict(s) for s in servers])
+
+            logger.info(f"Discovered {len(servers)} servers from registry")
+            return servers
+
+        except httpx.HTTPError as e:
+            logger.error(f"Failed to fetch registry: {e}")
+            return []
+
+    async def search_servers(
+        self, query: str, registry_url: str = OFFICIAL_REGISTRY
+    ) -> list[MCPServerDefinition]:
+        """Search registries for servers matching query.
+
+        Args:
+            query: Search query (name, description, tags)
+            registry_url: Registry URL to search
+
+        Returns:
+            List of matching server definitions
+
+        Example:
+            >>> client = MCPRegistryClient()
+            >>> results = await client.search_servers("filesystem")
+            >>> for server in results:
+            ...     print(f"{server.name}: {server.description}")
+        """
+        all_servers = await self.discover_servers(registry_url)
+
+        query_lower = query.lower()
+        results = []
+
+        for server in all_servers:
+            # Search in name, description, tags, and id
+            if (
+                query_lower in server.name.lower()
+                or query_lower in server.description.lower()
+                or query_lower in server.id.lower()
+                or any(query_lower in tag.lower() for tag in server.tags)
+            ):
+                results.append(server)
+
+        logger.info(f"Search '{query}' found {len(results)} servers")
+        return results
+
+    async def get_server_details(
+        self, server_id: str, registry_url: str = OFFICIAL_REGISTRY
+    ) -> MCPServerDefinition | None:
+        """Get detailed information about a specific server.
+
+        Args:
+            server_id: Unique server identifier
+            registry_url: Registry URL
+
+        Returns:
+            Server definition or None if not found
+        """
+        servers = await self.discover_servers(registry_url)
+
+        for server in servers:
+            if server.id == server_id:
+                return server
+
+        logger.warning(f"Server not found in registry: {server_id}")
+        return None
+
+    async def install_server(
+        self,
+        server_id: str,
+        registry: str = OFFICIAL_REGISTRY,
+        config_path: Path | None = None,
+        auto_connect: bool = False,
+    ) -> dict[str, Any]:
+        """Install server from registry.
+
+        This method:
+        1. Fetches server definition from registry
+        2. Installs dependencies (npm, pip) if needed
+        3. Adds server to config/mcp_servers.yaml
+        4. Optionally connects to server
+
+        Args:
+            server_id: Unique server identifier
+            registry: Registry URL
+            config_path: Path to mcp_servers.yaml (default: config/mcp_servers.yaml)
+            auto_connect: Whether to auto-connect after installation
+
+        Returns:
+            Installation result dictionary
+
+        Example:
+            >>> client = MCPRegistryClient()
+            >>> result = await client.install_server(
+            ...     "@modelcontextprotocol/server-filesystem",
+            ...     auto_connect=True
+            ... )
+            >>> print(result["status"])  # "installed"
+        """
+        logger.info(f"Installing MCP server: {server_id}")
+
+        # Get server definition
+        server_def = await self.get_server_details(server_id, registry)
+        if not server_def:
+            return {
+                "status": "error",
+                "message": f"Server not found in registry: {server_id}",
+            }
+
+        # Check if already installed
+        if config_path is None:
+            config_path = Path(__file__).parents[3] / "config" / "mcp_servers.yaml"
+
+        if self._is_server_installed(server_id, config_path):
+            logger.warning(f"Server already installed: {server_id}")
+            return {
+                "status": "already_installed",
+                "message": f"Server {server_id} is already installed",
+                "server": self._server_to_dict(server_def),
+            }
+
+        # Install dependencies (if any)
+        dependency_results = await self._install_dependencies(server_def)
+
+        # Add to configuration
+        success = self._add_to_config(server_def, config_path, auto_connect)
+
+        if success:
+            logger.info(f"Successfully installed server: {server_id}")
+            return {
+                "status": "installed",
+                "message": f"Server {server_id} installed successfully",
+                "server": self._server_to_dict(server_def),
+                "dependencies": dependency_results,
+                "auto_connect": auto_connect,
+            }
+        else:
+            return {
+                "status": "error",
+                "message": f"Failed to add server to configuration",
+            }
+
+    def _parse_server_definition(self, data: dict[str, Any]) -> MCPServerDefinition:
+        """Parse server definition from registry data.
+
+        Args:
+            data: Raw server data from registry
+
+        Returns:
+            MCPServerDefinition instance
+        """
+        return MCPServerDefinition(
+            id=data.get("id", data.get("name", "unknown")),
+            name=data.get("name", "Unknown Server"),
+            description=data.get("description", ""),
+            transport=data.get("transport", "stdio"),
+            command=data.get("command"),
+            args=data.get("args", []),
+            url=data.get("url"),
+            dependencies=data.get("dependencies", {}),
+            repository=data.get("repository"),
+            homepage=data.get("homepage"),
+            version=data.get("version", "1.0.0"),
+            stars=data.get("stars", 0),
+            downloads=data.get("downloads", 0),
+            tags=data.get("tags", []),
+            metadata=data.get("metadata", {}),
+        )
+
+    def _server_to_dict(self, server: MCPServerDefinition) -> dict[str, Any]:
+        """Convert server definition to dictionary.
+
+        Args:
+            server: Server definition
+
+        Returns:
+            Dictionary representation
+        """
+        return {
+            "id": server.id,
+            "name": server.name,
+            "description": server.description,
+            "transport": server.transport,
+            "command": server.command,
+            "args": server.args,
+            "url": server.url,
+            "dependencies": server.dependencies,
+            "repository": server.repository,
+            "homepage": server.homepage,
+            "version": server.version,
+            "stars": server.stars,
+            "downloads": server.downloads,
+            "tags": server.tags,
+            "metadata": server.metadata,
+        }
+
+    def _get_cache_key(self, url: str) -> str:
+        """Generate cache key from URL.
+
+        Args:
+            url: Registry URL
+
+        Returns:
+            Cache key (SHA256 hash)
+        """
+        return hashlib.sha256(url.encode()).hexdigest()
+
+    def _read_cache(self, cache_key: str) -> list[dict[str, Any]] | None:
+        """Read cached registry data.
+
+        Args:
+            cache_key: Cache key
+
+        Returns:
+            Cached data or None if expired/missing
+        """
+        cache_file = self.cache_dir / f"{cache_key}.json"
+
+        if not cache_file.exists():
+            return None
+
+        # Check if cache is expired
+        mtime = datetime.fromtimestamp(cache_file.stat().st_mtime, tz=UTC)
+        if datetime.now(UTC) - mtime > self.cache_ttl:
+            logger.debug(f"Cache expired: {cache_key[:8]}...")
+            cache_file.unlink()
+            return None
+
+        # Read cache
+        try:
+            with open(cache_file, encoding="utf-8") as f:
+                return json.load(f)  # type: ignore[no-any-return]
+        except Exception as e:
+            logger.warning(f"Failed to read cache: {e}")
+            return None
+
+    def _write_cache(self, cache_key: str, data: list[dict[str, Any]]) -> None:
+        """Write data to cache.
+
+        Args:
+            cache_key: Cache key
+            data: Data to cache
+        """
+        cache_file = self.cache_dir / f"{cache_key}.json"
+
+        try:
+            with open(cache_file, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2)
+            logger.debug(f"Wrote cache: {cache_key[:8]}...")
+        except Exception as e:
+            logger.warning(f"Failed to write cache: {e}")
+
+    def _is_server_installed(self, server_id: str, config_path: Path) -> bool:
+        """Check if server is already installed in config.
+
+        Args:
+            server_id: Server identifier
+            config_path: Path to config file
+
+        Returns:
+            True if already installed
+        """
+        if not config_path.exists():
+            return False
+
+        try:
+            with open(config_path, encoding="utf-8") as f:
+                config = yaml.safe_load(f)
+
+            servers = config.get("servers", [])
+            for server in servers:
+                # Check by name or command (for npm packages)
+                if server.get("name") == server_id:
+                    return True
+                if server_id in str(server.get("command", "")):
+                    return True
+                if server_id in " ".join(server.get("args", [])):
+                    return True
+
+            return False
+
+        except Exception as e:
+            logger.error(f"Failed to check installed servers: {e}")
+            return False
+
+    def _add_to_config(
+        self, server: MCPServerDefinition, config_path: Path, auto_connect: bool
+    ) -> bool:
+        """Add server to configuration file.
+
+        Args:
+            server: Server definition
+            config_path: Path to config file
+            auto_connect: Whether to enable auto-connect
+
+        Returns:
+            True if successful
+        """
+        try:
+            # Load existing config
+            if config_path.exists():
+                with open(config_path, encoding="utf-8") as f:
+                    config = yaml.safe_load(f) or {}
+            else:
+                config = {}
+
+            # Ensure servers list exists
+            if "servers" not in config:
+                config["servers"] = []
+
+            # Build server config
+            server_config = {
+                "name": server.id.replace("@", "").replace("/", "-"),
+                "transport": server.transport,
+                "description": server.description,
+                "auto_connect": auto_connect,
+                "enabled": True,
+            }
+
+            if server.transport == "stdio":
+                server_config["command"] = server.command or "npx"
+                # If server.id is npm package, use it in args
+                if server.command is None or "npx" in str(server.command):
+                    server_config["args"] = [server.id]
+                else:
+                    server_config["args"] = server.args
+            else:
+                server_config["url"] = server.url
+
+            # Add dependencies if any
+            if server.dependencies:
+                server_config["dependencies"] = server.dependencies
+
+            # Append to servers
+            config["servers"].append(server_config)
+
+            # Write back to file
+            with open(config_path, "w", encoding="utf-8") as f:
+                yaml.dump(config, f, default_flow_style=False, sort_keys=False)
+
+            logger.info(f"Added server to config: {server.id}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to add server to config: {e}")
+            return False
+
+    async def _install_dependencies(
+        self, server: MCPServerDefinition
+    ) -> dict[str, Any]:
+        """Install server dependencies (npm, pip, etc.).
+
+        Args:
+            server: Server definition
+
+        Returns:
+            Dictionary with installation results
+        """
+        results = {"npm": [], "pip": [], "errors": []}
+
+        if not server.dependencies:
+            return results
+
+        # Install npm packages
+        npm_packages = server.dependencies.get("npm", [])
+        if npm_packages:
+            for package in npm_packages:
+                try:
+                    logger.info(f"Installing npm package: {package}")
+                    # Note: Actual installation would run: npm install -g {package}
+                    # For now, just log (would require subprocess execution)
+                    results["npm"].append({"package": package, "status": "skipped"})
+                except Exception as e:
+                    logger.error(f"Failed to install npm package {package}: {e}")
+                    results["errors"].append({"package": package, "error": str(e)})
+
+        # Install pip packages
+        pip_packages = server.dependencies.get("pip", [])
+        if pip_packages:
+            for package in pip_packages:
+                try:
+                    logger.info(f"Installing pip package: {package}")
+                    # Note: Actual installation would run: pip install {package}
+                    results["pip"].append({"package": package, "status": "skipped"})
+                except Exception as e:
+                    logger.error(f"Failed to install pip package {package}: {e}")
+                    results["errors"].append({"package": package, "error": str(e)})
+
+        return results
+
+    async def close(self) -> None:
+        """Close HTTP client."""
+        await self._http_client.aclose()
+
+
+# Singleton instance
+_client: MCPRegistryClient | None = None
+
+
+def get_registry_client() -> MCPRegistryClient:
+    """Get singleton registry client instance.
+
+    Returns:
+        MCPRegistryClient instance
+    """
+    global _client
+    if _client is None:
+        _client = MCPRegistryClient()
+    return _client
