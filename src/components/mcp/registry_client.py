@@ -483,16 +483,34 @@ class MCPRegistryClient:
     ) -> dict[str, Any]:
         """Install server dependencies (npm, pip, etc.).
 
+        Sprint 107 Feature 107.4: Automatic dependency installation.
+
         Args:
             server: Server definition
 
         Returns:
             Dictionary with installation results
         """
-        results = {"npm": [], "pip": [], "errors": []}
+        results = {"npm": [], "pip": [], "env": [], "errors": []}
 
         if not server.dependencies:
             return results
+
+        # Check environment variables
+        env_vars = server.dependencies.get("env", [])
+        if env_vars:
+            import os
+
+            for var in env_vars:
+                if os.getenv(var):
+                    results["env"].append({"variable": var, "status": "found"})
+                else:
+                    results["env"].append({"variable": var, "status": "missing"})
+                    results["errors"].append({
+                        "type": "env",
+                        "variable": var,
+                        "error": f"Environment variable {var} is not set"
+                    })
 
         # Install npm packages
         npm_packages = server.dependencies.get("npm", [])
@@ -500,12 +518,49 @@ class MCPRegistryClient:
             for package in npm_packages:
                 try:
                     logger.info(f"Installing npm package: {package}")
-                    # Note: Actual installation would run: npm install -g {package}
-                    # For now, just log (would require subprocess execution)
-                    results["npm"].append({"package": package, "status": "skipped"})
+
+                    # Check if npm is available
+                    npm_check = await asyncio.create_subprocess_exec(
+                        "npm", "--version",
+                        stdout=asyncio.subprocess.PIPE,
+                        stderr=asyncio.subprocess.PIPE
+                    )
+                    await npm_check.communicate()
+
+                    if npm_check.returncode != 0:
+                        logger.warning("npm not available, skipping package installation")
+                        results["npm"].append({"package": package, "status": "skipped_no_npm"})
+                        continue
+
+                    # Install package globally
+                    process = await asyncio.create_subprocess_exec(
+                        "npm", "install", "-g", package,
+                        stdout=asyncio.subprocess.PIPE,
+                        stderr=asyncio.subprocess.PIPE
+                    )
+                    stdout, stderr = await process.communicate()
+
+                    if process.returncode == 0:
+                        logger.info(f"Successfully installed npm package: {package}")
+                        results["npm"].append({"package": package, "status": "installed"})
+                    else:
+                        error_msg = stderr.decode() if stderr else "Unknown error"
+                        logger.error(f"Failed to install npm package {package}: {error_msg}")
+                        results["npm"].append({"package": package, "status": "failed"})
+                        results["errors"].append({
+                            "type": "npm",
+                            "package": package,
+                            "error": error_msg
+                        })
+
                 except Exception as e:
                     logger.error(f"Failed to install npm package {package}: {e}")
-                    results["errors"].append({"package": package, "error": str(e)})
+                    results["npm"].append({"package": package, "status": "error"})
+                    results["errors"].append({
+                        "type": "npm",
+                        "package": package,
+                        "error": str(e)
+                    })
 
         # Install pip packages
         pip_packages = server.dependencies.get("pip", [])
@@ -513,11 +568,36 @@ class MCPRegistryClient:
             for package in pip_packages:
                 try:
                     logger.info(f"Installing pip package: {package}")
-                    # Note: Actual installation would run: pip install {package}
-                    results["pip"].append({"package": package, "status": "skipped"})
+
+                    # Install package
+                    process = await asyncio.create_subprocess_exec(
+                        "pip", "install", package,
+                        stdout=asyncio.subprocess.PIPE,
+                        stderr=asyncio.subprocess.PIPE
+                    )
+                    stdout, stderr = await process.communicate()
+
+                    if process.returncode == 0:
+                        logger.info(f"Successfully installed pip package: {package}")
+                        results["pip"].append({"package": package, "status": "installed"})
+                    else:
+                        error_msg = stderr.decode() if stderr else "Unknown error"
+                        logger.error(f"Failed to install pip package {package}: {error_msg}")
+                        results["pip"].append({"package": package, "status": "failed"})
+                        results["errors"].append({
+                            "type": "pip",
+                            "package": package,
+                            "error": error_msg
+                        })
+
                 except Exception as e:
                     logger.error(f"Failed to install pip package {package}: {e}")
-                    results["errors"].append({"package": package, "error": str(e)})
+                    results["pip"].append({"package": package, "status": "error"})
+                    results["errors"].append({
+                        "type": "pip",
+                        "package": package,
+                        "error": str(e)
+                    })
 
         return results
 
