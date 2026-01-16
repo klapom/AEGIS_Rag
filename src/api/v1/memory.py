@@ -632,18 +632,17 @@ async def get_memory_stats(
 
             qdrant_client = get_qdrant_client()
             collection_info = await qdrant_client.async_client.get_collection(
-                settings.qdrant_collection_name
+                settings.qdrant_collection
             )
 
             # Extract collection statistics from CollectionInfo
             long_term_stats = {
                 "available": True,
-                "collection_name": collection_info.collection_name,
+                "collection_name": settings.qdrant_collection,
                 "points_count": collection_info.points_count or 0,
                 "vectors_count": collection_info.vectors_count or 0,
                 "indexed_vectors_count": collection_info.indexed_vectors_count or 0,
-                "segments_count": len(collection_info.payload_schema) if collection_info.payload_schema else 0,
-                "status": collection_info.status.value if collection_info.status else "unknown",
+                "status": str(collection_info.status) if collection_info.status else "unknown",
             }
 
             # Add disk/RAM size if available
