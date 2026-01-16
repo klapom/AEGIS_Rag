@@ -2,6 +2,8 @@
 
 This module provides a high-level manager for handling multiple MCP server
 connections, automatic reconnection, and connection pooling.
+
+Sprint 107 Feature 107.1: Added YAML-based config loading and auto-connect.
 """
 
 import asyncio
@@ -9,6 +11,7 @@ import logging
 from typing import Any
 
 from .client import MCPClient, MCPConnectionError
+from .config import MCPConfigLoader, MCPConfiguration
 from .models import MCPServer, MCPServerConnection, MCPTool, ServerStatus
 
 logger = logging.getLogger(__name__)
@@ -29,13 +32,19 @@ class ConnectionManager:
         auto_reconnect: bool = True,
         reconnect_interval: int = 30,
         max_reconnect_attempts: int = 5,
+        config_loader: MCPConfigLoader | None = None,
+        auto_connect_on_init: bool = False,
     ) -> None:
         """Initialize the connection manager.
+
+        Sprint 107 Feature 107.1: Added config_loader and auto_connect_on_init.
 
         Args:
             auto_reconnect: Whether to automatically reconnect on failure
             reconnect_interval: Interval between reconnection attempts (seconds)
             max_reconnect_attempts: Maximum number of reconnection attempts
+            config_loader: Optional config loader (creates default if None)
+            auto_connect_on_init: Whether to auto-connect configured servers on init
         """
         self.client = MCPClient()
         self.auto_reconnect = auto_reconnect
@@ -43,6 +52,15 @@ class ConnectionManager:
         self.max_reconnect_attempts = max_reconnect_attempts
         self._reconnect_tasks: dict[str, asyncio.Task] = {}
         self._shutdown = False
+
+        # Sprint 107 Feature 107.1: Configuration management
+        self.config_loader = config_loader or MCPConfigLoader()
+        self._config: MCPConfiguration | None = None
+
+        # Load config and optionally auto-connect
+        if auto_connect_on_init:
+            # Note: auto-connect must be done asynchronously, so we only load config here
+            self._config = self.config_loader.load()
 
     async def connect_all(self, servers: list[MCPServer]) -> dict[str, bool]:
         """Connect to multiple servers in parallel.
@@ -257,3 +275,87 @@ class ConnectionManager:
             "connections": {name: status.value for name, status in connections.items()},
             "auto_reconnect": self.auto_reconnect,
         }
+
+    async def connect_from_config(self, auto_connect_only: bool = True) -> dict[str, bool]:
+        """Connect to servers from configuration file.
+
+        Sprint 107 Feature 107.1: Auto-connect configured servers.
+
+        Args:
+            auto_connect_only: If True, only connect servers with auto_connect=true
+
+        Returns:
+            Dictionary mapping server name to connection success status
+        """
+        # Load config if not already loaded
+        if self._config is None:
+            self._config = self.config_loader.load()
+
+        # Get servers to connect
+        if auto_connect_only:
+            servers = self._config.get_auto_connect_servers()
+            logger.info(f"Auto-connecting to {len(servers)} configured MCP servers")
+        else:
+            servers = self._config.get_all_enabled_servers()
+            logger.info(f"Connecting to {len(servers)} enabled MCP servers")
+
+        if not servers:
+            logger.warning("No MCP servers configured for connection")
+            return {}
+
+        # Connect to all servers
+        return await self.connect_all(servers)
+
+    async def reload_config(self, reconnect: bool = True) -> dict[str, Any]:
+        """Reload configuration from file and optionally reconnect.
+
+        Sprint 107 Feature 107.1: Configuration reload without restart.
+
+        Args:
+            reconnect: Whether to reconnect servers after reloading config
+
+        Returns:
+            Dictionary with reload results
+        """
+        logger.info("Reloading MCP configuration", extra={"reconnect": reconnect})
+
+        # Reload config
+        old_config = self._config
+        self._config = self.config_loader.reload()
+
+        result = {
+            "success": True,
+            "servers_before": len(old_config.servers) if old_config else 0,
+            "servers_after": len(self._config.servers),
+            "connection_results": {},
+        }
+
+        # Optionally reconnect
+        if reconnect:
+            # Disconnect all existing connections
+            await self.disconnect_all()
+
+            # Connect to auto-connect servers
+            connection_results = await self.connect_from_config(auto_connect_only=True)
+            result["connection_results"] = connection_results
+            result["connected"] = sum(1 for success in connection_results.values() if success)
+
+        logger.info(
+            "Configuration reloaded",
+            extra={
+                "servers": result["servers_after"],
+                "connected": result.get("connected", 0),
+            },
+        )
+
+        return result
+
+    def get_config(self) -> MCPConfiguration:
+        """Get current configuration.
+
+        Returns:
+            MCPConfiguration instance
+        """
+        if self._config is None:
+            self._config = self.config_loader.load()
+        return self._config

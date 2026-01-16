@@ -71,6 +71,8 @@ _connection_manager: ConnectionManager | None = None
 def get_connection_manager() -> ConnectionManager:
     """Get or create the global MCP connection manager.
 
+    Sprint 107 Feature 107.1: Enabled auto_connect_on_init for config loading.
+
     Returns:
         ConnectionManager instance
 
@@ -84,8 +86,9 @@ def get_connection_manager() -> ConnectionManager:
             auto_reconnect=True,
             reconnect_interval=30,
             max_reconnect_attempts=5,
+            auto_connect_on_init=True,  # Sprint 107 Feature 107.1
         )
-        logger.info("mcp_manager_initialized")
+        logger.info("mcp_manager_initialized", config_loaded=True)
     return _connection_manager
 
 
@@ -675,3 +678,60 @@ async def mcp_health_check(
     logger.info("mcp_health_checked", user_id=current_user.user_id, status=health["status"])
 
     return health
+
+
+@router.post("/reload-config")
+async def reload_mcp_config(
+    reconnect: bool = True,
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Reload MCP server configuration from config file.
+
+    Sprint 107 Feature 107.1: Configuration reload without restart.
+
+    This endpoint reloads the MCP server configuration from config/mcp_servers.yaml
+    and optionally reconnects to servers with auto_connect enabled.
+
+    Args:
+        reconnect: Whether to reconnect servers after reloading (default: True)
+
+    Returns:
+        Reload results with server counts and connection status
+
+    Example:
+        ```bash
+        # Reload and reconnect
+        curl -X POST -H "Authorization: Bearer $TOKEN" \
+          "http://localhost:8000/api/v1/mcp/reload-config?reconnect=true"
+
+        # Reload without reconnecting
+        curl -X POST -H "Authorization: Bearer $TOKEN" \
+          "http://localhost:8000/api/v1/mcp/reload-config?reconnect=false"
+        ```
+    """
+    manager = get_connection_manager()
+
+    try:
+        result = await manager.reload_config(reconnect=reconnect)
+
+        logger.info(
+            "mcp_config_reloaded",
+            user_id=current_user.user_id,
+            servers_before=result["servers_before"],
+            servers_after=result["servers_after"],
+            reconnected=reconnect,
+            connected=result.get("connected", 0),
+        )
+
+        return result
+
+    except Exception as e:
+        logger.error(
+            "mcp_config_reload_failed",
+            user_id=current_user.user_id,
+            error=str(e),
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to reload MCP configuration: {e}",
+        ) from e

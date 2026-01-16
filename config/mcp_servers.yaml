@@ -1,0 +1,93 @@
+# MCP Server Configuration
+# Sprint 107 Feature 107.1: YAML-based MCP server configuration
+#
+# This file defines MCP servers that will be automatically connected on startup.
+# Servers with auto_connect: true and enabled: true will be connected during
+# ConnectionManager initialization.
+#
+# Transport Types:
+#   - stdio: Execute command via stdin/stdout (local processes)
+#   - http: Connect to HTTP endpoint (remote services)
+#
+# Example servers are provided below. Uncomment and configure as needed.
+
+servers:
+  # Example: Bash Command Execution Tools
+  # Provides shell command execution via bash
+  - name: bash-tools
+    transport: stdio
+    command: /usr/bin/bash
+    args: []
+    description: "Bash command execution tools for system operations"
+    auto_connect: false  # Set to true to enable on startup
+    enabled: true
+    timeout: 30
+    retry_attempts: 3
+
+  # Example: Python Code Execution Tools
+  # Provides Python code execution and evaluation
+  - name: python-tools
+    transport: stdio
+    command: /usr/bin/python3
+    args: ["-m", "mcp_server"]
+    description: "Python code execution and evaluation tools"
+    auto_connect: false  # Set to true to enable on startup
+    enabled: true
+    timeout: 30
+    retry_attempts: 3
+
+  # Example: Browser Automation Tools
+  # Provides browser automation via Chrome DevTools Protocol
+  - name: browser-tools
+    transport: http
+    url: "http://localhost:9222"
+    description: "Browser automation via Chrome DevTools Protocol"
+    auto_connect: false  # Set to true to enable on startup
+    enabled: true
+    timeout: 60
+    retry_attempts: 3
+
+  # Example: Filesystem Tools (with npm dependencies)
+  # Provides file read/write operations
+  # - name: filesystem-tools
+  #   transport: stdio
+  #   command: npx
+  #   args: ["@modelcontextprotocol/server-filesystem", "/home/user/documents"]
+  #   description: "File system read/write operations"
+  #   auto_connect: false
+  #   enabled: true
+  #   dependencies:
+  #     npm:
+  #       - "@modelcontextprotocol/server-filesystem@^1.0.0"
+
+  # Example: GitHub Tools (with environment variables)
+  # Provides GitHub API integration
+  # - name: github-tools
+  #   transport: stdio
+  #   command: npx
+  #   args: ["@modelcontextprotocol/server-github"]
+  #   description: "GitHub repository and issue management"
+  #   auto_connect: false
+  #   enabled: true
+  #   dependencies:
+  #     npm:
+  #       - "@modelcontextprotocol/server-github@^1.0.0"
+  #     env:
+  #       - GITHUB_TOKEN  # Required environment variable
+
+  # Example: Web Scraper Tools
+  # Provides web content extraction
+  # - name: web-scraper
+  #   transport: http
+  #   url: "http://localhost:8080/mcp"
+  #   description: "Web content extraction and scraping"
+  #   auto_connect: false
+  #   enabled: true
+  #   timeout: 60
+
+# Configuration Notes:
+# 1. auto_connect: true → Server connects automatically on startup
+# 2. enabled: false → Server is ignored even if auto_connect is true
+# 3. For stdio transport, ensure command is executable and in PATH
+# 4. For http transport, ensure the service is running before connecting
+# 5. Dependencies are optional but help document server requirements
