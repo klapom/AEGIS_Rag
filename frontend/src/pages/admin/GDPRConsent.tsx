@@ -64,10 +64,22 @@ export function GDPRConsentPage() {
         // Sprint 100 Fix #2: Use standardized "items" field (not "consents")
         const items = consentsData.items || [];
 
-        // Sprint 100 Fix #6: Map backend "granted" status to frontend "active"
+        // Transform snake_case API response to camelCase + Sprint 100 Fix #6 status mapping
         const mappedConsents = items.map((consent: any) => ({
-          ...consent,
+          id: consent.id,
+          userId: consent.user_id,
+          purpose: consent.purpose,
+          legalBasis: consent.legal_basis || 'consent',
+          legalBasisText: consent.legal_basis_text || 'Art. 6(1)(a) Consent',
+          dataCategories: consent.data_categories || [],
+          skillRestrictions: consent.skill_restrictions || [],
+          grantedAt: consent.granted_at,
+          expiresAt: consent.expires_at || null,
+          withdrawnAt: consent.withdrawn_at || null,
+          // Sprint 100 Fix #6: Map backend "granted" status to frontend "active"
           status: consent.status === 'granted' ? 'active' : consent.status,
+          version: consent.version || '1.0',
+          metadata: consent.metadata || {},
         }));
 
         setConsents(mappedConsents);
@@ -81,7 +93,25 @@ export function GDPRConsentPage() {
       });
       if (requestsResponse.ok) {
         const requestsData = await requestsResponse.json();
-        setRequests(requestsData.requests || []);
+        const requestsItems = requestsData.requests || [];
+
+        // Transform snake_case to camelCase
+        const mappedRequests = requestsItems.map((req: any) => ({
+          id: req.id,
+          userId: req.user_id,
+          requestType: req.request_type,
+          articleReference: req.article_reference || 'GDPR',
+          submittedAt: req.submitted_at,
+          status: req.status,
+          scope: req.scope || [],
+          reviewedBy: req.reviewed_by || null,
+          reviewedAt: req.reviewed_at || null,
+          completedAt: req.completed_at || null,
+          rejectionReason: req.rejection_reason || null,
+          metadata: req.metadata || {},
+        }));
+
+        setRequests(mappedRequests);
       }
 
       // Fetch activities
@@ -92,7 +122,24 @@ export function GDPRConsentPage() {
       });
       if (activitiesResponse.ok) {
         const activitiesData = await activitiesResponse.json();
-        setActivities(activitiesData.activities || []);
+        const activitiesItems = activitiesData.activities || [];
+
+        // Transform snake_case to camelCase
+        const mappedActivities = activitiesItems.map((act: any) => ({
+          id: act.id,
+          userId: act.user_id || null,
+          timestamp: act.timestamp,
+          activity: act.activity,
+          purpose: act.purpose,
+          legalBasis: act.legal_basis,
+          dataCategories: act.data_categories || [],
+          skillName: act.skill_name || null,
+          resourceId: act.resource_id,
+          duration: act.duration || null,
+          metadata: act.metadata || {},
+        }));
+
+        setActivities(mappedActivities);
       }
 
       // Fetch PII settings

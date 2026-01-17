@@ -1,4 +1,4 @@
-import { test, expect, setupAuthMocking } from './fixtures';
+import { test, expect, navigateClientSide } from './fixtures';
 
 /**
  * Group 14: GDPR/Audit E2E Tests
@@ -19,24 +19,67 @@ import { test, expect, setupAuthMocking } from './fixtures';
  */
 
 test.describe('Group 14: GDPR/Audit - Sprint 98/100/101', () => {
-  test.beforeEach(async ({ page }) => {
-    // Setup authentication for admin routes
-    await setupAuthMocking(page);
-  });
+  // No beforeEach needed - navigateClientSide handles auth per test
 
   test('should load GDPR Consent Management page (Sprint 101 fix)', async ({ page }) => {
-    // Navigate to GDPR page
-    await page.goto('http://localhost:80/admin/gdpr');
-    await page.waitForLoadState('networkidle');
+    // Mock GDPR API endpoints to prevent errors during page load
+    await page.route('**/api/v1/gdpr/consents*', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ items: [], total: 0 }),
+      });
+    });
+    await page.route('**/api/v1/gdpr/requests*', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ requests: [], total: 0 }),
+      });
+    });
+    await page.route('**/api/v1/gdpr/processing-activities*', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ activities: [], total: 0 }),
+      });
+    });
+    await page.route('**/api/v1/gdpr/pii-settings*', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          enabled: false,
+          autoRedact: false,
+          redactionChar: '*',
+          detectionThreshold: 0.7,
+          enabledCategories: [],
+        }),
+      });
+    });
+
+    // Navigate to GDPR page with auth handling
+    await navigateClientSide(page, '/admin/gdpr');
 
     // Verify page loaded successfully
-    const heading = page.locator('h1, h2').first();
+    const heading = page.locator('h1').first();
     const headingText = await heading.textContent();
     expect(headingText).toBeTruthy();
     expect(headingText?.toLowerCase()).toMatch(/gdpr|consent|privacy/);
   });
 
   test('should display consents list using `items` field (Sprint 100 Fix #2)', async ({ page }) => {
+    // Mock GDPR API endpoints
+    await page.route('**/api/v1/gdpr/requests*', (route) => {
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ requests: [] }) });
+    });
+    await page.route('**/api/v1/gdpr/processing-activities*', (route) => {
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ activities: [] }) });
+    });
+    await page.route('**/api/v1/gdpr/pii-settings*', (route) => {
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ enabled: false }) });
+    });
+
     // Mock GDPR consents endpoint with `items` field
     await page.route('**/api/v1/gdpr/consents*', (route) => {
       route.fulfill({
@@ -92,6 +135,17 @@ test.describe('Group 14: GDPR/Audit - Sprint 98/100/101', () => {
   });
 
   test('should map consent status granted→active (Sprint 100 Fix #6)', async ({ page }) => {
+    // Mock other GDPR API endpoints
+    await page.route('**/api/v1/gdpr/requests*', (route) => {
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ requests: [] }) });
+    });
+    await page.route('**/api/v1/gdpr/processing-activities*', (route) => {
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ activities: [] }) });
+    });
+    await page.route('**/api/v1/gdpr/pii-settings*', (route) => {
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ enabled: false }) });
+    });
+
     // Mock GDPR consents with `granted` status
     await page.route('**/api/v1/gdpr/consents*', (route) => {
       route.fulfill({
@@ -155,6 +209,15 @@ test.describe('Group 14: GDPR/Audit - Sprint 98/100/101', () => {
   });
 
   test('should load Audit Events page', async ({ page }) => {
+    // Mock Audit API endpoint to prevent errors during page load
+    await page.route('**/api/v1/audit/events*', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ items: [], total: 0 }),
+      });
+    });
+
     // Navigate to audit page
     await page.goto('http://localhost:80/admin/audit');
     await page.waitForLoadState('networkidle');
@@ -338,6 +401,17 @@ test.describe('Group 14: GDPR/Audit - Sprint 98/100/101', () => {
   });
 
   test('should handle empty consents list gracefully', async ({ page }) => {
+    // Mock other GDPR API endpoints
+    await page.route('**/api/v1/gdpr/requests*', (route) => {
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ requests: [] }) });
+    });
+    await page.route('**/api/v1/gdpr/processing-activities*', (route) => {
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ activities: [] }) });
+    });
+    await page.route('**/api/v1/gdpr/pii-settings*', (route) => {
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ enabled: false }) });
+    });
+
     // Mock empty consents list
     await page.route('**/api/v1/gdpr/consents*', (route) => {
       route.fulfill({
@@ -382,7 +456,18 @@ test.describe('Group 14: GDPR/Audit - Sprint 98/100/101', () => {
   });
 
   test('should handle GDPR API errors gracefully', async ({ page }) => {
-    // Mock API error
+    // Mock other GDPR API endpoints (successful)
+    await page.route('**/api/v1/gdpr/requests*', (route) => {
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ requests: [] }) });
+    });
+    await page.route('**/api/v1/gdpr/processing-activities*', (route) => {
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ activities: [] }) });
+    });
+    await page.route('**/api/v1/gdpr/pii-settings*', (route) => {
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ enabled: false }) });
+    });
+
+    // Mock API error for consents endpoint
     await page.route('**/api/v1/gdpr/consents*', (route) => {
       route.fulfill({
         status: 500,
@@ -424,6 +509,17 @@ test.describe('Group 14: GDPR/Audit - Sprint 98/100/101', () => {
   });
 
   test('should display pagination controls for consents', async ({ page }) => {
+    // Mock other GDPR API endpoints
+    await page.route('**/api/v1/gdpr/requests*', (route) => {
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ requests: [] }) });
+    });
+    await page.route('**/api/v1/gdpr/processing-activities*', (route) => {
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ activities: [] }) });
+    });
+    await page.route('**/api/v1/gdpr/pii-settings*', (route) => {
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ enabled: false }) });
+    });
+
     // Mock paginated consents
     await page.route('**/api/v1/gdpr/consents*', (route) => {
       route.fulfill({

@@ -42,16 +42,16 @@ export function AuditTrailPage() {
       setLoading(true);
       setError(null);
 
-      // Build query params
+      // Build query params (backend expects snake_case)
       const params = new URLSearchParams();
-      if (filters.eventType) params.append('eventType', filters.eventType);
+      if (filters.eventType) params.append('event_type', filters.eventType);
       if (filters.outcome) params.append('outcome', filters.outcome);
-      if (filters.actorId) params.append('actorId', filters.actorId);
-      if (filters.startTime) params.append('startTime', filters.startTime);
-      if (filters.endTime) params.append('endTime', filters.endTime);
+      if (filters.actorId) params.append('actor_id', filters.actorId);
+      if (filters.startTime) params.append('start_time', filters.startTime);
+      if (filters.endTime) params.append('end_time', filters.endTime);
       if (filters.searchQuery) params.append('search', filters.searchQuery);
       params.append('page', String(filters.page || 1));
-      params.append('pageSize', String(filters.pageSize || 50));
+      params.append('page_size', String(filters.pageSize || 50));
 
       const response = await fetch(`/api/v1/audit/events?${params.toString()}`, {
         headers: {
@@ -62,7 +62,26 @@ export function AuditTrailPage() {
       if (response.ok) {
         const data = await response.json();
         // Sprint 100 Fix #3: Use standardized "items" field (not "events")
-        setEvents(data.items || []);
+        const items = data.items || [];
+
+        // Transform snake_case API response to camelCase
+        const mappedEvents = items.map((event: any) => ({
+          id: event.id,
+          timestamp: event.timestamp,
+          eventType: event.event_type,
+          actorId: event.actor_id,
+          actorName: event.actor_name || null,
+          resourceId: event.resource_id,
+          resourceType: event.resource_type,
+          outcome: event.outcome,
+          duration: event.duration || null,
+          message: event.message,
+          metadata: event.metadata || {},
+          hash: event.hash,
+          previousHash: event.previous_hash || null,
+        }));
+
+        setEvents(mappedEvents);
         setTotalEvents(data.total || 0);
       } else {
         throw new Error('Failed to fetch events');
@@ -135,8 +154,8 @@ export function AuditTrailPage() {
   ): Promise<IntegrityVerificationResult> => {
     try {
       const params = new URLSearchParams();
-      if (startTime) params.append('startTime', startTime);
-      if (endTime) params.append('endTime', endTime);
+      if (startTime) params.append('start_time', startTime);
+      if (endTime) params.append('end_time', endTime);
 
       const response = await fetch(`/api/v1/audit/integrity?${params.toString()}`, {
         headers: {
@@ -159,12 +178,12 @@ export function AuditTrailPage() {
     try {
       const params = new URLSearchParams();
       params.append('format', format);
-      params.append('includeMetadata', String(includeMetadata));
-      if (filters.eventType) params.append('eventType', filters.eventType);
+      params.append('include_metadata', String(includeMetadata));
+      if (filters.eventType) params.append('event_type', filters.eventType);
       if (filters.outcome) params.append('outcome', filters.outcome);
-      if (filters.actorId) params.append('actorId', filters.actorId);
-      if (filters.startTime) params.append('startTime', filters.startTime);
-      if (filters.endTime) params.append('endTime', filters.endTime);
+      if (filters.actorId) params.append('actor_id', filters.actorId);
+      if (filters.startTime) params.append('start_time', filters.startTime);
+      if (filters.endTime) params.append('end_time', filters.endTime);
 
       const response = await fetch(`/api/v1/audit/export?${params.toString()}`, {
         headers: {
