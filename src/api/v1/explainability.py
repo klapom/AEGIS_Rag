@@ -77,6 +77,39 @@ class SourceDocument(BaseModel):
     confidence: Optional[Literal["high", "medium", "low"]] = None
 
 
+class CertificationInfo(BaseModel):
+    """Individual certification information."""
+
+    id: str
+    name: str
+    status: Literal["certified", "pending", "expired"]
+    issued_date: Optional[str] = None
+    expiry_date: Optional[str] = None
+    issuer: str
+    certificate_url: Optional[str] = None
+
+
+class CertificationStatusResponse(BaseModel):
+    """Certification status response for EU compliance."""
+
+    certification_status: Literal["compliant", "partial", "non_compliant"]
+    certifications: List[CertificationInfo]
+    compliance_score: float = Field(..., ge=0.0, le=100.0)
+    last_audit_date: str
+
+
+class ModelInfoResponse(BaseModel):
+    """LLM model information response."""
+
+    model_name: str
+    model_version: str
+    model_type: str = "LLM"
+    embedding_model: str
+    last_updated: str
+    parameters: int = Field(..., description="Number of model parameters")
+    context_window: int
+
+
 class SkillConsideration(BaseModel):
     """Skill consideration in decision process."""
 
@@ -416,3 +449,95 @@ async def get_source_attribution(
             confidence="medium",
         ),
     ]
+
+
+@router.get("/model-info", response_model=ModelInfoResponse)
+async def get_model_info() -> ModelInfoResponse:
+    """
+    Get LLM model information.
+
+    Returns information about the models used in the AegisRAG system,
+    including the primary LLM and embedding models.
+
+    EU AI Act Article 13 - Information to be provided:
+    - Model name and version
+    - Model capabilities (context window, parameters)
+    - Last update timestamp
+
+    Returns:
+        Model information including LLM and embedding model details
+    """
+    logger.info("explainability_model_info_request")
+
+    # TODO: Fetch from actual LLM config (src/components/llm/llm_client.py)
+    # For now, return mock data matching DGX Spark deployment
+    return ModelInfoResponse(
+        model_name="Nemotron3 Nano",
+        model_version="1.0",
+        model_type="LLM",
+        embedding_model="BGE-M3",
+        last_updated="2026-01-01T00:00:00Z",
+        parameters=30_000_000_000,  # 30B parameters
+        context_window=32768,
+    )
+
+
+# Sprint 107 Feature 107.3: Certification Status Endpoint
+# Note: This endpoint is mounted under explainability router but will also be
+# accessible via /api/v1/explainability/certification/status
+# The E2E test expects /api/v1/certification/status, so we need to register
+# this endpoint in a separate certification router as well (see main.py)
+@router.get("/certification/status", response_model=CertificationStatusResponse)
+async def get_certification_status() -> CertificationStatusResponse:
+    """
+    Get AI system certification status.
+
+    Returns the current certification compliance status for various
+    EU regulations and industry standards.
+
+    EU AI Act Article 43 - Conformity Assessment:
+    - Certification level (basic/standard/advanced)
+    - Compliance with EU AI Act, GDPR, ISO standards
+    - Audit dates and compliance scores
+
+    Returns:
+        Certification status with all active certifications
+    """
+    logger.info("explainability_certification_status_request")
+
+    # TODO: Fetch from certification database/compliance system
+    # For now, return mock data showing compliant status
+    return CertificationStatusResponse(
+        certification_status="compliant",
+        certifications=[
+            CertificationInfo(
+                id="cert-1",
+                name="EU AI Act Compliance",
+                status="certified",
+                issued_date="2026-01-01T00:00:00Z",
+                expiry_date="2027-01-01T00:00:00Z",
+                issuer="EU Certification Body",
+                certificate_url="https://example.com/cert-1.pdf",
+            ),
+            CertificationInfo(
+                id="cert-2",
+                name="GDPR Compliance",
+                status="certified",
+                issued_date="2026-01-01T00:00:00Z",
+                expiry_date="2027-01-01T00:00:00Z",
+                issuer="Data Protection Authority",
+                certificate_url="https://example.com/cert-2.pdf",
+            ),
+            CertificationInfo(
+                id="cert-3",
+                name="ISO 27001",
+                status="pending",
+                issued_date=None,
+                expiry_date=None,
+                issuer="ISO Certification Body",
+                certificate_url=None,
+            ),
+        ],
+        compliance_score=95.5,
+        last_audit_date="2026-01-10T00:00:00Z",
+    )

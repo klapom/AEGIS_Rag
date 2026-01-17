@@ -54,6 +54,7 @@ from src.api.v1.skills import router as skills_router  # Sprint 99 Feature 99.1:
 from src.api.v1.agents import router as agents_router  # Sprint 99 Feature 99.2: Agent Monitoring APIs (Part 1)
 from src.api.v1.orchestration import router as orchestration_router  # Sprint 99 Feature 99.2: Agent Monitoring APIs (Part 2)
 from src.api.v1.explainability import router as explainability_router  # Sprint 104 Feature 104.10: Explainability API
+from src.api.v1.certification import router as certification_router  # Sprint 107 Feature 107.3: Certification API
 from src.core.config import get_settings
 from src.core.exceptions import AegisRAGException
 from src.core.logging import get_logger, setup_logging
@@ -589,6 +590,14 @@ logger.info(
     router="explainability_router",
     prefix="/api/v1/explainability",
     note="Sprint 105 Feature 105.1: Fixed prefix registration (was missing in Sprint 104)",
+)
+
+app.include_router(certification_router, prefix="/api/v1")
+logger.info(
+    "router_registered",
+    router="certification_router",
+    prefix="/api/v1/certification",
+    note="Sprint 107 Feature 107.3: Certification compliance status (EU AI Act Article 43)",
 )
 
 # Prometheus metrics endpoint
