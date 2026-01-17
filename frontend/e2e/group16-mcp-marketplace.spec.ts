@@ -5,7 +5,7 @@
  * Test Group 16: MCP Server Marketplace (6 tests)
  */
 
-import { test, expect, setupAuthMocking } from './fixtures';
+import { test, expect, setupAuthMocking, navigateClientSide } from './fixtures';
 import type { Page } from '@playwright/test';
 
 // Test data
@@ -147,7 +147,7 @@ test.describe('Group 16: MCP Marketplace', () => {
   test('16.1: should display marketplace page with server browser', async ({ page }) => {
     // Navigate directly to page (auth already done in beforeEach)
 
-    await page.goto('/admin/mcp-marketplace');
+    await navigateClientSide(page, '/admin/mcp-marketplace');
     await page.waitForLoadState('networkidle');
 
     // Check page title and subtitle
@@ -175,7 +175,7 @@ test.describe('Group 16: MCP Marketplace', () => {
   });
 
   test('16.2: should display server cards with correct information', async ({ page }) => {
-    await page.goto('/admin/mcp-marketplace');
+    await navigateClientSide(page, '/admin/mcp-marketplace');
 
     // Wait for servers to load
     await expect(page.getByTestId('server-count')).toContainText('5 servers found');
@@ -226,7 +226,7 @@ test.describe('Group 16: MCP Marketplace', () => {
   });
 
   test('16.3: should search servers by name and tags', async ({ page }) => {
-    await page.goto('/admin/mcp-marketplace');
+    await navigateClientSide(page, '/admin/mcp-marketplace');
 
     // Wait for initial load
     await expect(page.getByTestId('server-count')).toContainText('5 servers found');
@@ -260,7 +260,7 @@ test.describe('Group 16: MCP Marketplace', () => {
   });
 
   test('16.4: should open installer dialog when clicking server card', async ({ page }) => {
-    await page.goto('/admin/mcp-marketplace');
+    await navigateClientSide(page, '/admin/mcp-marketplace');
 
     // Click on first server card
     const firstCard = page.getByTestId(
@@ -301,7 +301,7 @@ test.describe('Group 16: MCP Marketplace', () => {
   });
 
   test('16.5: should show dependencies in installer dialog', async ({ page }) => {
-    await page.goto('/admin/mcp-marketplace');
+    await navigateClientSide(page, '/admin/mcp-marketplace');
 
     // Click on GitHub server (has dependencies)
     const githubCard = page.getByTestId('server-card-@modelcontextprotocol/server-github');
@@ -325,7 +325,7 @@ test.describe('Group 16: MCP Marketplace', () => {
   });
 
   test('16.6: should install server and show success message', async ({ page }) => {
-    await page.goto('/admin/mcp-marketplace');
+    await navigateClientSide(page, '/admin/mcp-marketplace');
 
     // Click on first server card
     const firstCard = page.getByTestId(

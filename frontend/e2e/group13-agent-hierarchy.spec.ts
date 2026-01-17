@@ -1,4 +1,4 @@
-import { test, expect, setupAuthMocking } from './fixtures';
+import { test, expect, setupAuthMocking, navigateClientSide } from './fixtures';
 
 /**
  * Group 13: Agent Hierarchy E2E Tests
@@ -24,7 +24,7 @@ test.describe('Group 13: Agent Hierarchy - Sprint 98/100', () => {
 
   test('should load Agent Hierarchy page', async ({ page }) => {
     // Navigate to agent hierarchy page
-    await page.goto('http://localhost:80/admin/agent-hierarchy');
+    await navigateClientSide(page, '/admin/agent-hierarchy');
     await page.waitForLoadState('networkidle');
 
     // Verify page title or heading
@@ -36,7 +36,7 @@ test.describe('Group 13: Agent Hierarchy - Sprint 98/100', () => {
 
   test('should display tree structure with agent levels', async ({ page }) => {
     // Navigate to agent hierarchy page
-    await page.goto('http://localhost:80/admin/agent-hierarchy');
+    await navigateClientSide(page, '/admin/agent-hierarchy');
     await page.waitForLoadState('networkidle');
 
     // Wait for tree to render (SVG or D3.js visualization)
@@ -99,7 +99,7 @@ test.describe('Group 13: Agent Hierarchy - Sprint 98/100', () => {
       });
     });
 
-    await page.goto('http://localhost:80/admin/agent-hierarchy');
+    await navigateClientSide(page, '/admin/agent-hierarchy');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(2000);
 
@@ -168,7 +168,7 @@ test.describe('Group 13: Agent Hierarchy - Sprint 98/100', () => {
       });
     });
 
-    await page.goto('http://localhost:80/admin/agent-hierarchy');
+    await navigateClientSide(page, '/admin/agent-hierarchy');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(2000);
 
@@ -226,7 +226,7 @@ test.describe('Group 13: Agent Hierarchy - Sprint 98/100', () => {
       });
     });
 
-    await page.goto('http://localhost:80/admin/agent-hierarchy');
+    await navigateClientSide(page, '/admin/agent-hierarchy');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(2000);
 
@@ -268,7 +268,7 @@ test.describe('Group 13: Agent Hierarchy - Sprint 98/100', () => {
       });
     });
 
-    await page.goto('http://localhost:80/admin/agent-hierarchy');
+    await navigateClientSide(page, '/admin/agent-hierarchy');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(2000);
 
@@ -284,7 +284,7 @@ test.describe('Group 13: Agent Hierarchy - Sprint 98/100', () => {
   });
 
   test('should verify tree zoom and pan controls', async ({ page }) => {
-    await page.goto('http://localhost:80/admin/agent-hierarchy');
+    await navigateClientSide(page, '/admin/agent-hierarchy');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(2000);
 
@@ -321,7 +321,7 @@ test.describe('Group 13: Agent Hierarchy - Sprint 98/100', () => {
       });
     });
 
-    await page.goto('http://localhost:80/admin/agent-hierarchy');
+    await navigateClientSide(page, '/admin/agent-hierarchy');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(2000);
 

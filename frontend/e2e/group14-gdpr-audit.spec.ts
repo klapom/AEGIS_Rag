@@ -120,7 +120,7 @@ test.describe('Group 14: GDPR/Audit - Sprint 98/100/101', () => {
       });
     });
 
-    await page.goto('http://localhost:80/admin/gdpr');
+    await navigateClientSide(page, '/admin/gdpr');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(2000);
 
@@ -174,7 +174,7 @@ test.describe('Group 14: GDPR/Audit - Sprint 98/100/101', () => {
       });
     });
 
-    await page.goto('http://localhost:80/admin/gdpr');
+    await navigateClientSide(page, '/admin/gdpr');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(2000);
 
@@ -190,7 +190,7 @@ test.describe('Group 14: GDPR/Audit - Sprint 98/100/101', () => {
   });
 
   test('should navigate to Data Subject Rights tab', async ({ page }) => {
-    await page.goto('http://localhost:80/admin/gdpr');
+    await navigateClientSide(page, '/admin/gdpr');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(1000);
 
@@ -219,7 +219,7 @@ test.describe('Group 14: GDPR/Audit - Sprint 98/100/101', () => {
     });
 
     // Navigate to audit page
-    await page.goto('http://localhost:80/admin/audit');
+    await navigateClientSide(page, '/admin/audit');
     await page.waitForLoadState('networkidle');
 
     // Verify page loaded successfully
@@ -267,7 +267,7 @@ test.describe('Group 14: GDPR/Audit - Sprint 98/100/101', () => {
       });
     });
 
-    await page.goto('http://localhost:80/admin/audit');
+    await navigateClientSide(page, '/admin/audit');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(2000);
 
@@ -316,7 +316,7 @@ test.describe('Group 14: GDPR/Audit - Sprint 98/100/101', () => {
       });
     });
 
-    await page.goto('http://localhost:80/admin/audit');
+    await navigateClientSide(page, '/admin/audit');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(1000);
 
@@ -375,7 +375,7 @@ test.describe('Group 14: GDPR/Audit - Sprint 98/100/101', () => {
       });
     });
 
-    await page.goto('http://localhost:80/admin/audit');
+    await navigateClientSide(page, '/admin/audit');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(1000);
 
@@ -424,7 +424,7 @@ test.describe('Group 14: GDPR/Audit - Sprint 98/100/101', () => {
       });
     });
 
-    await page.goto('http://localhost:80/admin/gdpr');
+    await navigateClientSide(page, '/admin/gdpr');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(2000);
 
@@ -446,7 +446,7 @@ test.describe('Group 14: GDPR/Audit - Sprint 98/100/101', () => {
       });
     });
 
-    await page.goto('http://localhost:80/admin/audit');
+    await navigateClientSide(page, '/admin/audit');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(2000);
 
@@ -478,7 +478,7 @@ test.describe('Group 14: GDPR/Audit - Sprint 98/100/101', () => {
       });
     });
 
-    await page.goto('http://localhost:80/admin/gdpr');
+    await navigateClientSide(page, '/admin/gdpr');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(2000);
 
@@ -499,7 +499,7 @@ test.describe('Group 14: GDPR/Audit - Sprint 98/100/101', () => {
       });
     });
 
-    await page.goto('http://localhost:80/admin/audit');
+    await navigateClientSide(page, '/admin/audit');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(2000);
 
@@ -541,7 +541,7 @@ test.describe('Group 14: GDPR/Audit - Sprint 98/100/101', () => {
       });
     });
 
-    await page.goto('http://localhost:80/admin/gdpr');
+    await navigateClientSide(page, '/admin/gdpr');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(2000);
 
@@ -578,7 +578,7 @@ test.describe('Group 14: GDPR/Audit - Sprint 98/100/101', () => {
       });
     });
 
-    await page.goto('http://localhost:80/admin/audit');
+    await navigateClientSide(page, '/admin/audit');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(2000);
 

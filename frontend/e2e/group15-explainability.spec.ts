@@ -1,4 +1,4 @@
-import { test, expect, setupAuthMocking } from './fixtures';
+import { test, expect, setupAuthMocking, navigateClientSide } from './fixtures';
 
 /**
  * Group 15: Explainability & Certification E2E Tests
@@ -26,7 +26,7 @@ test.describe('Group 15: Explainability & Certification - Sprint 98', () => {
 
   test('should load Explainability Dashboard page', async ({ page }) => {
     // Navigate to explainability page
-    await page.goto('http://localhost:80/admin/explainability');
+    await navigateClientSide(page, '/admin/explainability');
     await page.waitForLoadState('networkidle');
 
     // Verify page loaded successfully
@@ -108,7 +108,7 @@ test.describe('Group 15: Explainability & Certification - Sprint 98', () => {
       });
     });
 
-    await page.goto('http://localhost:80/admin/explainability');
+    await navigateClientSide(page, '/admin/explainability');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(2000);
 
@@ -169,7 +169,7 @@ test.describe('Group 15: Explainability & Certification - Sprint 98', () => {
       });
     });
 
-    await page.goto('http://localhost:80/admin/explainability');
+    await navigateClientSide(page, '/admin/explainability');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(2000);
 
@@ -217,7 +217,7 @@ test.describe('Group 15: Explainability & Certification - Sprint 98', () => {
       });
     });
 
-    await page.goto('http://localhost:80/admin/explainability');
+    await navigateClientSide(page, '/admin/explainability');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(2000);
 
@@ -236,7 +236,7 @@ test.describe('Group 15: Explainability & Certification - Sprint 98', () => {
   });
 
   test('should display audit trail links', async ({ page }) => {
-    await page.goto('http://localhost:80/admin/explainability');
+    await navigateClientSide(page, '/admin/explainability');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(2000);
 
@@ -252,7 +252,7 @@ test.describe('Group 15: Explainability & Certification - Sprint 98', () => {
   });
 
   test('should navigate to audit trail from explainability page', async ({ page }) => {
-    await page.goto('http://localhost:80/admin/explainability');
+    await navigateClientSide(page, '/admin/explainability');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(2000);
 
@@ -299,7 +299,7 @@ test.describe('Group 15: Explainability & Certification - Sprint 98', () => {
       });
     });
 
-    await page.goto('http://localhost:80/admin/explainability');
+    await navigateClientSide(page, '/admin/explainability');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(2000);
 
@@ -348,7 +348,7 @@ test.describe('Group 15: Explainability & Certification - Sprint 98', () => {
       });
     });
 
-    await page.goto('http://localhost:80/admin/explainability');
+    await navigateClientSide(page, '/admin/explainability');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(2000);
 
@@ -385,7 +385,7 @@ test.describe('Group 15: Explainability & Certification - Sprint 98', () => {
       });
     });
 
-    await page.goto('http://localhost:80/admin/explainability');
+    await navigateClientSide(page, '/admin/explainability');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(2000);
 
@@ -413,7 +413,7 @@ test.describe('Group 15: Explainability & Certification - Sprint 98', () => {
       });
     });
 
-    await page.goto('http://localhost:80/admin/explainability');
+    await navigateClientSide(page, '/admin/explainability');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(2000);
 
@@ -434,7 +434,7 @@ test.describe('Group 15: Explainability & Certification - Sprint 98', () => {
       });
     });
 
-    await page.goto('http://localhost:80/admin/explainability');
+    await navigateClientSide(page, '/admin/explainability');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(2000);
 
@@ -485,7 +485,7 @@ test.describe('Group 15: Explainability & Certification - Sprint 98', () => {
       });
     });
 
-    await page.goto('http://localhost:80/admin/explainability');
+    await navigateClientSide(page, '/admin/explainability');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(2000);
 
@@ -495,7 +495,7 @@ test.describe('Group 15: Explainability & Certification - Sprint 98', () => {
   });
 
   test('should export decision paths', async ({ page }) => {
-    await page.goto('http://localhost:80/admin/explainability');
+    await navigateClientSide(page, '/admin/explainability');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(2000);
 
