@@ -1442,25 +1442,49 @@ After implementing comprehensive logging (Sprint 83), we expect to discover addi
 
 ---
 
-## Sprint 110: E2E Test Fixes (Groups 01-03, 09, 13-16) 📝 (PLANNED)
+## Sprint 110: E2E Test Fixes (Groups 01-03, 13-16) 📝 (PLANNED)
 **Epic:** E2E Test Completion - Phase 2
-**Total Story Points:** 70 SP
-**Status:** 📝 **PLANNED** - Focus: Group 09 Long Context
+**Total Story Points:** 60 SP
+**Status:** 📝 **PLANNED** - Focus: Tool Execution & Enterprise Features
 
 **Execution Strategy:**
-- **Priority Feature:** Group 09 Long Context (10 tests, 10 SP) ⭐ User requested
-- **Phase 2:** Groups 01-03 Tool Execution (16 tests, 20 SP)
-- **Phase 3:** Groups 13-16 Enterprise Features (35 tests, 40 SP)
+- **Phase 1:** Groups 01-03 Tool Execution (16 tests, 20 SP)
+- **Phase 2:** Groups 13-16 Enterprise Features (35 tests, 40 SP)
 
 | Feature | Tests | SP | Priority | Description |
 |---------|-------|-----|----------|-------------|
-| 110.1 | Group 09: Long Context | 10 | P0 | ⭐ Large document handling, context window mgmt |
-| 110.2 | Groups 01-03: Tool Execution | 16 | P1 | MCP, Bash, Python execution |
-| 110.3 | Groups 13-15: Enterprise | 27 | P2 | Hierarchy, GDPR, Explainability |
-| 110.4 | Group 16: MCP Marketplace | 8 | P3 | Server marketplace UI |
+| 110.1 | Groups 01-03: Tool Execution | 16 | P0 | MCP, Bash, Python execution |
+| 110.2 | Groups 13-15: Enterprise | 27 | P1 | Hierarchy, GDPR, Explainability |
+| 110.3 | Group 16: MCP Marketplace | 8 | P2 | Server marketplace UI |
 
-### Group 09: Long Context (Priority Feature)
-**User Request:** "was ist mit den anderen SPRINT 109 features wie z.B. Long Context?"
+### Groups 01-03: Tool Execution (20 SP)
+- MCP Tools basic operations
+- Bash command execution and output
+- Python code execution and output
+
+### Groups 13-16: Enterprise Features (40 SP)
+- Agent Hierarchy visualization (partial work from Sprint 100)
+- GDPR & Audit compliance UI
+- Explainability dashboards
+- MCP Marketplace (server discovery, installation)
+
+**Sprint 110 Target:** >90% pass rate on Groups 01-03, 13-16, ≥80 tests passing
+
+---
+
+## Sprint 111: Long Context E2E + Cost Dashboard Token Chart 📝 (PLANNED)
+**Epic:** E2E Test Completion - Phase 3 + Admin UI Enhancement
+**Total Story Points:** 18 SP
+**Status:** 📝 **PLANNED** - Focus: Long Context Handling + Cost Monitoring
+
+**Note:** Long Context moved from Sprint 110 to allow focused implementation.
+
+| Feature | Tests | SP | Priority | Description |
+|---------|-------|-----|----------|-------------|
+| 111.1 | Group 09: Long Context E2E | 10 | P0 | Large document handling, context window mgmt |
+| 111.2 | Cost Dashboard Token Usage Chart | 8 | P0 | Token usage over time with range slider |
+
+### Feature 111.1: Group 09 Long Context
 **Scope:**
 - Large document handling (>100K tokens)
 - Context window management UI
@@ -1485,21 +1509,34 @@ After implementing comprehensive logging (Sprint 83), we expect to discover addi
 - Chunk navigation and preview
 - Score display formatting
 
-**Effort:** 10 SP, 1-2 days
+### Feature 111.2: Cost Dashboard Token Usage Chart
+**Scope:**
+- Token Usage Over Time line chart (Recharts oder Chart.js)
+- Schieberegler für Zeitraum-Auswahl (1 Tag - 3 Jahre)
+- Logarithmische/Lineare Skala toggle
+- Provider-Filter (alle/einzeln)
+- Tägliche/Wöchentliche/Monatliche Aggregation
 
-### Remaining Groups
-**Groups 01-03: Tool Execution** (20 SP)
-- MCP Tools basic operations
-- Bash command execution and output
-- Python code execution and output
+**UI Components:**
+1. `TokenUsageChart.tsx` - Zeitverlaufs-Grafik Komponente
+2. `TimeRangeSlider.tsx` - Slider mit Presets (1d, 7d, 30d, 90d, 1y, 3y)
+3. `ChartControls.tsx` - Aggregation + Provider Filter
 
-**Groups 13-16: Enterprise Features** (40 SP)
-- Agent Hierarchy visualization (partial work from Sprint 100)
-- GDPR & Audit compliance UI
-- Explainability dashboards
-- MCP Marketplace (server discovery, installation)
+**Backend Requirements:**
+- `GET /api/v1/admin/costs/timeseries?start=...&end=...&aggregation=daily`
+- Response: `{ data: [{ date: "2026-01-17", tokens: 150000, cost_usd: 0.45, provider: "ollama" }, ...] }`
 
-**Sprint 110 Target:** >95% pass rate overall, ≥110 tests passing
+**Tests:**
+1. Chart renders with data
+2. Slider changes time range correctly
+3. Provider filter works
+4. Aggregation toggle updates chart
+5. Empty state handling
+6. Loading state
+7. Error state
+8. Export chart as PNG
+
+**Sprint 111 Target:** 100% pass rate on Group 09 (10/10 tests) + Token Chart functional
 
 ---
 

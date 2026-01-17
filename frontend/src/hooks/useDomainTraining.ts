@@ -246,7 +246,26 @@ export function useStartTraining() {
 }
 
 /**
+ * Response from LLM models endpoint
+ * Sprint 110 Feature 110.4: Fixed to use /admin/llm/models endpoint
+ */
+interface OllamaModelsResponse {
+  models: Array<{
+    name: string;
+    size: number;
+    digest: string;
+    modified_at: string;
+  }>;
+  ollama_available: boolean;
+  error: string | null;
+}
+
+/**
  * Get available LLM models
+ * Sprint 110 Feature 110.4: Fixed to use /admin/llm/models endpoint
+ *
+ * Previously called /admin/domains/available-models (404 NOT FOUND)
+ * Now calls /admin/llm/models which returns all Ollama models
  */
 export function useAvailableModels() {
   const [data, setData] = useState<string[] | null>(null);
@@ -257,10 +276,17 @@ export function useAvailableModels() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await apiClient.get<AvailableModelsResponse>(
-        '/admin/domains/available-models'
+      // Sprint 110 Fix: Use /admin/llm/models endpoint (returns OllamaModelsResponse)
+      const response = await apiClient.get<OllamaModelsResponse>(
+        '/admin/llm/models'
       );
-      setData(response.models);
+      // Extract model names from the response
+      if (response.ollama_available && response.models) {
+        setData(response.models.map(m => m.name));
+      } else {
+        setError(new Error(response.error || 'Ollama not available'));
+        setData([]);
+      }
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to fetch available models'));
     } finally {

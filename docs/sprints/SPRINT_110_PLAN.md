@@ -1,23 +1,26 @@
-# Sprint 110 Plan - E2E Test Completion (Groups 01-03, 09, 13-16)
+# Sprint 110 Plan - E2E Test Completion (Groups 01-03, 13-16)
 
 **Status:** 🔄 In Progress
-**Target:** Complete remaining E2E test groups with focus on Long Context
-**Sprint Points:** 73 SP (70 + 3 bug fix)
-**Completed:** 3 SP (Feature 110.0)
-**Estimated Duration:** 1.5-2 weeks
+**Target:** Complete remaining E2E test groups (Tool Execution + Enterprise)
+**Sprint Points:** 65 SP (60 + 3 bug fix + 2 bug fix)
+**Completed:** 5 SP (Feature 110.0 + 110.4)
+**Estimated Duration:** 1-1.5 weeks
 
-**User Priority:** ⭐ **Group 09 - Long Context** (explicitly requested)
+**Note:** Group 09 Long Context moved to Sprint 111 for dedicated focus
 
 ---
 
 ## Sprint Goals
 
 0. **Bug Fix:** Complete Feature 110.0 - Admin Memory Search Endpoint (3 SP) ✅
-1. **Priority:** Implement Group 09 Long Context UI + E2E tests (10 SP)
+1. **Bug Fix:** Feature 110.4 - Domain Training Model Selector (2 SP) 📝
 2. Complete Groups 01-03: Tool Execution (20 SP)
 3. Complete Groups 13-16: Enterprise Features (40 SP)
 4. Achieve >80% pass rate per group
-5. Total: 73 SP, ~70 tests
+5. Total: 65 SP, ~60 tests
+
+**Moved to Sprint 111:**
+- ⏸️ Group 09: Long Context (10 SP) - see `SPRINT_111_PLAN.md`
 
 ---
 
@@ -101,91 +104,60 @@ Sprint 72.3 "Memory Management UI" was marked as complete, but the backend endpo
 
 ---
 
-### ⭐ Feature 110.1: Group 09 - Long Context (10 SP) - HIGH PRIORITY
+### ⏸️ Feature 110.1: Group 09 - Long Context (10 SP) - MOVED TO SPRINT 111
 
-**Status:** 📝 Planned
-**Priority:** ⭐ **HIGH** (User specifically requested)
-**Story Points:** 10 SP
-**Effort:** 1-2 days dedicated work
+**Status:** ⏸️ **MOVED TO SPRINT 111**
+**Reason:** User requested dedicated focus with Token Usage Chart feature
+**See:** `SPRINT_111_PLAN.md` for full details
 
-#### User Request Context
+---
 
-**Original Question:** "was ist mit den anderen SPRINT 109 features wie z.B. Long Context?"
-**Decision:** Moved from Sprint 109 to Sprint 110 for dedicated focus
+### ✅ Feature 110.4: Domain Training Model Selector (2 SP) - BUG FIX
 
-#### Scope
+**Status:** ✅ **COMPLETE**
+**Priority:** 🟡 **MEDIUM** (UI Bug from Sprint 109)
+**Story Points:** 2 SP
+**Date Completed:** 2026-01-17
 
-- **Large Document Handling:** >100K tokens, multi-megabyte files
-- **Context Window Management UI:** Visual indicators for context usage
-- **Document Chunking Visualization:** Interactive chunk explorer
-- **Context Relevance Scoring:** Display relevance scores per chunk
-- **Context Compression:** Strategies for fitting large contexts
-- **Multi-Document Context:** Merging contexts from multiple sources
+#### Problem
 
-#### Test Coverage (10 tests)
+**Original Bug Report (Sprint 109.3B):**
+> "Domain Training ==> 'New Domain' ==> Use default model ==> Kann kein Modell ausgewählt werden"
 
-1. **Large Document Upload** - Upload and process >100K token document
-2. **Context Window Indicators** - Display current/max context usage
-3. **Chunk Preview Functionality** - Navigate and preview document chunks
-4. **Relevance Score Visualization** - Display chunk relevance scores
-5. **Long Context Search** - Search within large context windows
-6. **Context Compression Strategies** - Summarization, filtering UI
-7. **Multi-Document Context Merging** - Combine contexts from multiple docs
-8. **Context Overflow Handling** - Graceful degradation when context full
-9. **Context Quality Metrics** - Display context quality indicators
-10. **Context Export Functionality** - Export context data as JSON/Markdown
+**Root Cause Analysis (2026-01-17):**
+- Frontend `useAvailableModels()` hook called `/admin/domains/available-models`
+- This endpoint **did NOT exist** (returned 404)
+- Working endpoint exists at `/admin/llm/models` (returns 12 Ollama models)
 
-#### Component Requirements
+#### Solution Implemented
 
-**New Components Needed:**
+**Option A (Frontend fix):** Updated hook to use existing endpoint
+
+**File:** `frontend/src/hooks/useDomainTraining.ts`
+
 ```typescript
-// Main container for long context features
-LongContextViewer.tsx
-
-// Visual gauge for context usage (0-100%)
-ContextWindowIndicator.tsx
-
-// Interactive chunk navigation
-ChunkExplorer.tsx
-
-// Score visualization component
-RelevanceScoreDisplay.tsx
-
-// Compression strategy selector
-ContextCompressionPanel.tsx
+// Fixed: Uses existing LLM models endpoint
+const response = await apiClient.get<OllamaModelsResponse>(
+  '/admin/llm/models'  // ✅ Returns 12 Ollama models
+);
+if (response.ollama_available && response.models) {
+  setData(response.models.map(m => m.name));
+}
 ```
 
-**API Endpoints:**
-- `GET /api/v1/context/documents/{doc_id}` - Get document with context metadata
-- `GET /api/v1/context/chunks/{doc_id}` - Get all chunks for document
-- `POST /api/v1/context/compress` - Trigger context compression
-- `GET /api/v1/context/metrics` - Get context quality metrics
+#### Files Changed
 
-#### Success Criteria
+- `frontend/src/hooks/useDomainTraining.ts` (+20 LOC, -5 LOC)
+  - Added `OllamaModelsResponse` interface
+  - Updated `useAvailableModels()` to call `/admin/llm/models`
+  - Added Ollama availability check
 
-- ✅ Upload and process documents >100K tokens
-- ✅ Context window indicator shows accurate usage (0-100%)
-- ✅ Chunk explorer allows navigation through 100+ chunks
-- ✅ Relevance scores displayed consistently (0.00-1.00 format)
-- ✅ Long context search returns results within 2s
-- ✅ Context compression reduces size by >50%
-- ✅ All 10 tests passing (100% pass rate)
+#### Success Criteria Met
 
-#### Dependencies
-
-- **Backend:** Context window calculation logic
-- **Backend:** Chunk metadata storage (Qdrant)
-- **Backend:** Relevance scoring algorithm
-- **Backend:** Context compression service
-
-#### Risks & Mitigations
-
-- **Risk:** Large file upload timeout
-  - **Mitigation:** Chunked upload with progress tracking
-- **Risk:** UI freezes with 100+ chunks
-  - **Mitigation:** Virtual scrolling, lazy loading
-- **Risk:** Relevance score calculation slow
-  - **Mitigation:** Pre-compute scores during ingestion
+- ✅ Model dropdown shows all 12 Ollama models
+- ✅ Can select custom model when creating new domain
+- ✅ No 404 errors in browser console
+- ✅ Graceful handling if Ollama unavailable
 
 ---
 
