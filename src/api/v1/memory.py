@@ -41,11 +41,11 @@ router = APIRouter(prefix="/memory", tags=["memory"])
 class MemorySearchRequest(BaseModel):
     """Request model for unified memory search."""
 
-    query: str = Field(
-        ...,
+    query: str | None = Field(
+        default=None,
         min_length=1,
         max_length=1000,
-        description="Search query text",
+        description="Search query text for semantic search. If None, returns all memories filtered by other parameters.",
         examples=["What did we discuss about RAG architecture?"],
     )
     layers: list[str] | None = Field(
@@ -281,13 +281,13 @@ async def unified_memory_search(
 
         logger.info(
             "Memory search completed",
-            query=search_params.query[:100],
+            query=(search_params.query or "")[:100],
             total_results=total_results,
             layers=list(results.keys()),
         )
 
         return MemorySearchResponse(
-            query=search_params.query,
+            query=search_params.query or "",  # Default to empty string if None
             results_by_layer=results_by_layer,
             total_results=total_results,
             layers_searched=list(results.keys()),

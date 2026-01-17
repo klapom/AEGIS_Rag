@@ -14,7 +14,7 @@ For LLM config endpoints, see admin_llm.py
 For graph analytics, see admin_graph.py
 """
 
-from typing import Literal
+from typing import Any, Literal
 
 import structlog
 from fastapi import APIRouter, HTTPException, status
@@ -661,6 +661,180 @@ async def reset_relation_synonyms() -> RelationOverridesResetResponse:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to reset relation synonyms: {str(e)}",
+        ) from e
+
+
+# ============================================================================
+# Sprint 110 Feature 110.0: Admin Memory Search (Bug Fix)
+# ============================================================================
+
+
+class AdminMemorySearchRequest(BaseModel):
+    """Admin memory search request - filter-based search across all layers.
+
+    Sprint 110 Feature 110.0: Fix for missing admin endpoint (Sprint 72.3 gap)
+    """
+
+    user_id: str | None = Field(default=None, description="Filter by user ID")
+    session_id: str | None = Field(default=None, description="Filter by session ID")
+    query: str | None = Field(default=None, description="Semantic search query (optional)")
+    namespace: str | None = Field(default=None, description="Filter by namespace")
+    limit: int = Field(default=20, ge=1, le=100, description="Results per page")
+    offset: int = Field(default=0, ge=0, description="Pagination offset")
+
+
+class AdminMemorySearchResult(BaseModel):
+    """Individual memory search result for admin UI."""
+
+    id: str = Field(description="Memory ID")
+    content: str = Field(description="Memory content")
+    relevance_score: float = Field(description="Relevance score (0.0-1.0)")
+    timestamp: str = Field(description="ISO 8601 timestamp")
+    layer: Literal["redis", "qdrant", "graphiti"] = Field(description="Memory layer")
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+
+
+class AdminMemorySearchResponse(BaseModel):
+    """Admin memory search response matching frontend contract."""
+
+    results: list[AdminMemorySearchResult] = Field(description="Flattened search results")
+    total_count: int = Field(description="Total results across all layers")
+    query: AdminMemorySearchRequest = Field(description="Original query for reference")
+
+
+@router.post("/memory/search", response_model=AdminMemorySearchResponse)
+async def admin_memory_search(
+    search_request: AdminMemorySearchRequest,
+) -> AdminMemorySearchResponse:
+    """Admin-specific memory search with filter-based queries.
+
+    **Sprint 110 Feature 110.0: Admin Memory Search Endpoint**
+
+    This endpoint was missing from Sprint 72.3 implementation. It provides
+    filter-based search (user_id, session_id, namespace) without requiring
+    a semantic query, unlike the user-facing /api/v1/memory/search endpoint.
+
+    **Differences from /api/v1/memory/search:**
+    - Query is optional (filter-only search supported)
+    - Results are flattened (not grouped by layer)
+    - Supports pagination (offset/limit)
+    - Designed for admin debugging UI
+
+    Args:
+        search_request: Search filters and pagination params
+
+    Returns:
+        AdminMemorySearchResponse with flattened results
+
+    Raises:
+        HTTPException 500: If memory search fails
+
+    Example:
+        ```bash
+        curl -X POST "http://localhost:8000/api/v1/admin/memory/search" \\
+             -H "Content-Type: application/json" \\
+             -d '{
+                "session_id": "session_123",
+                "limit": 20,
+                "offset": 0
+             }'
+        ```
+    """
+    try:
+        from src.components.memory import get_memory_router
+
+        # Get memory router
+        memory_router = get_memory_router(session_id=search_request.session_id)
+
+        # Perform search across all layers
+        results_by_layer = await memory_router.search_memory(
+            query=search_request.query or "",  # Empty query for filter-only search
+            session_id=search_request.session_id,
+            limit=search_request.limit * 3,  # Request more to account for filtering
+            time_window_hours=None,
+        )
+
+        # Flatten results from all layers
+        all_results: list[AdminMemorySearchResult] = []
+
+        for layer_name, layer_results in results_by_layer.items():
+            # Map layer name to expected format
+            layer_key: Literal["redis", "qdrant", "graphiti"]
+            if "short" in layer_name.lower() or "redis" in layer_name.lower():
+                layer_key = "redis"
+            elif "long" in layer_name.lower() or "qdrant" in layer_name.lower():
+                layer_key = "qdrant"
+            else:
+                layer_key = "graphiti"
+
+            for result in layer_results:
+                # Extract content
+                content = result.get("content", "") or result.get("text", "")
+
+                # Extract timestamp
+                timestamp = result.get("timestamp", result.get("created_at", ""))
+                if not timestamp:
+                    from datetime import datetime
+
+                    timestamp = datetime.utcnow().isoformat() + "Z"
+
+                # Extract score
+                score = result.get("score", result.get("relevance_score", 0.5))
+                if score is None:
+                    score = 0.5
+
+                # Generate ID if missing
+                result_id = result.get("id", result.get("memory_id", f"{layer_key}_{len(all_results)}"))
+
+                all_results.append(
+                    AdminMemorySearchResult(
+                        id=str(result_id),
+                        content=content,
+                        relevance_score=float(score),
+                        timestamp=str(timestamp),
+                        layer=layer_key,
+                        metadata={
+                            k: v
+                            for k, v in result.items()
+                            if k not in ["id", "content", "text", "score", "relevance_score", "timestamp", "layer"]
+                        },
+                    )
+                )
+
+        # Apply pagination
+        total_count = len(all_results)
+        paginated_results = all_results[search_request.offset : search_request.offset + search_request.limit]
+
+        logger.info(
+            "admin_memory_search_complete",
+            total_count=total_count,
+            returned_count=len(paginated_results),
+            filters={
+                "user_id": search_request.user_id,
+                "session_id": search_request.session_id,
+                "query": search_request.query,
+            },
+        )
+
+        return AdminMemorySearchResponse(
+            results=paginated_results,
+            total_count=total_count,
+            query=search_request,
+        )
+
+    except Exception as e:
+        logger.error(
+            "admin_memory_search_failed",
+            error=str(e),
+            filters={
+                "user_id": search_request.user_id,
+                "session_id": search_request.session_id,
+            },
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Memory search failed: {str(e)}",
         ) from e
 
 

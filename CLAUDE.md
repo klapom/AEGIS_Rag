@@ -10,7 +10,7 @@
 5. Technology Stack: docs/TECH_STACK.md
 6. Code Conventions: docs/CONVENTIONS.md
 7. **RAGAS Journey:** [docs/ragas/RAGAS_JOURNEY.md](docs/ragas/RAGAS_JOURNEY.md) - Living document for RAGAS metrics optimization (Sprint 79+)
-
+8. PLAYWRIGHT E2E Testing: docs/
 ---
 
 ## Project Overview
@@ -338,9 +338,10 @@ REDIS_HOST=localhost
 
 ### E2E Testing with Playwright (Sprint 108+)
 
-**Documentation:** [tests/playwright/PLAYWRIGHT_E2E.md](tests/playwright/PLAYWRIGHT_E2E.md)
+**Documentation:** [docs/e2e/PLAYWRIGHT_E2E.md](docs/e2e/PLAYWRIGHT_E2E.md)
 
 **Test Execution:**
+Make sure frontend container is uptdodate, maybe just rebuild it to be on the safe side
 ```bash
 cd /home/admin/projects/aegisrag/AEGIS_Rag/frontend
 PLAYWRIGHT_BASE_URL=http://192.168.178.10 npx playwright test --reporter=list
@@ -362,10 +363,10 @@ PLAYWRIGHT_BASE_URL=http://192.168.178.10 npx playwright test --reporter=list
 
 **Testing Strategy:**
 1. **After every code change:** Rebuild Docker containers with `--no-cache`
-2. **Document all test runs:** Update `tests/playwright/PLAYWRIGHT_E2E.md`
-3. **Create temp test docs:** In `tests/playwright/` during test runs
+2. **Document all test runs:** Update `docs/e2e/PLAYWRIGHT_E2E.md`
+3. **Create temp test docs:** In `docs/e2e/` during test runs
 4. **Sprint planning:** Document test-related tasks in `docs/sprints/SPRINT_XX_PLAN.md`
-5. **Archive old docs:** Move outdated E2E docs to `tests/playwright/archive/`
+5. **Archive old docs:** Move outdated E2E docs to `docs/e2e/archive/`
 
 **Common E2E Issues & Fixes:**
 - **Timing:** E2E tests need 50-100% overhead vs API-only tests
@@ -431,6 +432,12 @@ curl http://localhost:8000/health
 **Nach jedem Sprint MÜSSEN folgende Schritte durchgeführt werden:**
 
 ### 1. Dokumentation aktualisieren (MANDATORY)
+
+**📍 Dokumentations-Locations (WICHTIG):**
+- ✅ `CLAUDE.md` → **Root-Verzeichnis** (`/CLAUDE.md`)
+- ✅ `SPRINT_XX_PLAN.md` → **docs/sprints/** (`/docs/sprints/SPRINT_110_PLAN.md`)
+- ✅ `PLAYWRIGHT_E2E.md` → **docs/e2e/** (`/docs/e2e/PLAYWRIGHT_E2E.md`)
+- ✅ `SPRINT_PLAN.md` → **docs/sprints/** (`/docs/sprints/SPRINT_PLAN.md`)
 
 **A. ADR erstellen/aktualisieren (wenn architektonische Entscheidungen):**
 - Neue ADR in `docs/adr/ADR-XXX-title.md` erstellen
