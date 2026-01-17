@@ -1,10 +1,10 @@
 # Sprint 109 Plan
 
 **Status:** 📝 Planned
-**Story Points:** 49 SP
-**Duration:** 2 weeks
+**Story Points:** 35 SP
+**Duration:** 1-2 weeks
 **Created:** 2026-01-17
-**Epic:** E2E Test Stabilization + UI Bug Fixes + Long Context + Deep Research Refactoring
+**Epic:** E2E Test Stabilization + UI Bug Fixes + Long Context
 
 ---
 
@@ -25,7 +25,7 @@ Sprint 109 focuses on **E2E test stabilization** (reaching >80% pass rate), **cr
 | ⏭️ Skipped | 10 | 1% |
 | **Total** | 949 | 100% |
 
-**Fully Passing Groups:** 3, 10, 11, 12, 16 (100% pass rate)
+**Fully Passing Groups:** 3, 10, 11, 12, 16 (100% pass rate) - These should be excluded from the test runs until the other groups are successfully executed
 
 ### Sprint 109 Target
 
@@ -45,14 +45,13 @@ Sprint 109 focuses on **E2E test stabilization** (reaching >80% pass rate), **cr
 2. **E2E Test Fixes: Groups 13-15** (10 SP)
 3. **UI Bug Fixes** (5 SP)
 
-### 🟡 High (Should-Have) - 24 SP
+### 🟡 High (Should-Have) - 10 SP
 
 4. **Long Context Implementation** (10 SP from Sprint 92)
-5. **Deep Research as Skill Bundle** (14 SP - Architectural Refactoring)
 
 ### 🟢 Medium (Nice-to-Have) - Defer to Sprint 110
 
-6. **Groups 07-09 Implementation** (30 SP - Memory, Deep Research E2E, Long Context UI)
+5. **Groups 07-09 Implementation** (30 SP - Memory, Deep Research, Long Context UI)
 
 ---
 
@@ -64,9 +63,8 @@ Sprint 109 focuses on **E2E test stabilization** (reaching >80% pass rate), **cr
 | **109.2** | E2E Fix: Groups 13-15 Partial Impl | 10 | 🔴 Critical | 📝 Ready | Complete frontend for Agent/GDPR/Explainability |
 | **109.3** | UI Bug Fixes (Research/Domain) | 5 | 🔴 Critical | 📝 Ready | Fix Research button + Domain Training model selector |
 | **109.4** | Long Context (Recursive LLM) | 10 | 🟡 High | 📝 Ready | 3-Level processing for 320K token documents |
-| **109.5** | Deep Research as Skill Bundle | 14 | 🟡 High | 📝 Ready | Refactor Deep Research to use Skill Orchestrator |
 
-**Total:** 49 SP
+**Total:** 35 SP
 
 ---
 
@@ -502,12 +500,12 @@ async def get_model_info() -> ModelInfoResponse: ...
 - Unclear destination (possibly broken route)
 
 **Expected Behavior:**
-- "Research" button should navigate to Deep Research page
+- "When activated the deep resaerch will be activated for the normal search. No other page should be loaded, but during search the extended deep research functionality should be active"
 
 **Investigation Required:**
 1. Check current button implementation
-2. Verify Deep Research route exists
-3. Fix button navigation
+2. Verify Deep Research exists and is working
+
 
 **File:** `frontend/src/pages/Home.tsx` or `frontend/src/components/chat/ChatInterface.tsx`
 

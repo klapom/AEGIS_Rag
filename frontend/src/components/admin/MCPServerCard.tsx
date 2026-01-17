@@ -130,6 +130,7 @@ export function MCPServerCard({
     <div
       className="bg-white rounded-xl border-2 border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
       data-testid={`mcp-server-${server.name}`}
+      data-server-name={server.name}
     >
       {/* Header */}
       <div className="p-4 border-b border-gray-100">
@@ -150,9 +151,10 @@ export function MCPServerCard({
             <span
               className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${statusConfig.bg} ${statusConfig.text}`}
               data-testid={`server-status-${server.name}`}
+              data-status={server.status}
             >
               {statusConfig.icon}
-              <span>{statusConfig.label}</span>
+              <span data-testid="server-status">{statusConfig.label}</span>
             </span>
           </div>
         </div>

@@ -291,13 +291,14 @@ function SkillCard({ skill, onToggle }: SkillCardProps) {
         <div className="flex gap-2">
           <Link
             to={`/admin/skills/${skill.name}/config`}
-            data-testid={`skill-config-link-${skill.name}`}
+            data-testid={`skill-edit-${skill.name}`}
             className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm font-medium"
           >
             Config
           </Link>
           <Link
             to={`/admin/skills/${skill.name}/logs`}
+            data-testid={`skill-logs-link-${skill.name}`}
             className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 text-sm font-medium"
           >
             Logs

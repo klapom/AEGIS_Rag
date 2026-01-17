@@ -1,8 +1,9 @@
-import { test, expect } from './fixtures';
+import { test, expect, setupAuthMocking, navigateClientSide } from './fixtures';
 
 /**
  * E2E Tests for Group 7: Memory Management
  * Sprint 102 Feature Group 7: Memory Management UI
+ * Sprint 109 Fix: Added authentication setup for all tests
  *
  * Tests verify:
  * - Memory Management page loads correctly
@@ -18,9 +19,13 @@ import { test, expect } from './fixtures';
  */
 
 test.describe('Group 7: Memory Management', () => {
+  test.beforeEach(async ({ page }) => {
+    // Setup authentication before each test
+    await setupAuthMocking(page);
+  });
+
   test('should load Memory Management page', async ({ page }) => {
-    await page.goto('/admin/memory');
-    await page.waitForLoadState('networkidle');
+    await navigateClientSide(page, '/admin/memory');
 
     // Verify page loaded
     const pageTitle = page.locator('[data-testid="memory-management-page"]');
@@ -38,8 +43,7 @@ test.describe('Group 7: Memory Management', () => {
   });
 
   test('should display Memory Management tabs', async ({ page }) => {
-    await page.goto('/admin/memory');
-    await page.waitForLoadState('networkidle');
+    await navigateClientSide(page, '/admin/memory');
 
     // Verify all three tabs exist
     const statsTab = page.locator('[data-testid="tab-stats"]');
@@ -56,8 +60,7 @@ test.describe('Group 7: Memory Management', () => {
   });
 
   test('should view Redis memory statistics (Layer 1)', async ({ page }) => {
-    await page.goto('/admin/memory');
-    await page.waitForLoadState('networkidle');
+    await navigateClientSide(page, '/admin/memory');
 
     // Ensure Stats tab is active
     const statsTab = page.locator('[data-testid="tab-stats"]');
@@ -69,8 +72,8 @@ test.describe('Group 7: Memory Management', () => {
     const isRedisVisible = await redisSection.isVisible().catch(() => false);
 
     if (isRedisVisible) {
-      // Verify Redis layer description
-      const redisDescription = page.locator('text=Short-term session cache');
+      // Verify Redis layer description (use .first() to handle multiple matches)
+      const redisDescription = page.locator('text=Short-term session cache').first();
       await expect(redisDescription).toBeVisible();
 
       // Take screenshot of Redis stats
@@ -93,8 +96,7 @@ test.describe('Group 7: Memory Management', () => {
   });
 
   test('should view Qdrant memory statistics (Layer 2)', async ({ page }) => {
-    await page.goto('/admin/memory');
-    await page.waitForLoadState('networkidle');
+    await navigateClientSide(page, '/admin/memory');
 
     // Ensure Stats tab is active
     const statsTab = page.locator('[data-testid="tab-stats"]');
@@ -106,8 +108,8 @@ test.describe('Group 7: Memory Management', () => {
     const isQdrantVisible = await qdrantSection.isVisible().catch(() => false);
 
     if (isQdrantVisible) {
-      // Verify Qdrant layer description
-      const qdrantDescription = page.locator('text=Vector store for semantic search');
+      // Verify Qdrant layer description (use .first() to handle multiple matches)
+      const qdrantDescription = page.locator('text=Vector store for semantic search').first();
       await expect(qdrantDescription).toBeVisible();
 
       // Take screenshot of Qdrant stats
@@ -123,8 +125,7 @@ test.describe('Group 7: Memory Management', () => {
   });
 
   test('should view Graphiti memory statistics (Layer 3)', async ({ page }) => {
-    await page.goto('/admin/memory');
-    await page.waitForLoadState('networkidle');
+    await navigateClientSide(page, '/admin/memory');
 
     // Ensure Stats tab is active
     const statsTab = page.locator('[data-testid="tab-stats"]');
@@ -136,8 +137,8 @@ test.describe('Group 7: Memory Management', () => {
     const isGraphitiVisible = await graphitiSection.isVisible().catch(() => false);
 
     if (isGraphitiVisible) {
-      // Verify Graphiti layer description
-      const graphitiDescription = page.locator('text=Temporal memory graph');
+      // Verify Graphiti layer description (use .first() to handle multiple matches)
+      const graphitiDescription = page.locator('text=Temporal memory graph').first();
       await expect(graphitiDescription).toBeVisible();
 
       // Take screenshot of Graphiti stats
@@ -153,8 +154,7 @@ test.describe('Group 7: Memory Management', () => {
   });
 
   test('should display 3-Layer memory architecture info', async ({ page }) => {
-    await page.goto('/admin/memory');
-    await page.waitForLoadState('networkidle');
+    await navigateClientSide(page, '/admin/memory');
 
     // Verify informational section about memory layers
     const infoSection = page.locator('text=About the Memory Layers').first();
@@ -179,8 +179,7 @@ test.describe('Group 7: Memory Management', () => {
   });
 
   test('should switch to Search tab and display search panel', async ({ page }) => {
-    await page.goto('/admin/memory');
-    await page.waitForLoadState('networkidle');
+    await navigateClientSide(page, '/admin/memory');
 
     // Click Search tab
     const searchTab = page.locator('[data-testid="tab-search"]');
@@ -203,8 +202,7 @@ test.describe('Group 7: Memory Management', () => {
   });
 
   test('should display search tips in Search tab', async ({ page }) => {
-    await page.goto('/admin/memory');
-    await page.waitForLoadState('networkidle');
+    await navigateClientSide(page, '/admin/memory');
 
     // Click Search tab
     const searchTab = page.locator('[data-testid="tab-search"]');
@@ -231,8 +229,7 @@ test.describe('Group 7: Memory Management', () => {
   });
 
   test('should switch to Consolidation tab', async ({ page }) => {
-    await page.goto('/admin/memory');
-    await page.waitForLoadState('networkidle');
+    await navigateClientSide(page, '/admin/memory');
 
     // Click Consolidation tab
     const consolidationTab = page.locator('[data-testid="tab-consolidation"]');
@@ -255,8 +252,7 @@ test.describe('Group 7: Memory Management', () => {
   });
 
   test('should display consolidation information', async ({ page }) => {
-    await page.goto('/admin/memory');
-    await page.waitForLoadState('networkidle');
+    await navigateClientSide(page, '/admin/memory');
 
     // Click Consolidation tab
     const consolidationTab = page.locator('[data-testid="tab-consolidation"]');
@@ -283,8 +279,7 @@ test.describe('Group 7: Memory Management', () => {
   });
 
   test('should have export memory function available', async ({ page }) => {
-    await page.goto('/admin/memory');
-    await page.waitForLoadState('networkidle');
+    await navigateClientSide(page, '/admin/memory');
 
     // Click Search tab (export is usually in search panel)
     const searchTab = page.locator('[data-testid="tab-search"]');
@@ -309,8 +304,7 @@ test.describe('Group 7: Memory Management', () => {
   });
 
   test('should have clear memory function available', async ({ page }) => {
-    await page.goto('/admin/memory');
-    await page.waitForLoadState('networkidle');
+    await navigateClientSide(page, '/admin/memory');
 
     // Look for clear/delete memory button across all tabs
     const clearButton = page.locator('button:has-text("Clear")').or(
@@ -331,8 +325,7 @@ test.describe('Group 7: Memory Management', () => {
   });
 
   test('should navigate back to admin dashboard', async ({ page }) => {
-    await page.goto('/admin/memory');
-    await page.waitForLoadState('networkidle');
+    await navigateClientSide(page, '/admin/memory');
 
     // Look for back link
     const backLink = page.locator('a:has-text("Back to Admin")');
@@ -351,8 +344,7 @@ test.describe('Group 7: Memory Management', () => {
   });
 
   test('should display memory stats with numeric values', async ({ page }) => {
-    await page.goto('/admin/memory');
-    await page.waitForLoadState('networkidle');
+    await navigateClientSide(page, '/admin/memory');
 
     // Ensure Stats tab is active
     const statsTab = page.locator('[data-testid="tab-stats"]');
@@ -385,8 +377,7 @@ test.describe('Group 7: Memory Management', () => {
       }
     });
 
-    await page.goto('/admin/memory');
-    await page.waitForLoadState('networkidle');
+    await navigateClientSide(page, '/admin/memory');
 
     // Switch between all tabs
     const searchTab = page.locator('[data-testid="tab-search"]');

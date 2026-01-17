@@ -1342,3 +1342,204 @@ After implementing comprehensive logging (Sprint 83), we expect to discover addi
 | 100 | 18 | 2,403 |
 | 101 | 10 | 2,413 |
 | **Total** | **2,413** | - |
+
+---
+
+## Sprint 108: E2E Test Baseline ✅ (COMPLETED 2026-01-16)
+**Epic:** Playwright E2E Test Suite Establishment
+**Total Story Points:** ~15 SP (testing infrastructure)
+**Status:** ✅ **COMPLETE** - Baseline established
+
+**Objectives:**
+- Establish E2E test infrastructure for all 16 feature groups
+- Create baseline test suite for Sprints 90-96 features
+- Identify test gaps and fix priorities
+
+**Deliverables:**
+- ✅ 16 E2E test groups created (Groups 01-16)
+- ✅ ~115 individual tests written
+- ✅ Baseline pass rate: 410/1011 (40.6%)
+- ✅ Test infrastructure and fixtures established
+
+**Test Groups Created:**
+1. MCP Tools (6 tests)
+2. Bash Execution (5 tests)
+3. Python Execution (5 tests)
+4. Browser Tools (6 tests)
+5. Skills Management (8 tests)
+6. Skills Using Tools (9 tests)
+7. Memory Management (10 tests)
+8. Deep Research (8 tests)
+9. Long Context (10 tests)
+10. Hybrid Search (9 tests)
+11. Document Upload (8 tests)
+12. Graph Communities (7 tests)
+13. Agent Hierarchy (8 tests)
+14. GDPR & Audit (10 tests)
+15. Explainability (9 tests)
+16. MCP Marketplace (8 tests)
+
+**Key Findings:**
+- Most failures due to missing data-testid attributes
+- API mock format mismatches
+- React Router navigation reliability issues
+- Test priority groups identified for Sprint 109
+
+**For detailed report, see:** Test results in `/frontend/test-results/`
+
+---
+
+## Sprint 109: E2E Test Fixes (Groups 04-08, 10-12) 🔄 (IN PROGRESS 2026-01-17)
+**Epic:** E2E Test Completion - Phase 1
+**Total Story Points:** 62 SP
+**Status:** 🔄 **IN PROGRESS** - Group 05 complete, Group 04 in progress
+
+**Execution Strategy:**
+- **Phase 1:** Complete Groups 04-06 (Browser, Skills, Tools) - 10 SP
+- **Phase 2:** Groups 07-08 (Memory, Research) - 20 SP
+- **Phase 3:** Groups 10-12 (Hybrid Search, Upload, Communities) - 30 SP
+- **Deferred:** Group 06 (requires chat integration), Group 09 (moved to Sprint 110)
+
+| Feature | Tests | SP | Status | Pass Rate |
+|---------|-------|-----|--------|-----------|
+| 109.1 | Groups 04-06 (Browser, Skills, Tools) | 23 | 🟡 Partial | 39% (9/23) |
+| 109.2 | Groups 07-08 (Memory, Research) | 18 | 📝 Next | 0% |
+| 109.3 | Groups 10-12 (Search, Upload, Communities) | 24 | 📝 Planned | 0% |
+
+### Completed (109.1 Partial)
+✅ **Group 05: Skills Management** - 8/8 tests (100%)
+- Fixed API response format (array → SkillListResponse object)
+- Fixed selector specificity (scoped to avoid dropdown matches)
+- Changed to direct navigation (navigateClientSide)
+- Added data-testid="save-error" to SkillConfigEditor
+- Updated config link selectors to use data-testids
+
+🟡 **Group 04: Browser Tools** - 1/6 tests (16.7%)
+- Fixed tool parameter format (input_schema → parameters[])
+- Changed from expandable cards to dropdown selection
+- Tools load correctly, execution mocks need refinement
+
+⏸️ **Group 06: Skills Using Tools** - 0/9 tests (deferred)
+- Requires chat interface integration
+- Beyond scope of data-testid fixes
+- Moved to Sprint 110+
+
+### Files Modified
+- `e2e/group04-browser-tools.spec.ts` - Mock format + dropdown selection
+- `e2e/group05-skills-management.spec.ts` - API format + selectors + navigation
+- `e2e/group06-skills-using-tools.spec.ts` - API response format
+- `src/pages/admin/SkillConfigEditor.tsx` - Added data-testid
+
+**Commit:** `ccd6902` - Feature 109.1 Partial (8 SP earned)
+
+### Next Steps (Current Sprint)
+1. 🔄 **NOW:** Complete Group 04 Browser Tools (2 SP, 2-4 hours)
+2. 📝 **Next:** Group 07 Memory Management (10 SP, 1-2 days)
+3. 📝 **Next:** Group 08 Deep Research (10 SP, 1-2 days)
+4. 📝 **Final:** Groups 10-12 Core RAG (30 SP, 3-4 days)
+
+**Sprint 109 Target:** >80% pass rate per group, ≥50 tests passing overall
+
+---
+
+## Sprint 110: E2E Test Fixes (Groups 01-03, 09, 13-16) 📝 (PLANNED)
+**Epic:** E2E Test Completion - Phase 2
+**Total Story Points:** 70 SP
+**Status:** 📝 **PLANNED** - Focus: Group 09 Long Context
+
+**Execution Strategy:**
+- **Priority Feature:** Group 09 Long Context (10 tests, 10 SP) ⭐ User requested
+- **Phase 2:** Groups 01-03 Tool Execution (16 tests, 20 SP)
+- **Phase 3:** Groups 13-16 Enterprise Features (35 tests, 40 SP)
+
+| Feature | Tests | SP | Priority | Description |
+|---------|-------|-----|----------|-------------|
+| 110.1 | Group 09: Long Context | 10 | P0 | ⭐ Large document handling, context window mgmt |
+| 110.2 | Groups 01-03: Tool Execution | 16 | P1 | MCP, Bash, Python execution |
+| 110.3 | Groups 13-15: Enterprise | 27 | P2 | Hierarchy, GDPR, Explainability |
+| 110.4 | Group 16: MCP Marketplace | 8 | P3 | Server marketplace UI |
+
+### Group 09: Long Context (Priority Feature)
+**User Request:** "was ist mit den anderen SPRINT 109 features wie z.B. Long Context?"
+**Scope:**
+- Large document handling (>100K tokens)
+- Context window management UI
+- Document chunking visualization
+- Context relevance scoring display
+
+**Tests:**
+1. Large document upload and processing
+2. Context window indicators
+3. Chunk preview functionality
+4. Relevance score visualization
+5. Long context search
+6. Context compression strategies
+7. Multi-document context merging
+8. Context overflow handling
+9. Context quality metrics
+10. Context export functionality
+
+**Expected Issues:**
+- Large file upload UI/progress
+- Context window visualization
+- Chunk navigation and preview
+- Score display formatting
+
+**Effort:** 10 SP, 1-2 days
+
+### Remaining Groups
+**Groups 01-03: Tool Execution** (20 SP)
+- MCP Tools basic operations
+- Bash command execution and output
+- Python code execution and output
+
+**Groups 13-16: Enterprise Features** (40 SP)
+- Agent Hierarchy visualization (partial work from Sprint 100)
+- GDPR & Audit compliance UI
+- Explainability dashboards
+- MCP Marketplace (server discovery, installation)
+
+**Sprint 110 Target:** >95% pass rate overall, ≥110 tests passing
+
+---
+
+## Cumulative Story Points (Updated)
+
+| Sprint | SP | Cumulative |
+|--------|-----|------------|
+| 1-70 | ~2,100 | 2,100 |
+| 71 | 50 | 2,150 |
+| 72 | 55 | 2,205 |
+| 73 | 48 | 2,253 |
+| 82 | 8 | 2,261 |
+| 83 | 26 | 2,287 |
+| 87 | 34 | 2,321 |
+| 88 | 28 | 2,349 |
+| 90 | 36 | 2,385 |
+| 100 | 18 | 2,403 |
+| 101 | 10 | 2,413 |
+| 108 | 15 | 2,428 |
+| **109** | **8** (partial) | **2,436** |
+| **Total** | **2,436** | - |
+
+**Note:** Sprint 109 is in progress with 8 SP earned (Group 05 complete). Remaining 54 SP to be completed.
+
+---
+
+## Current Sprint Status
+
+**Current Sprint:** 109 (In Progress)
+**Next Sprint:** 110 (Planned - Long Context Priority)
+**Focus:** E2E Test Completion for Production Release
+
+**Sprint 109 Progress:**
+- ✅ Group 05: 8/8 tests (100%) - Complete
+- 🔄 Group 04: 1/6 tests (16.7%) - In Progress
+- 📝 Groups 07-08: Not Started
+- 📝 Groups 10-12: Not Started
+- **Current SP:** 8/62 (12.9% complete)
+
+**Sprint 110 Planned:**
+- ⭐ Group 09: Long Context (Priority)
+- Groups 01-03, 13-16 (Remaining)
+- **Target SP:** 70 SP
