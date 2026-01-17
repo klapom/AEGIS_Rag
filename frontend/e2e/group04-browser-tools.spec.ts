@@ -102,7 +102,7 @@ test.describe('Group 4: Browser MCP Tools', () => {
 
   // Sprint 106: Skip - UI data-testids don't match (mcp-server-browser not found)
   // Bug: MCP Tools page lacks expected browser server data-testid attributes
-  test.skip('should display browser MCP tools in UI', async ({ page }) => {
+  test('should display browser MCP tools in UI', async ({ page }) => {
     await navigateToMCPTools(page);
 
     // Check if browser server is listed
@@ -132,7 +132,7 @@ test.describe('Group 4: Browser MCP Tools', () => {
   });
 
   // Sprint 106: Skip - UI data-testids don't match (tool-browser_navigate not found)
-  test.skip('should execute navigate to URL command', async ({ page }) => {
+  test('should execute navigate to URL command', async ({ page }) => {
     // Mock tool execution endpoint
     await page.route('**/api/v1/mcp/tools/execute', (route) => {
       const request = route.request();
@@ -181,7 +181,7 @@ test.describe('Group 4: Browser MCP Tools', () => {
   });
 
   // Sprint 106: Skip - UI data-testids don't match (tool-browser_click not found)
-  test.skip('should execute click element command', async ({ page }) => {
+  test('should execute click element command', async ({ page }) => {
     // Mock tool execution endpoint
     await page.route('**/api/v1/mcp/tools/execute', (route) => {
       const request = route.request();
@@ -232,7 +232,7 @@ test.describe('Group 4: Browser MCP Tools', () => {
   });
 
   // Sprint 106: Skip - UI data-testids don't match (tool-browser_take_screenshot not found)
-  test.skip('should execute take screenshot command', async ({ page }) => {
+  test('should execute take screenshot command', async ({ page }) => {
     // Mock tool execution endpoint
     await page.route('**/api/v1/mcp/tools/execute', (route) => {
       const request = route.request();
@@ -283,7 +283,7 @@ test.describe('Group 4: Browser MCP Tools', () => {
   });
 
   // Sprint 106: Skip - UI data-testids don't match (tool-browser_evaluate not found)
-  test.skip('should execute evaluate JavaScript command', async ({ page }) => {
+  test('should execute evaluate JavaScript command', async ({ page }) => {
     // Mock tool execution endpoint
     await page.route('**/api/v1/mcp/tools/execute', (route) => {
       const request = route.request();
@@ -330,7 +330,7 @@ test.describe('Group 4: Browser MCP Tools', () => {
   });
 
   // Sprint 106: Skip - UI data-testids don't match (tool-browser_navigate not found)
-  test.skip('should handle tool execution errors gracefully', async ({ page }) => {
+  test('should handle tool execution errors gracefully', async ({ page }) => {
     // Mock tool execution endpoint with error
     await page.route('**/api/v1/mcp/tools/execute', (route) => {
       route.fulfill({

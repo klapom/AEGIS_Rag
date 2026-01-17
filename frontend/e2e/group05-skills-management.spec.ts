@@ -166,7 +166,7 @@ async function setupSkillsMocks(page: Page) {
 
 // Sprint 106: Skip all - UI data-testids don't match (skill-card-* not found in actual UI)
 // Bug: Skills Registry page lacks expected data-testid attributes
-test.describe.skip('Group 5: Skills Management', () => {
+test.describe('Group 5: Skills Management', () => {
   test.beforeEach(async ({ page }) => {
     // Setup authentication
     await setupAuthMocking(page);

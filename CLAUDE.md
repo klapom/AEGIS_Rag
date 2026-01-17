@@ -336,6 +336,49 @@ REDIS_HOST=localhost
 - **Integration Tests:** Real services (Qdrant, Neo4j, Redis)
 - **E2E Tests:** Full flows with Playwright
 
+### E2E Testing with Playwright (Sprint 108+)
+
+**Documentation:** [tests/playwright/PLAYWRIGHT_E2E.md](tests/playwright/PLAYWRIGHT_E2E.md)
+
+**Test Execution:**
+```bash
+cd /home/admin/projects/aegisrag/AEGIS_Rag/frontend
+PLAYWRIGHT_BASE_URL=http://192.168.178.10 npx playwright test --reporter=list
+```
+
+**Test Groups (200 tests across 16 groups):**
+- **Group 01-03:** MCP Tools, Bash, Python Execution
+- **Group 04-06:** Browser Tools, Skills Management (23 tests skipped - need data-testids)
+- **Group 07:** Memory Management (11 failures - missing data-testids)
+- **Group 08-09:** Deep Research, Long Context
+- **Group 10-12:** Hybrid Search, Document Upload, Graph Communities
+- **Group 13-15:** Agent Hierarchy, GDPR/Audit, Explainability (Sprint 95-96 features)
+- **Group 16:** MCP Marketplace
+
+**Current Status (Sprint 108):**
+- **Pass Rate:** 65% (130/200 tests)
+- **Failed:** 39 tests (19.5%)
+- **Skipped:** 31 tests (15.5%)
+
+**Testing Strategy:**
+1. **After every code change:** Rebuild Docker containers with `--no-cache`
+2. **Document all test runs:** Update `tests/playwright/PLAYWRIGHT_E2E.md`
+3. **Create temp test docs:** In `tests/playwright/` during test runs
+4. **Sprint planning:** Document test-related tasks in `docs/sprints/SPRINT_XX_PLAN.md`
+5. **Archive old docs:** Move outdated E2E docs to `tests/playwright/archive/`
+
+**Common E2E Issues & Fixes:**
+- **Timing:** E2E tests need 50-100% overhead vs API-only tests
+- **Selectors:** Use scoped selectors (`.within()`, `parent.getByTestId()`)
+- **Mock APIs:** Should have graceful fallbacks (components cache data)
+- **File Inputs:** Hidden inputs need `.count()` not `.toBeVisible()`
+- **TypeScript:** Never export interfaces from runtime code files
+
+**Key Learnings (Sprint 108):**
+- Always verify backend APIs first before assuming missing endpoints
+- Use parallel specialized agents (testing-agent, frontend-agent, api-agent) for 4-5x speedup
+- Rebuild Docker containers after every frontend/backend change
+
 ### Lazy Import Patching (Critical!)
 
 When patching lazy imports, **patch at source module**, not caller:

@@ -74,7 +74,7 @@ async function waitForToolExecutionInChat(page: Page, toolName: string) {
 
 // Sprint 106: Skip all - Tests rely on skill-tool integration UI that doesn't match expectations
 // Bug: Chat skill invocation flow doesn't match test expectations
-test.describe.skip('Group 6: Skills Using Tools', () => {
+test.describe('Group 6: Skills Using Tools', () => {
   test.beforeEach(async ({ page }) => {
     // Setup authentication
     await setupAuthMocking(page);
