@@ -140,7 +140,7 @@ export function AgentHierarchyPage() {
                 <Network className="w-6 h-6 text-green-600 dark:text-green-400" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100" data-testid="page-title">
                   Agent Hierarchy
                 </h1>
                 <div className="text-sm text-gray-600 dark:text-gray-400" data-testid="hierarchy-stats">

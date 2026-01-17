@@ -186,10 +186,10 @@ export function AgentDetailsPanel({ agentId, onClose, className = '' }: AgentDet
       {/* Status Badges */}
       <div className="flex gap-2 mb-4">
         <span className={`text-xs px-2 py-1 rounded font-medium ${LEVEL_COLORS[details.agent_level]}`} data-testid="agent-level">
-          {details.agent_level}
+          {details.agent_level.toUpperCase()}
         </span>
         <span className={`text-xs px-2 py-1 rounded font-medium ${STATUS_COLORS[details.status]}`} data-testid="agent-status">
-          {details.status}
+          {details.status.toLowerCase()}
         </span>
       </div>
 
@@ -223,8 +223,8 @@ export function AgentDetailsPanel({ agentId, onClose, className = '' }: AgentDet
               <CheckCircle className="w-3 h-3 text-green-600" />
               <span className="text-xs text-gray-600 dark:text-gray-400">Success Rate</span>
             </div>
-            <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
-              {details.success_rate_pct.toFixed(0)}%
+            <div className="text-lg font-bold text-gray-900 dark:text-gray-100" data-testid="success-rate">
+              {details.success_rate_pct.toFixed(1)}%
             </div>
           </div>
 
