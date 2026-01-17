@@ -187,6 +187,7 @@ export function SkillConfigEditor() {
                 onClick={handleSave}
                 disabled={!isDirty || !validation?.valid || saving}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                data-testid={`skill-save-${skillName}`}
               >
                 <Save className="w-4 h-4" />
                 {saving ? 'Saving...' : 'Save'}
@@ -200,7 +201,10 @@ export function SkillConfigEditor() {
       <main className="max-w-7xl mx-auto px-6 py-8">
         {/* Error Display */}
         {error && (
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6">
+          <div
+            data-testid="save-error"
+            className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6"
+          >
             <p className="text-red-800 dark:text-red-200">{error}</p>
           </div>
         )}
@@ -225,6 +229,7 @@ export function SkillConfigEditor() {
                 onChange={(e) => handleYamlChange(e.target.value)}
                 className="w-full h-[600px] font-mono text-sm bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-lg border border-gray-300 dark:border-gray-600 p-4 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 spellCheck={false}
+                data-testid={`skill-config-${skillName}`}
               />
             </div>
 

@@ -98,6 +98,103 @@ test.describe('Group 4: Browser MCP Tools', () => {
         })
       });
     });
+
+    // Mock MCP servers list - returns browser server with tools
+    await page.route('**/api/v1/mcp/servers', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([
+          {
+            name: 'browser',
+            status: 'connected',
+            description: 'Browser automation tools',
+            url: 'stdio://browser-mcp',
+            tools: [
+              {
+                name: 'browser_navigate',
+                description: 'Navigate to a URL in the browser',
+                server_name: 'browser',
+                parameters: [
+                  { name: 'url', type: 'string', description: 'The URL to navigate to', required: true }
+                ]
+              },
+              {
+                name: 'browser_click',
+                description: 'Click an element in the browser',
+                server_name: 'browser',
+                parameters: [
+                  { name: 'element', type: 'string', description: 'Element selector', required: true },
+                  { name: 'ref', type: 'string', description: 'Element reference', required: false }
+                ]
+              },
+              {
+                name: 'browser_take_screenshot',
+                description: 'Take a screenshot of the current page',
+                server_name: 'browser',
+                parameters: [
+                  { name: 'filename', type: 'string', description: 'Screenshot filename', required: false },
+                  { name: 'type', type: 'string', description: 'Image type (png/jpg)', required: false }
+                ]
+              },
+              {
+                name: 'browser_evaluate',
+                description: 'Evaluate JavaScript in the browser',
+                server_name: 'browser',
+                parameters: [
+                  { name: 'function', type: 'string', description: 'JavaScript function to execute', required: true }
+                ]
+              }
+            ],
+            last_connected: new Date().toISOString()
+          }
+        ])
+      });
+    });
+
+    // Mock MCP tools list (GET) - populates tool dropdown
+    await page.route('**/api/v1/mcp/tools', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([
+          {
+            name: 'browser_navigate',
+            description: 'Navigate to a URL in the browser',
+            server_name: 'browser',
+            parameters: [
+              { name: 'url', type: 'string', description: 'The URL to navigate to', required: true }
+            ]
+          },
+          {
+            name: 'browser_click',
+            description: 'Click an element in the browser',
+            server_name: 'browser',
+            parameters: [
+              { name: 'element', type: 'string', description: 'Element selector', required: true },
+              { name: 'ref', type: 'string', description: 'Element reference', required: false }
+            ]
+          },
+          {
+            name: 'browser_take_screenshot',
+            description: 'Take a screenshot of the current page',
+            server_name: 'browser',
+            parameters: [
+              { name: 'filename', type: 'string', description: 'Screenshot filename', required: false },
+              { name: 'type', type: 'string', description: 'Image type (png/jpg)', required: false }
+            ]
+          },
+          {
+            name: 'browser_evaluate',
+            description: 'Evaluate JavaScript in the browser',
+            server_name: 'browser',
+            parameters: [
+              { name: 'function', type: 'string', description: 'JavaScript function to execute', required: true }
+            ]
+          }
+        ])
+      });
+    });
   });
 
   // Sprint 106: Skip - UI data-testids don't match (mcp-server-browser not found)
@@ -112,6 +209,11 @@ test.describe('Group 4: Browser MCP Tools', () => {
     // Verify status badge shows "connected"
     const statusBadge = browserServer.locator('[data-testid="server-status"]');
     await expect(statusBadge).toContainText('connected', { ignoreCase: true });
+
+    // Expand browser server to show tools
+    const toggleToolsButton = page.locator('[data-testid="toggle-tools-browser"]');
+    await toggleToolsButton.click();
+    await page.waitForSelector('[data-testid="tools-list-browser"]', { state: 'visible' });
 
     // Check for browser tools in the tool list
     const toolsAvailable = await checkBrowserToolsAvailable(page);
@@ -159,9 +261,12 @@ test.describe('Group 4: Browser MCP Tools', () => {
 
     await navigateToMCPTools(page);
 
-    // Select browser_navigate tool
-    const navigateTool = page.locator('[data-testid="tool-browser_navigate"]');
-    await navigateTool.click();
+    // Select browser_navigate tool from dropdown in execution panel
+    const toolSelector = page.locator('[data-testid="tool-selector"]');
+    await toolSelector.selectOption('browser_navigate');
+
+    // Wait for tool parameters to load
+    await page.waitForSelector('[data-testid="param-url"]', { state: 'visible', timeout: 10000 });
 
     // Fill in URL parameter
     const urlInput = page.locator('[data-testid="param-url"]');
@@ -208,9 +313,12 @@ test.describe('Group 4: Browser MCP Tools', () => {
 
     await navigateToMCPTools(page);
 
-    // Select browser_click tool
-    const clickTool = page.locator('[data-testid="tool-browser_click"]');
-    await clickTool.click();
+    // Select browser_click tool from dropdown in execution panel
+    const toolSelector = page.locator('[data-testid="tool-selector"]');
+    await toolSelector.selectOption('browser_click');
+
+    // Wait for tool parameters to load
+    await page.waitForSelector('[data-testid="param-element"]', { state: 'visible', timeout: 10000 });
 
     // Fill in element selector parameter
     const elementInput = page.locator('[data-testid="param-element"]');
@@ -260,9 +368,12 @@ test.describe('Group 4: Browser MCP Tools', () => {
 
     await navigateToMCPTools(page);
 
-    // Select browser_take_screenshot tool
-    const screenshotTool = page.locator('[data-testid="tool-browser_take_screenshot"]');
-    await screenshotTool.click();
+    // Select browser_take_screenshot tool from dropdown in execution panel
+    const toolSelector = page.locator('[data-testid="tool-selector"]');
+    await toolSelector.selectOption('browser_take_screenshot');
+
+    // Wait for execute button to be enabled (screenshot has optional params)
+    await page.waitForSelector('[data-testid="execute-tool-button"]', { state: 'visible', timeout: 10000 });
 
     // Fill in filename parameter (optional)
     const filenameInput = page.locator('[data-testid="param-filename"]');
@@ -309,9 +420,12 @@ test.describe('Group 4: Browser MCP Tools', () => {
 
     await navigateToMCPTools(page);
 
-    // Select browser_evaluate tool
-    const evaluateTool = page.locator('[data-testid="tool-browser_evaluate"]');
-    await evaluateTool.click();
+    // Select browser_evaluate tool from dropdown in execution panel
+    const toolSelector = page.locator('[data-testid="tool-selector"]');
+    await toolSelector.selectOption('browser_evaluate');
+
+    // Wait for tool parameters to load
+    await page.waitForSelector('[data-testid="param-function"]', { state: 'visible', timeout: 10000 });
 
     // Fill in JavaScript function parameter
     const functionInput = page.locator('[data-testid="param-function"]');
@@ -346,9 +460,12 @@ test.describe('Group 4: Browser MCP Tools', () => {
 
     await navigateToMCPTools(page);
 
-    // Select any browser tool
-    const navigateTool = page.locator('[data-testid="tool-browser_navigate"]');
-    await navigateTool.click();
+    // Select browser_navigate tool from dropdown in execution panel
+    const toolSelector = page.locator('[data-testid="tool-selector"]');
+    await toolSelector.selectOption('browser_navigate');
+
+    // Wait for tool parameters to load
+    await page.waitForSelector('[data-testid="param-url"]', { state: 'visible', timeout: 10000 });
 
     const urlInput = page.locator('[data-testid="param-url"]');
     await urlInput.fill('https://example.com');

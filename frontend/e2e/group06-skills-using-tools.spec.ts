@@ -20,7 +20,7 @@
  * - Verify tool execution results appear in chat
  */
 
-import { test, expect, setupAuthMocking } from './fixtures';
+import { test, expect, setupAuthMocking, navigateClientSide } from './fixtures';
 import { Page } from '@playwright/test';
 
 // Test configuration
@@ -28,10 +28,10 @@ const BACKEND_URL = 'http://localhost:8000';
 const TIMEOUT = 30000; // 30s for LLM + tool execution
 
 /**
- * Helper: Navigate to chat page
+ * Helper: Navigate to chat page (with auth handling)
  */
 async function navigateToChat(page: Page) {
-  await page.goto('/');
+  await navigateClientSide(page, '/');
   await page.waitForLoadState('networkidle');
 
   // Verify chat interface loaded
@@ -72,8 +72,8 @@ async function waitForToolExecutionInChat(page: Page, toolName: string) {
   });
 }
 
-// Sprint 106: Skip all - Tests rely on skill-tool integration UI that doesn't match expectations
-// Bug: Chat skill invocation flow doesn't match test expectations
+// Sprint 106: Group 6 Fixes - Added MCP servers list and skills registry mocks
+// Fixed mocks to return proper server data and skills metadata
 test.describe('Group 6: Skills Using Tools', () => {
   test.beforeEach(async ({ page }) => {
     // Setup authentication
@@ -107,7 +107,100 @@ test.describe('Group 6: Skills Using Tools', () => {
       });
     });
 
-    // Mock skills list - all active
+    // Mock MCP servers list - all servers with tools
+    await page.route('**/api/v1/mcp/servers', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([
+          {
+            name: 'bash',
+            status: 'connected',
+            description: 'Bash shell execution tools',
+            url: 'stdio://bash-mcp',
+            tools: [
+              { name: 'bash', description: 'Execute bash commands', server_name: 'bash', parameters: [] },
+              { name: 'shell_execute', description: 'Execute shell scripts', server_name: 'bash', parameters: [] }
+            ],
+            last_connected: new Date().toISOString()
+          },
+          {
+            name: 'python',
+            status: 'connected',
+            description: 'Python code execution tools',
+            url: 'stdio://python-mcp',
+            tools: [
+              { name: 'python_exec', description: 'Execute Python code', server_name: 'python', parameters: [] },
+              { name: 'notebook_run', description: 'Run Jupyter notebooks', server_name: 'python', parameters: [] }
+            ],
+            last_connected: new Date().toISOString()
+          },
+          {
+            name: 'browser',
+            status: 'connected',
+            description: 'Browser automation tools',
+            url: 'stdio://browser-mcp',
+            tools: [
+              { name: 'browser_navigate', description: 'Navigate to URL', server_name: 'browser', parameters: [] },
+              { name: 'browser_click', description: 'Click element', server_name: 'browser', parameters: [] },
+              { name: 'browser_snapshot', description: 'Take screenshot', server_name: 'browser', parameters: [] }
+            ],
+            last_connected: new Date().toISOString()
+          }
+        ])
+      });
+    });
+
+    // Mock skills registry endpoint
+    await page.route('**/api/v1/skills/registry*', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          items: [
+            {
+              name: 'bash_executor',
+              version: '1.0.0',
+              description: 'Execute bash commands using MCP tools',
+              icon: '⌨️',
+              is_active: true,
+              tools_count: 2,
+              triggers_count: 3,
+              created_at: '2024-01-01T00:00:00Z',
+              updated_at: '2024-01-01T00:00:00Z'
+            },
+            {
+              name: 'python_runner',
+              version: '1.0.0',
+              description: 'Execute Python code and notebooks',
+              icon: '🐍',
+              is_active: true,
+              tools_count: 2,
+              triggers_count: 2,
+              created_at: '2024-01-01T00:00:00Z',
+              updated_at: '2024-01-01T00:00:00Z'
+            },
+            {
+              name: 'web_navigator',
+              version: '1.0.0',
+              description: 'Navigate and interact with web pages',
+              icon: '🌐',
+              is_active: true,
+              tools_count: 3,
+              triggers_count: 4,
+              created_at: '2024-01-01T00:00:00Z',
+              updated_at: '2024-01-01T00:00:00Z'
+            }
+          ],
+          total: 3,
+          page: 1,
+          page_size: 12,
+          total_pages: 1
+        })
+      });
+    });
+
+    // Mock skills list endpoint (legacy endpoint)
     await page.route('**/api/v1/skills', (route) => {
       route.fulfill({
         status: 200,
