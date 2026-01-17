@@ -235,28 +235,23 @@ test.describe('Group 4: Browser MCP Tools', () => {
 
   // Sprint 106: Skip - UI data-testids don't match (tool-browser_navigate not found)
   test('should execute navigate to URL command', async ({ page }) => {
-    // Mock tool execution endpoint
-    await page.route('**/api/v1/mcp/tools/execute', (route) => {
-      const request = route.request();
-      const postData = request.postDataJSON();
-
-      if (postData.tool_name === 'browser_navigate') {
-        route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            success: true,
-            result: {
-              url: postData.parameters.url,
-              title: 'Example Domain',
-              status: 200
-            },
-            execution_time: 1.2
-          })
-        });
-      } else {
-        route.continue();
-      }
+    // Mock tool execution endpoint - correct URL format: /tools/{toolName}/execute
+    await page.route('**/api/v1/mcp/tools/browser_navigate/execute', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          result: {
+            url: 'https://example.com',
+            title: 'Example Domain',
+            status: 200
+          },
+          execution_time_ms: 1200,
+          timestamp: new Date().toISOString(),
+          tool_name: 'browser_navigate'
+        })
+      });
     });
 
     await navigateToMCPTools(page);
@@ -287,28 +282,23 @@ test.describe('Group 4: Browser MCP Tools', () => {
 
   // Sprint 106: Skip - UI data-testids don't match (tool-browser_click not found)
   test('should execute click element command', async ({ page }) => {
-    // Mock tool execution endpoint
-    await page.route('**/api/v1/mcp/tools/execute', (route) => {
-      const request = route.request();
-      const postData = request.postDataJSON();
-
-      if (postData.tool_name === 'browser_click') {
-        route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            success: true,
-            result: {
-              element: postData.parameters.element,
-              clicked: true,
-              ref: postData.parameters.ref
-            },
-            execution_time: 0.5
-          })
-        });
-      } else {
-        route.continue();
-      }
+    // Mock tool execution endpoint - correct URL format
+    await page.route('**/api/v1/mcp/tools/browser_click/execute', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          result: {
+            element: 'Submit button',
+            clicked: true,
+            ref: 'button[type="submit"]'
+          },
+          execution_time_ms: 500,
+          timestamp: new Date().toISOString(),
+          tool_name: 'browser_click'
+        })
+      });
     });
 
     await navigateToMCPTools(page);
@@ -341,29 +331,24 @@ test.describe('Group 4: Browser MCP Tools', () => {
 
   // Sprint 106: Skip - UI data-testids don't match (tool-browser_take_screenshot not found)
   test('should execute take screenshot command', async ({ page }) => {
-    // Mock tool execution endpoint
-    await page.route('**/api/v1/mcp/tools/execute', (route) => {
-      const request = route.request();
-      const postData = request.postDataJSON();
-
-      if (postData.tool_name === 'browser_take_screenshot') {
-        route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            success: true,
-            result: {
-              filename: postData.parameters.filename || 'page-1234567890.png',
-              path: '/tmp/screenshots/page-1234567890.png',
-              size_bytes: 45678,
-              type: postData.parameters.type || 'png'
-            },
-            execution_time: 0.8
-          })
-        });
-      } else {
-        route.continue();
-      }
+    // Mock tool execution endpoint - correct URL format
+    await page.route('**/api/v1/mcp/tools/browser_take_screenshot/execute', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          result: {
+            filename: 'test-screenshot.png',
+            path: '/tmp/screenshots/test-screenshot.png',
+            size_bytes: 45678,
+            type: 'png'
+          },
+          execution_time_ms: 800,
+          timestamp: new Date().toISOString(),
+          tool_name: 'browser_take_screenshot'
+        })
+      });
     });
 
     await navigateToMCPTools(page);
@@ -395,27 +380,22 @@ test.describe('Group 4: Browser MCP Tools', () => {
 
   // Sprint 106: Skip - UI data-testids don't match (tool-browser_evaluate not found)
   test('should execute evaluate JavaScript command', async ({ page }) => {
-    // Mock tool execution endpoint
-    await page.route('**/api/v1/mcp/tools/execute', (route) => {
-      const request = route.request();
-      const postData = request.postDataJSON();
-
-      if (postData.tool_name === 'browser_evaluate') {
-        route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            success: true,
-            result: {
-              return_value: 'Hello from browser!',
-              type: 'string'
-            },
-            execution_time: 0.3
-          })
-        });
-      } else {
-        route.continue();
-      }
+    // Mock tool execution endpoint - correct URL format
+    await page.route('**/api/v1/mcp/tools/browser_evaluate/execute', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          result: {
+            return_value: 'Hello from browser!',
+            type: 'string'
+          },
+          execution_time_ms: 300,
+          timestamp: new Date().toISOString(),
+          tool_name: 'browser_evaluate'
+        })
+      });
     });
 
     await navigateToMCPTools(page);
@@ -445,15 +425,14 @@ test.describe('Group 4: Browser MCP Tools', () => {
 
   // Sprint 106: Skip - UI data-testids don't match (tool-browser_navigate not found)
   test('should handle tool execution errors gracefully', async ({ page }) => {
-    // Mock tool execution endpoint with error
-    await page.route('**/api/v1/mcp/tools/execute', (route) => {
+    // Mock tool execution endpoint with error - correct URL format
+    await page.route('**/api/v1/mcp/tools/browser_navigate/execute', (route) => {
       route.fulfill({
         status: 500,
         contentType: 'application/json',
         body: JSON.stringify({
-          success: false,
           error: 'Browser context not available',
-          details: 'No active browser session found'
+          detail: 'No active browser session found'
         })
       });
     });

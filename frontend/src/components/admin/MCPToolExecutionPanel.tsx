@@ -382,7 +382,7 @@ export function MCPToolExecutionPanel({
 
       {/* Error Display */}
       {error && (
-        <div className="p-4 bg-red-50 border-b border-red-100">
+        <div className="p-4 bg-red-50 border-b border-red-100" data-testid="tool-execution-error">
           <div className="flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
             <div>
