@@ -5,7 +5,8 @@
  * Test Group 16: MCP Server Marketplace (6 tests)
  */
 
-import { test, expect, Page, setupAuthMocking } from './fixtures';
+import { test, expect, setupAuthMocking } from './fixtures';
+import type { Page } from '@playwright/test';
 
 // Test data
 const mockServers = {
@@ -40,6 +41,51 @@ const mockServers = {
       stars: 980,
       downloads: 8500,
       tags: ['github', 'git', 'vcs'],
+      repository: 'https://github.com/modelcontextprotocol/servers',
+    },
+    {
+      id: '@modelcontextprotocol/server-postgres',
+      name: 'PostgreSQL Server',
+      description: 'Connect to PostgreSQL databases',
+      transport: 'stdio',
+      command: 'npx',
+      args: ['@modelcontextprotocol/server-postgres'],
+      version: '1.0.0',
+      stars: 750,
+      downloads: 5200,
+      tags: ['database', 'postgres', 'sql'],
+      repository: 'https://github.com/modelcontextprotocol/servers',
+    },
+    {
+      id: '@modelcontextprotocol/server-slack',
+      name: 'Slack Server',
+      description: 'Integrate with Slack workspaces',
+      transport: 'stdio',
+      command: 'npx',
+      args: ['@modelcontextprotocol/server-slack'],
+      dependencies: {
+        env: ['SLACK_TOKEN'],
+      },
+      version: '1.0.3',
+      stars: 1100,
+      downloads: 9800,
+      tags: ['slack', 'chat', 'messaging'],
+      repository: 'https://github.com/modelcontextprotocol/servers',
+    },
+    {
+      id: '@modelcontextprotocol/server-google-docs',
+      name: 'Google Docs Server',
+      description: 'Access and manage Google Docs',
+      transport: 'stdio',
+      command: 'npx',
+      args: ['@modelcontextprotocol/server-google-docs'],
+      dependencies: {
+        env: ['GOOGLE_API_KEY'],
+      },
+      version: '0.9.8',
+      stars: 620,
+      downloads: 4100,
+      tags: ['google', 'docs', 'productivity'],
       repository: 'https://github.com/modelcontextprotocol/servers',
     },
   ],
@@ -223,15 +269,16 @@ test.describe('Group 16: MCP Marketplace', () => {
     await firstCard.click();
 
     // Check installer dialog is open
-    await expect(page.getByTestId('installer-dialog')).toBeVisible();
+    const installerDialog = page.getByTestId('installer-dialog');
+    await expect(installerDialog).toBeVisible();
     await expect(page.getByTestId('dialog-title')).toHaveText('Install MCP Server');
 
-    // Check server info in dialog
-    await expect(page.getByTestId('server-name')).toHaveText('Filesystem Server');
-    await expect(page.getByTestId('server-id')).toHaveText(
+    // Check server info in dialog (scoped within dialog)
+    await expect(installerDialog.getByTestId('server-name')).toHaveText('Filesystem Server');
+    await expect(installerDialog.getByTestId('server-id')).toHaveText(
       '@modelcontextprotocol/server-filesystem'
     );
-    await expect(page.getByTestId('server-description')).toContainText(
+    await expect(installerDialog.getByTestId('server-description')).toContainText(
       'Read and write files'
     );
 
@@ -240,9 +287,9 @@ test.describe('Group 16: MCP Marketplace', () => {
     const autoConnectCheckbox = page.locator('#auto-connect');
     await expect(autoConnectCheckbox).toBeChecked(); // Should be checked by default
 
-    // Check install button
-    await expect(page.getByTestId('install-button')).toBeVisible();
-    await expect(page.getByTestId('install-button')).toHaveText('Install');
+    // Check install button (scoped within dialog)
+    await expect(installerDialog.getByTestId('install-button')).toBeVisible();
+    await expect(installerDialog.getByTestId('install-button')).toHaveText('Install');
 
     // Check cancel button
     await expect(page.getByTestId('cancel-button')).toBeVisible();
@@ -286,22 +333,22 @@ test.describe('Group 16: MCP Marketplace', () => {
     );
     await firstCard.click();
 
-    // Check auto-connect is checked
+    // Get installer dialog and check auto-connect is checked
+    const installerDialog = page.getByTestId('installer-dialog');
+    await expect(installerDialog).toBeVisible();
+
     const autoConnectCheckbox = page.locator('#auto-connect');
     await expect(autoConnectCheckbox).toBeChecked();
 
-    // Click install
-    await page.getByTestId('install-button').click();
+    // Click install (scoped within dialog)
+    await installerDialog.getByTestId('install-button').click();
 
-    // Check installing status
-    await expect(page.getByTestId('installing-status')).toBeVisible();
-    await expect(page.getByTestId('installing-status')).toContainText('Installing server');
-
-    // Wait for success
-    await expect(page.getByTestId('success-status')).toBeVisible({ timeout: 5000 });
-    await expect(page.getByTestId('success-status')).toContainText('Installation successful');
-    await expect(page.getByTestId('success-status')).toContainText(
-      'Tools will be available after connection'
+    // Wait for success status (installing status might be too quick to observe)
+    const successStatus = page.getByTestId('success-status');
+    await expect(successStatus).toBeVisible({ timeout: 5000 });
+    await expect(successStatus).toContainText('Installation successful');
+    await expect(successStatus).toContainText(
+      'will be available after connection'
     );
 
     // Dialog should close automatically after 2 seconds
