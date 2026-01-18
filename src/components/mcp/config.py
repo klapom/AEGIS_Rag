@@ -62,13 +62,20 @@ class MCPServerConfig(BaseModel):
     @field_validator("command", "url")
     @classmethod
     def validate_endpoint(cls, v: str | None, info: Any) -> str | None:
-        """Validate endpoint based on transport."""
+        """Validate endpoint based on transport.
+
+        Sprint 112 Fix: Use the current field value (v) not values.get()
+        since the current field isn't in info.data yet during validation.
+        """
         values = info.data
         transport = values.get("transport")
+        field_name = info.field_name
 
-        if transport == "stdio" and not values.get("command"):
+        # Only validate the current field, not cross-field validation
+        # Cross-field validation is done in model_validator
+        if field_name == "command" and transport == "stdio" and not v:
             raise ValueError("stdio transport requires 'command'")
-        if transport == "http" and not values.get("url"):
+        if field_name == "url" and transport == "http" and not v:
             raise ValueError("http transport requires 'url'")
 
         return v

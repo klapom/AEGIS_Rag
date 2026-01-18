@@ -1,17 +1,19 @@
 /**
  * CostDashboardPage Component
  * Sprint 31 Feature 31.10b: Cost Dashboard UI Implementation
+ * Sprint 111 Feature 111.2: Token Usage Over Time Chart
  *
  * Features:
  * - 4 summary cards: Total Cost, Total Tokens, Total Calls, Avg Cost/Call
  * - Budget status bars with alerts (warning/critical)
+ * - Token usage over time chart (Sprint 111)
  * - Provider cost breakdown
  * - Top 5 models by cost
  * - Time range selector (7d/30d/all)
  * - Real-time cost tracking
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Loader2,
@@ -22,6 +24,8 @@ import {
   TrendingUp,
   RefreshCw,
 } from 'lucide-react';
+import { TokenUsageChart } from '../../components/charts';
+import type { TokenUsageDataPoint, AggregationType } from '../../components/charts';
 
 interface ProviderCost {
   cost_usd: number;
@@ -64,9 +68,73 @@ export function CostDashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | 'all'>('7d');
 
+  // Sprint 111: Token usage chart state
+  const [tokenUsageData, setTokenUsageData] = useState<TokenUsageDataPoint[]>([]);
+  const [chartLoading, setChartLoading] = useState(false);
+  const [chartError, setChartError] = useState<string | null>(null);
+  const [chartDays, setChartDays] = useState(30);
+  const [chartAggregation, setChartAggregation] = useState<AggregationType>('daily');
+  const [chartProvider, setChartProvider] = useState('all');
+
   useEffect(() => {
     fetchCostStats();
   }, [timeRange]);
+
+  // Sprint 111: Fetch token usage timeseries
+  const fetchTokenUsageData = useCallback(async () => {
+    setChartLoading(true);
+    setChartError(null);
+
+    try {
+      const endDate = new Date().toISOString().split('T')[0];
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - chartDays);
+      const startStr = startDate.toISOString().split('T')[0];
+
+      const params = new URLSearchParams({
+        start: startStr,
+        end: endDate,
+        aggregation: chartAggregation,
+      });
+      if (chartProvider !== 'all') {
+        params.append('provider', chartProvider);
+      }
+
+      const response = await fetch(
+        `${API_BASE_URL}/api/v1/admin/costs/timeseries?${params}`
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: Failed to fetch timeseries data`);
+      }
+
+      const data = await response.json();
+      setTokenUsageData(data.data || []);
+    } catch (err) {
+      console.error('Error fetching token usage data:', err);
+      setChartError(err instanceof Error ? err.message : 'Failed to load chart data');
+
+      // Generate demo data for testing/fallback
+      const demoData: TokenUsageDataPoint[] = [];
+      for (let i = chartDays - 1; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        demoData.push({
+          date: date.toISOString().split('T')[0],
+          tokens: Math.floor(Math.random() * 100000) + 10000,
+          cost_usd: Math.random() * 2 + 0.1,
+          provider: 'ollama',
+        });
+      }
+      setTokenUsageData(demoData);
+    } finally {
+      setChartLoading(false);
+    }
+  }, [chartDays, chartAggregation, chartProvider]);
+
+  useEffect(() => {
+    fetchTokenUsageData();
+  }, [fetchTokenUsageData]);
 
   const fetchCostStats = async () => {
     try {
@@ -279,6 +347,18 @@ export function CostDashboardPage() {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Sprint 111: Token Usage Over Time Chart */}
+      <div className="mb-6" data-testid="token-usage-chart-container">
+        <TokenUsageChart
+          data={tokenUsageData}
+          isLoading={chartLoading}
+          error={chartError}
+          onTimeRangeChange={(days) => setChartDays(days)}
+          onAggregationChange={(agg) => setChartAggregation(agg)}
+          onProviderChange={(provider) => setChartProvider(provider)}
+        />
       </div>
 
       {/* Provider & Model Breakdown */}

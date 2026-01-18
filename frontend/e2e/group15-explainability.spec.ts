@@ -37,74 +37,26 @@ test.describe('Group 15: Explainability & Certification - Sprint 98', () => {
   });
 
   test('should display decision paths', async ({ page }) => {
-    // Mock explainability endpoint with decision paths
-    await page.route('**/api/v1/explainability/decision-paths*', (route) => {
+    // Sprint 111 Fix: Mock correct endpoint /api/v1/explainability/recent
+    // The component calls getRecentTraces which uses this endpoint, not decision-paths
+    await page.route('**/api/v1/explainability/recent*', (route) => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({
-          decision_paths: [
-            {
-              id: 'path-1',
-              query: 'What is RAG?',
-              timestamp: '2024-01-15T10:00:00Z',
-              steps: [
-                {
-                  step_id: 1,
-                  agent: 'Coordinator',
-                  action: 'Query Classification',
-                  reasoning: 'Classified as knowledge retrieval query',
-                  confidence: 0.95,
-                  duration_ms: 50,
-                },
-                {
-                  step_id: 2,
-                  agent: 'Vector Agent',
-                  action: 'Vector Search',
-                  reasoning: 'Retrieved 5 relevant documents using BGE-M3 embeddings',
-                  confidence: 0.88,
-                  duration_ms: 120,
-                },
-                {
-                  step_id: 3,
-                  agent: 'Generation Agent',
-                  action: 'Answer Synthesis',
-                  reasoning: 'Synthesized answer from top 3 documents',
-                  confidence: 0.92,
-                  duration_ms: 200,
-                },
-              ],
-              final_decision: 'Answer generated with high confidence',
-              total_duration_ms: 370,
-            },
-            {
-              id: 'path-2',
-              query: 'Explain the graph extraction process',
-              timestamp: '2024-01-15T10:05:00Z',
-              steps: [
-                {
-                  step_id: 1,
-                  agent: 'Coordinator',
-                  action: 'Query Classification',
-                  reasoning: 'Classified as graph reasoning query',
-                  confidence: 0.89,
-                  duration_ms: 55,
-                },
-                {
-                  step_id: 2,
-                  agent: 'Graph Agent',
-                  action: 'Entity Extraction',
-                  reasoning: 'Extracted 12 entities and 8 relationships',
-                  confidence: 0.85,
-                  duration_ms: 180,
-                },
-              ],
-              final_decision: 'Graph query processed successfully',
-              total_duration_ms: 235,
-            },
-          ],
-          total: 2,
-        }),
+        body: JSON.stringify([
+          {
+            trace_id: 'trace-1',
+            query: 'What is RAG?',
+            timestamp: '2024-01-15T10:00:00Z',
+            confidence: 0.95,
+          },
+          {
+            trace_id: 'trace-2',
+            query: 'Explain the graph extraction process',
+            timestamp: '2024-01-15T10:05:00Z',
+            confidence: 0.89,
+          },
+        ]),
       });
     });
 
@@ -112,18 +64,15 @@ test.describe('Group 15: Explainability & Certification - Sprint 98', () => {
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(2000);
 
-    // Verify decision paths are displayed
-    const decisionPaths = page.locator('[data-testid*="decision-path"], [class*="decision-path"]');
+    // Verify recent queries are displayed (decision paths)
+    const decisionPaths = page.locator('[data-testid*="decision-path"], [class*="decision-path"], [data-testid*="trace-item"]');
     const pathCount = await decisionPaths.count();
 
-    // Look for decision path content
-    const coordinatorText = page.locator('text=/Coordinator|Vector Agent|Generation Agent/');
-    const actionText = page.locator('text=/Query Classification|Vector Search|Answer Synthesis/');
+    // Look for query text in the list
+    const ragQuery = page.locator('text=/What is RAG|graph extraction/i');
+    const hasQueryText = await ragQuery.count() > 0;
 
-    const hasCoordinator = await coordinatorText.count() > 0;
-    const hasAction = await actionText.count() > 0;
-
-    expect(pathCount > 0 || hasCoordinator || hasAction).toBeTruthy();
+    expect(pathCount > 0 || hasQueryText).toBeTruthy();
   });
 
   test('should display certification status', async ({ page }) => {
@@ -401,15 +350,12 @@ test.describe('Group 15: Explainability & Certification - Sprint 98', () => {
   });
 
   test('should handle empty decision paths gracefully', async ({ page }) => {
-    // Mock empty decision paths
-    await page.route('**/api/v1/explainability/decision-paths*', (route) => {
+    // Sprint 111 Fix: Mock correct endpoint with empty response
+    await page.route('**/api/v1/explainability/recent*', (route) => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({
-          decision_paths: [],
-          total: 0,
-        }),
+        body: JSON.stringify([]), // Empty array
       });
     });
 
@@ -417,14 +363,17 @@ test.describe('Group 15: Explainability & Certification - Sprint 98', () => {
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(2000);
 
-    // Verify empty state message
-    const emptyMessage = page.locator('text=/no decision paths|empty|no data|no queries/i');
-    expect(await emptyMessage.count()).toBeGreaterThan(0);
+    // Verify empty state message - component shows "No decision paths available"
+    // Sprint 111 Fix: Use separate locators to avoid CSS parsing issues
+    const emptyByTestId = page.locator('[data-testid="empty-decision-paths"]');
+    const emptyByText = page.locator('text=/no decision paths|submit queries/i');
+    const hasEmptyState = (await emptyByTestId.count() > 0) || (await emptyByText.count() > 0);
+    expect(hasEmptyState).toBeTruthy();
   });
 
   test('should handle API errors gracefully', async ({ page }) => {
-    // Mock API error
-    await page.route('**/api/v1/explainability/decision-paths*', (route) => {
+    // Sprint 111 Fix: Mock correct endpoint with error response
+    await page.route('**/api/v1/explainability/recent*', (route) => {
       route.fulfill({
         status: 500,
         contentType: 'application/json',
@@ -438,7 +387,7 @@ test.describe('Group 15: Explainability & Certification - Sprint 98', () => {
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(2000);
 
-    // Verify error message is displayed
+    // Verify error message is displayed - component shows "Failed to load recent traces"
     const errorMessage = page.locator('text=/error|failed|unable/i');
     expect(await errorMessage.count()).toBeGreaterThan(0);
   });

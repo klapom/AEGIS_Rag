@@ -299,6 +299,98 @@ async def list_skills(
 
 
 # ============================================================================
+# Endpoint: GET /api/v1/skills/registry - Get skill registry info
+# Sprint 112: Fix for /admin/skills/registry 404 error
+# MUST be defined BEFORE /{skill_name} catch-all route
+# ============================================================================
+
+
+class SkillRegistryResponse(SkillListResponse):
+    """Extended response for skill registry with metadata."""
+    registry_version: str = "1.0.0"
+    total_categories: int = 0
+    categories_summary: dict = {}
+
+
+@router.get("/registry", response_model=SkillRegistryResponse)
+async def get_skill_registry_info(
+    include_inactive: bool = Query(False, description="Include inactive skills"),
+) -> SkillRegistryResponse:
+    """Get skill registry information and statistics.
+
+    Sprint 112 Feature 112.8.2: Skills Registry Endpoint
+    Endpoint: GET /api/v1/skills/registry
+
+    Returns overview of all registered skills with category breakdown.
+
+    Args:
+        include_inactive: Whether to include inactive skills in counts
+
+    Returns:
+        SkillRegistryResponse with registry metadata and skill list
+    """
+    logger.info("get_skill_registry_info", include_inactive=include_inactive)
+
+    try:
+        registry = get_registry()
+        all_skills = registry.list_skills()
+
+        # Filter by status if needed
+        if not include_inactive:
+            all_skills = [s for s in all_skills if s.get("status") != "inactive"]
+
+        # Build category summary
+        categories_summary = {}
+        for skill in all_skills:
+            cat = skill.get("category", "unknown")
+            if cat not in categories_summary:
+                categories_summary[cat] = 0
+            categories_summary[cat] += 1
+
+        # Convert to response format
+        items = []
+        for skill in all_skills[:100]:  # Limit to first 100
+            items.append(
+                SkillSummary(
+                    name=skill.get("name", "unknown"),
+                    category=SkillCategory(skill.get("category", "tools")),
+                    description=skill.get("description", ""),
+                    version=skill.get("version", "1.0.0"),
+                    status=SkillStatus(skill.get("status", "discovered")),
+                    tags=skill.get("tags", []),
+                    author=skill.get("author", "AegisRAG"),
+                    created_at=skill.get("created_at", datetime.now().isoformat()),
+                    updated_at=skill.get("updated_at", datetime.now().isoformat()),
+                )
+            )
+
+        return SkillRegistryResponse(
+            items=items,
+            page=1,
+            page_size=len(items),
+            total=len(all_skills),
+            total_pages=1,
+            registry_version="1.0.0",
+            total_categories=len(categories_summary),
+            categories_summary=categories_summary,
+        )
+
+    except Exception as e:
+        logger.error("get_skill_registry_failed", error=str(e), exc_info=True)
+        # Return empty registry on error (graceful degradation)
+        return SkillRegistryResponse(
+            items=[],
+            page=1,
+            page_size=0,
+            total=0,
+            total_pages=0,
+            registry_version="1.0.0",
+            total_categories=0,
+            categories_summary={},
+        )
+
+
+# ============================================================================
 # Endpoint 2: GET /api/v1/skills/:name - Get skill details
 # ============================================================================
 

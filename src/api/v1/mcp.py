@@ -205,23 +205,23 @@ class ToolExecuteResponse(BaseModel):
 
 
 @router.get("/servers", response_model=list[MCPServerInfo])
-async def list_mcp_servers(
-    current_user: User = Depends(get_current_user),
-) -> list[MCPServerInfo]:
+async def list_mcp_servers() -> list[MCPServerInfo]:
     """List all configured MCP servers and their connection status.
+
+    Sprint 112 Feature 112.8.4: Made public for admin UI access.
 
     Returns:
         list of MCP server information
 
     Example:
         ```bash
-        curl -H "Authorization: Bearer $TOKEN" "http://localhost:8000/api/v1/mcp/servers"
+        curl "http://localhost:8000/api/v1/mcp/servers"
         ```
     """
     manager = get_connection_manager()
     connections = manager.get_connection_details()
 
-    logger.info("mcp_servers_listed", user_id=current_user.user_id, count=len(connections))
+    logger.info("mcp_servers_listed", count=len(connections))
 
     return [
         MCPServerInfo(
@@ -394,9 +394,10 @@ async def disconnect_server(
 @router.get("/tools", response_model=list[MCPToolInfo])
 async def list_all_tools(
     server_name: str | None = None,
-    current_user: User = Depends(get_current_user),
 ) -> list[MCPToolInfo]:
     """List all available tools across connected servers.
+
+    Sprint 112 Feature 112.8.4: Made public for admin UI access.
 
     Args:
         server_name: Optional filter by server name
@@ -407,10 +408,10 @@ async def list_all_tools(
     Example:
         ```bash
         # All tools
-        curl -H "Authorization: Bearer $TOKEN" "http://localhost:8000/api/v1/mcp/tools"
+        curl "http://localhost:8000/api/v1/mcp/tools"
 
         # Tools from specific server
-        curl -H "Authorization: Bearer $TOKEN" "http://localhost:8000/api/v1/mcp/tools?server_name=filesystem"
+        curl "http://localhost:8000/api/v1/mcp/tools?server_name=filesystem"
         ```
     """
     manager = get_connection_manager()
@@ -428,7 +429,6 @@ async def list_all_tools(
 
     logger.info(
         "mcp_tools_listed",
-        user_id=current_user.user_id,
         server_name=server_name,
         count=len(tools),
     )
@@ -659,23 +659,24 @@ async def check_server_health(
 
 
 @router.get("/health")
-async def mcp_health_check(
-    current_user: User = Depends(get_current_user),
-) -> dict[str, Any]:
+async def mcp_health_check() -> dict[str, Any]:
     """Health check for MCP subsystem.
+
+    Sprint 112 Feature 112.8.4: Made public for admin UI access.
+    Health endpoints should be accessible without authentication.
 
     Returns:
         Health status with server and tool counts
 
     Example:
         ```bash
-        curl -H "Authorization: Bearer $TOKEN" "http://localhost:8000/api/v1/mcp/health"
+        curl "http://localhost:8000/api/v1/mcp/health"
         ```
     """
     manager = get_connection_manager()
     health = await manager.health_check()
 
-    logger.info("mcp_health_checked", user_id=current_user.user_id, status=health["status"])
+    logger.info("mcp_health_checked", status=health["status"])
 
     return health
 

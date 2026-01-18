@@ -57,7 +57,7 @@ export function DataSubjectRights({
 
   return (
     <div className="space-y-4" data-testid="data-subject-rights-list">
-      {/* Header with Summary */}
+      {/* Header with Summary - Sprint 111: Added rights description for E2E test compatibility */}
       <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4 border border-yellow-200 dark:border-yellow-800">
         <div className="flex items-center justify-between">
           <div className="space-y-1">
@@ -66,6 +66,10 @@ export function DataSubjectRights({
             </h3>
             <p className="text-sm text-yellow-700 dark:text-yellow-300">
               {pendingRequests.length} pending request{pendingRequests.length !== 1 ? 's' : ''}
+            </p>
+            <p className="text-xs text-yellow-600 dark:text-yellow-400" data-testid="rights-description">
+              Manage requests for: Right to Access (Art. 15), Right to Rectification (Art. 16),
+              Right to Erasure (Art. 17), Right to Portability (Art. 20)
             </p>
           </div>
           <button

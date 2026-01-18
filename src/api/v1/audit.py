@@ -57,12 +57,105 @@ limiter = Limiter(key_func=get_remote_address)
 _audit_manager: Optional[AuditTrailManager] = None
 
 
+def _seed_demo_events(manager: AuditTrailManager) -> None:
+    """Seed demo audit events for development/testing.
+
+    Sprint 112 Feature 112.8.3: Fix empty audit trail on startup.
+
+    Note: We directly append to storage.events list since:
+    1. InMemoryAuditStorage is just a list
+    2. The manager.log() method is async
+    3. We need sync seeding during module initialization
+    """
+    from datetime import timedelta
+    import uuid
+
+    from src.governance.audit.trail import AuditEvent
+
+    demo_events = [
+        {
+            "event_type": AuditEventType.AUTH_SUCCESS,
+            "actor_id": "admin",
+            "actor_type": "user",
+            "action": "login",
+            "outcome": "success",
+            "metadata": {"ip": "192.168.178.10", "user_agent": "Mozilla/5.0"},
+            "hours_ago": 2,
+        },
+        {
+            "event_type": AuditEventType.SKILL_EXECUTED,
+            "actor_id": "coordinator_agent",
+            "actor_type": "agent",
+            "action": "execute_skill:vector_search",
+            "outcome": "success",
+            "metadata": {"skill": "vector_search", "duration_ms": 145},
+            "hours_ago": 1.5,
+        },
+        {
+            "event_type": AuditEventType.DATA_READ,
+            "actor_id": "retrieval_agent",
+            "actor_type": "agent",
+            "action": "read_documents",
+            "outcome": "success",
+            "metadata": {"documents": 5, "namespace": "sprint_docs"},
+            "hours_ago": 1,
+        },
+        {
+            "event_type": AuditEventType.CONFIG_CHANGED,
+            "actor_id": "admin",
+            "actor_type": "user",
+            "action": "update_llm_config",
+            "outcome": "success",
+            "metadata": {"model": "nemotron3", "provider": "ollama"},
+            "hours_ago": 0.5,
+        },
+        {
+            "event_type": AuditEventType.SKILL_EXECUTED,
+            "actor_id": "graph_agent",
+            "actor_type": "agent",
+            "action": "execute_skill:graph_reasoning",
+            "outcome": "success",
+            "metadata": {"skill": "graph_reasoning", "entities_found": 12},
+            "hours_ago": 0.25,
+        },
+    ]
+
+    previous_hash = None
+    for event_data in demo_events:
+        try:
+            event_time = datetime.utcnow() - timedelta(hours=event_data["hours_ago"])
+
+            # Create AuditEvent directly with hash chain
+            event = AuditEvent(
+                id=str(uuid.uuid4()),
+                timestamp=event_time,
+                event_type=event_data["event_type"],
+                actor_id=event_data["actor_id"],
+                actor_type=event_data["actor_type"],
+                action=event_data["action"],
+                outcome=event_data["outcome"],
+                metadata=event_data["metadata"],
+                previous_hash=previous_hash,
+            )
+
+            # Directly append to storage (sync, for in-memory storage only)
+            manager.storage.events.append(event)
+            previous_hash = event.event_hash
+
+            logger.debug("seeded_demo_audit_event", event_id=event.id, action=event.action)
+        except Exception as e:
+            logger.warning("failed_to_seed_demo_event", error=str(e))
+
+
 def get_audit_manager() -> AuditTrailManager:
     """Get or create audit trail manager singleton."""
     global _audit_manager
     if _audit_manager is None:
         storage = InMemoryAuditStorage(retention_days=365 * 7)  # 7 years
         _audit_manager = AuditTrailManager(storage=storage, retention_days=365 * 7)
+        # Sprint 112: Seed demo events for development
+        _seed_demo_events(_audit_manager)
+        logger.info("audit_manager_initialized_with_demo_events")
     return _audit_manager
 
 

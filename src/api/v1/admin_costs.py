@@ -343,3 +343,160 @@ async def get_cost_history(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve cost history: {str(e)}",
         ) from e
+
+
+from pydantic import BaseModel
+
+
+class TimeseriesDataPoint(BaseModel):
+    """Individual data point for timeseries chart."""
+    date: str
+    tokens: int
+    cost_usd: float
+    provider: str
+
+
+class TimeseriesResponse(BaseModel):
+    """Response for timeseries endpoint."""
+    data: list[TimeseriesDataPoint]
+    total_tokens: int = 0
+    total_cost_usd: float = 0.0
+
+
+@router.get("/costs/timeseries", response_model=TimeseriesResponse)
+async def get_cost_timeseries(
+    start: str = Query(
+        ...,
+        description="Start date (YYYY-MM-DD)",
+        pattern=r"^\d{4}-\d{2}-\d{2}$",
+    ),
+    end: str = Query(
+        ...,
+        description="End date (YYYY-MM-DD)",
+        pattern=r"^\d{4}-\d{2}-\d{2}$",
+    ),
+    aggregation: Literal["daily", "weekly", "monthly"] = Query(
+        default="daily",
+        description="Aggregation level (daily, weekly, monthly)",
+    ),
+    provider: str | None = Query(
+        default=None,
+        description="Filter by provider (e.g., ollama, alibaba_cloud)",
+    ),
+) -> TimeseriesResponse:
+    """Get token usage timeseries data for charting.
+
+    **Sprint 112 Feature 112.2: Cost Timeseries Endpoint**
+
+    Returns token usage and cost data grouped by date for visualization
+    in time-series charts. Supports filtering by provider and aggregation
+    at different time granularities.
+
+    **Aggregation Levels:**
+    - `daily`: One data point per day (default)
+    - `weekly`: One data point per week (ISO week)
+    - `monthly`: One data point per month
+
+    **Provider Filtering:**
+    - `ollama`: Local Ollama models (free)
+    - `alibaba_cloud`: Alibaba Cloud DashScope models
+    - `openai`: OpenAI models (if configured)
+
+    Args:
+        start: Start date in YYYY-MM-DD format
+        end: End date in YYYY-MM-DD format
+        aggregation: Aggregation level (daily/weekly/monthly)
+        provider: Optional provider filter
+
+    Returns:
+        TimeseriesResponse: Timeseries data with totals
+
+    Raises:
+        HTTPException: If data retrieval fails
+    """
+    try:
+        tracker = get_cost_tracker()
+
+        # Parse dates
+        start_date = datetime.strptime(start, "%Y-%m-%d")
+        end_date = datetime.strptime(end, "%Y-%m-%d")
+
+        # Query database
+        with sqlite3.connect(tracker.db_path) as conn:
+            cursor = conn.cursor()
+
+            # Build WHERE clause
+            conditions = ["date(timestamp) >= ?", "date(timestamp) <= ?"]
+            params: list = [start, end]
+
+            if provider:
+                conditions.append("provider = ?")
+                params.append(provider)
+
+            where_clause = " AND ".join(conditions)
+
+            # Determine date grouping based on aggregation
+            if aggregation == "weekly":
+                date_group = "strftime('%Y-W%W', timestamp)"
+            elif aggregation == "monthly":
+                date_group = "strftime('%Y-%m', timestamp)"
+            else:
+                date_group = "date(timestamp)"
+
+            # Query with aggregation by provider
+            cursor.execute(
+                f"""
+                SELECT
+                    {date_group} as period,
+                    provider,
+                    SUM(tokens_total) as total_tokens,
+                    SUM(cost_usd) as total_cost
+                FROM llm_requests
+                WHERE {where_clause}
+                GROUP BY {date_group}, provider
+                ORDER BY period ASC, provider ASC
+            """,
+                tuple(params),
+            )
+
+            rows = cursor.fetchall()
+
+        # Build response data
+        data_points: list[TimeseriesDataPoint] = []
+        total_tokens = 0
+        total_cost_usd = 0.0
+
+        for period, prov, tokens, cost in rows:
+            data_points.append(
+                TimeseriesDataPoint(
+                    date=period,
+                    tokens=tokens or 0,
+                    cost_usd=cost or 0.0,
+                    provider=prov or "unknown",
+                )
+            )
+            total_tokens += tokens or 0
+            total_cost_usd += cost or 0.0
+
+        logger.info(
+            "cost_timeseries_retrieved",
+            start=start,
+            end=end,
+            aggregation=aggregation,
+            provider=provider,
+            data_points=len(data_points),
+            total_tokens=total_tokens,
+        )
+
+        return TimeseriesResponse(
+            data=data_points,
+            total_tokens=total_tokens,
+            total_cost_usd=round(total_cost_usd, 4),
+        )
+
+    except Exception as e:
+        logger.error("cost_timeseries_failed", error=str(e), exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve timeseries data: {str(e)}",
+        ) from e

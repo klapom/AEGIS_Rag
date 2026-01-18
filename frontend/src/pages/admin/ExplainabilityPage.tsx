@@ -13,8 +13,8 @@
  */
 
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, FileText, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { ArrowLeft, FileText, AlertCircle, CheckCircle2, ExternalLink, Server, Cpu } from 'lucide-react';
 import {
   getRecentTraces,
   getDecisionTrace,
@@ -172,6 +172,50 @@ export function ExplainabilityPage() {
           </div>
         </div>
 
+        {/* Sprint 111: Model Info and Audit Trail Link section */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4" data-testid="model-info">
+          {/* Model Info Card */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border-2 border-gray-200 dark:border-gray-700 p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <Cpu className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100">Model Information</h3>
+            </div>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-500 dark:text-gray-400">LLM Model:</span>
+                <span className="font-medium text-gray-900 dark:text-gray-100">Nemotron3 Nano</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500 dark:text-gray-400">Embedding Model:</span>
+                <span className="font-medium text-gray-900 dark:text-gray-100">BGE-M3</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500 dark:text-gray-400">Context Window:</span>
+                <span className="font-medium text-gray-900 dark:text-gray-100">32K tokens</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Audit Trail Link Card */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border-2 border-gray-200 dark:border-gray-700 p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <Server className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100">Audit & Compliance</h3>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+              View the full audit trail for compliance and traceability.
+            </p>
+            <Link
+              to="/admin/audit"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+              data-testid="audit-trail-link"
+            >
+              <ExternalLink className="w-4 h-4" />
+              View Audit Trail
+            </Link>
+          </div>
+        </div>
+
         {/* Error Message */}
         {error && (
           <div className="bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800 rounded-xl p-4">
@@ -195,8 +239,8 @@ export function ExplainabilityPage() {
               </h2>
               <div className="space-y-2 max-h-[600px] overflow-y-auto" data-testid="decision-traces-list">
                 {recentTraces.length === 0 ? (
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    No recent traces available. Submit queries to see traces here.
+                  <p className="text-sm text-gray-500 dark:text-gray-400" data-testid="empty-decision-paths">
+                    No decision paths available. Submit queries to see decision traces here.
                   </p>
                 ) : (
                   recentTraces.map((trace) => (
@@ -421,14 +465,14 @@ export function ExplainabilityPage() {
                   </div>
                 )}
 
-                {/* Decision Flow */}
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border-2 border-gray-200 dark:border-gray-700 p-6" data-testid="decision-flow-section">
+                {/* Decision Flow / Decision Paths - Sprint 111: Added decision-path testid for E2E compatibility */}
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border-2 border-gray-200 dark:border-gray-700 p-6 decision-path" data-testid="decision-path-section">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
                     Decision Flow
                   </h3>
-                  <div className="space-y-3" data-testid={`decision-flow-${selectedTrace.trace_id}`}>
+                  <div className="space-y-3" data-testid={`decision-path-${selectedTrace.trace_id}`}>
                     {selectedTrace.decision_flow.map((stage, idx) => (
-                      <div key={idx} className="flex items-start gap-3" data-testid={`decision-step-${idx}`}>
+                      <div key={idx} className="flex items-start gap-3 decision-path-step" data-testid={`decision-path-step-${idx}`}>
                         <div className="flex-shrink-0 mt-1">
                           {stage.status === 'completed' ? (
                             <CheckCircle2 className="w-5 h-5 text-green-500" />

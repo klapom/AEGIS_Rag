@@ -302,21 +302,24 @@ test.describe('Group 13: Agent Hierarchy - Sprint 98/100', () => {
   });
 
   test('should display agent skills badges', async ({ page }) => {
-    // Mock hierarchy with skills
+    // Sprint 111 Fix: Mock with D3HierarchyResponse format (nodes[], edges[])
+    // The D3 component expects nodes with 'capabilities' field
     await page.route('**/api/v1/agents/hierarchy', (route) => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          executive: {
-            id: 'executive-1',
-            name: 'Executive Agent',
-            agent_name: 'ExecutiveAgent',
-            level: 'EXECUTIVE',
-            status: 'active',
-            skills: ['planning', 'delegation', 'coordination'],
-            managers: [],
-          },
+          nodes: [
+            {
+              agent_id: 'executive-1',
+              name: 'Executive Agent',
+              level: 'executive',
+              status: 'active',
+              capabilities: ['planning', 'delegation', 'coordination'],
+              child_count: 0,
+            },
+          ],
+          edges: [],
         }),
       });
     });
@@ -325,17 +328,15 @@ test.describe('Group 13: Agent Hierarchy - Sprint 98/100', () => {
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(2000);
 
-    // Look for skill badges
-    const skillBadges = page.locator('[data-testid*="skill"], [class*="skill-badge"]');
-    const badgeCount = await skillBadges.count();
-
-    // Skills should be displayed somewhere in the UI
+    // Look for capabilities in the D3 tree (displayed as [planning, delegation])
+    // The D3 component shows first 2 capabilities as text below node name
     const planningText = page.locator('text=/planning/i');
     const delegationText = page.locator('text=/delegation/i');
 
-    const hasPlanningSkill = await planningText.count() > 0;
-    const hasDelegationSkill = await delegationText.count() > 0;
+    const hasPlanningCapability = await planningText.count() > 0;
+    const hasDelegationCapability = await delegationText.count() > 0;
 
-    expect(hasPlanningSkill || hasDelegationSkill || badgeCount > 0).toBeTruthy();
+    // At least one capability should be visible in the tree
+    expect(hasPlanningCapability || hasDelegationCapability).toBeTruthy();
   });
 });

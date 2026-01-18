@@ -284,34 +284,37 @@ export function AgentHierarchyD3({
       className={`relative bg-white dark:bg-gray-800 rounded-xl border-2 border-gray-200 dark:border-gray-700 overflow-hidden ${className}`}
       style={{ height: '600px' }}
     >
-      {/* Zoom Controls */}
-      <div className="absolute top-4 right-4 z-10 flex gap-2">
+      {/* Zoom Controls - Sprint 111: Fixed aria-labels for E2E test compatibility */}
+      <div className="absolute top-4 right-4 z-10 flex gap-2" data-testid="zoom-controls">
         <button
           onClick={handleZoomIn}
           className="p-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors shadow-sm"
           title="Zoom In"
-          aria-label="Zoom in"
+          aria-label="zoom in"
           data-testid="zoom-in-button"
         >
           <ZoomIn className="w-4 h-4 text-gray-700 dark:text-gray-300" />
+          <span className="sr-only">+</span>
         </button>
         <button
           onClick={handleZoomOut}
           className="p-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors shadow-sm"
           title="Zoom Out"
-          aria-label="Zoom out"
+          aria-label="zoom out"
           data-testid="zoom-out-button"
         >
           <ZoomOut className="w-4 h-4 text-gray-700 dark:text-gray-300" />
+          <span className="sr-only">-</span>
         </button>
         <button
           onClick={handleResetZoom}
           className="p-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors shadow-sm"
           title="Reset Zoom"
-          aria-label="Reset zoom"
+          aria-label="reset"
           data-testid="reset-zoom-button"
         >
           <Maximize2 className="w-4 h-4 text-gray-700 dark:text-gray-300" />
+          <span className="sr-only">Reset</span>
         </button>
       </div>
 

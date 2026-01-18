@@ -1,0 +1,437 @@
+openapi: 3.1.0
+info:
+  title: AegisRAG Context API
+  description: |
+    API for Long Context management including document metadata,
+    chunk exploration, compression strategies, and export functionality.
+
+    Sprint 112 Feature 112.1: Long Context Backend APIs
+  version: 1.0.0
+  contact:
+    name: AegisRAG Team
+
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Development server
+  - url: http://192.168.178.10:8000/api/v1
+    description: DGX Spark production
+
+tags:
+  - name: context
+    description: Long context document management
+
+paths:
+  /context/documents:
+    get:
+      summary: List context documents
+      description: Get all documents with context metadata from the specified namespace
+      operationId: listContextDocuments
+      tags:
+        - context
+      parameters:
+        - name: namespace
+          in: query
+          description: Document namespace to filter by
+          required: false
+          schema:
+            type: string
+            default: sprint_docs
+        - name: limit
+          in: query
+          description: Maximum number of documents to return
+          required: false
+          schema:
+            type: integer
+            default: 100
+            maximum: 500
+        - name: offset
+          in: query
+          description: Number of documents to skip
+          required: false
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: List of documents with metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContextDocumentListResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /context/metrics:
+    get:
+      summary: Get context metrics
+      description: Get aggregated statistics about context window usage
+      operationId: getContextMetrics
+      tags:
+        - context
+      parameters:
+        - name: namespace
+          in: query
+          description: Namespace to calculate metrics for
+          required: false
+          schema:
+            type: string
+            default: sprint_docs
+      responses:
+        '200':
+          description: Context metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContextMetricsResponse'
+        '500':
+          description: Internal server error
+
+  /context/chunks/{doc_id}:
+    get:
+      summary: Get document chunks
+      description: Get all chunks for a specific document with relevance scores
+      operationId: getDocumentChunks
+      tags:
+        - context
+      parameters:
+        - name: doc_id
+          in: path
+          description: Document ID
+          required: true
+          schema:
+            type: string
+        - name: min_relevance
+          in: query
+          description: Minimum relevance score filter (0.0-1.0)
+          required: false
+          schema:
+            type: number
+            format: float
+            minimum: 0.0
+            maximum: 1.0
+      responses:
+        '200':
+          description: List of document chunks
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChunkListResponse'
+        '404':
+          description: Document not found
+        '500':
+          description: Internal server error
+
+  /context/compress:
+    post:
+      summary: Compress context
+      description: Apply a compression strategy to reduce context size
+      operationId: compressContext
+      tags:
+        - context
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompressionRequest'
+      responses:
+        '200':
+          description: Compression result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompressionResponse'
+        '400':
+          description: Invalid request
+        '404':
+          description: Document not found
+        '500':
+          description: Internal server error
+
+  /context/export:
+    get:
+      summary: Export context data
+      description: Export context documents and chunks as JSON or Markdown
+      operationId: exportContext
+      tags:
+        - context
+      parameters:
+        - name: format
+          in: query
+          description: Export format
+          required: false
+          schema:
+            type: string
+            enum: [json, markdown]
+            default: json
+        - name: namespace
+          in: query
+          description: Namespace to export
+          required: false
+          schema:
+            type: string
+            default: sprint_docs
+        - name: doc_id
+          in: query
+          description: Export specific document only
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Exported file
+          content:
+            application/json:
+              schema:
+                type: object
+            text/markdown:
+              schema:
+                type: string
+        '404':
+          description: Document not found
+        '500':
+          description: Internal server error
+
+components:
+  schemas:
+    ContextDocument:
+      type: object
+      required:
+        - id
+        - name
+        - token_count
+        - chunk_count
+        - uploaded_at
+        - status
+      properties:
+        id:
+          type: string
+          description: Unique document identifier
+          example: doc_abc123
+        name:
+          type: string
+          description: Original filename
+          example: SPRINT_111_PLAN.md
+        token_count:
+          type: integer
+          description: Total tokens in document
+          example: 8500
+        chunk_count:
+          type: integer
+          description: Number of chunks
+          example: 12
+        uploaded_at:
+          type: string
+          format: date-time
+          description: Upload timestamp
+          example: "2026-01-18T10:00:00Z"
+        status:
+          type: string
+          enum: [ready, processing, error]
+          description: Document processing status
+          example: ready
+        namespace:
+          type: string
+          description: Document namespace
+          example: sprint_docs
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Additional metadata
+
+    ContextDocumentListResponse:
+      type: object
+      required:
+        - documents
+        - total
+      properties:
+        documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContextDocument'
+        total:
+          type: integer
+          description: Total number of documents
+          example: 22
+
+    ContextMetricsResponse:
+      type: object
+      required:
+        - total_tokens
+        - max_tokens
+        - document_count
+        - average_relevance
+      properties:
+        total_tokens:
+          type: integer
+          description: Total tokens across all documents
+          example: 275000
+        max_tokens:
+          type: integer
+          description: Maximum context window size
+          example: 128000
+        document_count:
+          type: integer
+          description: Number of documents
+          example: 22
+        average_relevance:
+          type: number
+          format: float
+          description: Average relevance score (0.0-1.0)
+          example: 0.72
+        chunks_total:
+          type: integer
+          description: Total number of chunks
+          example: 450
+        utilization_percent:
+          type: number
+          format: float
+          description: Context window utilization percentage
+          example: 214.8
+
+    DocumentChunk:
+      type: object
+      required:
+        - id
+        - content
+        - relevance_score
+        - token_count
+        - chunk_index
+      properties:
+        id:
+          type: string
+          description: Chunk identifier
+          example: chunk_001
+        content:
+          type: string
+          description: Chunk text content
+          example: "## Sprint 111 Plan..."
+        relevance_score:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          description: Relevance score
+          example: 0.85
+        token_count:
+          type: integer
+          description: Token count for this chunk
+          example: 450
+        chunk_index:
+          type: integer
+          description: Position in document (0-indexed)
+          example: 0
+        metadata:
+          type: object
+          properties:
+            section:
+              type: string
+              description: Section header
+              example: Sprint Goals
+            source:
+              type: string
+              description: Source filename
+              example: SPRINT_111_PLAN.md
+            page_number:
+              type: integer
+              description: Page number (if applicable)
+
+    ChunkListResponse:
+      type: object
+      required:
+        - chunks
+        - total
+      properties:
+        chunks:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentChunk'
+        total:
+          type: integer
+          description: Total number of chunks
+          example: 12
+        document_id:
+          type: string
+          description: Parent document ID
+          example: doc_abc123
+
+    CompressionRequest:
+      type: object
+      required:
+        - strategy
+      properties:
+        document_id:
+          type: string
+          description: Specific document to compress (optional, compress all if omitted)
+          example: doc_abc123
+        strategy:
+          type: string
+          enum: [summarization, filtering, truncation, hybrid]
+          description: Compression strategy
+          example: filtering
+        target_reduction:
+          type: integer
+          minimum: 10
+          maximum: 90
+          description: Target reduction percentage
+          example: 50
+        min_relevance_threshold:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          description: Minimum relevance score to keep (for filtering)
+          example: 0.3
+        max_chunks:
+          type: integer
+          minimum: 1
+          description: Maximum chunks to keep (for truncation)
+          example: 20
+
+    CompressionResponse:
+      type: object
+      required:
+        - original_tokens
+        - compressed_tokens
+        - reduction_percent
+        - strategy_applied
+      properties:
+        original_tokens:
+          type: integer
+          description: Token count before compression
+          example: 8500
+        compressed_tokens:
+          type: integer
+          description: Token count after compression
+          example: 4200
+        reduction_percent:
+          type: number
+          format: float
+          description: Actual reduction achieved
+          example: 50.6
+        chunks_removed:
+          type: integer
+          description: Number of chunks removed
+          example: 6
+        strategy_applied:
+          type: string
+          description: Strategy that was applied
+          example: filtering
+        document_id:
+          type: string
+          description: Document that was compressed
+          example: doc_abc123
+
+    ErrorResponse:
+      type: object
+      required:
+        - detail
+      properties:
+        detail:
+          type: string
+          description: Error message
+          example: Document not found

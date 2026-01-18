@@ -28,6 +28,8 @@ interface ConsentRegistryProps {
   onRenewConsent: (consent: GDPRConsent) => void;
 }
 
+const ITEMS_PER_PAGE = 10;
+
 export function ConsentRegistry({
   consents,
   onRevokeConsent,
@@ -37,6 +39,7 @@ export function ConsentRegistry({
 }: ConsentRegistryProps) {
   const [filterStatus, setFilterStatus] = useState<ConsentStatus | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Filter and search logic
   const filteredConsents = consents.filter((consent) => {
@@ -51,6 +54,17 @@ export function ConsentRegistry({
   // Group consents by status
   const activeConsents = filteredConsents.filter((c) => c.status === 'active');
   const expiringConsents = activeConsents.filter(isConsentExpiringSoon);
+
+  // Sprint 111: Pagination logic
+  const totalPages = Math.ceil(filteredConsents.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const paginatedConsents = filteredConsents.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+
+  // Reset to page 1 when filters change
+  const handleFilterChange = (newStatus: ConsentStatus | 'all') => {
+    setFilterStatus(newStatus);
+    setCurrentPage(1);
+  };
 
   return (
     <div className="space-y-4" data-testid="gdpr-consents-list">
@@ -95,7 +109,7 @@ export function ConsentRegistry({
           <select
             id="status-filter"
             value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value as ConsentStatus | 'all')}
+            onChange={(e) => handleFilterChange(e.target.value as ConsentStatus | 'all')}
             className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
           >
             <option value="all">All Status</option>
@@ -114,7 +128,7 @@ export function ConsentRegistry({
             No consents found matching your filters.
           </div>
         ) : (
-          filteredConsents.map((consent) => (
+          paginatedConsents.map((consent) => (
             <ConsentCard
               key={consent.id}
               consent={consent}
@@ -126,6 +140,33 @@ export function ConsentRegistry({
           ))
         )}
       </div>
+
+      {/* Sprint 111: Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700" data-testid="pagination-controls">
+          <div className="text-sm text-gray-600 dark:text-gray-400">
+            Page {currentPage} of {totalPages} ({filteredConsents.length} total)
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1.5 text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              data-testid="pagination-prev"
+            >
+              Previous
+            </button>
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="px-3 py-1.5 text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              data-testid="pagination-next"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

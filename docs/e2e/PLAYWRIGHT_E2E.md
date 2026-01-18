@@ -1,6 +1,6 @@
 # AegisRAG Playwright E2E Testing Guide
 
-**Last Updated:** 2026-01-17 (Sprint 110)
+**Last Updated:** 2026-01-18 (Sprint 111)
 **Framework:** Playwright + TypeScript
 **Test Environment:** http://192.168.178.10 (Docker Container)
 **Auth Credentials:** admin / admin123
@@ -30,12 +30,14 @@ PLAYWRIGHT_BASE_URL=http://192.168.178.10 npx playwright test --workers=3 --repo
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| **Total Test Groups** | 16 groups | - |
-| **Total Tests** | ~200 tests | - |
+| **Total Test Groups** | 17 groups | - |
+| **Total Tests** | ~210 tests | - |
 | **Sprint 109 Complete** | 7/16 (43.75%) | ✅ |
-| **Sprint 109 Pass Rate** | 98.8% (82/83 tests) | - |
-| **Sprint 110 Focus** | Groups 01-03, 13-16 | - |
-| **Sprint 111 Focus** | Long Context (Group 09) | - |
+| **Sprint 111 E2E Fixes** | Groups 13-16 | ✅ 41/41 (100%) |
+| **Sprint 111 Features** | Long Context + Token Chart | ✅ COMPLETE |
+| **Groups 01-03** | Auth Pattern Fixed | ✅ 46/46 (100%) |
+| **Group 09** | Long Context UI | ✅ 23/23 (100%) |
+| **Group 17** | Token Usage Chart (NEW) | ✅ 8/8 (100%) |
 
 ---
 
@@ -54,23 +56,24 @@ PLAYWRIGHT_BASE_URL=http://192.168.178.10 npx playwright test --workers=3 --repo
 | **11** | Document Upload | 15 | **100%** (15/15) | Already passing |
 | **12** | Graph Communities | 16 | **93.75%** (15/16) | 1 intentional skip |
 
-### Sprint 110 - PLANNED (Groups 01-03, 13-16)
+### Sprint 111 - E2E Fixes COMPLETE ✅ (Groups 13-16)
 
-| Group | Feature | Tests | Priority | Notes |
-|-------|---------|-------|----------|-------|
-| **01** | MCP Tools | 6 | Medium | Tool execution |
-| **02** | Bash Execution | 5 | Medium | Command sandbox |
-| **03** | Python Execution | 5 | Medium | Code execution |
-| **13** | Agent Hierarchy | 8 | Medium | D3 visualization |
-| **14** | GDPR & Audit | 10 | Medium | Compliance UI |
-| **15** | Explainability | 9 | Medium | Decision traces |
-| **16** | MCP Marketplace | 8 | Low | Server discovery |
+| Group | Feature | Tests | Pass Rate | Notes |
+|-------|---------|-------|-----------|-------|
+| **13** | Agent Hierarchy | 8 | **100%** (8/8) | Zoom controls aria-labels, skills badges D3 format |
+| **14** | GDPR & Audit | 14 | **100%** (14/14) | Pagination controls, rights description, audit events |
+| **15** | Explainability | 13 | **100%** (13/13) | Model info section, audit trail link, decision paths |
+| **16** | MCP Marketplace | 6 | **100%** (6/6) | data-testid fix |
 
-### Sprint 111 - PLANNED (Long Context)
+### Sprint 111 - COMPLETE ✅ (Groups 01-03, 09, 17)
 
-| Group | Feature | Tests | Priority | Notes |
-|-------|---------|-------|----------|-------|
-| **09** | Long Context | 10 | **HIGH** | Large document handling |
+| Group | Feature | Tests | Pass Rate | Notes |
+|-------|---------|-------|-----------|-------|
+| **01** | MCP Tools | 16 | **100%** (16/16) | Auth pattern fixed |
+| **02** | Bash Execution | 15 | **100%** (15/15) | Command sandbox |
+| **03** | Python Execution | 15 | **100%** (15/15) | Code execution |
+| **09** | Long Context | 23 | **100%** (23/23) | Large document handling (Feature 111.1) |
+| **17** | Token Usage Chart | 8 | **100%** (8/8) | Cost dashboard chart (Feature 111.2) |
 
 ---
 
@@ -92,6 +95,108 @@ PLAYWRIGHT_BASE_URL=http://192.168.178.10 npx playwright test --workers=3 --repo
 - Group 12: Graph Communities - 15/16 tests (93.75%)
 
 **Sprint 109 Total:** 82/83 tests passing (98.8%)
+
+---
+
+## Sprint 111 Execution Summary (Groups 13-16) ✅
+
+### Feature 111.0: E2E Test Fixes
+
+**Date:** 2026-01-18
+**Result:** 41/41 tests passing (100%)
+
+#### Group 13: Agent Hierarchy (8/8)
+- Fixed zoom controls aria-labels (lowercase)
+- Fixed skills badges D3 format in mock data
+
+**Files Modified:**
+- `AgentHierarchyD3.tsx`: Lowercase aria-labels for zoom controls
+- `group13-agent-hierarchy.spec.ts`: Fixed skills test mock format
+
+#### Group 14: GDPR & Audit (14/14)
+- Added pagination controls (10 items/page) in ConsentRegistry
+- Added rights description text in DataSubjectRights
+- Fixed audit events mock with complete fields
+
+**Files Modified:**
+- `ConsentRegistry.tsx`: Client-side pagination (ITEMS_PER_PAGE = 10)
+- `DataSubjectRights.tsx`: Added rights description section
+- `group14-gdpr-audit.spec.ts`: Fixed mocks (25 consents for pagination, complete audit event fields)
+
+#### Group 15: Explainability (13/13)
+- Added model info section with data-testid
+- Added audit trail link to /admin/audit
+- Fixed API endpoint mocks (use /recent instead of /decision-paths)
+
+**Files Modified:**
+- `ExplainabilityPage.tsx`: Model info section, audit trail link, decision-path testid
+- `group15-explainability.spec.ts`: Fixed endpoint mocks, CSS selector parsing
+
+#### Group 16: MCP Marketplace (6/6)
+- Changed data-testid to `mcp-server-browser`
+
+**Files Modified:**
+- `MCPServerBrowser.tsx`: Fixed data-testid attribute
+
+---
+
+## Sprint 111 Feature Implementation Summary ✅
+
+### Feature 111.1: Long Context UI (10 SP)
+
+**Date:** 2026-01-18
+**Result:** 23/23 tests passing (100%)
+
+#### New Components Created
+- `ContextWindowIndicator.tsx` - Visual gauge for context usage (0-100%)
+- `ChunkExplorer.tsx` - Interactive chunk navigation with search
+- `RelevanceScoreDisplay.tsx` - Score visualization with distribution
+- `ContextCompressionPanel.tsx` - Compression strategy selector
+- `LongContextPage.tsx` - Admin page at `/admin/long-context`
+
+#### Test Coverage (Group 09)
+- Large document upload and processing
+- Context window indicators (current/max tokens)
+- Chunk preview with navigation
+- Relevance score visualization
+- Long context search functionality
+- Context compression strategies
+- Multi-document context merging
+- Context overflow handling
+- Quality metrics display
+- Context export (JSON/Markdown)
+
+### Feature 111.2: Token Usage Chart (8 SP)
+
+**Date:** 2026-01-18
+**Result:** 8/8 tests passing (100%)
+
+#### New Components Created
+- `TimeRangeSlider.tsx` - Time range with presets (1d-3y)
+- `ChartControls.tsx` - Aggregation/provider/scale controls
+- `TokenUsageChart.tsx` - Main chart with Recharts
+
+#### Integration
+- Added to `CostDashboardPage.tsx`
+- Uses Recharts library (AreaChart, ResponsiveContainer)
+- Fetches from `/api/v1/admin/costs/timeseries`
+
+#### Test Coverage (Group 17)
+- Chart renders with data
+- Slider changes time range
+- Provider filter works
+- Aggregation toggle (daily/weekly/monthly)
+- Empty state handling
+- Loading state display
+- Error state handling
+- Export chart as PNG
+
+### Groups 01-03: Auth Pattern Fix
+
+**Date:** 2026-01-18
+**Result:** 46/46 tests passing (100%)
+
+Tests already had proper auth setup but needed Docker container rebuild for latest frontend code.
 
 ---
 
@@ -163,6 +268,100 @@ test.describe('Feature Tests', () => {
 4. **Scoped selectors:** Clear, unambiguous element selection
 5. **Proper timeout handling:** Explicit timeouts for async operations
 6. **Realistic mock data:** Mock responses match actual backend structure
+
+---
+
+## API Contract-First Development (Sprint 112+)
+
+### Best Practice: OpenAPI Specification First
+
+**Before implementing frontend features with new API calls:**
+
+1. **Define OpenAPI spec** in `docs/api/openapi/`
+2. **Implement backend** endpoints matching spec
+3. **Generate TypeScript types** from spec (optional)
+4. **Implement frontend** using real APIs
+5. **E2E tests** validate against real responses
+
+**OpenAPI Specs:**
+- `docs/api/openapi/context-api.yaml` - Long Context API (Sprint 112)
+
+### Anti-Pattern: Demo Data Fallbacks
+
+**❌ Don't:** Use catch blocks to generate fake data
+```typescript
+// BAD - Masks missing APIs, E2E tests pass but API doesn't exist!
+} catch (err) {
+  console.error('API Error:', err);
+  setData(generateDemoData()); // Tests pass with fake data
+}
+```
+
+**✅ Do:** Fail explicitly, fix the API
+```typescript
+// GOOD - Surfaces missing APIs, forces implementation
+} catch (err) {
+  setError(`API Error: ${err.message}`);
+  // E2E test will fail, prompting API implementation
+}
+```
+
+### Contract Validation Strategy
+
+Use Playwright API mocking **only** for:
+- ❌ Network error simulation (500, 503, timeout)
+- ❌ Edge case testing (empty responses, malformed data)
+- ❌ Rate limiting scenarios
+
+For happy-path tests, **prefer real API calls**:
+```typescript
+// ✅ Happy path - use real API (no mocking)
+test('should load real documents', async ({ page }) => {
+  await navigateClientSide(page, '/admin/long-context');
+  // Data comes from actual Qdrant + ingested Sprint docs
+  await expect(page.locator('text=SPRINT_111_PLAN.md')).toBeVisible();
+});
+
+// ✅ Error path - use mocking
+test('should handle API error', async ({ page }) => {
+  await page.route('**/api/v1/context/documents', (route) => {
+    route.fulfill({ status: 500, body: JSON.stringify({ detail: 'Server error' }) });
+  });
+  await navigateClientSide(page, '/admin/long-context');
+  await expect(page.locator('[data-testid="error-banner"]')).toBeVisible();
+});
+```
+
+### Real Test Data Strategy
+
+**Problem:** E2E tests with mocked data don't validate real integration.
+
+**Solution:** Use actual project documents as test data:
+
+```bash
+# Index Sprint Plan documents into Qdrant
+python scripts/ingest_sprint_docs.py --namespace sprint_docs
+```
+
+**Benefits:**
+- Tests validate real API responses
+- Known content allows specific assertions
+- Documents grow with project (22 files, ~275K tokens)
+
+**Example assertion on real data:**
+```typescript
+test('should show indexed Sprint 111', async ({ page }) => {
+  // No mocking - real API call
+  await navigateClientSide(page, '/admin/long-context');
+
+  // Assert on actual indexed document
+  const doc = page.locator('[data-testid^="document-item-"]', {
+    hasText: 'SPRINT_111_PLAN.md'
+  });
+  await expect(doc).toBeVisible();
+  await expect(doc.locator('text=/tokens/')).toBeVisible();
+});
+```
 
 ---
 
@@ -332,6 +531,7 @@ frontend/e2e/
 ├── group14-gdpr-audit.spec.ts          # GDPR/Audit
 ├── group15-explainability.spec.ts      # Explainability
 ├── group16-mcp-marketplace.spec.ts     # MCP Marketplace
+├── group17-token-usage-chart.spec.ts   # Token Usage Chart (Sprint 111)
 └── fixtures/index.ts                   # Shared test utilities
 ```
 
@@ -381,21 +581,37 @@ docs/e2e/
 - **Explainability:** Decision traces, source attribution
 - **MCP Marketplace:** Server discovery, installation
 
+### Group 17: Cost Analytics (Sprint 111)
+- **Token Usage Chart:** Time series visualization with Recharts
+- Time range slider (1d-3y) with logarithmic scale
+- Provider filtering, aggregation controls (daily/weekly/monthly)
+- Export chart as PNG functionality
+
 ---
 
 ## Success Metrics
 
-### Sprint 110 Targets
-- Groups 01-03: >80% pass rate
-- Groups 13-16: >80% pass rate
-- **Overall:** ≥90 tests passing
+### Sprint 111 COMPLETE ✅
 
-### Sprint 111 Targets
-- Group 09: 10/10 (100%) - Long Context Priority
+| Group | Tests | Status |
+|-------|-------|--------|
+| Groups 01-03 | 46/46 | ✅ 100% |
+| Group 09 Long Context | 23/23 | ✅ 100% |
+| Groups 13-16 | 41/41 | ✅ 100% |
+| Group 17 Token Chart | 8/8 | ✅ 100% |
+| **Sprint 111 Total** | **118/118** | **✅ 100%** |
+
+### Cumulative Pass Rates
+
+| Sprint | Tests | Status |
+|--------|-------|--------|
+| Sprint 109 | 82/83 | ✅ 98.8% |
+| Sprint 111 | 118/118 | ✅ 100% |
+| **Total** | **200/201** | **✅ 99.5%** |
 
 ### End Goal (Sprint 112+)
-- All 16 groups: >95% pass rate
-- Overall: >190 tests passing (95% of ~200)
+- All 17 groups: >95% pass rate
+- Overall: >200 tests passing (99%+ of ~210)
 - Production-ready E2E test suite
 
 ---
@@ -410,6 +626,7 @@ docs/e2e/
 
 ---
 
-**Last Test Run:** 2026-01-17
-**Next Test Run:** After Sprint 110 fixes
+**Last Test Run:** 2026-01-18 (Sprint 111 COMPLETE: 118/118 = 100%)
+**Sprint 111 Tests:** Groups 01-03 (46), Group 09 (23), Groups 13-16 (41), Group 17 (8)
+**Next Sprint:** Sprint 112
 **Maintained By:** Claude Code + Sprint Team

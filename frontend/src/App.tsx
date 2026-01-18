@@ -50,6 +50,7 @@ import { AuditTrailPage } from './pages/admin/AuditTrail';
 import { BrowserToolsPage } from './pages/admin/BrowserToolsPage';
 import { DomainDiscoveryPage } from './pages/admin/DomainDiscoveryPage';
 import { MCPMarketplace } from './pages/admin/MCPMarketplace';
+import { LongContextPage } from './pages/admin/LongContextPage';
 
 function App() {
   // Sprint 46: Sidebar state moved to individual pages (HomePage, etc.)
@@ -98,6 +99,7 @@ function App() {
                       <Route path="/admin/audit" element={<AuditTrailPage />} />
                       <Route path="/admin/browser-tools" element={<BrowserToolsPage />} />
                       <Route path="/admin/mcp-marketplace" element={<MCPMarketplace />} />
+                      <Route path="/admin/long-context" element={<LongContextPage />} />
                       <Route path="/dashboard/costs" element={<CostDashboardPage />} />
                       <Route path="/settings" element={<Settings />} />
                     </Routes>

@@ -55,6 +55,7 @@ from src.api.v1.agents import router as agents_router  # Sprint 99 Feature 99.2:
 from src.api.v1.orchestration import router as orchestration_router  # Sprint 99 Feature 99.2: Agent Monitoring APIs (Part 2)
 from src.api.v1.explainability import router as explainability_router  # Sprint 104 Feature 104.10: Explainability API
 from src.api.v1.certification import router as certification_router  # Sprint 107 Feature 107.3: Certification API
+from src.api.v1.context import router as context_router  # Sprint 112 Feature 112.1: Long Context API
 from src.core.config import get_settings
 from src.core.exceptions import AegisRAGException
 from src.core.logging import get_logger, setup_logging
@@ -598,6 +599,14 @@ logger.info(
     router="certification_router",
     prefix="/api/v1/certification",
     note="Sprint 107 Feature 107.3: Certification compliance status (EU AI Act Article 43)",
+)
+
+app.include_router(context_router, prefix="/api/v1")
+logger.info(
+    "router_registered",
+    router="context_router",
+    prefix="/api/v1/context",
+    note="Sprint 112 Feature 112.1: Long Context API (documents, chunks, compression, export)",
 )
 
 # Prometheus metrics endpoint

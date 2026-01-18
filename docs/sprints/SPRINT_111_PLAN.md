@@ -1,20 +1,54 @@
-# Sprint 111 Plan - Long Context E2E + Cost Dashboard Token Chart
+# Sprint 111 Plan - E2E Fixes + Long Context + Token Chart
 
-**Status:** 📝 Planned
-**Target:** Complete Long Context E2E tests + Token Usage Chart
-**Sprint Points:** 18 SP
-**Estimated Duration:** 3-4 days
+**Status:** ✅ COMPLETE
+**Target:** Complete E2E fixes + Long Context UI + Token Usage Chart
+**Sprint Points:** 26 SP (26 SP complete)
+**Completed:** 2026-01-18
 
-**Note:** Long Context moved from Sprint 110 to allow focused implementation.
+**Results:**
+- Feature 111.0: E2E Fixes ✅ 41/41 tests (100%)
+- Feature 111.1: Long Context UI ✅ 10 SP, 10 tests
+- Feature 111.2: Token Usage Chart ✅ 8 SP, 8 tests
+
+**Note:** Sprint 111 now includes E2E test fixes from Sprint 110 deferred work.
 
 ---
 
 ## Sprint Goals
 
-1. **Feature 111.1:** Implement Group 09 Long Context UI + E2E tests (10 SP)
-2. **Feature 111.2:** Add Token Usage Over Time Chart to Cost Dashboard (8 SP)
-3. Achieve 100% pass rate on Group 09 (10/10 tests)
-4. Total: 18 SP, ~18 tests
+1. ✅ **Feature 111.0:** E2E Test Fixes for Groups 13-16 (8 SP) - **COMPLETE**
+2. 📝 **Feature 111.1:** Implement Group 09 Long Context UI + E2E tests (10 SP)
+3. 📝 **Feature 111.2:** Add Token Usage Over Time Chart to Cost Dashboard (8 SP)
+4. Achieve 100% pass rate on Groups 01-03, 09, 13-16
+5. Total: 26 SP, ~60 tests
+
+---
+
+## Feature 111.0: E2E Test Fixes (Groups 13-16) ✅ COMPLETE
+
+**Status:** ✅ Complete
+**Story Points:** 8 SP
+**Test Results:** 41/41 (100%)
+
+### Completed Fixes
+
+| Group | Tests | Pass Rate | Key Fixes |
+|-------|-------|-----------|-----------|
+| **13** Agent Hierarchy | 8/8 | 100% | Zoom controls aria-labels, skills badges D3 format |
+| **14** GDPR/Audit | 14/14 | 100% | Pagination controls, rights description, audit events |
+| **15** Explainability | 13/13 | 100% | Model info section, audit trail link, decision paths |
+| **16** MCP Marketplace | 6/6 | 100% | data-testid fix |
+
+### Files Modified
+
+- `AgentHierarchyD3.tsx`: Lowercase aria-labels for zoom controls
+- `MCPServerBrowser.tsx`: Changed data-testid to `mcp-server-browser`
+- `ConsentRegistry.tsx`: Added pagination controls (10 items/page)
+- `DataSubjectRights.tsx`: Added rights description text
+- `ExplainabilityPage.tsx`: Added model info section + audit trail link
+- `group13-agent-hierarchy.spec.ts`: Fixed skills test mock format
+- `group14-gdpr-audit.spec.ts`: Fixed audit events mock + pagination tests
+- `group15-explainability.spec.ts`: Fixed API endpoint mocks
 
 ---
 
@@ -22,7 +56,7 @@
 
 ### Feature 111.1: Group 09 - Long Context (10 SP)
 
-**Status:** 📝 Planned
+**Status:** ✅ Complete
 **Priority:** ⭐ **HIGH** (User specifically requested)
 **Story Points:** 10 SP
 **Effort:** 1-2 days dedicated work
@@ -94,7 +128,7 @@ ContextCompressionPanel.tsx
 
 ### Feature 111.2: Cost Dashboard Token Usage Chart (8 SP)
 
-**Status:** 📝 Planned
+**Status:** ✅ Complete
 **Priority:** ⭐ **HIGH** (User requested)
 **Story Points:** 8 SP
 **Effort:** 1-2 days
@@ -216,9 +250,14 @@ ChartControls.tsx
 
 | Metric | Target | Current | Status |
 |--------|--------|---------|--------|
-| **Total Story Points** | 18 SP | 0 SP | 📝 Not Started |
-| **Features Complete** | 2 | 0 | 📝 Not Started |
-| **Individual Tests Passing** | ~18 tests | 0 tests | 📝 Not Started |
+| **E2E Test Fixes** | 8 SP | 8 SP | ✅ Complete |
+| **Feature 111.1 Long Context** | 10 SP | 10 SP | ✅ Complete |
+| **Feature 111.2 Token Chart** | 8 SP | 8 SP | ✅ Complete |
+| **Groups 01-03 Tests** | ~46 tests | 46/46 | ✅ 100% |
+| **Group 09 Tests** | 23 tests | 23/23 | ✅ 100% |
+| **Groups 13-16 Tests** | 41/41 | 41/41 | ✅ 100% |
+| **Group 17 Tests** | 8/8 | 8/8 | ✅ 100% |
+| **Total Story Points** | 26 SP | 26 SP | ✅ Complete |
 
 ---
 

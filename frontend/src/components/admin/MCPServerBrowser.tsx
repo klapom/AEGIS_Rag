@@ -107,7 +107,7 @@ export const MCPServerBrowser: React.FC<MCPServerBrowserProps> = ({
   }
 
   return (
-    <div className="space-y-4" data-testid="mcp-server-browser-container">
+    <div className="space-y-4" data-testid="mcp-server-browser">
       {/* Search Bar */}
       <div className="relative">
         <input

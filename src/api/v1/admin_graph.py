@@ -386,14 +386,19 @@ async def generate_community_summaries(
         # Parse community IDs
         community_ids = []
         for record in results:
-            community_id_str = record.get("community_id")
-            if community_id_str:
-                # Parse "community_5" → 5
+            community_id_val = record.get("community_id")
+            if community_id_val is not None:
+                # Handle both formats: integer (from GDS) or string "community_5" (legacy)
                 try:
-                    community_id = int(community_id_str.split("_")[-1])
+                    if isinstance(community_id_val, int):
+                        # GDS returns integer community IDs directly
+                        community_id = community_id_val
+                    else:
+                        # Parse "community_5" → 5 (legacy format)
+                        community_id = int(str(community_id_val).split("_")[-1])
                     community_ids.append(community_id)
-                except (ValueError, IndexError):
-                    logger.warning("invalid_community_id_format_skipped", community_id=community_id_str)
+                except (ValueError, IndexError, AttributeError):
+                    logger.warning("invalid_community_id_format_skipped", community_id=community_id_val)
 
         total_communities = len(community_ids)
 
