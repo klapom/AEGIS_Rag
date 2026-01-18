@@ -22,7 +22,7 @@
 | 112.2 Cost Timeseries | 4 | ✅ Complete | `/costs/timeseries` endpoint |
 | 112.3 Real Test Data | 4 | ✅ Complete | 23 docs, 191 chunks, 138K tokens |
 | 112.4 E2E Best Practices | 2 | ✅ Complete | PLAYWRIGHT_E2E.md updated |
-| 112.8 API Endpoint Fixes | 6 | ✅ Complete | 10 fixes (see below) |
+| 112.8 API Endpoint Fixes | 6 | ✅ Complete | 11 fixes (see below) |
 | 112.9 Admin E2E Tests | 8 | ✅ Complete | 4 groups (18-21), 56/70 passing |
 
 **Feature 112.8 - API Fixes Summary:**
@@ -36,6 +36,7 @@
 8. ✅ **Deep Research LangGraph** - Created sync `should_use_tools_sync()` for conditional edges (async not allowed)
 9. ✅ **Certification Endpoints** - 5 new endpoints: `/overview`, `/skills`, `/expiring`, `/skill/{name}/report`, `/skill/{name}/validate`
 10. ✅ **Memory Router None Query** - Fixed `query[:100]` guards at lines 222, 229 to handle None query
+11. ✅ **MCP Registry URL** - Updated to new official API (`registry.modelcontextprotocol.io/v0.1/servers`), adapted JSON parsing for nested structure
 
 **API Test Results (Post-Fix):**
 | Endpoint | Status | Notes |
@@ -49,6 +50,8 @@
 | `/api/v1/certification/skills` | ✅ 200 OK | Full skill list with checks |
 | `/api/v1/certification/expiring` | ✅ 200 OK | 2 expiring skills |
 | `/api/v1/certification/skill/{name}/report` | ✅ 200 OK | Detailed validation report |
+| `/api/v1/mcp/registry/servers` | ✅ 200 OK | Returns 30 servers from new registry |
+| `/api/v1/mcp/registry/search?q=exa` | ✅ 200 OK | Returns 6 Exa (WebSearch) servers |
 
 **Sprint 112.1-4 Key Results:**
 - 6 new API endpoints implemented and tested
@@ -919,4 +922,5 @@ Consolidate and fix the 11 failing admin test files into 4 new group files:
 | `src/agents/research/searcher.py` | Fixed `namespace` → `namespaces=[namespace]` |
 | `src/agents/research/research_graph.py` | Added sync `should_use_tools_sync()` for LangGraph |
 | `src/api/v1/certification.py` | 5 new endpoints with mock data (17 skills) |
-| `src/components/memory/memory_router.py` | Fixed None query handling in logging
+| `src/components/memory/memory_router.py` | Fixed None query handling in logging |
+| `src/components/mcp/registry_client.py` | Updated to new MCP Registry API (registry.modelcontextprotocol.io)

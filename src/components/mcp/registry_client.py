@@ -26,7 +26,9 @@ from src.core.config import get_settings
 logger = logging.getLogger(__name__)
 
 # Registry URLs
-OFFICIAL_REGISTRY = "https://raw.githubusercontent.com/modelcontextprotocol/servers/main/src/mcp-servers.json"
+# Sprint 112 Fix: Updated to new official MCP Registry API
+# Old URL (returns 404): https://raw.githubusercontent.com/modelcontextprotocol/servers/main/src/mcp-servers.json
+OFFICIAL_REGISTRY = "https://registry.modelcontextprotocol.io/v0.1/servers"
 COMMUNITY_REGISTRY = "https://raw.githubusercontent.com/mcpregistry/registry/main/servers.json"
 
 
@@ -127,8 +129,18 @@ class MCPRegistryClient:
             data = response.json()
 
             # Parse server definitions
+            # Sprint 112 Fix: Handle new nested JSON structure
+            # New format: {"servers": [{"server": {...}}, ...]}
+            # Old format: {"servers": [{...}, ...]}
             servers = []
-            for server_data in data.get("servers", []):
+            for item in data.get("servers", []):
+                # Check if new nested format or old flat format
+                if "server" in item:
+                    # New nested format from registry.modelcontextprotocol.io
+                    server_data = item["server"]
+                else:
+                    # Old flat format or community registries
+                    server_data = item
                 servers.append(self._parse_server_definition(server_data))
 
             # Cache results
@@ -276,22 +288,70 @@ class MCPRegistryClient:
     def _parse_server_definition(self, data: dict[str, Any]) -> MCPServerDefinition:
         """Parse server definition from registry data.
 
+        Sprint 112 Fix: Handle new MCP Registry API structure.
+
+        New format from registry.modelcontextprotocol.io:
+        {
+            "name": "org/project",
+            "description": "...",
+            "packages": [
+                {"registryType": "npm", "identifier": "@org/package"}
+            ],
+            "homepage": "...",
+            "repository": {"type": "github", "url": "..."}
+        }
+
         Args:
             data: Raw server data from registry
 
         Returns:
             MCPServerDefinition instance
         """
+        # Extract server name (used as ID)
+        server_name = data.get("name", data.get("id", "unknown"))
+
+        # Extract package info for command/args
+        packages = data.get("packages", [])
+        npm_package = None
+        pip_package = None
+        for pkg in packages:
+            if pkg.get("registryType") == "npm":
+                npm_package = pkg.get("identifier")
+            elif pkg.get("registryType") == "pip" or pkg.get("registryType") == "pypi":
+                pip_package = pkg.get("identifier")
+
+        # Determine command and args based on package type
+        command = data.get("command")
+        args = data.get("args", [])
+        if not command and npm_package:
+            command = "npx"
+            args = [npm_package]
+        elif not command and pip_package:
+            command = "python"
+            args = ["-m", pip_package]
+
+        # Extract repository URL (handles both old and new format)
+        repository = data.get("repository")
+        if isinstance(repository, dict):
+            repository = repository.get("url", "")
+
+        # Build dependencies from packages
+        dependencies = data.get("dependencies", {})
+        if npm_package and "npm" not in dependencies:
+            dependencies["npm"] = [npm_package]
+        if pip_package and "pip" not in dependencies:
+            dependencies["pip"] = [pip_package]
+
         return MCPServerDefinition(
-            id=data.get("id", data.get("name", "unknown")),
-            name=data.get("name", "Unknown Server"),
+            id=server_name,
+            name=data.get("displayName", server_name.split("/")[-1] if "/" in server_name else server_name),
             description=data.get("description", ""),
             transport=data.get("transport", "stdio"),
-            command=data.get("command"),
-            args=data.get("args", []),
+            command=command,
+            args=args,
             url=data.get("url"),
-            dependencies=data.get("dependencies", {}),
-            repository=data.get("repository"),
+            dependencies=dependencies,
+            repository=repository,
             homepage=data.get("homepage"),
             version=data.get("version", "1.0.0"),
             stars=data.get("stars", 0),
