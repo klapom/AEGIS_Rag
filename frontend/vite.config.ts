@@ -9,9 +9,11 @@ export default defineConfig({
     port: 5179,
     strictPort: true, // Fail if port is already in use
     // Sprint 101 Fix: Proxy API requests to backend
+    // Sprint 112 Fix: Use Docker service name 'api' instead of 'localhost'
+    // Inside Docker, 'localhost' refers to the container itself
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        target: process.env.VITE_API_PROXY_TARGET || 'http://api:8000',
         changeOrigin: true,
         secure: false,
       },
