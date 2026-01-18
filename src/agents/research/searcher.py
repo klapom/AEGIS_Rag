@@ -78,8 +78,7 @@ async def execute_research_queries(
             result = await coordinator.process_query(
                 query=query,
                 intent="hybrid",  # Always use hybrid for research
-                namespace=namespace,
-                include_sources=True,
+                namespaces=[namespace],  # CoordinatorAgent expects list of namespaces
             )
 
             # Extract retrieved contexts from result

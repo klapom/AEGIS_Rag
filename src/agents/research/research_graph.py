@@ -242,6 +242,35 @@ def should_continue_research(state: ResearchSupervisorState) -> str:
     return "synthesize"
 
 
+def should_use_tools_sync(state: ResearchSupervisorState) -> str:
+    """Synchronous tool detection for research graph conditional edges.
+
+    LangGraph conditional edges require synchronous functions, so this uses
+    only the marker-based strategy (fast, synchronous) instead of the full
+    async should_use_tools() function.
+
+    Args:
+        state: Current research state with synthesis
+
+    Returns:
+        Edge name: "tools" or "end"
+    """
+    from src.components.tools_config import ToolsConfig
+
+    answer = state.get("synthesis", "")
+
+    # Use default explicit markers for synchronous detection
+    default_markers = ["[TOOL:", "[SEARCH:", "[FETCH:"]
+
+    for marker in default_markers:
+        if marker in answer:
+            logger.info("tool_use_detected_marker_sync", marker=marker)
+            return "tools"
+
+    logger.debug("tool_use_not_needed_sync")
+    return "end"
+
+
 def create_research_graph(enable_tools: bool = False) -> StateGraph:
     """Create the research supervisor graph.
 
@@ -286,12 +315,11 @@ def create_research_graph(enable_tools: bool = False) -> StateGraph:
 
     # Sprint 70 Feature 70.6: Add tool use edges (ReAct pattern)
     if enable_tools:
-        from src.agents.tools import should_use_tools
-
         # Conditional edge: synthesizer → [tools | END]
+        # Use synchronous version since LangGraph conditional edges don't support async
         graph.add_conditional_edges(
             "synthesizer",
-            lambda state: should_use_tools({"answer": state.get("synthesis", "")}),
+            should_use_tools_sync,
             {
                 "tools": "research_tools",  # Use tools
                 "end": END,  # No tools needed

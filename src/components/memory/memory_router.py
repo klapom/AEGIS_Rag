@@ -97,21 +97,27 @@ class MemoryRouter:
 
         logger.info(
             "Routed query to memory layers",
-            query=query[:100],
+            query=(query[:100] if query else "(empty)"),
             layers=[layer.value for layer in layers],
         )
 
         return layers
 
-    def _is_recent_context_query(self, query: str) -> bool:
+    def _is_recent_context_query(self, query: str | None) -> bool:
         """Detect if query requires recent conversation context.
 
         Args:
-            query: Query text
+            query: Query text (can be None for empty searches)
 
         Returns:
             True if query needs recent context
+
+        Sprint 112 Fix: Handle None query gracefully.
         """
+        # Guard against None query (e.g., empty search from UI)
+        if not query:
+            return False
+
         # Patterns indicating recent context needs
         recent_patterns = [
             r"\b(just|earlier|previous|last|recent)\b",
@@ -128,15 +134,21 @@ class MemoryRouter:
 
         return False
 
-    def _is_temporal_query(self, query: str) -> bool:
+    def _is_temporal_query(self, query: str | None) -> bool:
         """Detect if query requires temporal/episodic memory.
 
         Args:
-            query: Query text
+            query: Query text (can be None for empty searches)
 
         Returns:
             True if query needs temporal reasoning
+
+        Sprint 112 Fix: Handle None query gracefully.
         """
+        # Guard against None query
+        if not query:
+            return False
+
         # Patterns indicating temporal needs
         temporal_patterns = [
             r"\b(when|timeline|history|evolution|changed|became)\b",
@@ -207,14 +219,14 @@ class MemoryRouter:
         if results and all(len(r) == 0 for r in results.values()):
             logger.error(
                 "All memory layer searches failed",
-                query=query[:100],
+                query=(query[:100] if query else "(empty)"),
                 layers_attempted=list(results.keys()),
             )
             raise MemoryError("All memory layer searches failed")
 
         logger.info(
             "Completed multi-layer memory search",
-            query=query[:100],
+            query=(query[:100] if query else "(empty)"),
             layers_searched=list(results.keys()),
             total_results=sum(len(r) for r in results.values()),
         )
