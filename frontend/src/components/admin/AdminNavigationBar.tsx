@@ -2,9 +2,10 @@
  * AdminNavigationBar Component
  * Sprint 51: Admin Dashboard Navigation Improvement
  * Sprint 79 Feature 79.7: Added Graph Operations link
+ * Sprint 112: Added MCP Marketplace link
  *
  * Navigation bar for admin subpages, displayed at the top of the admin dashboard.
- * Provides quick access to Graph Analytics, Costs, LLM Config, Health, and Training pages.
+ * Provides quick access to Graph Analytics, Costs, LLM Config, Health, Training, and MCP pages.
  */
 
 import { Link, useLocation } from 'react-router-dom';
@@ -23,6 +24,7 @@ import {
   Package,
   ShieldCheck,
   FileCheck,
+  Store,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 
@@ -93,6 +95,12 @@ const navItems: NavItem[] = [
     label: 'Tools',
     icon: <Wrench className="w-4 h-4" />,
     testId: 'admin-nav-tools',
+  },
+  {
+    href: '/admin/mcp-marketplace',
+    label: 'MCP Store',
+    icon: <Store className="w-4 h-4" />,
+    testId: 'admin-nav-mcp-marketplace',
   },
   {
     href: '/admin/memory',
