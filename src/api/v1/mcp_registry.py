@@ -102,7 +102,7 @@ async def list_registry_servers(
         default=OFFICIAL_REGISTRY,
         description="Registry URL to fetch servers from",
     ),
-    current_user: User = Depends(get_current_user),
+    # Sprint 112: Made public for MCP Marketplace UI
 ) -> dict[str, Any]:
     """List all available MCP servers from registry.
 
@@ -168,7 +168,6 @@ async def list_registry_servers(
 
         logger.info(
             "mcp_registry_servers_listed",
-            user_id=current_user.user_id,
             registry=registry,
             count=len(servers),
         )
@@ -182,7 +181,6 @@ async def list_registry_servers(
     except Exception as e:
         logger.error(
             "mcp_registry_list_failed",
-            user_id=current_user.user_id,
             registry=registry,
             error=str(e),
         )
@@ -199,7 +197,7 @@ async def search_registry_servers(
         default=OFFICIAL_REGISTRY,
         description="Registry URL to search",
     ),
-    current_user: User = Depends(get_current_user),
+    # Sprint 112: Made public for MCP Marketplace UI
 ) -> dict[str, Any]:
     """Search for MCP servers in registry.
 
@@ -246,7 +244,6 @@ async def search_registry_servers(
 
         logger.info(
             "mcp_registry_search",
-            user_id=current_user.user_id,
             query=q,
             registry=registry,
             results=len(results),
@@ -262,7 +259,6 @@ async def search_registry_servers(
     except Exception as e:
         logger.error(
             "mcp_registry_search_failed",
-            user_id=current_user.user_id,
             query=q,
             error=str(e),
         )
@@ -279,7 +275,7 @@ async def get_server_details(
         default=OFFICIAL_REGISTRY,
         description="Registry URL",
     ),
-    current_user: User = Depends(get_current_user),
+    # Sprint 112: Made public for MCP Marketplace UI
 ) -> ServerDefinitionResponse:
     """Get detailed information about a specific server.
 
@@ -311,7 +307,6 @@ async def get_server_details(
 
         logger.info(
             "mcp_registry_server_details",
-            user_id=current_user.user_id,
             server_id=server_id,
         )
 
@@ -337,7 +332,6 @@ async def get_server_details(
     except Exception as e:
         logger.error(
             "mcp_registry_details_failed",
-            user_id=current_user.user_id,
             server_id=server_id,
             error=str(e),
         )
