@@ -1,0 +1,86 @@
+# Docker Build Context Exclusions
+# Sprint 113: Created to dramatically speed up builds (11GB models excluded)
+# ============================================================================
+
+# Large data files (mount as volumes at runtime instead)
+data/models/
+data/uploads/
+data/lightrag/
+data/lightrag_backup*
+data/evaluation/
+data/ragas_*
+data/cache/
+data/*.db
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Test and coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Git
+.git/
+.gitignore
+
+# Documentation (not needed in container)
+docs/
+*.md
+!README.md
+
+# Frontend node_modules (installed in container)
+# NOTE: Don't exclude frontend/ itself - needed for frontend container build
+frontend/node_modules/
+frontend/dist/
+frontend/test-results/
+frontend/.playwright/
+
+# Test files
+tests/
+test-results/
+
+# Jupyter notebooks
+*.ipynb
+.ipynb_checkpoints/
+
+# Node modules (if any)
+node_modules/
+
+# Temporary files
+*.tmp
+*.temp
+*.log

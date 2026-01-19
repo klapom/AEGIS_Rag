@@ -35,9 +35,9 @@ export const DEFAULT_SETTINGS: UserSettings = {
   language: 'de',
   autoSaveConversations: true,
 
-  // Models
+  // Models (Sprint 112: Updated to match actual deployment)
   ollamaBaseUrl: 'http://localhost:11434',
-  defaultModel: 'llama3.2:3b',
+  defaultModel: 'nemotron-3-nano',
   cloudProvider: 'local',
 
   // Retrieval (Sprint 74 Feature 74.3)
@@ -49,12 +49,54 @@ export const DEFAULT_SETTINGS: UserSettings = {
   temperature: 0.7,
 };
 
+/**
+ * Available LLM models
+ * Sprint 112: Updated to match actual deployed models from llm_config.yml
+ */
 export const AVAILABLE_MODELS = [
-  'llama3.2:3b',
-  'llama3.2:8b',
-  'gemma-3-4b-it-Q8_0',
-  'llava:7b-v1.6-mistral-q2_K',
+  'nemotron-3-nano',    // DGX Spark: NVIDIA Nemotron 3 Nano 30B-3A (Primary)
+  'qwen3:32b',          // Ollama: Qwen 3 32B (Fallback)
+  'gpt-oss:20b',        // Ollama: GPT-OSS 20B (Fast extraction)
+  'qwen-turbo',         // Alibaba Cloud: Qwen Turbo
+  'qwen-plus',          // Alibaba Cloud: Qwen Plus
+  'gpt-4o',             // OpenAI: GPT-4o (Premium)
 ] as const;
+
+/**
+ * System LLM Capability Mapping
+ * Sprint 112: Shows which LLMs are used for TOP 3 system capabilities
+ */
+export interface LLMCapability {
+  name: string;
+  description: string;
+  model: string;
+  provider: string;
+  icon: 'chat' | 'graph' | 'search';
+}
+
+export const SYSTEM_LLM_CAPABILITIES: LLMCapability[] = [
+  {
+    name: 'Textgenerierung',
+    description: 'Chat-Antworten, Zusammenfassungen, Analysen',
+    model: 'Nemotron 3 Nano (30B)',
+    provider: 'DGX Spark / Ollama',
+    icon: 'chat',
+  },
+  {
+    name: 'Entity-Extraktion',
+    description: 'Wissensgraph: Entitäten & Relationen',
+    model: '3-Rank Cascade',
+    provider: 'Nemotron → GPT-OSS → SpaCy',
+    icon: 'graph',
+  },
+  {
+    name: 'Semantische Suche',
+    description: 'Vektorsuche mit Dense + Sparse Embeddings',
+    model: 'BGE-M3 (1024D)',
+    provider: 'FlagEmbedding / Qdrant',
+    icon: 'search',
+  },
+];
 
 export const CLOUD_PROVIDERS = [
   { value: 'local', label: 'Local (Ollama)', requiresApiKey: false },

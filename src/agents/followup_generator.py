@@ -2,6 +2,7 @@
 
 Sprint 27 Feature 27.5: Follow-up Question Suggestions
 Sprint 52 Feature 52.3: Async Follow-up Questions (TD-043)
+Sprint 113 Fix: Robust JSON array extraction (handle LLM extra text)
 
 This module generates 3-5 follow-up questions after each answer to guide
 users to deeper insights and increase engagement (Perplexity-style UX).
@@ -273,6 +274,24 @@ Output ONLY a JSON array of question strings (no other text):
             if content.startswith("json"):
                 content = content[4:]
             content = content.strip()
+
+        # Sprint 113 Fix: Extract JSON array even if LLM adds extra text
+        # The LLM sometimes adds explanatory text after the JSON array
+        # Find the JSON array by bracket matching
+        start_idx = content.find('[')
+        if start_idx != -1:
+            # Find matching closing bracket (handles nested arrays)
+            bracket_count = 0
+            end_idx = start_idx
+            for i, char in enumerate(content[start_idx:], start_idx):
+                if char == '[':
+                    bracket_count += 1
+                elif char == ']':
+                    bracket_count -= 1
+                    if bracket_count == 0:
+                        end_idx = i + 1
+                        break
+            content = content[start_idx:end_idx]
 
         questions = json.loads(content)
 

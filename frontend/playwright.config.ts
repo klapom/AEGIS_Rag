@@ -31,12 +31,25 @@ export default defineConfig({
     ['junit', { outputFile: 'test-results/junit.xml' }],
   ],
 
-  /* Shared timeout for all tests (Sprint 106: 30s for real auth flow) */
-  timeout: 30 * 1000,
+  /* Shared timeout for all tests
+   * Sprint 106: 30s for real auth flow
+   * Sprint 113: Increased to 180s for full flow:
+   *   - Auth Login: 30s
+   *   - Entity Expansion: 8.5s (Neo4j bottleneck identified)
+   *   - LLM Generation: 60-90s (Nemotron3 Nano)
+   *   - Buffer & React: 30s
+   */
+  timeout: 180 * 1000,
 
-  /* Shared expectation timeout */
+  /* Shared expectation timeout
+   * Sprint 113: Increased from 30s to 150s for LLM waits
+   * The expect() assertions in waitForResponse() need the full LLM generation time:
+   *   - Entity Expansion: ~8.5s
+   *   - LLM Generation: 60-90s
+   *   - Streaming Complete: +30s buffer
+   */
   expect: {
-    timeout: 10 * 1000,
+    timeout: 150 * 1000,
   },
 
   use: {

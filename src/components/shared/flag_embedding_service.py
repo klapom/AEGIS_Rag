@@ -83,6 +83,7 @@ See Also:
 
 import asyncio
 import hashlib
+import threading
 import time
 from collections import OrderedDict
 from typing import Any
@@ -262,6 +263,7 @@ class FlagEmbeddingService:
         self.sparse_min_weight = sparse_min_weight
         self.sparse_top_k = sparse_top_k
         self._model: Any = None  # Lazy loading - will be BGEM3FlagModel when loaded
+        self._model_lock = threading.Lock()  # Sprint 113: Fix race condition in lazy loading
         self.cache = LRUCache(max_size=cache_max_size)
 
         logger.info(
@@ -313,40 +315,47 @@ class FlagEmbeddingService:
             - First load downloads model from HuggingFace (~400MB for BGE-M3)
             - Subsequent loads use cached model from disk
             - use_fp16=True requires CUDA (auto-falls back to fp32 on CPU)
+            - Sprint 113: Uses lock to prevent concurrent model loads (race condition fix)
         """
+        # Sprint 113: Double-checked locking pattern for thread safety
         if self._model is None:
-            # Lazy import for optional dependency
-            try:
-                from FlagEmbedding import BGEM3FlagModel
-            except ImportError as e:
-                logger.error(
-                    "flag_embedding_import_failed",
-                    error=str(e),
-                    hint="Install with: pip install FlagEmbedding",
+            with self._model_lock:
+                # Re-check after acquiring lock (another thread may have loaded)
+                if self._model is not None:
+                    return self._model
+
+                # Lazy import for optional dependency
+                try:
+                    from FlagEmbedding import BGEM3FlagModel
+                except ImportError as e:
+                    logger.error(
+                        "flag_embedding_import_failed",
+                        error=str(e),
+                        hint="Install with: pip install FlagEmbedding",
+                    )
+                    raise
+
+                # Resolve 'auto' to actual device (Sprint 88 fix)
+                resolved_device = self._resolve_device()
+
+                load_start = time.perf_counter()
+
+                # Load model with specified device and precision
+                self._model = BGEM3FlagModel(
+                    self.model_name,
+                    use_fp16=self.use_fp16,
+                    device=resolved_device,
                 )
-                raise
 
-            # Resolve 'auto' to actual device (Sprint 88 fix)
-            resolved_device = self._resolve_device()
+                load_duration_ms = (time.perf_counter() - load_start) * 1000
 
-            load_start = time.perf_counter()
-
-            # Load model with specified device and precision
-            self._model = BGEM3FlagModel(
-                self.model_name,
-                use_fp16=self.use_fp16,
-                device=resolved_device,
-            )
-
-            load_duration_ms = (time.perf_counter() - load_start) * 1000
-
-            logger.info(
-                "flag_embedding_model_loaded",
-                model=self.model_name,
-                device=resolved_device,
-                use_fp16=self.use_fp16,
-                duration_ms=round(load_duration_ms, 2),
-            )
+                logger.info(
+                    "flag_embedding_model_loaded",
+                    model=self.model_name,
+                    device=resolved_device,
+                    use_fp16=self.use_fp16,
+                    duration_ms=round(load_duration_ms, 2),
+                )
 
         return self._model
 

@@ -74,7 +74,8 @@ async function setupAuthMocking(page: Page): Promise<void> {
   await signInButton.click();
 
   // Wait for navigation away from login page (auth success)
-  await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 10000 });
+  // Sprint 113: Increased from 10s to 30s for slow auth with LLM warmup
+  await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 30000 });
   await page.waitForLoadState('networkidle');
 }
 
@@ -245,7 +246,8 @@ async function navigateClientSide(page: Page, path: string): Promise<void> {
     await page.getByRole('button', { name: 'Sign In' }).click();
 
     // Wait for redirect back to the target page (app remembers the intended destination)
-    await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 10000 });
+    // Sprint 113: Increased from 10s to 30s for slow auth with LLM warmup
+    await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 30000 });
     await page.waitForLoadState('networkidle');
   }
 

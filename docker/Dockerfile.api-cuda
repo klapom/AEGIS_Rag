@@ -81,17 +81,18 @@ RUN useradd -m -u 1001 aegis
 COPY --from=builder --chown=aegis:aegis /build/.venv /app/.venv
 
 # Copy application code with correct ownership
+# Sprint 113: Removed data/ from COPY (now mounted as volume for faster builds)
+# data/ directory was 11GB, causing 2-3 minute build overhead
 COPY --chown=aegis:aegis src/ /app/src/
 COPY --chown=aegis:aegis scripts/ /app/scripts/
-COPY --chown=aegis:aegis data/ /app/data/
 
 # Fix permissions - ensure all files are readable by owner
-RUN chmod -R u+r /app/src /app/scripts /app/data && \
+RUN chmod -R u+r /app/src /app/scripts && \
     find /app/src /app/scripts -type f -name "*.py" -exec chmod u+x {} \;
 
-# Ensure LightRAG data directory exists with correct permissions
-# Fixes Sprint 68.8 Permission Issue with LightRAG graph extraction
-RUN mkdir -p /app/data/lightrag && \
+# Create data directory structure (will be mounted as volume at runtime)
+# Sprint 113: Only create skeleton directories, actual data mounted via volumes
+RUN mkdir -p /app/data/lightrag /app/data/models /app/data/uploads /app/data/cache && \
     chown -R aegis:aegis /app/data && \
     chmod -R 755 /app/data
 

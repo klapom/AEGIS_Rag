@@ -1,10 +1,69 @@
 # AegisRAG Playwright E2E Testing Guide
 
-**Last Updated:** 2026-01-18 (Sprint 111)
+**Last Updated:** 2026-01-19 (Sprint 113)
 **Framework:** Playwright + TypeScript
 **Test Environment:** http://192.168.178.10 (Docker Container)
 **Auth Credentials:** admin / admin123
 **Documentation:** This file is the authoritative source for all E2E testing information
+
+---
+
+## ✅ Sprint 113 Feature 113.0: Graph Search Early-Exit Fix (COMPLETED)
+
+**Fix Applied:** 2026-01-19 | **ADR:** [ADR-056](../adr/ADR-056-graph-search-early-exit.md)
+
+### Performance Improvement
+
+| Metric | Before | After | Improvement |
+|--------|--------|-------|-------------|
+| **Graph Search (empty NS)** | 13,376ms | 6.8ms | **-99.9%** |
+| **Hybrid API (empty NS)** | 13.77s | 16ms | **-99.9%** |
+
+### Test Results After Fix
+
+| Test Suite | Passed | Failed | Pass Rate |
+|------------|--------|--------|-----------|
+| Smoke Tests | 11 | 1 | **91.7%** |
+| ReasoningPanel | 10 | 2 | **83.3%** |
+| ConversationUI | 11 | 2 | **84.6%** |
+| Chat Interface | 2 | 0 | **100%** |
+
+### Bugs Fixed (Sprint 113)
+
+| Bug | Test | Issue | Fix |
+|-----|------|-------|-----|
+| ✅ BUG-113.1 | TC-46.2.2 | Test didn't handle `defaultExpanded=true` | Test now checks initial state |
+| ✅ BUG-113.2 | TC-46.2.3 | Same (depends on 113.1) | Same fix applied |
+| ✅ BUG-113.3 | TC-46.1.5 | Test expected `flex-shrink-0` but component uses `absolute` | Updated test to check `absolute bottom-0` |
+| ✅ BUG-113.4 | TC-46.1.9 | Race condition - message count checked too early | Added explicit `toHaveCount()` wait |
+
+### Remaining Issue
+
+| Issue | Test | Description |
+|-------|------|-------------|
+| LLM Timeout | TC-46.2.3 | Intermittent timeout waiting for LLM response (>150s) |
+
+---
+
+## ⚠️ Sprint 113 Original Finding: LLM Response Time Crisis
+
+**Full Test Suite Run (2026-01-19 BEFORE Fix):**
+| Metric | Value | Status |
+|--------|-------|--------|
+| **Total Tests** | 1099 | - |
+| **Passed** | 538 | 49% |
+| **Failed** | 544 | 50% |
+| **Skipped** | 17 | 1% |
+| **Duration** | 3.1 hours | - |
+
+**Root Cause Analysis:**
+- **60% of failures** (328 tests) due to LLM response timeout
+- **Ollama `/api/chat` takes 11-15 MINUTES** (expected: <60s)
+- Tests timeout at 11-30 seconds, LLM responds after 660-890s
+- Nemotron 3 Nano 30B model is slow on DGX Spark (cold requests)
+- **FIXED:** Graph Search Early-Exit now skips LLM calls for empty namespaces
+
+**Sprint 113 Plan:** [docs/sprints/SPRINT_113_PLAN.md](../sprints/SPRINT_113_PLAN.md) - 108 SP across 10 features
 
 ---
 
@@ -30,14 +89,72 @@ PLAYWRIGHT_BASE_URL=http://192.168.178.10 npx playwright test --workers=3 --repo
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| **Total Test Groups** | 17 groups | - |
-| **Total Tests** | ~210 tests | - |
-| **Sprint 109 Complete** | 7/16 (43.75%) | ✅ |
-| **Sprint 111 E2E Fixes** | Groups 13-16 | ✅ 41/41 (100%) |
-| **Sprint 111 Features** | Long Context + Token Chart | ✅ COMPLETE |
+| **Total Test Files** | 59 spec files | - |
+| **Total Tests** | 1099 tests | - |
+| **Full Suite Pass Rate** | 538/1099 (49%) | ⚠️ Sprint 113 |
+| **Primary Issue** | LLM Timeout (60% of failures) | 🔴 P0 |
+| **Sprint 111 Groups** | Groups 01-03, 09, 13-17 | ✅ 118/118 |
+| **Sprint 113 Target** | ≥85% pass rate | 🎯 Planned |
+
+### Sprint 111 Verified Groups (Still Passing)
+
+| Metric | Value | Status |
+|--------|-------|--------|
 | **Groups 01-03** | Auth Pattern Fixed | ✅ 46/46 (100%) |
 | **Group 09** | Long Context UI | ✅ 23/23 (100%) |
-| **Group 17** | Token Usage Chart (NEW) | ✅ 8/8 (100%) |
+| **Groups 13-16** | Enterprise Features | ✅ 41/41 (100%) |
+| **Group 17** | Token Usage Chart | ✅ 8/8 (100%) |
+
+---
+
+## Sprint 113 Failure Analysis (2026-01-19)
+
+### Failure Categories
+
+| Category | Count | % of Failures | Root Cause |
+|----------|-------|---------------|------------|
+| **LLM Response Timeout** | 328 | 60% | Ollama 11-15min response vs 11-30s test timeout |
+| **UI Element Not Found** | 112 | 21% | Missing data-testids, late rendering |
+| **API Errors** | 62 | 11% | Unexpected error responses |
+| **Other** | 42 | 8% | Various issues |
+
+### Top Failing Test Files
+
+| File | Failures | Category | Priority |
+|------|----------|----------|----------|
+| conversation-ui.spec.ts | 26 | LLM Timeout | P0 |
+| test_domain_training_flow.spec.ts | 26 | UI/Timeout | P1 |
+| pipeline-progress.spec.ts | 22 | SSE/UI | P1 |
+| error-handling.spec.ts | 21 | Error UI | P2 |
+| test_domain_training_api.spec.ts | 21 | API | P1 |
+| structured-output.spec.ts | 20 | UI | P2 |
+| graph-visualization.spec.ts | 19+12 | Graph UI | P2 |
+| tool-output-viz.spec.ts | 16 | UI | P2 |
+| search.spec.ts | 15 | Search | P1 |
+| intent.spec.ts | 15 | Intent | P1 |
+| multi-turn-rag.spec.ts | 15 | LLM Timeout | P0 |
+| memory-management.spec.ts | 14 | Admin UI | P2 |
+| vlm-integration.spec.ts | 14 | VLM | P2 |
+| research-mode.spec.ts | 12 | LLM Timeout | P0 |
+| single-document-test.spec.ts | 12 | Ingestion | P1 |
+| group19-llm-config.spec.ts | 12 | Config | P2 |
+
+### Sprint 113 Fix Plan
+
+See **[SPRINT_113_PLAN.md](../sprints/SPRINT_113_PLAN.md)** for detailed fix plan (108 SP):
+
+| Feature | Story Points | Priority | Impact |
+|---------|--------------|----------|--------|
+| 113.1 LLM Performance | 20 SP | P0 | 328 tests (60%) |
+| 113.2 Chat UI Tests | 15 SP | P0 | 26 tests |
+| 113.3 Domain Training | 12 SP | P1 | 47+ tests |
+| 113.4 Graph Visualization | 15 SP | P2 | 31+ tests |
+| 113.5 Pipeline/Admin UI | 10 SP | P1 | 36+ tests |
+| 113.6 Search/Intent | 8 SP | P1 | 30+ tests |
+| 113.7 Error/Structured | 10 SP | P2 | 41+ tests |
+| 113.8 Mock Infrastructure | 8 SP | P0 | Cross-cutting |
+| 113.9 Timeout Config | 5 SP | P1 | Cross-cutting |
+| 113.10 CI/CD Updates | 5 SP | P2 | Automation |
 
 ---
 
@@ -591,7 +708,16 @@ docs/e2e/
 
 ## Success Metrics
 
-### Sprint 111 COMPLETE ✅
+### Sprint 113 Full Suite Run (2026-01-19)
+
+| Metric | Tests | Status |
+|--------|-------|--------|
+| **Total Tests** | 1099 | - |
+| **Passed** | 538 | 49% ⚠️ |
+| **Failed** | 544 | 50% |
+| **Skipped** | 17 | 1% |
+
+### Sprint 111 Groups (Still Verified)
 
 | Group | Tests | Status |
 |-------|-------|--------|
@@ -601,18 +727,20 @@ docs/e2e/
 | Group 17 Token Chart | 8/8 | ✅ 100% |
 | **Sprint 111 Total** | **118/118** | **✅ 100%** |
 
-### Cumulative Pass Rates
+### Sprint 113 Target Goals
 
-| Sprint | Tests | Status |
-|--------|-------|--------|
-| Sprint 109 | 82/83 | ✅ 98.8% |
-| Sprint 111 | 118/118 | ✅ 100% |
-| **Total** | **200/201** | **✅ 99.5%** |
+| Metric | Current | Target | Gap |
+|--------|---------|--------|-----|
+| **Overall Pass Rate** | 49% | ≥85% | +36% |
+| **Critical Path (Chat/Search/Admin)** | ~40% | ≥95% | +55% |
+| **Test Duration** | 3.1h | <30min fast / <2h full | - |
+| **LLM Response Time** | 11-15min | <60s (mock: <500ms) | - |
 
-### End Goal (Sprint 112+)
-- All 17 groups: >95% pass rate
-- Overall: >200 tests passing (99%+ of ~210)
-- Production-ready E2E test suite
+### End Goal (Sprint 113)
+- All critical paths: >95% pass rate
+- Overall: >85% pass rate (935+ of 1099 tests)
+- Mock LLM for non-integration tests
+- Test suite tiers: fast (10min), integration (30min), full (2h)
 
 ---
 
@@ -626,7 +754,8 @@ docs/e2e/
 
 ---
 
-**Last Test Run:** 2026-01-18 (Sprint 111 COMPLETE: 118/118 = 100%)
-**Sprint 111 Tests:** Groups 01-03 (46), Group 09 (23), Groups 13-16 (41), Group 17 (8)
-**Next Sprint:** Sprint 112
+**Last Test Run:** 2026-01-19 (Sprint 113 Full Suite: 538/1099 = 49%)
+**Critical Finding:** LLM Response Timeout (60% of failures) - Ollama takes 11-15min per request
+**Sprint 113 Plan:** [SPRINT_113_PLAN.md](../sprints/SPRINT_113_PLAN.md) - 108 SP across 10 features
+**Target:** ≥85% pass rate (935+ tests passing)
 **Maintained By:** Claude Code + Sprint Team

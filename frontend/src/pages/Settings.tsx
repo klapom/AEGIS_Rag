@@ -12,7 +12,8 @@
 
 import { useState, useEffect } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
-import { AVAILABLE_MODELS, CLOUD_PROVIDERS, RETRIEVAL_METHODS } from '../types/settings';
+import { AVAILABLE_MODELS, CLOUD_PROVIDERS, RETRIEVAL_METHODS, SYSTEM_LLM_CAPABILITIES } from '../types/settings';
+import { MessageSquare, GitBranch, Search } from 'lucide-react';
 
 type TabType = 'general' | 'models' | 'advanced';
 
@@ -243,6 +244,42 @@ export function Settings() {
         {/* Models Tab */}
         {activeTab === 'models' && (
           <div className="space-y-6">
+            {/* Sprint 112: System LLM Capabilities Summary */}
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
+              <h3 className="text-sm font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                System LLM Übersicht
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {SYSTEM_LLM_CAPABILITIES.map((capability) => (
+                  <div
+                    key={capability.name}
+                    className="bg-white rounded-lg p-3 border border-gray-200 shadow-sm"
+                  >
+                    <div className="flex items-start gap-2">
+                      <div className="p-1.5 bg-blue-100 rounded-md">
+                        {capability.icon === 'chat' && <MessageSquare className="w-4 h-4 text-blue-600" />}
+                        {capability.icon === 'graph' && <GitBranch className="w-4 h-4 text-purple-600" />}
+                        {capability.icon === 'search' && <Search className="w-4 h-4 text-green-600" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-gray-900 text-sm">{capability.name}</div>
+                        <div className="text-xs text-gray-500 truncate">{capability.description}</div>
+                        <div className="mt-1.5 text-xs">
+                          <span className="font-medium text-blue-700">{capability.model}</span>
+                          <span className="text-gray-400 ml-1">via</span>
+                          <span className="text-gray-600 ml-1">{capability.provider}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-blue-700 mt-3">
+                Diese Modelle werden automatisch vom AegisLLMProxy geroutet. Das Standard-Modell unten gilt für Chat-Anfragen.
+              </p>
+            </div>
+
             {/* Ollama Base URL */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">

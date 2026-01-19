@@ -38,9 +38,13 @@ logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/chat", tags=["chat"])
 
 # Sprint 48 Feature 48.4: Timeout Constants
-REQUEST_TIMEOUT_SECONDS = 90  # Total request timeout
+# Sprint 113: Increased timeouts based on LLM trace analysis:
+#   - Entity Expansion: ~8.5s (Neo4j bottleneck)
+#   - LLM Generation: 60-90s (Nemotron3 Nano on DGX Spark)
+#   - Buffer for streaming: 30s
+REQUEST_TIMEOUT_SECONDS = 180  # Total request timeout (was 90s)
 PHASE_TIMEOUT_SECONDS = 30  # Individual phase timeout (not LLM)
-LLM_TIMEOUT_SECONDS = 60  # LLM generation timeout (longer)
+LLM_TIMEOUT_SECONDS = 120  # LLM generation timeout (was 60s)
 
 # Initialize coordinator (singleton pattern)
 _coordinator: CoordinatorAgent | None = None

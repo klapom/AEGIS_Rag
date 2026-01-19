@@ -36,15 +36,19 @@ export class BasePage {
    * Waits for streaming to complete by checking for:
    * 1. An assistant message bubble to appear (confirms response started)
    * 2. The streaming indicator to show completion (data-streaming="false")
+   *
+   * Sprint 113: Increased timeout from 90s to 120s for Entity Expansion bottleneck
+   * LLM trace analysis showed 8.5s for Entity Expansion + 60s for LLM generation
    */
-  async waitForLLMResponse(timeout = 90000) {
+  async waitForLLMResponse(timeout = 150000) {
     try {
       // Wait for an assistant message bubble to appear
       // This confirms the backend has started responding
       // Sprint 46: Allow 80% of timeout for first token (gpt-oss:20b is slow to start)
+      // Sprint 113: Increased to 150s total (120s for first token = 8.5s Entity Expansion + 60s LLM warmup + buffer)
       await this.page.locator('[data-testid="message-bubble"][data-role="assistant"]').first().waitFor({
         state: 'visible',
-        timeout: Math.floor(timeout * 0.8)
+        timeout: Math.floor(timeout * 0.8)  // 120s for first token
       });
 
       // Then wait for streaming to complete (data-streaming="false" on assistant message)

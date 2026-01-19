@@ -76,6 +76,41 @@ class SmartEntityExpander:
             max_synonyms_per_entity=self.max_synonyms_per_entity,
         )
 
+    async def _namespace_has_entities(self, namespaces: list[str]) -> bool:
+        """Early-exit check: Does namespace have any entities?
+
+        Sprint 113: Performance optimization - skip expensive LLM calls
+        if the namespace has no entities in Neo4j.
+
+        Args:
+            namespaces: List of namespaces to check
+
+        Returns:
+            True if namespace has at least 1 entity, False otherwise
+        """
+        cypher = """
+        MATCH (e:base)
+        WHERE e.namespace_id IN $namespaces
+        RETURN count(e) > 0 AS has_entities
+        LIMIT 1
+        """
+        try:
+            results = await self.neo4j_client.execute_read(
+                cypher, {"namespaces": namespaces}
+            )
+            if results and len(results) > 0:
+                return results[0].get("has_entities", False)
+            return False
+        except Exception as e:
+            logger.warning(
+                "namespace_entity_check_failed",
+                error=str(e),
+                namespaces=namespaces,
+                fallback="proceeding_with_expansion",
+            )
+            # On error, proceed with expansion (don't break functionality)
+            return True
+
     async def expand_entities(
         self,
         query: str,
@@ -94,6 +129,17 @@ class SmartEntityExpander:
             - List of expanded entity names (initial + graph + synonyms)
             - Number of graph hops used (0 if graph expansion not used)
         """
+        # Sprint 113: Early-exit if namespace has no entities
+        # This avoids 2x LLM calls (~10-12s) when graph is empty
+        if not await self._namespace_has_entities(namespaces):
+            logger.info(
+                "entity_expansion_early_exit",
+                reason="namespace_has_no_entities",
+                namespaces=namespaces,
+                query=query[:50],
+            )
+            return [], 0
+
         # STAGE 1: LLM Entity Extraction
         initial_entities = await self._extract_entities_llm(query)
         logger.info(

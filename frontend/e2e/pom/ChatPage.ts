@@ -68,8 +68,11 @@ export class ChatPage extends BasePage {
    * Wait for LLM to generate response
    * Handles SSE streaming and response completion
    * Sprint 46: Increased timeout to 90s for gpt-oss:20b model
+   * Sprint 113: Increased to 150s to match BasePage.waitForLLMResponse
+   *   - First Token: 120s (80% of 150s) for Entity Expansion + LLM warmup
+   *   - Streaming Complete: 150s total
    */
-  async waitForResponse(timeout = 90000) {
+  async waitForResponse(timeout = 150000) {
     // Wait for streaming to complete
     try {
       await this.waitForLLMResponse(timeout);

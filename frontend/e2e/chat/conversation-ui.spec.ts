@@ -98,16 +98,18 @@ test.describe('Sprint 46 - Feature 46.1: ConversationView', () => {
   /**
    * TC-46.1.5: Verify input is fixed at bottom of viewport
    * Input area should remain visible even when scrolling messages
+   * Sprint 113 Fix: Updated for absolute positioning (Sprint 52 change)
    */
   test('TC-46.1.5: should keep input area fixed at bottom', async ({ chatPage }) => {
     // Input area should exist
     const inputArea = chatPage.page.locator('[data-testid="input-area"]');
     await expect(inputArea).toBeVisible();
 
-    // Input area should have fixed positioning via flex-shrink-0
+    // Sprint 113: Input area uses absolute positioning (changed in Sprint 52)
+    // Previously used flex-shrink-0, now uses absolute bottom-0
     const inputAreaClasses = await inputArea.getAttribute('class');
-    expect(inputAreaClasses).toContain('flex-shrink-0');
-    expect(inputAreaClasses).toContain('border-t');
+    expect(inputAreaClasses).toContain('absolute');
+    expect(inputAreaClasses).toContain('bottom-0');
 
     // Send multiple messages to trigger scrolling
     await chatPage.sendMessage('First question');
@@ -199,15 +201,24 @@ test.describe('Sprint 46 - Feature 46.1: ConversationView', () => {
   /**
    * TC-46.1.9: Verify multiple messages maintain proper layout
    * Conversation should grow vertically with proper spacing
+   * Sprint 113 Fix: Added explicit waits for message rendering
    */
   test('TC-46.1.9: should maintain proper layout with multiple messages', async ({ chatPage }) => {
     // Send first message
     await chatPage.sendMessage('What is Python?');
     await chatPage.waitForResponse();
 
+    // Sprint 113: Wait for first message pair to be rendered
+    const messages = chatPage.page.locator('[data-testid="message"]');
+    await expect(messages).toHaveCount(2, { timeout: 10000 });
+
     // Send second message
     await chatPage.sendMessage('What is Java?');
     await chatPage.waitForResponse();
+
+    // Sprint 113: Wait for all 4 messages to be rendered (with timeout)
+    // Sometimes the second response takes longer to render
+    await expect(messages).toHaveCount(4, { timeout: 30000 });
 
     // All messages should be visible
     const allMessages = await chatPage.getAllMessages();
@@ -339,8 +350,9 @@ test.describe('Sprint 46 - Feature 46.2: ReasoningPanel', () => {
   });
 
   /**
-   * TC-46.2.2: Verify panel expands when clicked
-   * ReasoningPanel should expand to show detailed reasoning information
+   * TC-46.2.2: Verify panel toggle works correctly
+   * ReasoningPanel should toggle between expanded/collapsed states
+   * Sprint 113 Fix: Handle defaultExpanded=true (panel starts expanded)
    */
   test('TC-46.2.2: should expand reasoning panel when button clicked', async ({ chatPage }) => {
     // Send message
@@ -355,28 +367,37 @@ test.describe('Sprint 46 - Feature 46.2: ReasoningPanel', () => {
 
     if (toggleExists) {
       // Get the button's aria-expanded state before click
-      let ariaExpanded = await reasoningToggle.getAttribute('aria-expanded');
-      expect(['true', 'false']).toContain(ariaExpanded);
+      const initialState = await reasoningToggle.getAttribute('aria-expanded');
+      expect(['true', 'false']).toContain(initialState);
 
-      // Click to expand
+      // Sprint 113: If already expanded (defaultExpanded=true), collapse first
+      if (initialState === 'true') {
+        await reasoningToggle.click();
+        await chatPage.page.waitForTimeout(300);
+        // Verify collapsed
+        const collapsedState = await reasoningToggle.getAttribute('aria-expanded');
+        expect(collapsedState).toBe('false');
+      }
+
+      // Now click to expand (from collapsed state)
       await reasoningToggle.click();
-
-      // Wait for content to appear
       await chatPage.page.waitForTimeout(300);
 
       // Content should now be visible
       const reasoningContent = chatPage.page.locator('[data-testid="reasoning-content"]');
       const contentVisible = await reasoningContent.isVisible({ timeout: 3000 }).catch(() => false);
+      expect(contentVisible).toBeTruthy();
 
       // Verify expansion state
-      const newAriaExpanded = await reasoningToggle.getAttribute('aria-expanded');
-      expect(newAriaExpanded).toBe('true');
+      const expandedState = await reasoningToggle.getAttribute('aria-expanded');
+      expect(expandedState).toBe('true');
     }
   });
 
   /**
    * TC-46.2.3: Verify panel collapses when clicked again
    * ReasoningPanel should collapse to hide reasoning information
+   * Sprint 113 Fix: Handle defaultExpanded=true (panel starts expanded)
    */
   test('TC-46.2.3: should collapse reasoning panel when clicked again', async ({ chatPage }) => {
     // Send message
@@ -389,21 +410,27 @@ test.describe('Sprint 46 - Feature 46.2: ReasoningPanel', () => {
     const toggleExists = await reasoningToggle.isVisible({ timeout: 5000 }).catch(() => false);
 
     if (toggleExists) {
-      // First click to expand
-      await reasoningToggle.click();
-      await chatPage.page.waitForTimeout(300);
+      // Get initial state
+      const initialState = await reasoningToggle.getAttribute('aria-expanded');
 
-      // Verify expanded
+      // Sprint 113: Ensure we start from expanded state
+      if (initialState === 'false') {
+        // Click to expand first
+        await reasoningToggle.click();
+        await chatPage.page.waitForTimeout(300);
+      }
+
+      // Verify we're now expanded
       let ariaExpanded = await reasoningToggle.getAttribute('aria-expanded');
       expect(ariaExpanded).toBe('true');
 
-      // Second click to collapse
+      // Click to collapse
       await reasoningToggle.click();
       await chatPage.page.waitForTimeout(300);
 
       // Verify collapsed
-      const newAriaExpanded = await reasoningToggle.getAttribute('aria-expanded');
-      expect(newAriaExpanded).toBe('false');
+      const collapsedState = await reasoningToggle.getAttribute('aria-expanded');
+      expect(collapsedState).toBe('false');
 
       // Content should no longer be visible
       const reasoningContent = chatPage.page.locator('[data-testid="reasoning-content"]');
@@ -846,6 +873,17 @@ test.describe('Sprint 46 - Feature 46.1 + 46.2: Integration Tests', () => {
     if (toggleCount > 0) {
       // Click first toggle to verify it works
       const firstToggle = reasoningToggles.first();
+
+      // Sprint 113: Get initial state and handle defaultExpanded=true
+      const initialState = await firstToggle.getAttribute('aria-expanded');
+
+      // Ensure we start from collapsed state for predictable testing
+      if (initialState === 'true') {
+        await firstToggle.click();
+        await chatPage.page.waitForTimeout(300);
+      }
+
+      // Now click to expand
       await firstToggle.click();
       await chatPage.page.waitForTimeout(300);
 

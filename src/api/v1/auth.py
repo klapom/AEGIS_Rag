@@ -57,8 +57,10 @@ from pydantic import BaseModel, Field
 
 from src.api.dependencies import get_current_user
 from src.core.auth import (
+    LoginResponse,
     Token,
     User,
+    UserInfo,
     create_token_pair,
     decode_refresh_token,
 )
@@ -172,18 +174,21 @@ async def register(user_create: UserCreate) -> UserPublic:
         await store.close()
 
 
-@router.post("/login", response_model=Token, status_code=status.HTTP_200_OK)
-async def login(request: LoginRequest) -> Token:
+@router.post("/login", response_model=LoginResponse, status_code=status.HTTP_200_OK)
+async def login(request: LoginRequest) -> LoginResponse:
     """
-    Authenticate user and return JWT tokens.
+    Authenticate user and return JWT tokens with user info.
 
-    Validates username and password, then returns access and refresh tokens.
+    Validates username and password, then returns access and refresh tokens
+    along with user information.
+
+    Sprint 113 Fix: Returns user info for frontend compatibility.
 
     Args:
         request: Login credentials (username and password)
 
     Returns:
-        Token object with access_token, refresh_token, token_type, and expires_in
+        LoginResponse with access_token, refresh_token, token_type, expires_in, and user
 
     Raises:
         HTTPException: 401 Unauthorized if credentials are invalid
@@ -272,7 +277,18 @@ async def login(request: LoginRequest) -> Token:
             role=user.role,
         )
 
-        return tokens
+        # Sprint 113 Fix: Include user info in login response
+        return LoginResponse(
+            access_token=tokens.access_token,
+            refresh_token=tokens.refresh_token,
+            token_type=tokens.token_type,
+            expires_in=tokens.expires_in,
+            user=UserInfo(
+                username=user.username,
+                email=user.email,
+                created_at=user.created_at.isoformat() if user.created_at else None,
+            ),
+        )
 
     finally:
         await store.close()

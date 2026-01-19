@@ -7,7 +7,8 @@ import type { LoginRequest, LoginResponse, User, TokenData } from '../types/auth
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 const TOKEN_STORAGE_KEY = 'aegis_auth_token';
-const DEFAULT_TIMEOUT_MS = 15000; // 15 seconds timeout
+// Sprint 113: Increased from 15s to 30s for slow backend during LLM warmup
+const DEFAULT_TIMEOUT_MS = 30000; // 30 seconds timeout
 
 /**
  * Create an AbortController with timeout
@@ -136,7 +137,7 @@ export class ApiClient {
       return this.handleResponse<T>(response);
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
-        throw new Error(`Request timeout: Server at ${API_BASE_URL} did not respond within 15 seconds. Please check if the backend is accessible.`);
+        throw new Error(`Request timeout: Server at ${API_BASE_URL} did not respond within 30 seconds. Please check if the backend is accessible.`);
       }
       if (error instanceof TypeError && error.message.includes('fetch')) {
         throw new Error(`Network error: Cannot connect to ${API_BASE_URL}. Please check if the backend is running and accessible.`);
@@ -160,7 +161,7 @@ export class ApiClient {
       return this.handleResponse<T>(response);
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
-        throw new Error(`Request timeout: Server at ${API_BASE_URL} did not respond within 15 seconds. Please check if the backend is accessible.`);
+        throw new Error(`Request timeout: Server at ${API_BASE_URL} did not respond within 30 seconds. Please check if the backend is accessible.`);
       }
       if (error instanceof TypeError && error.message.includes('fetch')) {
         throw new Error(`Network error: Cannot connect to ${API_BASE_URL}. Please check if the backend is running and accessible.`);
@@ -184,7 +185,7 @@ export class ApiClient {
       return this.handleResponse<T>(response);
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
-        throw new Error(`Request timeout: Server at ${API_BASE_URL} did not respond within 15 seconds. Please check if the backend is accessible.`);
+        throw new Error(`Request timeout: Server at ${API_BASE_URL} did not respond within 30 seconds. Please check if the backend is accessible.`);
       }
       if (error instanceof TypeError && error.message.includes('fetch')) {
         throw new Error(`Network error: Cannot connect to ${API_BASE_URL}. Please check if the backend is running and accessible.`);
@@ -207,7 +208,7 @@ export class ApiClient {
       return this.handleResponse<T>(response);
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
-        throw new Error(`Request timeout: Server at ${API_BASE_URL} did not respond within 15 seconds. Please check if the backend is accessible.`);
+        throw new Error(`Request timeout: Server at ${API_BASE_URL} did not respond within 30 seconds. Please check if the backend is accessible.`);
       }
       if (error instanceof TypeError && error.message.includes('fetch')) {
         throw new Error(`Network error: Cannot connect to ${API_BASE_URL}. Please check if the backend is running and accessible.`);
@@ -250,7 +251,7 @@ export class ApiClient {
       return data.user;
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
-        throw new Error(`Login timeout: Server at ${API_BASE_URL} did not respond within 15 seconds. Please ensure port 8000 is forwarded in VS Code.`);
+        throw new Error(`Login timeout: Server at ${API_BASE_URL} did not respond within 30 seconds. Please ensure port 8000 is forwarded in VS Code.`);
       }
       if (error instanceof TypeError && error.message.includes('fetch')) {
         throw new Error(`Network error: Cannot connect to ${API_BASE_URL}. Please forward port 8000 in VS Code or check if the backend is running.`);

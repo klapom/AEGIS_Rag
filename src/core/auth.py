@@ -145,6 +145,38 @@ class Token(BaseModel):
     expires_in: int  # Seconds (for access token)
 
 
+class UserInfo(BaseModel):
+    """User information returned in login response.
+
+    Sprint 113 Fix: Frontend expects user info in login response.
+
+    Attributes:
+        username: Username for display
+        email: User email (optional)
+        created_at: Account creation timestamp (optional)
+    """
+
+    username: str
+    email: str | None = None
+    created_at: str | None = None
+
+
+class LoginResponse(Token):
+    """Login response with tokens and user info.
+
+    Sprint 113 Fix: Extends Token with user field for frontend compatibility.
+
+    Attributes:
+        access_token: JWT access token string
+        refresh_token: JWT refresh token string
+        token_type: Token type (always "bearer")
+        expires_in: Access token lifetime in seconds
+        user: User information object
+    """
+
+    user: UserInfo
+
+
 def _create_token(
     user_id: str,
     username: str,
