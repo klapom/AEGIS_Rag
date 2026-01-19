@@ -21,6 +21,7 @@ from src.components.mcp.registry_client import (
     MCPRegistryClient,
     get_available_registries,
     get_registry_client,
+    get_registry_type,
     resolve_registry_url,
 )
 from src.core.auth import User
@@ -223,6 +224,24 @@ async def list_registry_servers(
             "servers": server_dicts,
         }
 
+    except ValueError as e:
+        # Sprint 112: Handle non-JSON registries gracefully
+        registry_url, registry_type = resolve_registry_url(registry)
+        logger.warning(
+            "mcp_registry_not_fetchable",
+            registry=registry,
+            registry_type=registry_type,
+            message=str(e),
+        )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "error": "registry_not_fetchable",
+                "message": str(e),
+                "registry_type": registry_type,
+                "browse_url": registry_url,
+            },
+        ) from e
     except Exception as e:
         logger.error(
             "mcp_registry_list_failed",
@@ -622,8 +641,9 @@ async def add_custom_server(
         else:
             server_config["url"] = request.url
 
-        # Add to configuration file
-        config_path = Path(__file__).parents[3] / "config" / "mcp_servers.yaml"
+        # Sprint 112 Fix: Write to data directory (writable in Docker)
+        # /app/config is read-only, but /app/data is read-write
+        config_path = Path(__file__).parents[3] / "data" / "mcp_servers_installed.yaml"
 
         if config_path.exists():
             with open(config_path, encoding="utf-8") as f:

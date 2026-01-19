@@ -91,8 +91,8 @@ PREDEFINED_REGISTRIES: dict[str, dict[str, str]] = {
 }
 
 
-def resolve_registry_url(registry: str) -> str:
-    """Resolve registry name or URL to full URL.
+def resolve_registry_url(registry: str) -> tuple[str, str]:
+    """Resolve registry name or URL to full URL and type.
 
     Sprint 112 Feature: Support both named registries and direct URLs.
 
@@ -100,26 +100,40 @@ def resolve_registry_url(registry: str) -> str:
         registry: Registry name (e.g., "official") or full URL
 
     Returns:
-        Full registry URL
+        Tuple of (URL, type) where type is "json", "html", or "github"
 
     Example:
         >>> resolve_registry_url("official")
-        'https://registry.modelcontextprotocol.io/v0.1/servers'
-        >>> resolve_registry_url("https://custom.registry/servers")
-        'https://custom.registry/servers'
+        ('https://registry.modelcontextprotocol.io/v0.1/servers', 'json')
+        >>> resolve_registry_url("github_mcp")
+        ('https://github.com/modelcontextprotocol/servers', 'github')
     """
-    # If already a URL, return as-is
+    # If already a URL, return as-is with assumed json type
     if registry.startswith("http://") or registry.startswith("https://"):
-        return registry
+        return registry, "json"
 
     # Look up in predefined registries
     registry_lower = registry.lower()
     if registry_lower in PREDEFINED_REGISTRIES:
-        return PREDEFINED_REGISTRIES[registry_lower]["url"]
+        reg_info = PREDEFINED_REGISTRIES[registry_lower]
+        return reg_info["url"], reg_info["type"]
 
     # Default to official registry if unknown
     logger.warning(f"Unknown registry '{registry}', defaulting to official")
-    return OFFICIAL_REGISTRY
+    return OFFICIAL_REGISTRY, "json"
+
+
+def get_registry_type(registry: str) -> str:
+    """Get the type of a registry (json, html, or github).
+
+    Args:
+        registry: Registry name or URL
+
+    Returns:
+        Registry type string
+    """
+    _, reg_type = resolve_registry_url(registry)
+    return reg_type
 
 
 def get_available_registries() -> list[dict[str, str]]:
@@ -212,6 +226,7 @@ class MCPRegistryClient:
         """Fetch available servers from registry.
 
         Sprint 112 Fix: Accepts both registry names ("official") and full URLs.
+        Only JSON-type registries can be fetched programmatically.
 
         Args:
             registry: Registry name (e.g., "official", "pulsemcp") or full URL
@@ -219,14 +234,25 @@ class MCPRegistryClient:
         Returns:
             List of server definitions
 
+        Raises:
+            ValueError: If registry type is not "json" (HTML/GitHub registries
+                       must be browsed manually)
+
         Example:
             >>> client = MCPRegistryClient()
             >>> servers = await client.discover_servers("official")
             >>> print(f"Found {len(servers)} servers")
         """
-        # Resolve registry name to URL
-        registry_url = resolve_registry_url(registry)
+        # Resolve registry name to URL and type
+        registry_url, registry_type = resolve_registry_url(registry)
         logger.info(f"Fetching servers from registry: {registry_url}")
+
+        # Only JSON registries can be fetched programmatically
+        if registry_type != "json":
+            raise ValueError(
+                f"Registry '{registry}' is a {registry_type} registry and cannot be fetched programmatically. "
+                f"Please browse it directly at: {registry_url}"
+            )
 
         # Check cache first
         cache_key = self._get_cache_key(registry_url)
@@ -374,7 +400,9 @@ class MCPRegistryClient:
 
         # Check if already installed
         if config_path is None:
-            config_path = Path(__file__).parents[3] / "config" / "mcp_servers.yaml"
+            # Sprint 112 Fix: Write to data directory (writable in Docker)
+            # /app/config is read-only, but /app/data is read-write
+            config_path = Path(__file__).parents[3] / "data" / "mcp_servers_installed.yaml"
 
         if self._is_server_installed(server_id, config_path):
             logger.warning(f"Server already installed: {server_id}")

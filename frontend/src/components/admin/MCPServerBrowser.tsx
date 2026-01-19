@@ -63,10 +63,14 @@ export const MCPServerBrowser: React.FC<MCPServerBrowserProps> = ({
     fetchRegistries();
   }, [showRegistrySelector]);
 
+  // Sprint 112: Track if current registry requires browsing (non-JSON)
+  const [browseUrl, setBrowseUrl] = useState<string | null>(null);
+
   // Fetch servers from registry
   const fetchServers = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setBrowseUrl(null);
 
     try {
       const token = localStorage.getItem('token');
@@ -80,6 +84,17 @@ export const MCPServerBrowser: React.FC<MCPServerBrowserProps> = ({
       });
 
       if (!response.ok) {
+        // Sprint 112: Handle non-JSON registries (400 with browse_url)
+        if (response.status === 400) {
+          const errorData = await response.json();
+          if (errorData.detail?.error === 'registry_not_fetchable') {
+            setBrowseUrl(errorData.detail.browse_url);
+            setServers([]);
+            setFilteredServers([]);
+            setLoading(false);
+            return;
+          }
+        }
         throw new Error(`Failed to fetch servers: ${response.statusText}`);
       }
 
@@ -253,13 +268,36 @@ export const MCPServerBrowser: React.FC<MCPServerBrowserProps> = ({
         {currentRegistry.name && ` in ${currentRegistry.name}`}
       </div>
 
+      {/* Sprint 112: Browse-only registry message */}
+      {browseUrl && (
+        <div className="p-6 bg-amber-50 border border-amber-200 rounded-lg text-center" data-testid="browse-registry-message">
+          <Globe className="mx-auto h-12 w-12 text-amber-500 mb-4" />
+          <h3 className="text-lg font-medium text-amber-900 mb-2">
+            Browse This Registry Directly
+          </h3>
+          <p className="text-amber-700 mb-4">
+            This registry ({currentRegistry.name}) is a {currentRegistry.type} directory and cannot be fetched programmatically.
+            Please browse it directly to discover MCP servers.
+          </p>
+          <a
+            href={browseUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors"
+          >
+            <ExternalLink className="h-4 w-4" />
+            Browse {currentRegistry.name}
+          </a>
+        </div>
+      )}
+
       {/* Server Grid */}
-      {filteredServers.length === 0 ? (
+      {!browseUrl && filteredServers.length === 0 ? (
         <div className="text-center py-12 text-gray-500" data-testid="empty-state">
           <Package className="mx-auto h-12 w-12 text-gray-400 mb-4" />
           <p>No servers found matching your search.</p>
         </div>
-      ) : (
+      ) : !browseUrl && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredServers.map((server) => (
             <div
