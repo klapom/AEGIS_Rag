@@ -1,10 +1,13 @@
 /**
  * MCP Marketplace Page
  * Sprint 107 Feature 107.3: Browse, search, and install MCP servers
+ * Sprint 112: Added AdminNavigationBar for navigation back to admin pages
  */
 
 import React, { useState } from 'react';
-import { Store, RefreshCw } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Store, RefreshCw, ArrowLeft } from 'lucide-react';
+import { AdminNavigationBar } from '../../components/admin/AdminNavigationBar';
 import { MCPServerBrowser } from '../../components/admin/MCPServerBrowser';
 import { MCPServerInstaller } from '../../components/admin/MCPServerInstaller';
 import type { MCPServerDefinition } from '../../types/mcp';
@@ -59,6 +62,23 @@ export const MCPMarketplace: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 p-6" data-testid="mcp-marketplace-page">
+      {/* Sprint 112: Admin Navigation Bar */}
+      <div className="max-w-7xl mx-auto mb-4">
+        <AdminNavigationBar />
+      </div>
+
+      {/* Back to Admin Link */}
+      <div className="max-w-7xl mx-auto mb-4">
+        <Link
+          to="/admin"
+          className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 transition-colors"
+          data-testid="back-to-admin-link"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Admin Dashboard
+        </Link>
+      </div>
+
       {/* Header */}
       <div className="max-w-7xl mx-auto mb-8">
         <div className="flex items-center justify-between">
@@ -71,7 +91,7 @@ export const MCPMarketplace: React.FC = () => {
                 MCP Server Marketplace
               </h1>
               <p className="text-gray-600 mt-1" data-testid="page-subtitle">
-                Browse and install MCP servers from the official registry
+                Browse and install MCP servers from multiple registries
               </p>
             </div>
           </div>
