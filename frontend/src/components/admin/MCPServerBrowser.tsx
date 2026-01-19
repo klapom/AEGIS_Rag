@@ -86,13 +86,36 @@ export const MCPServerBrowser: React.FC<MCPServerBrowserProps> = ({
       if (!response.ok) {
         // Sprint 112: Handle non-JSON registries (400 with browse_url)
         if (response.status === 400) {
-          const errorData = await response.json();
-          if (errorData.detail?.error === 'registry_not_fetchable') {
-            setBrowseUrl(errorData.detail.browse_url);
-            setServers([]);
-            setFilteredServers([]);
-            setLoading(false);
-            return;
+          try {
+            const errorData = await response.json();
+            // Check multiple possible error formats due to middleware wrapping
+            // Format 1: errorData.detail.error (direct HTTPException)
+            // Format 2: errorData.error.message contains stringified detail
+            let browseUrlFound: string | null = null;
+
+            if (errorData.detail?.error === 'registry_not_fetchable') {
+              browseUrlFound = errorData.detail.browse_url;
+            } else if (errorData.error?.message) {
+              // The message might contain the dict as a string, try to extract browse_url
+              const msg = errorData.error.message;
+              if (msg.includes('registry_not_fetchable') && msg.includes('browse_url')) {
+                // Extract URL from string like "'browse_url': 'https://...'"
+                const urlMatch = msg.match(/'browse_url':\s*'([^']+)'/);
+                if (urlMatch) {
+                  browseUrlFound = urlMatch[1];
+                }
+              }
+            }
+
+            if (browseUrlFound) {
+              setBrowseUrl(browseUrlFound);
+              setServers([]);
+              setFilteredServers([]);
+              setLoading(false);
+              return;
+            }
+          } catch {
+            // If JSON parsing fails, fall through to generic error
           }
         }
         throw new Error(`Failed to fetch servers: ${response.statusText}`);
