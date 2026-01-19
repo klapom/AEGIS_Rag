@@ -19,7 +19,9 @@ from src.api.dependencies import get_current_user
 from src.components.mcp.registry_client import (
     OFFICIAL_REGISTRY,
     MCPRegistryClient,
+    get_available_registries,
     get_registry_client,
+    resolve_registry_url,
 )
 from src.core.auth import User
 
@@ -69,12 +71,12 @@ class InstallServerRequest(BaseModel):
 
     Attributes:
         server_id: Unique server identifier
-        registry: Registry URL (default: official registry)
+        registry: Registry name or URL (default: official registry)
         auto_connect: Whether to auto-connect after installation
     """
 
     server_id: str = Field(..., description="Unique server identifier")
-    registry: str = Field(default=OFFICIAL_REGISTRY, description="Registry URL")
+    registry: str = Field(default="official", description="Registry name or URL")
     auto_connect: bool = Field(default=False, description="Auto-connect after install")
 
 
@@ -96,11 +98,54 @@ class InstallServerResponse(BaseModel):
     auto_connect: bool = False
 
 
+@router.get("/registries")
+async def list_available_registries() -> dict[str, Any]:
+    """List all available MCP registries.
+
+    Sprint 112 Feature: Registry selection for MCP Marketplace.
+
+    Returns:
+        Dictionary with available registries
+
+    Example:
+        ```bash
+        curl "http://localhost:8000/api/v1/mcp/registry/registries"
+        ```
+
+    Response:
+        ```json
+        {
+          "count": 9,
+          "registries": [
+            {
+              "id": "official",
+              "name": "Official MCP Registry",
+              "url": "https://registry.modelcontextprotocol.io/v0.1/servers",
+              "description": "Official Model Context Protocol server registry",
+              "type": "json"
+            }
+          ]
+        }
+        ```
+    """
+    registries = get_available_registries()
+
+    logger.info(
+        "mcp_registries_listed",
+        count=len(registries),
+    )
+
+    return {
+        "count": len(registries),
+        "registries": registries,
+    }
+
+
 @router.get("/servers")
 async def list_registry_servers(
     registry: str = Query(
-        default=OFFICIAL_REGISTRY,
-        description="Registry URL to fetch servers from",
+        default="official",
+        description="Registry name (e.g., 'official', 'pulsemcp') or full URL",
     ),
     # Sprint 112: Made public for MCP Marketplace UI
 ) -> dict[str, Any]:
@@ -194,8 +239,8 @@ async def list_registry_servers(
 async def search_registry_servers(
     q: str = Query(..., description="Search query", min_length=1),
     registry: str = Query(
-        default=OFFICIAL_REGISTRY,
-        description="Registry URL to search",
+        default="official",
+        description="Registry name (e.g., 'official') or full URL",
     ),
     # Sprint 112: Made public for MCP Marketplace UI
 ) -> dict[str, Any]:
@@ -272,8 +317,8 @@ async def search_registry_servers(
 async def get_server_details(
     server_id: str,
     registry: str = Query(
-        default=OFFICIAL_REGISTRY,
-        description="Registry URL",
+        default="official",
+        description="Registry name or URL",
     ),
     # Sprint 112: Made public for MCP Marketplace UI
 ) -> ServerDefinitionResponse:
@@ -455,4 +500,215 @@ async def install_server(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Server installation failed: {e}",
+        ) from e
+
+
+class CustomServerRequest(BaseModel):
+    """Request to add a custom MCP server.
+
+    Sprint 112 Feature: Direct MCP server input for tool discovery.
+
+    Attributes:
+        name: Server name (for identification)
+        transport: Transport type (stdio or http)
+        command: Command to execute (for stdio)
+        args: Command arguments (for stdio)
+        url: Server URL (for http)
+        description: Optional description
+        auto_connect: Whether to connect and discover tools
+    """
+
+    name: str = Field(..., description="Server name for identification")
+    transport: str = Field(default="stdio", description="Transport type: stdio or http")
+    command: str | None = Field(default=None, description="Command to execute (for stdio)")
+    args: list[str] = Field(default_factory=list, description="Command arguments (for stdio)")
+    url: str | None = Field(default=None, description="Server URL (for http)")
+    description: str = Field(default="", description="Optional server description")
+    auto_connect: bool = Field(default=True, description="Connect and discover tools")
+
+
+class CustomServerResponse(BaseModel):
+    """Response from adding a custom server.
+
+    Attributes:
+        status: Operation status
+        message: Human-readable message
+        server: Server configuration
+        tools: Discovered tools (if auto_connect=true)
+    """
+
+    status: str
+    message: str
+    server: dict[str, Any] = Field(default_factory=dict)
+    tools: list[dict[str, Any]] = Field(default_factory=list)
+
+
+@router.post("/custom")
+async def add_custom_server(
+    request: CustomServerRequest,
+    current_user: User = Depends(get_current_user),
+) -> CustomServerResponse:
+    """Add a custom MCP server directly (not from registry).
+
+    Sprint 112 Feature: Direct MCP server input for tool discovery.
+
+    This endpoint allows adding an MCP server by providing its configuration
+    directly, without fetching from a registry. Useful for:
+    - Testing custom/local MCP servers
+    - Adding servers not in any registry
+    - Quick tool discovery from known servers
+
+    Args:
+        request: Custom server configuration
+
+    Returns:
+        Server configuration and discovered tools
+
+    Example (stdio):
+        ```bash
+        curl -X POST -H "Authorization: Bearer $TOKEN" \\
+          -H "Content-Type: application/json" \\
+          -d '{
+            "name": "my-filesystem",
+            "transport": "stdio",
+            "command": "npx",
+            "args": ["@modelcontextprotocol/server-filesystem", "/path/to/dir"],
+            "auto_connect": true
+          }' \\
+          "http://localhost:8000/api/v1/mcp/registry/custom"
+        ```
+
+    Example (http):
+        ```bash
+        curl -X POST -H "Authorization: Bearer $TOKEN" \\
+          -H "Content-Type: application/json" \\
+          -d '{
+            "name": "remote-server",
+            "transport": "http",
+            "url": "http://localhost:3000/mcp",
+            "auto_connect": true
+          }' \\
+          "http://localhost:8000/api/v1/mcp/registry/custom"
+        ```
+    """
+    import yaml
+    from pathlib import Path
+
+    # Validate request
+    if request.transport == "stdio" and not request.command:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Command is required for stdio transport",
+        )
+    if request.transport == "http" and not request.url:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="URL is required for http transport",
+        )
+
+    try:
+        # Build server configuration
+        server_config = {
+            "name": request.name,
+            "transport": request.transport,
+            "description": request.description or f"Custom server: {request.name}",
+            "auto_connect": request.auto_connect,
+            "enabled": True,
+        }
+
+        if request.transport == "stdio":
+            server_config["command"] = request.command
+            server_config["args"] = request.args
+        else:
+            server_config["url"] = request.url
+
+        # Add to configuration file
+        config_path = Path(__file__).parents[3] / "config" / "mcp_servers.yaml"
+
+        if config_path.exists():
+            with open(config_path, encoding="utf-8") as f:
+                config = yaml.safe_load(f) or {}
+        else:
+            config = {}
+
+        if "servers" not in config:
+            config["servers"] = []
+
+        # Check if server already exists
+        for existing in config["servers"]:
+            if existing.get("name") == request.name:
+                logger.warning(f"Server already exists: {request.name}")
+                return CustomServerResponse(
+                    status="already_exists",
+                    message=f"Server '{request.name}' already exists in configuration",
+                    server=existing,
+                    tools=[],
+                )
+
+        config["servers"].append(server_config)
+
+        with open(config_path, "w", encoding="utf-8") as f:
+            yaml.dump(config, f, default_flow_style=False, sort_keys=False)
+
+        logger.info(
+            "custom_mcp_server_added",
+            user_id=current_user.user_id,
+            server_name=request.name,
+            transport=request.transport,
+        )
+
+        # Discover tools if auto_connect is enabled
+        discovered_tools: list[dict[str, Any]] = []
+        if request.auto_connect:
+            try:
+                # Import MCP manager to discover tools
+                from src.components.mcp.mcp_manager import get_mcp_manager
+
+                manager = get_mcp_manager()
+                await manager.reload_config()
+
+                # Get tools from the newly added server
+                tools = await manager.list_tools(server_name=request.name)
+                discovered_tools = [
+                    {
+                        "name": tool.name,
+                        "description": tool.description or "",
+                        "input_schema": tool.inputSchema if hasattr(tool, "inputSchema") else {},
+                    }
+                    for tool in tools
+                ]
+
+                logger.info(
+                    "custom_server_tools_discovered",
+                    server_name=request.name,
+                    tool_count=len(discovered_tools),
+                )
+            except Exception as e:
+                logger.warning(
+                    "custom_server_tool_discovery_failed",
+                    server_name=request.name,
+                    error=str(e),
+                )
+                # Don't fail the request, just return empty tools
+                discovered_tools = []
+
+        return CustomServerResponse(
+            status="added",
+            message=f"Custom server '{request.name}' added successfully",
+            server=server_config,
+            tools=discovered_tools,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(
+            "custom_server_add_failed",
+            user_id=current_user.user_id,
+            server_name=request.name,
+            error=str(e),
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to add custom server: {e}",
         ) from e

@@ -26,10 +26,119 @@ from src.core.config import get_settings
 logger = logging.getLogger(__name__)
 
 # Registry URLs
-# Sprint 112 Fix: Updated to new official MCP Registry API
+# Sprint 112 Fix: Updated to new official MCP Registry API with multi-registry support
 # Old URL (returns 404): https://raw.githubusercontent.com/modelcontextprotocol/servers/main/src/mcp-servers.json
 OFFICIAL_REGISTRY = "https://registry.modelcontextprotocol.io/v0.1/servers"
 COMMUNITY_REGISTRY = "https://raw.githubusercontent.com/mcpregistry/registry/main/servers.json"
+
+# Sprint 112 Feature: Predefined registry list for MCP Marketplace
+# Users can select from these registries in the MCP Marketplace UI
+PREDEFINED_REGISTRIES: dict[str, dict[str, str]] = {
+    "official": {
+        "name": "Official MCP Registry",
+        "url": "https://registry.modelcontextprotocol.io/v0.1/servers",
+        "description": "Official Model Context Protocol server registry",
+        "type": "json",
+    },
+    "official_v1": {
+        "name": "Official MCP Registry (v1)",
+        "url": "https://registry.modelcontextprotocol.io/v1/servers",
+        "description": "Official MCP Registry v1 API",
+        "type": "json",
+    },
+    "pulsemcp": {
+        "name": "PulseMCP",
+        "url": "https://www.pulsemcp.com/servers",
+        "description": "Community-driven MCP server directory",
+        "type": "html",
+    },
+    "glama": {
+        "name": "Glama.ai MCP Servers",
+        "url": "https://glama.ai/mcp/servers",
+        "description": "Glama.ai's curated MCP server list",
+        "type": "html",
+    },
+    "mcpservers": {
+        "name": "MCPServers.org",
+        "url": "https://mcpservers.org",
+        "description": "Community MCP server directory",
+        "type": "html",
+    },
+    "mastra": {
+        "name": "Mastra MCP Registry",
+        "url": "https://mastra.ai/mcp-registry-registry",
+        "description": "Mastra's MCP registry aggregator",
+        "type": "html",
+    },
+    "github_mcp": {
+        "name": "GitHub MCP Servers",
+        "url": "https://github.com/modelcontextprotocol/servers",
+        "description": "Official GitHub repository for MCP servers",
+        "type": "github",
+    },
+    "github_registry": {
+        "name": "GitHub MCP Registry",
+        "url": "https://github.com/modelcontextprotocol/registry",
+        "description": "Official MCP Registry GitHub repository",
+        "type": "github",
+    },
+    "microsoft_mcp": {
+        "name": "Microsoft MCP",
+        "url": "https://github.com/microsoft/mcp",
+        "description": "Microsoft's MCP implementations",
+        "type": "github",
+    },
+}
+
+
+def resolve_registry_url(registry: str) -> str:
+    """Resolve registry name or URL to full URL.
+
+    Sprint 112 Feature: Support both named registries and direct URLs.
+
+    Args:
+        registry: Registry name (e.g., "official") or full URL
+
+    Returns:
+        Full registry URL
+
+    Example:
+        >>> resolve_registry_url("official")
+        'https://registry.modelcontextprotocol.io/v0.1/servers'
+        >>> resolve_registry_url("https://custom.registry/servers")
+        'https://custom.registry/servers'
+    """
+    # If already a URL, return as-is
+    if registry.startswith("http://") or registry.startswith("https://"):
+        return registry
+
+    # Look up in predefined registries
+    registry_lower = registry.lower()
+    if registry_lower in PREDEFINED_REGISTRIES:
+        return PREDEFINED_REGISTRIES[registry_lower]["url"]
+
+    # Default to official registry if unknown
+    logger.warning(f"Unknown registry '{registry}', defaulting to official")
+    return OFFICIAL_REGISTRY
+
+
+def get_available_registries() -> list[dict[str, str]]:
+    """Get list of all available predefined registries.
+
+    Sprint 112 Feature: Registry selection for MCP Marketplace.
+
+    Returns:
+        List of registry info dictionaries with id, name, url, description, type
+
+    Example:
+        >>> registries = get_available_registries()
+        >>> for reg in registries:
+        ...     print(f"{reg['name']}: {reg['url']}")
+    """
+    return [
+        {"id": key, **value}
+        for key, value in PREDEFINED_REGISTRIES.items()
+    ]
 
 
 @dataclass
@@ -98,21 +207,25 @@ class MCPRegistryClient:
         self._http_client = httpx.AsyncClient(timeout=30.0)
 
     async def discover_servers(
-        self, registry_url: str = OFFICIAL_REGISTRY
+        self, registry: str = "official"
     ) -> list[MCPServerDefinition]:
         """Fetch available servers from registry.
 
+        Sprint 112 Fix: Accepts both registry names ("official") and full URLs.
+
         Args:
-            registry_url: URL of the registry JSON
+            registry: Registry name (e.g., "official", "pulsemcp") or full URL
 
         Returns:
             List of server definitions
 
         Example:
             >>> client = MCPRegistryClient()
-            >>> servers = await client.discover_servers()
+            >>> servers = await client.discover_servers("official")
             >>> print(f"Found {len(servers)} servers")
         """
+        # Resolve registry name to URL
+        registry_url = resolve_registry_url(registry)
         logger.info(f"Fetching servers from registry: {registry_url}")
 
         # Check cache first
@@ -143,6 +256,9 @@ class MCPRegistryClient:
                     server_data = item
                 servers.append(self._parse_server_definition(server_data))
 
+            # Sprint 112 Fix: Deduplicate servers - keep only latest version
+            servers = self._deduplicate_servers(servers)
+
             # Cache results
             self._write_cache(cache_key, [self._server_to_dict(s) for s in servers])
 
@@ -154,13 +270,15 @@ class MCPRegistryClient:
             return []
 
     async def search_servers(
-        self, query: str, registry_url: str = OFFICIAL_REGISTRY
+        self, query: str, registry: str = "official"
     ) -> list[MCPServerDefinition]:
         """Search registries for servers matching query.
 
+        Sprint 112 Fix: Accepts both registry names and full URLs.
+
         Args:
             query: Search query (name, description, tags)
-            registry_url: Registry URL to search
+            registry: Registry name or URL to search
 
         Returns:
             List of matching server definitions
@@ -171,7 +289,7 @@ class MCPRegistryClient:
             >>> for server in results:
             ...     print(f"{server.name}: {server.description}")
         """
-        all_servers = await self.discover_servers(registry_url)
+        all_servers = await self.discover_servers(registry)
 
         query_lower = query.lower()
         results = []
@@ -190,18 +308,20 @@ class MCPRegistryClient:
         return results
 
     async def get_server_details(
-        self, server_id: str, registry_url: str = OFFICIAL_REGISTRY
+        self, server_id: str, registry: str = "official"
     ) -> MCPServerDefinition | None:
         """Get detailed information about a specific server.
 
+        Sprint 112 Fix: Accepts both registry names and full URLs.
+
         Args:
             server_id: Unique server identifier
-            registry_url: Registry URL
+            registry: Registry name or URL
 
         Returns:
             Server definition or None if not found
         """
-        servers = await self.discover_servers(registry_url)
+        servers = await self.discover_servers(registry)
 
         for server in servers:
             if server.id == server_id:
@@ -213,7 +333,7 @@ class MCPRegistryClient:
     async def install_server(
         self,
         server_id: str,
-        registry: str = OFFICIAL_REGISTRY,
+        registry: str = "official",
         config_path: Path | None = None,
         auto_connect: bool = False,
     ) -> dict[str, Any]:
@@ -359,6 +479,57 @@ class MCPRegistryClient:
             tags=data.get("tags", []),
             metadata=data.get("metadata", {}),
         )
+
+    def _deduplicate_servers(
+        self, servers: list[MCPServerDefinition]
+    ) -> list[MCPServerDefinition]:
+        """Deduplicate servers - keep only the latest version of each server.
+
+        Sprint 112 Fix: Registry returns all versions of each server.
+        Users expect to see only the latest version.
+
+        Args:
+            servers: List of all server definitions (may contain duplicates)
+
+        Returns:
+            List of unique servers with only latest version of each
+        """
+        from packaging import version as pkg_version
+
+        # Group by server ID
+        servers_by_id: dict[str, list[MCPServerDefinition]] = {}
+        for server in servers:
+            if server.id not in servers_by_id:
+                servers_by_id[server.id] = []
+            servers_by_id[server.id].append(server)
+
+        # Keep only the latest version of each server
+        latest_servers = []
+        for server_id, versions in servers_by_id.items():
+            if len(versions) == 1:
+                latest_servers.append(versions[0])
+            else:
+                # Sort by version (descending) and take the first one
+                try:
+                    sorted_versions = sorted(
+                        versions,
+                        key=lambda s: pkg_version.parse(s.version),
+                        reverse=True,
+                    )
+                    latest_servers.append(sorted_versions[0])
+                    logger.debug(
+                        f"Deduplicated {server_id}: kept {sorted_versions[0].version} "
+                        f"from {len(versions)} versions"
+                    )
+                except Exception as e:
+                    # If version parsing fails, just take the last one
+                    logger.warning(f"Version parsing failed for {server_id}: {e}")
+                    latest_servers.append(versions[-1])
+
+        logger.info(
+            f"Deduplicated servers: {len(servers)} → {len(latest_servers)} unique"
+        )
+        return latest_servers
 
     def _server_to_dict(self, server: MCPServerDefinition) -> dict[str, Any]:
         """Convert server definition to dictionary.

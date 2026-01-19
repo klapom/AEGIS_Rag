@@ -1,22 +1,33 @@
 /**
  * MCP Server Browser Component
  * Sprint 107 Feature 107.3: Browse and search MCP servers from registry
+ * Sprint 112: Added multi-registry support with dropdown selector
  */
 
-import React, { useState, useEffect } from 'react';
-import { Search, Star, Download, ExternalLink, Package } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Search, Star, Download, ExternalLink, Package, ChevronDown, Globe, RefreshCw } from 'lucide-react';
 import type { MCPServerDefinition } from '../../types/mcp';
+
+interface Registry {
+  id: string;
+  name: string;
+  url: string;
+  description: string;
+  type: string;
+}
 
 interface MCPServerBrowserProps {
   registry?: string;
   onInstall?: (server: MCPServerDefinition) => void;
   onServerSelect?: (server: MCPServerDefinition) => void;
+  showRegistrySelector?: boolean;
 }
 
 export const MCPServerBrowser: React.FC<MCPServerBrowserProps> = ({
-  registry,
+  registry: initialRegistry,
   onInstall,
   onServerSelect,
+  showRegistrySelector = true,
 }) => {
   const [servers, setServers] = useState<MCPServerDefinition[]>([]);
   const [loading, setLoading] = useState(false);
@@ -24,40 +35,76 @@ export const MCPServerBrowser: React.FC<MCPServerBrowserProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredServers, setFilteredServers] = useState<MCPServerDefinition[]>([]);
 
-  // Fetch servers from registry
+  // Sprint 112: Registry selection state
+  const [registries, setRegistries] = useState<Registry[]>([]);
+  const [selectedRegistry, setSelectedRegistry] = useState<string>(initialRegistry || 'official');
+  const [registryDropdownOpen, setRegistryDropdownOpen] = useState(false);
+  const [loadingRegistries, setLoadingRegistries] = useState(false);
+
+  // Fetch available registries
   useEffect(() => {
-    const fetchServers = async () => {
-      setLoading(true);
-      setError(null);
+    const fetchRegistries = async () => {
+      if (!showRegistrySelector) return;
 
+      setLoadingRegistries(true);
       try {
-        const token = localStorage.getItem('token');
-        const url = registry
-          ? `/api/v1/mcp/registry/servers?registry=${encodeURIComponent(registry)}`
-          : '/api/v1/mcp/registry/servers';
-
-        const response = await fetch(url, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error(`Failed to fetch servers: ${response.statusText}`);
+        const response = await fetch('/api/v1/mcp/registry/registries');
+        if (response.ok) {
+          const data = await response.json();
+          setRegistries(data.registries || []);
         }
-
-        const data = await response.json();
-        setServers(data.servers || []);
-        setFilteredServers(data.servers || []);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch servers');
+        console.error('Failed to fetch registries:', err);
       } finally {
-        setLoading(false);
+        setLoadingRegistries(false);
       }
     };
 
+    fetchRegistries();
+  }, [showRegistrySelector]);
+
+  // Fetch servers from registry
+  const fetchServers = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const token = localStorage.getItem('token');
+      const registryParam = selectedRegistry || 'official';
+      const url = `/api/v1/mcp/registry/servers?registry=${encodeURIComponent(registryParam)}`;
+
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch servers: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      setServers(data.servers || []);
+      setFilteredServers(data.servers || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch servers');
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedRegistry]);
+
+  useEffect(() => {
     fetchServers();
-  }, [registry]);
+  }, [fetchServers]);
+
+  // Get current registry info
+  const currentRegistry = registries.find(r => r.id === selectedRegistry) || {
+    id: selectedRegistry,
+    name: selectedRegistry,
+    url: '',
+    description: '',
+    type: 'unknown',
+  };
 
   // Filter servers based on search query
   useEffect(() => {
@@ -108,6 +155,85 @@ export const MCPServerBrowser: React.FC<MCPServerBrowserProps> = ({
 
   return (
     <div className="space-y-4" data-testid="mcp-server-browser">
+      {/* Sprint 112: Registry Selector */}
+      {showRegistrySelector && (
+        <div className="flex items-center gap-4 p-4 bg-white border border-gray-200 rounded-lg" data-testid="registry-selector">
+          <div className="flex items-center gap-2 text-gray-700">
+            <Globe className="h-5 w-5" />
+            <span className="font-medium">Registry:</span>
+          </div>
+
+          {/* Registry Dropdown */}
+          <div className="relative flex-1 max-w-md">
+            <button
+              onClick={() => setRegistryDropdownOpen(!registryDropdownOpen)}
+              disabled={loadingRegistries}
+              className="w-full flex items-center justify-between px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+              data-testid="registry-dropdown-button"
+            >
+              <div className="flex items-center gap-2">
+                <span className="font-medium">{currentRegistry.name}</span>
+                {currentRegistry.type && (
+                  <span className={`px-2 py-0.5 text-xs rounded ${
+                    currentRegistry.type === 'json' ? 'bg-green-100 text-green-800' :
+                    currentRegistry.type === 'github' ? 'bg-gray-100 text-gray-800' :
+                    'bg-blue-100 text-blue-800'
+                  }`}>
+                    {currentRegistry.type}
+                  </span>
+                )}
+              </div>
+              <ChevronDown className={`h-4 w-4 transition-transform ${registryDropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {/* Dropdown Menu */}
+            {registryDropdownOpen && (
+              <div
+                className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto"
+                data-testid="registry-dropdown-menu"
+              >
+                {registries.map((reg) => (
+                  <button
+                    key={reg.id}
+                    onClick={() => {
+                      setSelectedRegistry(reg.id);
+                      setRegistryDropdownOpen(false);
+                    }}
+                    className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-0 ${
+                      selectedRegistry === reg.id ? 'bg-blue-50' : ''
+                    }`}
+                    data-testid={`registry-option-${reg.id}`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">{reg.name}</span>
+                      <span className={`px-2 py-0.5 text-xs rounded ${
+                        reg.type === 'json' ? 'bg-green-100 text-green-800' :
+                        reg.type === 'github' ? 'bg-gray-100 text-gray-800' :
+                        'bg-blue-100 text-blue-800'
+                      }`}>
+                        {reg.type}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">{reg.description}</p>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Refresh Button */}
+          <button
+            onClick={fetchServers}
+            disabled={loading}
+            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            title="Refresh servers"
+            data-testid="refresh-button"
+          >
+            <RefreshCw className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
+      )}
+
       {/* Search Bar */}
       <div className="relative">
         <input
@@ -124,6 +250,7 @@ export const MCPServerBrowser: React.FC<MCPServerBrowserProps> = ({
       {/* Server Count */}
       <div className="text-sm text-gray-600" data-testid="server-count">
         {filteredServers.length} {filteredServers.length === 1 ? 'server' : 'servers'} found
+        {currentRegistry.name && ` in ${currentRegistry.name}`}
       </div>
 
       {/* Server Grid */}
