@@ -135,8 +135,9 @@ test.describe('Version Comparison View - Feature 39.7', () => {
     const versionASelect = page.locator('[data-testid="version-a-select"]');
 
     // Check that options are populated
+    // Sprint 113: Added timeout to prevent race condition
     const options = versionASelect.locator('option');
-    await expect(options).toHaveCount(4); // 1 placeholder + 3 versions
+    await expect(options).toHaveCount(4, { timeout: 10000 }); // 1 placeholder + 3 versions
 
     // Check option text includes version number and date
     await expect(options.nth(1)).toContainText('v3');
@@ -194,10 +195,11 @@ test.describe('Version Comparison View - Feature 39.7', () => {
     await expect(versionBHeader).toBeVisible();
 
     // Check properties are displayed
-    await expect(page.locator('text=Properties:')).toHaveCount(2);
+    // Sprint 113: Added timeout to prevent race condition
+    await expect(page.locator('text=Properties:')).toHaveCount(2, { timeout: 10000 });
 
     // Check relationships are displayed
-    await expect(page.locator('text=Relationships:')).toHaveCount(2);
+    await expect(page.locator('text=Relationships:')).toHaveCount(2, { timeout: 10000 });
   });
 
   test('should highlight changed fields with badges', async ({ page }) => {

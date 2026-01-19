@@ -412,8 +412,9 @@ test.describe('Memory Search Functionality (Feature 72.3)', () => {
     await expect(page.getByTestId('search-results')).toBeVisible({ timeout: 5000 });
 
     // Verify search result rows are visible
+    // Sprint 113: Added timeout to prevent race condition
     const resultRows = page.getByTestId('search-result-row');
-    await expect(resultRows).toHaveCount(3);
+    await expect(resultRows).toHaveCount(3, { timeout: 10000 });
 
     // Verify relevance scores are displayed - use first() to avoid strict mode error
     await expect(page.locator('text=/Relevance/').first()).toBeVisible();

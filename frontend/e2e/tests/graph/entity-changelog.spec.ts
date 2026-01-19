@@ -91,8 +91,9 @@ test.describe('Entity Changelog Panel - Feature 39.6', () => {
     await expect(header).toBeVisible();
 
     // Check that changes are displayed
+    // Sprint 113: Added timeout to prevent race condition
     const changeEntries = page.locator('[data-testid="changelog-entry"]');
-    await expect(changeEntries).toHaveCount(3);
+    await expect(changeEntries).toHaveCount(3, { timeout: 10000 });
   });
 
   test('should display all change information correctly', async ({ page }) => {
@@ -166,16 +167,18 @@ test.describe('Entity Changelog Panel - Feature 39.6', () => {
     await userFilter.waitFor({ state: 'visible' });
 
     // Initially should show all changes
+    // Sprint 113: Added timeout to prevent race condition
     let entries = page.locator('[data-testid="changelog-entry"]');
-    await expect(entries).toHaveCount(3);
+    await expect(entries).toHaveCount(3, { timeout: 10000 });
 
     // Select 'admin' filter
     await userFilter.selectOption('admin');
     await page.waitForTimeout(500);
 
     // Should now show only admin's changes
+    // Sprint 113: Added timeout to prevent race condition after filter
     entries = page.locator('[data-testid="changelog-entry"]');
-    await expect(entries).toHaveCount(1);
+    await expect(entries).toHaveCount(1, { timeout: 10000 });
     await expect(entries.first()).toContainText('admin');
   });
 
@@ -258,8 +261,9 @@ test.describe('Entity Changelog Panel - Feature 39.6', () => {
     await page.waitForLoadState('networkidle');
 
     // Check initial count
+    // Sprint 113: Added timeout for large data set rendering
     let entries = page.locator('[data-testid="changelog-entry"]');
-    await expect(entries).toHaveCount(50);
+    await expect(entries).toHaveCount(50, { timeout: 15000 });
 
     // Click Load More
     const loadMoreButton = page.locator('[data-testid="load-more-button"]');

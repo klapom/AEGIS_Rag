@@ -37,11 +37,44 @@
 | ✅ BUG-113.3 | TC-46.1.5 | Test expected `flex-shrink-0` but component uses `absolute` | Updated test to check `absolute bottom-0` |
 | ✅ BUG-113.4 | TC-46.1.9 | Race condition - message count checked too early | Added explicit `toHaveCount()` wait |
 
-### Remaining Issue
+### Pattern Fixes Applied (Preventive)
+
+Added `toHaveCount()` timeouts to prevent race conditions:
+
+| File | Lines Fixed | Original | Fixed |
+|------|-------------|----------|-------|
+| `entity-changelog.spec.ts` | 95, 170, 178, 262 | `toHaveCount(n)` | `toHaveCount(n, { timeout: 10000-15000 })` |
+| `version-compare.spec.ts` | 139, 197, 200 | `toHaveCount(n)` | `toHaveCount(n, { timeout: 10000 })` |
+| `memory-management.spec.ts` | 416 | `toHaveCount(n)` | `toHaveCount(n, { timeout: 10000 })` |
+
+**Note:** These tests currently fail due to **missing UI components**, not the pattern fix. The timeout fix is preventive.
+
+### Updated Test Results (2026-01-19 Post Bug Fixes)
+
+| Test Suite | Passed | Failed | Pass Rate | Notes |
+|------------|--------|--------|-----------|-------|
+| **TC-46.x (ConversationUI + ReasoningPanel)** | 25 | 0 | **100%** | All bugs fixed! |
+| entity-changelog.spec.ts | 0 | 9 | 0% | Missing Component |
+| version-compare.spec.ts | 0 | 10 | 0% | Missing Component |
+| memory-management.spec.ts | 1 | 14 | 7% | Missing data-testids |
+
+### Test Failure Classification
+
+| Category | Count | Root Cause | Fix Location |
+|----------|-------|------------|--------------|
+| **Test Pattern Bugs** | 4 | Race conditions, state assumptions, CSS changes | Tests (FIXED ✅) |
+| **Missing UI Components** | 19+ | Features not implemented (39.5, 39.6, 39.7) | Frontend Components |
+| **Missing data-testids** | 14+ | Components exist but lack test attributes | Frontend Components |
+| **LLM Timeouts** | 300+ | Ollama response time 11-15min | Feature 113.1 |
+
+### Remaining Issues
 
 | Issue | Test | Description |
 |-------|------|-------------|
-| LLM Timeout | TC-46.2.3 | Intermittent timeout waiting for LLM response (>150s) |
+| Missing EntityChangelogPanel | entity-changelog.spec.ts | Feature 39.6 never implemented |
+| Missing VersionCompare | version-compare.spec.ts | Feature 39.7 never implemented |
+| Missing data-testids | memory-management.spec.ts | MemoryManagementPage needs data-testids |
+| LLM Timeout | Various | Intermittent timeout waiting for LLM response (>150s) |
 
 ---
 
