@@ -174,6 +174,7 @@ class ErrorCode:
     INTERNAL_SERVER_ERROR = "INTERNAL_SERVER_ERROR"
     SERVICE_UNAVAILABLE = "SERVICE_UNAVAILABLE"
     GATEWAY_TIMEOUT = "GATEWAY_TIMEOUT"
+    EXTERNAL_SERVICE_ERROR = "EXTERNAL_SERVICE_ERROR"  # Sprint 117.12
 
     # Business Logic Errors (Sprint 22)
     INVALID_FILE_FORMAT = "INVALID_FILE_FORMAT"
@@ -185,6 +186,12 @@ class ErrorCode:
     DATABASE_CONNECTION_FAILED = "DATABASE_CONNECTION_FAILED"
     VALIDATION_FAILED = "VALIDATION_FAILED"
     RATE_LIMIT_EXCEEDED = "RATE_LIMIT_EXCEEDED"
+
+    # Domain Management Errors (Sprint 117.8)
+    DOMAIN_NOT_FOUND = "DOMAIN_NOT_FOUND"  # 404
+    DOMAIN_ALREADY_EXISTS = "DOMAIN_ALREADY_EXISTS"  # 409
+    TRAINING_IN_PROGRESS = "TRAINING_IN_PROGRESS"  # 409
+    INSUFFICIENT_PERMISSIONS = "INSUFFICIENT_PERMISSIONS"  # 403
 
 
 class ErrorDetail(BaseModel):
@@ -563,3 +570,310 @@ class Recommendation(BaseModel):
             }
         }
     )
+
+
+# --- Domain Management Models (Sprint 117) ---
+
+
+class DomainLLMConfig(BaseModel):
+    """LLM configuration per domain.
+
+    Sprint 117 Feature 117.1: Domain CRUD API.
+
+    Allows different models for:
+    - DSPy training (prompt optimization)
+    - Production extraction (entity/relation extraction)
+    - Classification (C-LARA fallback LLM verification)
+    """
+
+    training_model: str = Field(
+        default="qwen3:32b",
+        description="LLM model for DSPy training and prompt optimization",
+    )
+    training_temperature: float = Field(
+        default=0.7,
+        ge=0.0,
+        le=2.0,
+        description="Temperature for training model",
+    )
+    extraction_model: str = Field(
+        default="nemotron3",
+        description="LLM model for production entity/relation extraction",
+    )
+    extraction_temperature: float = Field(
+        default=0.3,
+        ge=0.0,
+        le=2.0,
+        description="Temperature for extraction model (lower = more deterministic)",
+    )
+    classification_model: str = Field(
+        default="nemotron3",
+        description="LLM model for C-LARA fallback classification",
+    )
+    provider: str = Field(
+        default="ollama",
+        description="LLM provider (ollama, alibaba, openai)",
+        pattern="^(ollama|alibaba|openai)$",
+    )
+
+
+class DomainSchema(BaseModel):
+    """Domain configuration schema.
+
+    Sprint 117 Feature 117.1: Domain CRUD API.
+
+    CRITICAL: MENTIONED_IN relation is automatically added to all domains.
+    """
+
+    id: str = Field(..., description="Unique domain ID (UUID)")
+    name: str = Field(
+        ...,
+        min_length=3,
+        max_length=50,
+        pattern="^[a-z][a-z0-9_-]*$",
+        description="Domain name (unique, lowercase, alphanumeric + hyphens)",
+    )
+    description: str = Field(
+        ...,
+        min_length=10,
+        max_length=500,
+        description="Domain description for semantic matching",
+    )
+    training_samples: int = Field(
+        default=0,
+        ge=0,
+        description="Count of labeled training samples",
+    )
+    entity_types: list[str] = Field(
+        ...,
+        min_length=1,
+        max_length=20,
+        description="Custom entity types (1-20 types, each 5-50 chars)",
+    )
+    relation_types: list[str] = Field(
+        ...,
+        min_length=1,
+        max_length=20,
+        description="Custom relation types (MENTIONED_IN automatically added)",
+    )
+    intent_classes: list[str] = Field(
+        default_factory=list,
+        max_length=10,
+        description="Intent classes for domain-specific classification",
+    )
+    model_family: str = Field(
+        default="general",
+        pattern="^(general|medical|legal|technical|finance)$",
+        description="Model family",
+    )
+    confidence_threshold: float = Field(
+        default=0.5,
+        ge=0.0,
+        le=1.0,
+        description="Minimum confidence for auto-extraction",
+    )
+    created_at: datetime = Field(
+        default_factory=datetime.utcnow,
+        description="Creation timestamp",
+    )
+    updated_at: datetime = Field(
+        default_factory=datetime.utcnow,
+        description="Last update timestamp",
+    )
+    created_by: str = Field(
+        default="system",
+        description="User ID who created the domain",
+    )
+    status: str = Field(
+        default="active",
+        pattern="^(active|training|inactive)$",
+        description="Domain status",
+    )
+    training_progress: int | None = Field(
+        default=None,
+        ge=0,
+        le=100,
+        description="Training progress (0-100) when status=training",
+    )
+    metrics: dict[str, float] | None = Field(
+        default=None,
+        description="RAGAS metrics when available",
+    )
+    llm_config: DomainLLMConfig = Field(
+        default_factory=DomainLLMConfig,
+        description="LLM configuration per domain",
+    )
+
+    @field_validator("entity_types")
+    @classmethod
+    def validate_entity_types(cls, v: list[str]) -> list[str]:
+        """Validate entity types are 5-50 characters each."""
+        for entity_type in v:
+            if not (5 <= len(entity_type) <= 50):
+                raise ValueError(
+                    f"Entity type '{entity_type}' must be 5-50 characters, got {len(entity_type)}"
+                )
+            if not entity_type.replace("_", "").replace(" ", "").isalnum():
+                raise ValueError(
+                    f"Entity type '{entity_type}' must be alphanumeric (underscores/spaces allowed)"
+                )
+        return v
+
+    @field_validator("relation_types")
+    @classmethod
+    def validate_and_inject_mentioned_in(cls, v: list[str]) -> list[str]:
+        """Validate relation types and ensure MENTIONED_IN is included.
+
+        CRITICAL: MENTIONED_IN is required for all domains to link entities
+        to their source chunks (ChunkIDs).
+        """
+        for relation_type in v:
+            if not (5 <= len(relation_type) <= 50):
+                raise ValueError(
+                    f"Relation type '{relation_type}' must be 5-50 characters, got {len(relation_type)}"
+                )
+            if not relation_type.replace("_", "").isalnum():
+                raise ValueError(
+                    f"Relation type '{relation_type}' must be alphanumeric with underscores"
+                )
+        if "MENTIONED_IN" not in v:
+            v.append("MENTIONED_IN")
+        return v
+
+    @field_validator("intent_classes")
+    @classmethod
+    def validate_intent_classes(cls, v: list[str]) -> list[str]:
+        """Validate intent classes are 3-50 characters each."""
+        for intent_class in v:
+            if not (3 <= len(intent_class) <= 50):
+                raise ValueError(
+                    f"Intent class '{intent_class}' must be 3-50 characters, got {len(intent_class)}"
+                )
+        return v
+
+
+class DomainCreateRequest(BaseModel):
+    """Request to create a new domain configuration.
+
+    Sprint 117 Feature 117.1: Domain CRUD API.
+    """
+
+    name: str = Field(
+        ...,
+        min_length=3,
+        max_length=50,
+        pattern="^[a-z][a-z0-9_-]*$",
+        description="Unique domain name (lowercase, alphanumeric + hyphens/underscores)",
+    )
+    description: str = Field(
+        ...,
+        min_length=10,
+        max_length=500,
+        description="Domain description for semantic matching",
+    )
+    entity_types: list[str] = Field(
+        ...,
+        min_length=1,
+        max_length=20,
+        description="Custom entity types (1-20 types)",
+    )
+    relation_types: list[str] = Field(
+        ...,
+        min_length=1,
+        max_length=20,
+        description="Custom relation types (MENTIONED_IN auto-added)",
+    )
+    intent_classes: list[str] = Field(
+        default_factory=list,
+        max_length=10,
+        description="Intent classes for classification",
+    )
+    model_family: str = Field(
+        default="general",
+        pattern="^(general|medical|legal|technical|finance)$",
+        description="Model family",
+    )
+    confidence_threshold: float = Field(
+        default=0.5,
+        ge=0.0,
+        le=1.0,
+        description="Minimum confidence threshold",
+    )
+    llm_config: DomainLLMConfig = Field(
+        default_factory=DomainLLMConfig,
+        description="LLM configuration",
+    )
+
+
+class DomainUpdateRequest(BaseModel):
+    """Request to update an existing domain configuration.
+
+    Sprint 117 Feature 117.1: Domain CRUD API.
+    """
+
+    description: str | None = Field(
+        default=None,
+        min_length=10,
+        max_length=500,
+        description="Updated domain description",
+    )
+    entity_types: list[str] | None = Field(
+        default=None,
+        min_length=1,
+        max_length=20,
+        description="Updated entity types",
+    )
+    relation_types: list[str] | None = Field(
+        default=None,
+        min_length=1,
+        max_length=20,
+        description="Updated relation types (MENTIONED_IN auto-added)",
+    )
+    intent_classes: list[str] | None = Field(
+        default=None,
+        max_length=10,
+        description="Updated intent classes",
+    )
+    confidence_threshold: float | None = Field(
+        default=None,
+        ge=0.0,
+        le=1.0,
+        description="Updated confidence threshold",
+    )
+    status: str | None = Field(
+        default=None,
+        pattern="^(active|training|inactive)$",
+        description="Updated status",
+    )
+    llm_config: DomainLLMConfig | None = Field(
+        default=None,
+        description="Updated LLM configuration",
+    )
+
+    @field_validator("entity_types")
+    @classmethod
+    def validate_entity_types(cls, v: list[str] | None) -> list[str] | None:
+        """Validate entity types are 5-50 characters each."""
+        if v is None:
+            return v
+        for entity_type in v:
+            if not (5 <= len(entity_type) <= 50):
+                raise ValueError(
+                    f"Entity type '{entity_type}' must be 5-50 characters, got {len(entity_type)}"
+                )
+        return v
+
+    @field_validator("relation_types")
+    @classmethod
+    def validate_and_inject_mentioned_in(cls, v: list[str] | None) -> list[str] | None:
+        """Validate relation types and ensure MENTIONED_IN is included."""
+        if v is None:
+            return v
+        for relation_type in v:
+            if not (5 <= len(relation_type) <= 50):
+                raise ValueError(
+                    f"Relation type '{relation_type}' must be 5-50 characters, got {len(relation_type)}"
+                )
+        if "MENTIONED_IN" not in v:
+            v.append("MENTIONED_IN")
+        return v

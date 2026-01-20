@@ -88,7 +88,7 @@ async def test_evaluate_connectivity_hotpotqa():
         }
     ]
 
-    with patch("src.components.domain_training.domain_metrics.get_neo4j_client") as mock_get_neo4j:
+    with patch("src.components.graph_rag.neo4j_client.get_neo4j_client") as mock_get_neo4j:
         # Setup mock
         mock_neo4j = AsyncMock()
         mock_neo4j.execute_read = AsyncMock(return_value=mock_result)
@@ -119,7 +119,7 @@ async def test_evaluate_connectivity_empty_namespace():
     # Mock Neo4j response (empty namespace)
     mock_result = []
 
-    with patch("src.components.domain_training.domain_metrics.get_neo4j_client") as mock_get_neo4j:
+    with patch("src.components.graph_rag.neo4j_client.get_neo4j_client") as mock_get_neo4j:
         # Setup mock
         mock_neo4j = AsyncMock()
         mock_neo4j.execute_read = AsyncMock(return_value=mock_result)
@@ -150,7 +150,7 @@ async def test_evaluate_connectivity_below_benchmark():
         }
     ]
 
-    with patch("src.components.domain_training.domain_metrics.get_neo4j_client") as mock_get_neo4j:
+    with patch("src.components.graph_rag.neo4j_client.get_neo4j_client") as mock_get_neo4j:
         # Setup mock
         mock_neo4j = AsyncMock()
         mock_neo4j.execute_read = AsyncMock(return_value=mock_result)
@@ -179,7 +179,7 @@ async def test_evaluate_connectivity_above_benchmark():
         }
     ]
 
-    with patch("src.components.domain_training.domain_metrics.get_neo4j_client") as mock_get_neo4j:
+    with patch("src.components.graph_rag.neo4j_client.get_neo4j_client") as mock_get_neo4j:
         # Setup mock
         mock_neo4j = AsyncMock()
         mock_neo4j.execute_read = AsyncMock(return_value=mock_result)
@@ -255,7 +255,7 @@ async def test_recommendations_within_benchmark():
         }
     ]
 
-    with patch("src.components.domain_training.domain_metrics.get_neo4j_client") as mock_get_neo4j:
+    with patch("src.components.graph_rag.neo4j_client.get_neo4j_client") as mock_get_neo4j:
         # Setup mock
         mock_neo4j = AsyncMock()
         mock_neo4j.execute_read = AsyncMock(return_value=mock_result)
@@ -283,7 +283,7 @@ async def test_recommendations_below_benchmark():
         }
     ]
 
-    with patch("src.components.domain_training.domain_metrics.get_neo4j_client") as mock_get_neo4j:
+    with patch("src.components.graph_rag.neo4j_client.get_neo4j_client") as mock_get_neo4j:
         # Setup mock
         mock_neo4j = AsyncMock()
         mock_neo4j.execute_read = AsyncMock(return_value=mock_result)

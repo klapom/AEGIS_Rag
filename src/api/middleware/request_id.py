@@ -149,11 +149,14 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
         # 2. Store in request state (accessible via request.state.request_id)
         request.state.request_id = request_id
 
-        # 3. Bind to structlog context (all logs in this request include request_id)
+        # 3. Store start time in request state (Sprint 117.8: for response utilities)
+        start_time = time.time()
+        request.state.start_time = start_time
+
+        # 4. Bind to structlog context (all logs in this request include request_id)
         structlog.contextvars.bind_contextvars(request_id=request_id)
 
-        # 4. Log request received (Windows-safe: no emojis)
-        start_time = time.time()
+        # 5. Log request received (Windows-safe: no emojis)
         logger.info(
             "request_received",
             method=request.method,
@@ -161,7 +164,7 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
             client_host=request.client.host if request.client else None,
         )
 
-        # 5. Process request (call next middleware or route handler)
+        # 6. Process request (call next middleware or route handler)
         response = None
         try:
             response = await call_next(request)
@@ -170,14 +173,14 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
             logger.error("request_failed", error=str(e), exc_info=True)
             raise  # Re-raise to let exception handlers deal with it
         finally:
-            # 6. Clear structlog context (prevent leakage to next request)
+            # 7. Clear structlog context (prevent leakage to next request)
             structlog.contextvars.clear_contextvars()
 
-        # 7. Add request ID to response headers
+        # 8. Add request ID to response headers
         duration_ms = (time.time() - start_time) * 1000
         response.headers["X-Request-ID"] = request_id
 
-        # 8. Log request completed (Windows-safe: no emojis)
+        # 9. Log request completed (Windows-safe: no emojis)
         logger.info(
             "request_completed",
             status_code=response.status_code,

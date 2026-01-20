@@ -1,6 +1,7 @@
 """Domain Training Component for DSPy-based Knowledge Graph Optimization.
 
 Sprint 45 - Feature 45.1, 45.2, 45.5, 45.6, 45.9, 45.10, 45.11: Domain Registry, DSPy Integration, Progress Tracking, Domain Classifier, Auto-Discovery, Grouped Ingestion, Data Augmentation
+Sprint 117 - Feature 117.5: Batch Document Ingestion (8 SP)
 
 This component manages domain-specific extraction prompts and training configurations
 for optimizing knowledge graph construction using DSPy.
@@ -87,8 +88,33 @@ Usage:
     >>> augmenter = get_training_data_augmenter()
     >>> generated = await augmenter.augment(seed_samples, target_count=20)
     >>> print(f"Generated {len(generated)} samples")
+
+    # Batch Document Ingestion (Sprint 117.5)
+    >>> from src.components.domain_training import get_batch_ingestion_service, DocumentRequest, IngestionOptions
+    >>> service = get_batch_ingestion_service()
+    >>> documents = [
+    ...     DocumentRequest(document_id="doc_001", content="Text...", metadata={}),
+    ... ]
+    >>> options = IngestionOptions(parallel_workers=4, extract_entities=True)
+    >>> batch_id = await service.start_batch("tech_docs", documents, options)
+    >>> status = await service.get_batch_status(batch_id)
+    >>> print(f"Completed: {status['progress']['completed']}/{status['total_documents']}")
 """
 
+from src.components.domain_training.augmentation_service import (
+    AugmentationService,
+    AugmentationStrategy,
+    get_augmentation_service,
+)
+from src.components.domain_training.batch_ingestion_service import (
+    BatchIngestionService,
+    BatchProgress,
+    DocumentRequest,
+    DocumentResult,
+    IngestionOptions,
+    get_batch_ingestion_service,
+    reset_service as reset_batch_ingestion_service,
+)
 from src.components.domain_training.data_augmentation import (
     TrainingDataAugmenter,
     get_training_data_augmenter,
@@ -167,7 +193,18 @@ __all__ = [
     "IngestionBatch",
     "get_grouped_ingestion_processor",
     "reset_processor",
-    # Training Data Augmentation (45.11)
+    # Training Data Augmentation (45.11, Sprint 117.4)
     "TrainingDataAugmenter",
     "get_training_data_augmenter",
+    "AugmentationService",
+    "AugmentationStrategy",
+    "get_augmentation_service",
+    # Batch Ingestion Service (Sprint 117.5)
+    "BatchIngestionService",
+    "DocumentRequest",
+    "DocumentResult",
+    "IngestionOptions",
+    "BatchProgress",
+    "get_batch_ingestion_service",
+    "reset_batch_ingestion_service",
 ]

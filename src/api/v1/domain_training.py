@@ -16,6 +16,7 @@ Key Endpoints:
 - GET /admin/domains/available-models - List Ollama models
 - POST /admin/domains/classify - Classify document to domain
 - POST /admin/domains/ingest-batch - Batch ingestion grouped by LLM model (45.10)
+- POST /admin/domains/{name}/validate - Validate domain quality (117.7)
 
 Security:
 - All endpoints require authentication (future Sprint)
@@ -48,12 +49,15 @@ from typing import Any
 
 import httpx
 import structlog
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, Request, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from src.core.config import get_settings
 from src.core.exceptions import DatabaseConnectionError
+from src.core.models import ErrorCode
+from src.core.models.response import ApiResponse
+from src.core.response_utils import error_response_from_request, success_response_from_request
 
 logger = structlog.get_logger(__name__)
 settings = get_settings()
@@ -153,31 +157,112 @@ class DomainResponse(BaseModel):
     trained_at: str | None = Field(default=None, description="Training completion timestamp")
 
 
+class TrainingStep(BaseModel):
+    """Represents a single training step with progress information.
+
+    Sprint 117.6: Step-by-step training progress tracking.
+    """
+
+    name: str = Field(..., description="Step name (e.g., 'entity_extraction_optimization')")
+    status: str = Field(..., description="Step status (pending/in_progress/completed/failed)")
+    progress: int = Field(..., ge=0, le=100, description="Step progress percentage (0-100)")
+
+
 class TrainingStatusResponse(BaseModel):
     """Response for training status and progress.
 
     Provides real-time updates on DSPy optimization progress.
+
+    Sprint 117.6 Enhancement: Added step-by-step progress, started_at,
+    estimated_completion, and elapsed_time_ms fields.
     """
 
-    status: str = Field(..., description="Training status (pending/running/completed/failed)")
-    progress_percent: float = Field(..., ge=0, le=100, description="Progress percentage")
+    domain_name: str = Field(..., description="Domain name being trained")
+    status: str = Field(..., description="Training status (pending/training/completed/failed)")
+    progress: int = Field(..., ge=0, le=100, description="Overall progress percentage (0-100)")
     current_step: str = Field(..., description="Current training step description")
-    logs: list[dict[str, Any]] = Field(default_factory=list, description="Training log messages")
-    metrics: dict[str, Any] | None = Field(
-        default=None, description="Training metrics (available after completion)"
+    steps: list[TrainingStep] = Field(
+        default_factory=list, description="Step-by-step progress information"
+    )
+    metrics: dict[str, Any] = Field(
+        default_factory=dict, description="Current training metrics (entity_f1, relation_f1, etc.)"
+    )
+    started_at: str | None = Field(
+        default=None, description="Training start timestamp (ISO 8601)"
+    )
+    estimated_completion: str | None = Field(
+        default=None, description="Estimated completion timestamp (ISO 8601)"
+    )
+    elapsed_time_ms: int | None = Field(
+        default=None, description="Elapsed time since start in milliseconds"
     )
 
 
-class AvailableModel(BaseModel):
-    """Available LLM model from Ollama."""
+class TrainingLog(BaseModel):
+    """Represents a single training log entry.
 
-    name: str = Field(..., description="Model name (e.g., 'qwen3:32b')")
-    size: int = Field(..., description="Model size in bytes")
-    modified_at: str | None = Field(default=None, description="Last modification time")
+    Sprint 117.6: Structured training log message.
+    """
+
+    timestamp: str = Field(..., description="Log timestamp (ISO 8601)")
+    level: str = Field(..., description="Log level (INFO/WARNING/ERROR)")
+    message: str = Field(..., description="Log message")
+    step: str | None = Field(default=None, description="Training step that produced this log")
+    metrics: dict[str, Any] | None = Field(
+        default=None, description="Optional metrics associated with this log entry"
+    )
+
+
+class TrainingLogsResponse(BaseModel):
+    """Response for training logs with pagination.
+
+    Sprint 117.6: Paginated training logs endpoint.
+    """
+
+    domain_name: str = Field(..., description="Domain name")
+    logs: list[TrainingLog] = Field(default_factory=list, description="Training log entries")
+    total_logs: int = Field(..., description="Total number of logs available")
+    page: int = Field(..., ge=1, description="Current page number (1-indexed)")
+    page_size: int = Field(..., ge=1, le=100, description="Number of logs per page")
+
+
+class AvailableModel(BaseModel):
+    """Available LLM model from Ollama.
+
+    Sprint 117.12: Enhanced with categorization and recommendations.
+    """
+
+    id: str = Field(..., description="Model ID (e.g., 'nemotron3', 'qwen3:32b')")
+    name: str = Field(..., description="Human-readable model name (e.g., 'Nemotron3 8B')")
+    provider: str = Field(default="ollama", description="Model provider")
+    size_gb: float = Field(..., description="Model size in GB")
+    recommended_for: list[str] = Field(
+        default_factory=list,
+        description="Use cases this model is recommended for (training/extraction/classification)",
+    )
+    speed: str = Field(..., description="Speed category (fast/medium/slow)")
+    quality: str = Field(..., description="Quality category (good/excellent)")
+    available: bool = Field(default=True, description="Whether model is currently available")
+
+
+class AvailableModelsResponse(BaseModel):
+    """Response for available models with recommendations.
+
+    Sprint 117.12: Per-domain LLM model selection.
+    """
+
+    models: list[AvailableModel] = Field(..., description="List of available models")
+    recommendations: dict[str, str] = Field(
+        ...,
+        description="Recommended models for each use case (training/extraction/classification)",
+    )
 
 
 class ClassificationRequest(BaseModel):
-    """Request for document classification to domain."""
+    """Request for document classification to domain.
+
+    Sprint 117.2: Enhanced with C-LARA hybrid classification options.
+    """
 
     text: str = Field(
         ...,
@@ -191,6 +276,24 @@ class ClassificationRequest(BaseModel):
         le=10,
         description="Number of top domains to return",
     )
+    document_id: str | None = Field(
+        default=None,
+        description="Optional document ID for tracking (Sprint 117.2)",
+    )
+    chunk_ids: list[str] | None = Field(
+        default=None,
+        description="Optional chunk IDs associated with document (Sprint 117.2)",
+    )
+    threshold: float = Field(
+        default=0.5,
+        ge=0.0,
+        le=1.0,
+        description="Minimum confidence threshold (Sprint 117.2)",
+    )
+    force_llm: bool = Field(
+        default=False,
+        description="Force LLM verification regardless of confidence (Sprint 117.2)",
+    )
 
 
 class ClassificationResult(BaseModel):
@@ -202,13 +305,44 @@ class ClassificationResult(BaseModel):
 
 
 class ClassificationResponse(BaseModel):
-    """Response for document classification."""
+    """Response for document classification.
+
+    Sprint 117.2: Enhanced with C-LARA hybrid classification metadata.
+    """
 
     classifications: list[ClassificationResult] = Field(
         ..., description="Ranked domain classifications"
     )
     recommended: str = Field(..., description="Top recommended domain")
     confidence: float = Field(..., ge=0, le=1, description="Confidence of top recommendation")
+    classification_path: str | None = Field(
+        default=None,
+        description="Classification path taken (fast/verified/fallback) - Sprint 117.2",
+    )
+    classification_status: str | None = Field(
+        default=None,
+        description="Classification status (confident/uncertain/unclassified) - Sprint 117.2",
+    )
+    requires_review: bool | None = Field(
+        default=None,
+        description="Whether classification requires manual review - Sprint 117.2",
+    )
+    reasoning: str | None = Field(
+        default=None,
+        description="LLM reasoning for classification (if LLM was used) - Sprint 117.2",
+    )
+    matched_entity_types: list[str] | None = Field(
+        default=None,
+        description="Matched entity types (if LLM was used) - Sprint 117.2",
+    )
+    matched_intent: str | None = Field(
+        default=None,
+        description="Detected intent (if LLM was used) - Sprint 117.2",
+    )
+    latency_ms: float | None = Field(
+        default=None,
+        description="Total classification latency in milliseconds - Sprint 117.2",
+    )
 
 
 class BatchIngestionItemRequest(BaseModel):
@@ -241,38 +375,128 @@ class BatchIngestionResponse(BaseModel):
 
 
 class AutoDiscoveryRequest(BaseModel):
-    """Request for domain auto-discovery.
+    """Request for domain auto-discovery with clustering.
 
-    Upload 3-10 representative documents and let the LLM analyze them
-    to suggest an appropriate domain configuration.
+    Sprint 117.3: Enhanced discovery with document clustering and entity extraction.
+
+    Upload 3-10 representative documents and let the system analyze them using:
+    1. BGE-M3 embeddings for document clustering
+    2. LLM analysis for entity/relation type extraction
+    3. Confidence scoring based on cluster cohesion
     """
 
-    sample_texts: list[str] = Field(
+    sample_documents: list[str] = Field(
         ...,
-        min_items=3,
-        max_items=10,
+        min_length=3,
+        max_length=10,
         description="3-10 representative document texts",
     )
-    llm_model: str = Field(
-        default="qwen3:32b",
-        description="LLM model to use for analysis",
+    min_samples: int = Field(
+        default=3,
+        ge=1,
+        le=10,
+        description="Minimum number of samples required",
     )
+    max_samples: int = Field(
+        default=10,
+        ge=3,
+        le=20,
+        description="Maximum number of samples to analyze",
+    )
+    suggested_count: int = Field(
+        default=5,
+        ge=1,
+        le=10,
+        description="Target number of domain suggestions",
+    )
+
+
+class DiscoveredDomainResponse(BaseModel):
+    """Single discovered domain suggestion."""
+
+    name: str = Field(..., description="Normalized domain name")
+    suggested_description: str = Field(..., description="Domain description")
+    confidence: float = Field(..., ge=0, le=1, description="Confidence score")
+    entity_types: list[str] = Field(..., description="Suggested entity types")
+    relation_types: list[str] = Field(..., description="Suggested relation types (includes MENTIONED_IN)")
+    intent_classes: list[str] = Field(..., description="Suggested intent classes")
+    sample_entities: dict[str, list[str]] = Field(..., description="Example entities by type")
+    recommended_model_family: str = Field(..., description="Recommended model family")
+    reasoning: str = Field(..., description="LLM reasoning for suggestion")
 
 
 class AutoDiscoveryResponse(BaseModel):
-    """Response from domain auto-discovery.
+    """Response from enhanced domain auto-discovery.
 
-    Contains the LLM's suggested domain configuration including name,
-    description, and expected entity/relation types.
+    Sprint 117.3: Returns multiple domain suggestions from clustering analysis.
     """
 
-    name: str = Field(..., description="Suggested domain name (normalized)")
-    title: str = Field(..., description="Human-readable title")
-    description: str = Field(..., description="Detailed domain description")
-    confidence: float = Field(..., ge=0, le=1, description="Confidence score")
-    reasoning: str = Field(..., description="LLM's reasoning for suggestion")
-    entity_types: list[str] = Field(..., description="Expected entity types")
-    relation_types: list[str] = Field(..., description="Expected relation types")
+    discovered_domains: list[DiscoveredDomainResponse] = Field(
+        ..., description="List of discovered domain suggestions"
+    )
+    processing_time_ms: float = Field(..., gt=0, description="Total processing time")
+    documents_analyzed: int = Field(..., gt=0, description="Number of documents analyzed")
+    clusters_found: int = Field(..., ge=0, description="Number of clusters identified")
+
+
+class DomainBatchDocumentRequest(BaseModel):
+    """Single document in domain batch ingestion request (Sprint 117.5)."""
+
+    document_id: str = Field(
+        ...,
+        min_length=1,
+        max_length=200,
+        description="Unique document identifier",
+    )
+    content: str = Field(
+        ...,
+        min_length=10,
+        max_length=50000,
+        description="Document text content",
+    )
+    metadata: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Optional metadata (source, page, etc.)",
+    )
+
+
+class DomainBatchIngestionRequest(BaseModel):
+    """Request for domain-specific batch document ingestion (Sprint 117.5).
+
+    Process up to 100 documents with domain-specific extraction.
+    """
+
+    documents: list[DomainBatchDocumentRequest] = Field(
+        ...,
+        min_length=1,
+        max_length=100,
+        description="Documents to ingest (max 100)",
+    )
+    options: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Ingestion options (extract_entities, parallel_workers, etc.)",
+    )
+
+
+class DomainBatchIngestionResponse(BaseModel):
+    """Response for domain batch ingestion (Sprint 117.5)."""
+
+    batch_id: str = Field(..., description="Batch identifier for status polling")
+    domain_name: str = Field(..., description="Target domain name")
+    total_documents: int = Field(..., ge=1, description="Total documents in batch")
+    status: str = Field(..., description="Batch status (processing/completed/failed)")
+    progress: dict[str, int] = Field(
+        ...,
+        description="Progress counts (completed, failed, pending)",
+    )
+    results: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="Per-document results",
+    )
+    errors: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="Error details",
+    )
 
 
 class AugmentationRequest(BaseModel):
@@ -318,8 +542,11 @@ class AugmentationResponse(BaseModel):
 # --- Endpoints ---
 
 
-@router.post("/", response_model=DomainResponse, status_code=status.HTTP_201_CREATED)
-async def create_domain(request: DomainCreateRequest) -> DomainResponse:
+@router.post("/", response_model=ApiResponse[DomainResponse], status_code=status.HTTP_201_CREATED)
+async def create_domain(
+    domain_request: DomainCreateRequest,
+    request: Request,
+) -> ApiResponse[DomainResponse]:
     """Create a new domain configuration.
 
     Creates a domain entry in Neo4j with the given configuration.
@@ -328,11 +555,14 @@ async def create_domain(request: DomainCreateRequest) -> DomainResponse:
     The description is embedded using BGE-M3 for semantic matching during
     document classification.
 
+    Sprint 117.8: Returns standardized response with request metadata.
+
     Args:
-        request: Domain creation request with name, description, and LLM model
+        domain_request: Domain creation request with name, description, and LLM model
+        request: FastAPI request object for metadata
 
     Returns:
-        Created domain configuration
+        ApiResponse with created domain configuration
 
     Raises:
         HTTPException 400: If domain name already exists or validation fails
@@ -340,8 +570,8 @@ async def create_domain(request: DomainCreateRequest) -> DomainResponse:
     """
     logger.info(
         "create_domain_request",
-        name=request.name,
-        llm_model=request.llm_model,
+        name=domain_request.name,
+        llm_model=domain_request.llm_model,
     )
 
     try:
@@ -352,30 +582,30 @@ async def create_domain(request: DomainCreateRequest) -> DomainResponse:
         embedding_service = EmbeddingService()
 
         # Generate description embedding using BGE-M3
-        description_embedding = await embedding_service.embed_single(request.description)
+        description_embedding = await embedding_service.embed_single(domain_request.description)
 
         logger.info(
             "description_embedded",
-            name=request.name,
+            name=domain_request.name,
             embedding_dim=len(description_embedding),
         )
 
         # Create domain in Neo4j
         domain = await repo.create_domain(
-            name=request.name,
-            description=request.description,
-            llm_model=request.llm_model,
+            name=domain_request.name,
+            description=domain_request.description,
+            llm_model=domain_request.llm_model,
             description_embedding=description_embedding,
         )
 
         logger.info(
             "domain_created",
-            name=request.name,
+            name=domain_request.name,
             domain_id=domain["id"],
             status=domain["status"],
         )
 
-        return DomainResponse(
+        domain_response = DomainResponse(
             id=domain["id"],
             name=domain["name"],
             description=domain["description"],
@@ -386,13 +616,15 @@ async def create_domain(request: DomainCreateRequest) -> DomainResponse:
             trained_at=None,
         )
 
+        return success_response_from_request(domain_response, request)
+
     except ValueError as e:
         # Domain already exists or validation error
-        logger.warning("domain_creation_validation_error", name=request.name, error=str(e))
+        logger.warning("domain_creation_validation_error", name=domain_request.name, error=str(e))
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
 
     except DatabaseConnectionError as e:
-        logger.error("domain_creation_db_error", name=request.name, error=str(e))
+        logger.error("domain_creation_db_error", name=domain_request.name, error=str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Database operation failed",
@@ -401,7 +633,7 @@ async def create_domain(request: DomainCreateRequest) -> DomainResponse:
     except Exception as e:
         logger.error(
             "domain_creation_unexpected_error",
-            name=request.name,
+            name=domain_request.name,
             error=str(e),
             exc_info=True,
         )
@@ -411,16 +643,18 @@ async def create_domain(request: DomainCreateRequest) -> DomainResponse:
         ) from e
 
 
-@router.get("", response_model=list[DomainResponse])
-@router.get("/", response_model=list[DomainResponse])
-async def list_domains() -> list[DomainResponse]:
+@router.get("", response_model=ApiResponse[list[DomainResponse]])
+@router.get("/", response_model=ApiResponse[list[DomainResponse]])
+async def list_domains(request: Request) -> ApiResponse[list[DomainResponse]]:
     """List all registered domains.
 
     Returns all domains with their current status, training metrics, and metadata.
     Domains are sorted by creation date (newest first).
 
+    Sprint 117.8: Returns standardized response with request metadata.
+
     Returns:
-        List of domain configurations
+        ApiResponse with list of domain configurations
 
     Raises:
         HTTPException 500: If database query fails
@@ -435,7 +669,7 @@ async def list_domains() -> list[DomainResponse]:
 
         logger.info("domains_listed", count=len(domains))
 
-        return [
+        domain_list = [
             DomainResponse(
                 id=d["id"],
                 name=d["name"],
@@ -450,6 +684,8 @@ async def list_domains() -> list[DomainResponse]:
             )
             for d in domains
         ]
+
+        return success_response_from_request(domain_list, request)
 
     except DatabaseConnectionError as e:
         logger.error("list_domains_db_error", error=str(e))
@@ -466,42 +702,93 @@ async def list_domains() -> list[DomainResponse]:
         ) from e
 
 
-@router.get("/available-models", response_model=list[AvailableModel])
-async def get_available_models() -> list[AvailableModel]:
-    """Get list of available LLM models from Ollama.
+@router.get("/available-models", response_model=AvailableModelsResponse)
+async def get_available_models() -> AvailableModelsResponse:
+    """Get list of available LLM models from Ollama with recommendations.
 
-    Queries the local Ollama instance to retrieve all available models
-    that can be used for domain training.
+    Sprint 117.12: Enhanced with model categorization and use case recommendations.
+
+    Queries the local Ollama instance to retrieve all available models,
+    categorizes them by size and capabilities, and provides recommendations
+    for training vs extraction use cases.
 
     Returns:
-        List of available Ollama models
+        AvailableModelsResponse with models list and recommendations
 
     Raises:
         HTTPException 503: If Ollama is not available
         HTTPException 500: If query fails
+
+    Example response:
+        {
+            "models": [
+                {
+                    "id": "nemotron3",
+                    "name": "Nemotron3 8B",
+                    "provider": "ollama",
+                    "size_gb": 4.7,
+                    "recommended_for": ["extraction", "classification"],
+                    "speed": "fast",
+                    "quality": "good",
+                    "available": true
+                },
+                {
+                    "id": "qwen3:32b",
+                    "name": "Qwen3 32B",
+                    "provider": "ollama",
+                    "size_gb": 18.5,
+                    "recommended_for": ["training"],
+                    "speed": "slow",
+                    "quality": "excellent",
+                    "available": true
+                }
+            ],
+            "recommendations": {
+                "training": "qwen3:32b",
+                "extraction": "nemotron3",
+                "classification": "nemotron3"
+            }
+        }
     """
     logger.info("get_available_models_request")
 
     try:
-        ollama_url = settings.ollama_base_url or "http://localhost:11434"
+        # Import here to avoid circular dependencies
+        from src.components.domain_training.model_service import get_model_service
 
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            response = await client.get(f"{ollama_url}/api/tags")
-            response.raise_for_status()
+        model_service = get_model_service()
 
-            models_data = response.json()
-            models = models_data.get("models", [])
+        # Fetch and categorize models
+        models_info = await model_service.get_available_models()
 
-            logger.info("available_models_retrieved", count=len(models))
+        # Get recommendations
+        recommendations = model_service.get_model_recommendations(models_info)
 
-            return [
-                AvailableModel(
-                    name=m["name"],
-                    size=m.get("size", 0),
-                    modified_at=m.get("modified_at"),
-                )
-                for m in models
-            ]
+        # Convert to API response models
+        models_response = [
+            AvailableModel(
+                id=m.id,
+                name=m.name,
+                provider=m.provider,
+                size_gb=m.size_gb,
+                recommended_for=m.recommended_for,
+                speed=m.speed,
+                quality=m.quality,
+                available=m.available,
+            )
+            for m in models_info
+        ]
+
+        logger.info(
+            "available_models_retrieved",
+            count=len(models_response),
+            recommendations=recommendations,
+        )
+
+        return AvailableModelsResponse(
+            models=models_response,
+            recommendations=recommendations,
+        )
 
     except httpx.ConnectError as e:
         logger.error("ollama_connection_error", error=str(e))
@@ -591,6 +878,98 @@ async def get_domain(domain_name: str) -> DomainResponse:
     except Exception as e:
         logger.error(
             "get_domain_unexpected_error",
+            name=domain_name,
+            error=str(e),
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error",
+        ) from e
+
+
+@router.put("/{domain_name}")
+async def update_domain(
+    domain_name: str,
+    update_request: "DomainUpdateRequest",
+) -> dict[str, Any]:
+    """Update domain configuration.
+
+    Sprint 117 Feature 117.1: Domain CRUD API - Update endpoint.
+
+    Updates domain configuration including entity types, relation types,
+    confidence threshold, and LLM settings. MENTIONED_IN relation is
+    automatically added if not present.
+
+    Args:
+        domain_name: Domain name to update
+        update_request: Update request with optional fields
+
+    Returns:
+        Updated domain configuration
+
+    Raises:
+        HTTPException 400: If validation fails
+        HTTPException 404: If domain not found
+        HTTPException 500: If database update fails
+    """
+    logger.info("update_domain_request", name=domain_name)
+
+    try:
+        from src.components.domain_training import get_domain_repository
+        from src.core.models import DomainUpdateRequest
+
+        # Import here to avoid circular dependency
+        if not isinstance(update_request, DomainUpdateRequest):
+            update_request = DomainUpdateRequest(**update_request.model_dump())
+
+        repo = get_domain_repository()
+
+        # Convert Pydantic model to dict for repository
+        update_data = {}
+        if update_request.description is not None:
+            update_data["description"] = update_request.description
+        if update_request.entity_types is not None:
+            update_data["entity_types"] = update_request.entity_types
+        if update_request.relation_types is not None:
+            update_data["relation_types"] = update_request.relation_types
+        if update_request.intent_classes is not None:
+            update_data["intent_classes"] = update_request.intent_classes
+        if update_request.confidence_threshold is not None:
+            update_data["confidence_threshold"] = update_request.confidence_threshold
+        if update_request.status is not None:
+            update_data["status"] = update_request.status
+        if update_request.llm_config is not None:
+            update_data["llm_config"] = update_request.llm_config.model_dump()
+
+        # Update domain
+        updated_domain = await repo.update_domain(domain_name, **update_data)
+
+        logger.info("domain_updated_successfully", name=domain_name)
+
+        return {
+            "success": True,
+            "message": f"Domain '{domain_name}' updated successfully",
+            "domain": updated_domain,
+        }
+
+    except ValueError as e:
+        logger.warning("update_domain_validation_error", name=domain_name, error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        ) from e
+
+    except DatabaseConnectionError as e:
+        logger.error("update_domain_db_error", name=domain_name, error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Database operation failed",
+        ) from e
+
+    except Exception as e:
+        logger.error(
+            "update_domain_unexpected_error",
             name=domain_name,
             error=str(e),
             exc_info=True,
@@ -789,10 +1168,13 @@ async def get_training_status(domain_name: str) -> TrainingStatusResponse:
         HTTPException 404: If domain or training log not found
         HTTPException 500: If database query fails
     """
+    from datetime import datetime, timedelta
+
     logger.info("get_training_status_request", domain=domain_name)
 
     try:
         from src.components.domain_training import get_domain_repository
+        from src.components.domain_training.training_progress import TrainingPhase
 
         repo = get_domain_repository()
         training_log = await repo.get_latest_training_log(domain_name)
@@ -811,27 +1193,115 @@ async def get_training_status(domain_name: str) -> TrainingStatusResponse:
             progress=training_log["progress_percent"],
         )
 
-        # Parse JSON fields safely
-        logs = []
-        if training_log.get("log_messages"):
-            try:
-                logs = eval(training_log["log_messages"])
-            except Exception:
-                logs = []
-
-        metrics = None
+        # Parse metrics JSON
+        metrics = {}
         if training_log.get("metrics"):
             try:
-                metrics = eval(training_log["metrics"])
-            except Exception:
+                metrics_str = training_log["metrics"]
+                metrics = json.loads(metrics_str) if metrics_str else {}
+            except (json.JSONDecodeError, TypeError):
+                logger.warning("invalid_metrics_json", domain=domain_name)
                 metrics = {}
 
+        # Calculate step-by-step progress based on TrainingPhase weights
+        progress_percent = float(training_log["progress_percent"])
+        current_step_name = training_log["current_step"]
+
+        # Map progress percentage to phase and steps
+        steps = []
+
+        # Define training steps (aligned with TrainingPhase.PHASE_WEIGHTS)
+        training_steps = [
+            ("initialization", TrainingPhase.INITIALIZING),
+            ("loading_data", TrainingPhase.LOADING_DATA),
+            ("entity_extraction_optimization", TrainingPhase.ENTITY_OPTIMIZATION),
+            ("relation_extraction_optimization", TrainingPhase.RELATION_OPTIMIZATION),
+            ("prompt_extraction", TrainingPhase.PROMPT_EXTRACTION),
+            ("model_validation", TrainingPhase.VALIDATION),
+            ("saving_results", TrainingPhase.SAVING),
+        ]
+
+        # Hardcoded phase weights (from TrainingProgressTracker.PHASE_WEIGHTS)
+        phase_weights_map = {
+            TrainingPhase.INITIALIZING: (0, 5),
+            TrainingPhase.LOADING_DATA: (5, 10),
+            TrainingPhase.ENTITY_OPTIMIZATION: (10, 45),
+            TrainingPhase.RELATION_OPTIMIZATION: (45, 80),
+            TrainingPhase.PROMPT_EXTRACTION: (80, 85),
+            TrainingPhase.VALIDATION: (85, 95),
+            TrainingPhase.SAVING: (95, 100),
+        }
+
+        for step_name, phase in training_steps:
+            start_pct, end_pct = phase_weights_map.get(phase, (0, 0))
+
+            # Determine step status and progress
+            if progress_percent < start_pct:
+                step_status = "pending"
+                step_progress = 0
+            elif progress_percent >= end_pct:
+                step_status = "completed"
+                step_progress = 100
+            else:
+                step_status = "in_progress"
+                step_progress = int(((progress_percent - start_pct) / (end_pct - start_pct)) * 100)
+
+            steps.append(
+                TrainingStep(
+                    name=step_name,
+                    status=step_status,
+                    progress=step_progress,
+                )
+            )
+
+        # Calculate elapsed time and estimated completion
+        started_at = training_log.get("started_at")
+        elapsed_time_ms = None
+        estimated_completion = None
+
+        if started_at:
+            # Parse started_at (Neo4j datetime object or ISO string)
+            if hasattr(started_at, "isoformat"):
+                started_at_dt = started_at
+                started_at_str = started_at.isoformat()
+            else:
+                started_at_str = str(started_at)
+                try:
+                    started_at_dt = datetime.fromisoformat(started_at_str.replace("Z", "+00:00"))
+                except ValueError:
+                    started_at_dt = None
+
+            if started_at_dt:
+                # Calculate elapsed time
+                now = datetime.utcnow()
+                elapsed = now - started_at_dt.replace(tzinfo=None)
+                elapsed_time_ms = int(elapsed.total_seconds() * 1000)
+
+                # Estimate completion time (based on progress)
+                if progress_percent > 0 and training_log["status"] in ("pending", "running"):
+                    avg_time_per_percent = elapsed_time_ms / progress_percent
+                    remaining_percent = 100 - progress_percent
+                    remaining_ms = avg_time_per_percent * remaining_percent
+                    estimated_completion_dt = now + timedelta(milliseconds=remaining_ms)
+                    estimated_completion = estimated_completion_dt.isoformat() + "Z"
+        else:
+            started_at_str = None
+
+        # Map internal status to API status
+        api_status = training_log["status"]
+        if api_status == "running":
+            api_status = "training"
+
         return TrainingStatusResponse(
-            status=training_log["status"],
-            progress_percent=training_log["progress_percent"],
-            current_step=training_log["current_step"],
-            logs=logs,
+            domain_name=domain_name,
+            status=api_status,
+            progress=int(progress_percent),
+            current_step=current_step_name,
+            steps=steps,
             metrics=metrics,
+            started_at=started_at_str,
+            estimated_completion=estimated_completion,
+            elapsed_time_ms=elapsed_time_ms,
         )
 
     except HTTPException:
@@ -847,6 +1317,125 @@ async def get_training_status(domain_name: str) -> TrainingStatusResponse:
     except Exception as e:
         logger.error(
             "get_training_status_unexpected_error",
+            domain=domain_name,
+            error=str(e),
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error",
+        ) from e
+
+
+@router.get("/{domain_name}/training-logs", response_model=TrainingLogsResponse)
+async def get_training_logs(
+    domain_name: str,
+    page: int = Query(1, ge=1, description="Page number (1-indexed)"),
+    page_size: int = Query(20, ge=1, le=100, description="Logs per page (max 100)"),
+) -> TrainingLogsResponse:
+    """Get paginated training logs for a domain.
+
+    Sprint 117.6: Retrieves structured training log messages with pagination support.
+
+    Provides historical training logs including:
+    - Timestamp (ISO 8601)
+    - Log level (INFO/WARNING/ERROR)
+    - Log message
+    - Training step that produced the log
+    - Optional metrics associated with the log
+
+    Args:
+        domain_name: Domain name
+        page: Page number (1-indexed, default: 1)
+        page_size: Number of logs per page (1-100, default: 20)
+
+    Returns:
+        Paginated training logs response
+
+    Raises:
+        HTTPException 404: If domain not found
+        HTTPException 422: If pagination parameters invalid
+        HTTPException 500: If database query fails
+    """
+    logger.info(
+        "get_training_logs_request",
+        domain=domain_name,
+        page=page,
+        page_size=page_size,
+    )
+
+    try:
+        from src.components.domain_training import get_domain_repository
+
+        repo = get_domain_repository()
+
+        # Validate pagination parameters (repo will also validate, but fail early)
+        if page < 1:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="page must be >= 1",
+            )
+        if page_size < 1 or page_size > 100:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="page_size must be 1-100",
+            )
+
+        # Get paginated logs from repository
+        result = await repo.get_training_log_messages(
+            domain_name=domain_name,
+            page=page,
+            page_size=page_size,
+        )
+
+        logger.info(
+            "training_logs_retrieved",
+            domain=domain_name,
+            total_logs=result["total_logs"],
+            page_logs=len(result["logs"]),
+        )
+
+        # Convert log dicts to TrainingLog models
+        training_logs = [
+            TrainingLog(
+                timestamp=log.get("timestamp", ""),
+                level=log.get("level", "INFO"),
+                message=log.get("message", ""),
+                step=log.get("step"),
+                metrics=log.get("metrics"),
+            )
+            for log in result["logs"]
+        ]
+
+        return TrainingLogsResponse(
+            domain_name=domain_name,
+            logs=training_logs,
+            total_logs=result["total_logs"],
+            page=result["page"],
+            page_size=result["page_size"],
+        )
+
+    except HTTPException:
+        raise
+
+    except ValueError as e:
+        # Catch validation errors from repository
+        logger.warning("invalid_pagination_parameters", error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(e),
+        ) from e
+
+    except DatabaseConnectionError as e:
+        logger.error("get_training_logs_db_error", domain=domain_name, error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Database operation failed",
+        ) from e
+
+    except Exception as e:
+        logger.error(
+            "get_training_logs_unexpected_error",
             domain=domain_name,
             error=str(e),
             exc_info=True,
@@ -1249,20 +1838,22 @@ async def delete_domain(domain_name: str) -> DomainDeletionResponse:
 async def classify_document(request: ClassificationRequest) -> ClassificationResponse:
     """Classify document text to best matching domain.
 
-    Uses BGE-M3 embeddings and cosine similarity to match documents to domains.
-    Returns top-k most similar domains ranked by confidence score.
+    Sprint 117.2: Enhanced with C-LARA hybrid classification.
 
-    Classification process:
-    1. Embed document text using BGE-M3
-    2. Load all ready domains with their description embeddings
-    3. Compute cosine similarity between document and domain embeddings
-    4. Return top-k domains ranked by similarity
+    Two-stage classification approach:
+        Stage A: C-LARA SetFit classifier (~40ms, local, no LLM cost)
+        Stage B: LLM Verification (optional, when confidence < 0.85)
+
+    Confidence Routing:
+        - conf >= 0.85  → Fast Return (no LLM, 70-80% of requests)
+        - 0.60-0.85     → LLM Verify Top-K (15-25%)
+        - conf < 0.60   → LLM Fallback All Domains (5-10%)
 
     Args:
-        request: Classification request with text and top_k
+        request: Classification request with text, top_k, and optional params
 
     Returns:
-        Ranked domain classifications with confidence scores
+        Ranked domain classifications with confidence scores and metadata
 
     Raises:
         HTTPException 500: If classification fails
@@ -1271,49 +1862,103 @@ async def classify_document(request: ClassificationRequest) -> ClassificationRes
         "classify_document_request",
         text_length=len(request.text),
         top_k=request.top_k,
+        document_id=request.document_id,
+        force_llm=request.force_llm,
     )
 
     try:
-        from src.components.domain_training import get_domain_classifier
+        # Sprint 117.2: Use LangGraph workflow for classification
+        from src.agents.domain_classifier import get_domain_classification_graph
 
-        classifier = get_domain_classifier()
+        graph = get_domain_classification_graph()
 
-        # Load domains (cached after first call)
-        await classifier.load_domains()
+        # Prepare state
+        initial_state = {
+            "document_text": request.text,
+            "document_id": request.document_id,
+            "chunk_ids": request.chunk_ids,
+            "top_k": request.top_k,
+            "threshold": request.threshold,
+            "force_llm": request.force_llm,
+        }
 
-        # Classify document
-        results = classifier.classify_document(text=request.text, top_k=request.top_k)
+        # Run classification workflow with LangSmith metadata
+        result = await graph.ainvoke(
+            initial_state,
+            config={
+                "metadata": {
+                    "sprint": "117.2",
+                    "feature": "c-lara-domain-classification",
+                    "document_id": request.document_id,
+                    "text_length": len(request.text),
+                    "force_llm": request.force_llm,
+                }
+            },
+        )
+
+        # Extract final classification
+        final_domain = result.get("final_domain_id", "general")
+        final_confidence = result.get("final_confidence", 0.0)
+        alternative_domains = result.get("alternative_domains", [])
 
         logger.info(
             "document_classified",
             text_length=len(request.text),
-            top_domain=results[0]["domain"] if results else "general",
-            score=results[0]["score"] if results else 0.0,
+            document_id=request.document_id,
+            final_domain=final_domain,
+            confidence=final_confidence,
+            classification_path=result.get("classification_path"),
+            latency_ms=result.get("latency_ms"),
         )
 
-        # Build response
+        # Build response (need to fetch domain descriptions)
+        from src.components.domain_training import get_domain_repository
+
+        repo = get_domain_repository()
+
+        # Fetch domain descriptions for response
+        all_domains = await repo.list_domains()
+        domain_desc_map = {d["name"]: d.get("description", "") for d in all_domains}
+
+        # Build classifications list
         classifications = [
             ClassificationResult(
-                domain=r["domain"],
-                score=r["score"],
-                description=r["description"],
+                domain=final_domain,
+                score=final_confidence,
+                description=domain_desc_map.get(final_domain, ""),
             )
-            for r in results
         ]
 
-        recommended = results[0]["domain"] if results else "general"
-        confidence = results[0]["score"] if results else 0.0
+        # Add alternative domains
+        for alt in alternative_domains:
+            domain_id = alt.get("domain_id", "")
+            confidence = alt.get("confidence", 0.0)
+            classifications.append(
+                ClassificationResult(
+                    domain=domain_id,
+                    score=confidence,
+                    description=domain_desc_map.get(domain_id, ""),
+                )
+            )
 
         return ClassificationResponse(
             classifications=classifications,
-            recommended=recommended,
-            confidence=confidence,
+            recommended=final_domain,
+            confidence=final_confidence,
+            classification_path=result.get("classification_path"),
+            classification_status=result.get("classification_status"),
+            requires_review=result.get("requires_review"),
+            reasoning=result.get("reasoning"),
+            matched_entity_types=result.get("matched_entity_types"),
+            matched_intent=result.get("matched_intent"),
+            latency_ms=result.get("latency_ms"),
         )
 
     except Exception as e:
         logger.error(
             "classify_document_unexpected_error",
             text_length=len(request.text),
+            document_id=request.document_id,
             error=str(e),
             exc_info=True,
         )
@@ -1325,70 +1970,93 @@ async def classify_document(request: ClassificationRequest) -> ClassificationRes
 
 @router.post("/discover", response_model=AutoDiscoveryResponse)
 async def discover_domain(request: AutoDiscoveryRequest) -> AutoDiscoveryResponse:
-    """Auto-discover domain from sample documents.
+    """Auto-discover domains from sample documents using clustering.
 
-    Upload 3-10 representative documents and let the LLM analyze their content
-    to suggest an appropriate domain name, description, and expected entity/relation types.
+    Sprint 117.3: Enhanced domain discovery with BGE-M3 clustering and LLM analysis.
+
+    Upload 3-10 representative documents and let the system analyze them using:
+    1. BGE-M3 embeddings to cluster similar documents
+    2. K-means clustering to identify distinct domain groups
+    3. LLM analysis to extract entity/relation types per cluster
+    4. Confidence scoring based on cluster cohesion and entity consistency
 
     This endpoint is useful when you have a collection of documents but aren't sure
-    how to categorize them or what domain configuration to use.
+    how to categorize them or what domain configurations to use.
 
     Discovery process:
-    1. Sample documents are sent to LLM (qwen3:32b by default)
-    2. LLM analyzes content to identify common themes and patterns
-    3. LLM suggests domain name, description, and expected types
-    4. Response includes confidence score and reasoning
+    1. Embed documents using BGE-M3 (dense vectors)
+    2. Cluster documents using K-means
+    3. For each cluster, analyze with LLM to extract domain configuration
+    4. Return all discovered domains ranked by confidence
 
     Args:
-        request: Auto-discovery request with sample texts and LLM model
+        request: Auto-discovery request with sample documents and parameters
 
     Returns:
-        Suggested domain configuration with confidence and reasoning
+        Multiple domain suggestions with entity/relation types and confidence scores
 
     Raises:
-        HTTPException 400: If less than 3 samples provided
+        HTTPException 400: If less than min_samples provided
         HTTPException 503: If Ollama service is unavailable
         HTTPException 500: If discovery fails
     """
     logger.info(
-        "discover_domain_request",
-        sample_count=len(request.sample_texts),
-        llm_model=request.llm_model,
+        "discover_domains_request",
+        sample_count=len(request.sample_documents),
+        min_samples=request.min_samples,
+        max_samples=request.max_samples,
+        suggested_count=request.suggested_count,
     )
 
     try:
-        from src.components.domain_training import get_domain_discovery_service
+        from src.components.domain_discovery import get_domain_discovery_service
 
         service = get_domain_discovery_service()
-        service.llm_model = request.llm_model
 
-        # Perform discovery
-        suggestion = await service.discover_domain(request.sample_texts)
-
-        logger.info(
-            "domain_discovered",
-            name=suggestion.name,
-            confidence=suggestion.confidence,
-            entity_types_count=len(suggestion.entity_types),
-            relation_types_count=len(suggestion.relation_types),
+        # Perform enhanced discovery with clustering
+        result = await service.discover_domains(
+            sample_documents=request.sample_documents,
+            min_samples=request.min_samples,
+            max_samples=request.max_samples,
+            suggested_count=request.suggested_count,
         )
 
+        logger.info(
+            "domains_discovered",
+            domains_found=len(result.discovered_domains),
+            clusters_found=result.clusters_found,
+            processing_time_ms=result.processing_time_ms,
+        )
+
+        # Convert to response format
+        discovered_domains = [
+            DiscoveredDomainResponse(
+                name=domain.name,
+                suggested_description=domain.suggested_description,
+                confidence=domain.confidence,
+                entity_types=domain.entity_types,
+                relation_types=domain.relation_types,
+                intent_classes=domain.intent_classes,
+                sample_entities=domain.sample_entities,
+                recommended_model_family=domain.recommended_model_family,
+                reasoning=domain.reasoning,
+            )
+            for domain in result.discovered_domains
+        ]
+
         return AutoDiscoveryResponse(
-            name=suggestion.name,
-            title=suggestion.title,
-            description=suggestion.description,
-            confidence=suggestion.confidence,
-            reasoning=suggestion.reasoning,
-            entity_types=suggestion.entity_types,
-            relation_types=suggestion.relation_types,
+            discovered_domains=discovered_domains,
+            processing_time_ms=result.processing_time_ms,
+            documents_analyzed=result.documents_analyzed,
+            clusters_found=result.clusters_found,
         )
 
     except ValueError as e:
         # Insufficient samples or validation error
         logger.warning(
-            "discover_domain_validation_error",
+            "discover_domains_validation_error",
             error=str(e),
-            sample_count=len(request.sample_texts),
+            sample_count=len(request.sample_documents),
         )
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
 
@@ -2052,140 +2720,8 @@ async def reindex_domain(
         ) from e
 
 
-@router.post("/{domain_name}/validate", response_model=ValidateDomainResponse)
-async def validate_domain(domain_name: str) -> ValidateDomainResponse:
-    """Validate a domain's configuration and data integrity.
-
-    Sprint 52 Feature 52.2.2: Domain Management Enhancement
-
-    Checks:
-    - Domain configuration is complete
-    - Training prompts are available (if status is 'ready')
-    - Entity and relationship counts are consistent
-    - No orphaned chunks or entities
-
-    Args:
-        domain_name: Domain name to validate
-
-    Returns:
-        Validation results with any errors and recommendations
-
-    Raises:
-        HTTPException 404: If domain not found
-        HTTPException 500: If validation fails
-    """
-    logger.info("validate_domain_request", domain=domain_name)
-
-    try:
-        from src.components.domain_training import get_domain_repository
-        from src.components.graph_rag.neo4j_client import get_neo4j_client
-
-        repo = get_domain_repository()
-
-        # Check if domain exists
-        domain = await repo.get_domain(domain_name)
-        if not domain:
-            logger.warning("domain_not_found_for_validation", domain=domain_name)
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Domain '{domain_name}' not found",
-            )
-
-        validation_errors: list[str] = []
-        recommendations: list[str] = []
-
-        # Check domain configuration
-        if not domain.get("description"):
-            validation_errors.append("Domain description is missing")
-
-        if not domain.get("llm_model"):
-            validation_errors.append("LLM model is not configured")
-
-        # Check training status
-        if domain.get("status") == "ready":
-            if not domain.get("entity_prompt"):
-                validation_errors.append(
-                    "Entity extraction prompt is missing despite 'ready' status"
-                )
-            if not domain.get("relation_prompt"):
-                validation_errors.append(
-                    "Relation extraction prompt is missing despite 'ready' status"
-                )
-        elif domain.get("status") == "pending":
-            recommendations.append("Domain has not been trained yet. Consider running training.")
-        elif domain.get("status") == "failed":
-            validation_errors.append("Domain training has failed. Check training logs.")
-
-        # Check data integrity in Neo4j
-        try:
-            neo4j = get_neo4j_client()
-
-            # Check for orphaned entities (no MENTIONED_IN relationships)
-            orphan_result = await neo4j.execute_read(
-                """
-                MATCH (e:base {namespace_id: $namespace_id})
-                WHERE NOT (e)-[:MENTIONED_IN]->()
-                RETURN count(e) AS orphan_count
-                """,
-                {"namespace_id": domain_name},
-            )
-            if orphan_result:
-                orphan_count = orphan_result[0].get("orphan_count", 0)
-                if orphan_count > 0:
-                    recommendations.append(
-                        f"Found {orphan_count} orphaned entities without chunk references"
-                    )
-
-            # Check for chunks without entities
-            no_entity_result = await neo4j.execute_read(
-                """
-                MATCH (c:chunk {namespace_id: $namespace_id})
-                WHERE NOT ()-[:MENTIONED_IN]->(c)
-                RETURN count(c) AS no_entity_count
-                """,
-                {"namespace_id": domain_name},
-            )
-            if no_entity_result:
-                no_entity_count = no_entity_result[0].get("no_entity_count", 0)
-                if no_entity_count > 0:
-                    recommendations.append(
-                        f"Found {no_entity_count} chunks without entity references"
-                    )
-
-        except Exception as e:
-            validation_errors.append(f"Neo4j validation failed: {str(e)}")
-
-        is_valid = len(validation_errors) == 0
-
-        logger.info(
-            "domain_validated",
-            domain=domain_name,
-            is_valid=is_valid,
-            error_count=len(validation_errors),
-            recommendation_count=len(recommendations),
-        )
-
-        return ValidateDomainResponse(
-            domain_name=domain_name,
-            is_valid=is_valid,
-            validation_errors=validation_errors,
-            recommendations=recommendations,
-        )
-
-    except HTTPException:
-        raise
-
-    except Exception as e:
-        logger.error(
-            "validate_domain_unexpected_error",
-            domain=domain_name,
-            error=str(e),
-            exc_info=True,
-        )
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Domain validation failed",
-        ) from e
+# Sprint 52 validate_domain endpoint replaced by Sprint 117.7 comprehensive validation
+# See DomainValidationResponse and validate_domain endpoint at line 3079
 
 
 # ============================================================================
@@ -2365,4 +2901,549 @@ async def evaluate_domain_connectivity(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to evaluate connectivity: {str(e)}",
+        ) from e
+
+
+# ============================================================================
+# Sprint 117 Feature 117.7: Domain Validation
+# ============================================================================
+
+
+class ValidationCheckResponse(BaseModel):
+    """Individual validation check result.
+
+    Attributes:
+        name: Check name (e.g., "training_samples_count")
+        status: ValidationStatus (pass/warning/fail)
+        message: Human-readable message
+        details: Additional details (counts, lists, etc.)
+    """
+
+    name: str = Field(..., description="Check name")
+    status: str = Field(..., description="Validation status (pass/warning/fail)")
+    message: str = Field(..., description="Human-readable message")
+    details: dict[str, Any] = Field(..., description="Additional details")
+
+
+class ValidationIssueResponse(BaseModel):
+    """Validation issue with severity and recommendation.
+
+    Attributes:
+        severity: IssueSeverity (error/warning/info)
+        category: IssueCategory
+        message: Human-readable message
+        recommendation: Actionable recommendation
+    """
+
+    severity: str = Field(..., description="Issue severity (error/warning/info)")
+    category: str = Field(..., description="Issue category")
+    message: str = Field(..., description="Human-readable message")
+    recommendation: str = Field(..., description="Actionable recommendation")
+
+
+class DomainValidationResponse(BaseModel):
+    """Domain validation response.
+
+    Sprint 117 Feature 117.7: Comprehensive domain quality validation.
+
+    Attributes:
+        domain_name: Domain name
+        validation_status: Overall status (pass/warning/fail)
+        health_score: Health score (0-100)
+        checks: List of validation checks
+        issues: List of validation issues
+        recommendations: List of actionable recommendations
+    """
+
+    domain_name: str = Field(..., description="Domain name")
+    validation_status: str = Field(..., description="Overall validation status (pass/warning/fail)")
+    health_score: int = Field(..., ge=0, le=100, description="Health score (0-100)")
+    checks: list[ValidationCheckResponse] = Field(..., description="Validation checks")
+    issues: list[ValidationIssueResponse] = Field(..., description="Validation issues")
+    recommendations: list[str] = Field(..., description="Actionable recommendations")
+
+    model_config = {"json_schema_extra": {"example": {
+        "domain_name": "medical",
+        "validation_status": "warning",
+        "health_score": 72,
+        "checks": [
+            {
+                "name": "training_samples_count",
+                "status": "pass",
+                "message": "1247 training samples (minimum: 20)",
+                "details": {"count": 1247, "minimum": 20},
+            },
+            {
+                "name": "entity_type_coverage",
+                "status": "warning",
+                "message": "3/5 entity types have samples",
+                "details": {"covered": 3, "total": 5, "missing": ["Medication", "Dosage"]},
+            },
+            {
+                "name": "relation_type_coverage",
+                "status": "pass",
+                "message": "All relation types have samples",
+                "details": {"covered": 4, "total": 4},
+            },
+            {
+                "name": "mentioned_in_relations",
+                "status": "pass",
+                "message": "MENTIONED_IN relations present",
+                "details": {"count": 2847},
+            },
+            {
+                "name": "model_trained",
+                "status": "fail",
+                "message": "DSPy model not trained",
+                "details": {"last_trained": None},
+            },
+        ],
+        "issues": [
+            {
+                "severity": "warning",
+                "category": "coverage",
+                "message": "Entity types 'Medication', 'Dosage' have no training samples",
+                "recommendation": "Add training samples for missing entity types: Medication, Dosage",
+            },
+            {
+                "severity": "error",
+                "category": "model",
+                "message": "Domain model not trained",
+                "recommendation": "Run POST /api/v1/admin/domains/medical/train to optimize prompts",
+            },
+        ],
+        "recommendations": [
+            "Add training samples for missing entity types: Medication, Dosage",
+            "Run POST /api/v1/admin/domains/medical/train to optimize prompts",
+        ],
+    }}}
+
+
+@router.post("/{domain_name}/validate", response_model=DomainValidationResponse)
+async def validate_domain(domain_name: str) -> DomainValidationResponse:
+    """Validate domain quality and readiness.
+
+    Sprint 117 Feature 117.7: Comprehensive domain validation.
+
+    This endpoint validates a domain's quality and readiness for production use.
+    It checks training samples, entity/relation coverage, provenance links,
+    model training status, confidence calibration, and recent activity.
+
+    **Validation Checks:**
+    1. **Training Samples Count** - Minimum 20 samples
+    2. **Entity Type Coverage** - All entity types have samples
+    3. **Relation Type Coverage** - All relation types have samples
+    4. **MENTIONED_IN Relations** - Provenance links exist (CRITICAL)
+    5. **Model Trained** - DSPy prompts optimized
+    6. **Confidence Calibration** - Threshold makes sense
+    7. **Recent Activity** - Domain used recently
+
+    **Health Score Calculation:**
+    - Pass = 100 points
+    - Warning = 50 points
+    - Fail = 0 points
+    - Health Score = average of all checks
+
+    Args:
+        domain_name: Domain name to validate
+
+    Returns:
+        DomainValidationResponse with validation results
+
+    Raises:
+        HTTPException 404: If domain not found
+        HTTPException 500: If validation fails
+
+    Example:
+        ```bash
+        curl -X POST http://localhost:8000/api/v1/admin/domains/medical/validate
+        ```
+
+        Response:
+        ```json
+        {
+          "domain_name": "medical",
+          "validation_status": "warning",
+          "health_score": 72,
+          "checks": [
+            {
+              "name": "training_samples_count",
+              "status": "pass",
+              "message": "1247 training samples (minimum: 20)",
+              "details": {"count": 1247, "minimum": 20}
+            },
+            {
+              "name": "mentioned_in_relations",
+              "status": "pass",
+              "message": "MENTIONED_IN relations present",
+              "details": {"count": 2847}
+            }
+          ],
+          "issues": [
+            {
+              "severity": "warning",
+              "category": "coverage",
+              "message": "Entity types 'Medication', 'Dosage' have no training samples",
+              "recommendation": "Add training samples for missing entity types"
+            }
+          ],
+          "recommendations": [
+            "Add training samples for missing entity types: Medication, Dosage",
+            "Run POST /api/v1/admin/domains/medical/train to optimize prompts"
+          ]
+        }
+        ```
+    """
+    try:
+        from src.components.domain_training.domain_validator import get_domain_validator
+
+        logger.info("domain_validation_requested", domain_name=domain_name)
+
+        # Get validator and run validation
+        validator = get_domain_validator()
+        result = await validator.validate_domain(domain_name)
+
+        logger.info(
+            "domain_validation_complete",
+            domain_name=domain_name,
+            validation_status=result["validation_status"],
+            health_score=result["health_score"],
+            issues_count=len(result["issues"]),
+        )
+
+        # Convert to response model
+        return DomainValidationResponse(
+            domain_name=result["domain_name"],
+            validation_status=result["validation_status"],
+            health_score=result["health_score"],
+            checks=[ValidationCheckResponse(**check) for check in result["checks"]],
+            issues=[ValidationIssueResponse(**issue) for issue in result["issues"]],
+            recommendations=result["recommendations"],
+        )
+
+    except ValueError as e:
+        logger.warning("domain_not_found", domain_name=domain_name, error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Domain '{domain_name}' not found",
+        ) from e
+
+    except DatabaseConnectionError as e:
+        logger.error("domain_validation_db_error", domain_name=domain_name, error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Database connection failed: {str(e)}",
+        ) from e
+
+    except Exception as e:
+        logger.error(
+            "domain_validation_failed",
+            domain_name=domain_name,
+            error=str(e),
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Domain validation failed: {str(e)}",
+        ) from e
+
+
+@router.post(
+    "/{domain_name}/ingest-batch",
+    response_model=DomainBatchIngestionResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def ingest_batch_documents(
+    domain_name: str,
+    request: DomainBatchIngestionRequest,
+) -> DomainBatchIngestionResponse:
+    """Ingest documents in batch with domain-specific extraction.
+
+    Sprint 117.5: Domain-Specific Batch Document Ingestion (8 SP)
+
+    Process up to 100 documents in parallel with domain-specific entity/relation
+    extraction, chunking, and indexing. Each document is processed independently
+    with isolated error handling.
+
+    Features:
+    - Parallel processing with configurable workers (default: 4, max: 10)
+    - Domain-specific DSPy-optimized prompts
+    - Real-time progress tracking per document
+    - Isolated failures (one document error doesn't stop batch)
+    - MENTIONED_IN relation auto-creation for all entities
+    - Comprehensive per-document statistics
+
+    Processing Options:
+    - extract_entities: Enable entity extraction (default: true)
+    - extract_relations: Enable relation extraction (default: true)
+    - chunk_strategy: Chunking strategy (default: "section_aware")
+    - parallel_workers: Number of parallel workers (default: 4, max: 10)
+
+    Args:
+        domain_name: Target domain name
+        request: Batch ingestion request with documents and options
+
+    Returns:
+        Batch response with ID for status polling
+
+    Raises:
+        HTTPException 400: If domain not found or invalid request
+        HTTPException 500: If batch processing setup fails
+
+    Example:
+        ```python
+        response = client.post(
+            "/api/v1/admin/domains/tech_docs/ingest-batch",
+            json={
+                "documents": [
+                    {
+                        "document_id": "doc_001",
+                        "content": "FastAPI is a modern web framework...",
+                        "metadata": {"source": "api_docs.pdf", "page": 1}
+                    },
+                    {
+                        "document_id": "doc_002",
+                        "content": "Django is a high-level Python framework...",
+                        "metadata": {"source": "django_guide.pdf", "page": 1}
+                    }
+                ],
+                "options": {
+                    "extract_entities": True,
+                    "extract_relations": True,
+                    "chunk_strategy": "section_aware",
+                    "parallel_workers": 4
+                }
+            }
+        )
+        print(response.json())
+        # {
+        #   "batch_id": "batch_abc123",
+        #   "domain_name": "tech_docs",
+        #   "total_documents": 2,
+        #   "status": "processing",
+        #   "progress": {"completed": 0, "failed": 0, "pending": 2},
+        #   "results": [],
+        #   "errors": []
+        # }
+        ```
+
+    Status Polling:
+        Use GET /api/v1/admin/domains/{domain_name}/ingest-batch/{batch_id}/status
+        to poll for batch progress and results.
+    """
+    logger.info(
+        "domain_batch_ingestion_requested",
+        domain_name=domain_name,
+        total_documents=len(request.documents),
+    )
+
+    try:
+        from src.components.domain_training import (
+            DocumentRequest,
+            IngestionOptions,
+            get_batch_ingestion_service,
+        )
+
+        # Convert Pydantic models to domain models
+        documents = [
+            DocumentRequest(
+                document_id=doc.document_id,
+                content=doc.content,
+                metadata=doc.metadata,
+            )
+            for doc in request.documents
+        ]
+
+        # Parse options with defaults
+        options = IngestionOptions(
+            extract_entities=request.options.get("extract_entities", True),
+            extract_relations=request.options.get("extract_relations", True),
+            chunk_strategy=request.options.get("chunk_strategy", "section_aware"),
+            parallel_workers=request.options.get("parallel_workers", 4),
+        )
+
+        # Start batch processing
+        service = get_batch_ingestion_service()
+        batch_id = await service.start_batch(
+            domain_name=domain_name,
+            documents=documents,
+            options=options,
+        )
+
+        # Get initial status
+        batch_status = await service.get_batch_status(batch_id)
+
+        if not batch_status:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to create batch",
+            )
+
+        logger.info(
+            "domain_batch_ingestion_started",
+            domain_name=domain_name,
+            batch_id=batch_id,
+            total_documents=len(request.documents),
+        )
+
+        return DomainBatchIngestionResponse(
+            batch_id=batch_id,
+            domain_name=domain_name,
+            total_documents=batch_status["total_documents"],
+            status=batch_status["status"],
+            progress=batch_status["progress"],
+            results=batch_status["results"],
+            errors=batch_status["errors"],
+        )
+
+    except ValueError as e:
+        logger.warning(
+            "domain_batch_ingestion_validation_error",
+            domain_name=domain_name,
+            error=str(e),
+        )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        ) from e
+
+    except Exception as e:
+        logger.error(
+            "domain_batch_ingestion_failed",
+            domain_name=domain_name,
+            error=str(e),
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Batch ingestion setup failed: {str(e)}",
+        ) from e
+
+
+@router.get(
+    "/{domain_name}/ingest-batch/{batch_id}/status",
+    response_model=DomainBatchIngestionResponse,
+)
+async def get_batch_ingestion_status(
+    domain_name: str,
+    batch_id: str,
+) -> DomainBatchIngestionResponse:
+    """Get status of a batch ingestion job.
+
+    Sprint 117.5: Batch Status Polling Endpoint
+
+    Poll this endpoint to get real-time progress of a batch ingestion job.
+    The response includes per-document results, error details, and overall
+    progress statistics.
+
+    Args:
+        domain_name: Domain name (for validation)
+        batch_id: Batch identifier from ingest-batch response
+
+    Returns:
+        Current batch status with progress and results
+
+    Raises:
+        HTTPException 404: If batch not found
+
+    Example:
+        ```python
+        response = client.get(
+            "/api/v1/admin/domains/tech_docs/ingest-batch/batch_abc123/status"
+        )
+        print(response.json())
+        # {
+        #   "batch_id": "batch_abc123",
+        #   "domain_name": "tech_docs",
+        #   "total_documents": 100,
+        #   "status": "processing",
+        #   "progress": {
+        #     "completed": 45,
+        #     "failed": 2,
+        #     "pending": 53
+        #   },
+        #   "results": [
+        #     {
+        #       "document_id": "doc_001",
+        #       "status": "completed",
+        #       "entities_extracted": 23,
+        #       "relations_extracted": 12,
+        #       "chunks_created": 5,
+        #       "processing_time_ms": 2340
+        #     },
+        #     ...
+        #   ],
+        #   "errors": [
+        #     {
+        #       "document_id": "doc_050",
+        #       "error": "Failed to extract entities",
+        #       "error_code": "EXTRACTION_FAILED"
+        #     }
+        #   ]
+        # }
+        ```
+
+    Polling Strategy:
+        - Poll every 2-5 seconds during processing
+        - Stop polling when status is "completed" or "completed_with_errors"
+        - Check errors array for failed documents
+    """
+    logger.info(
+        "batch_status_requested",
+        domain_name=domain_name,
+        batch_id=batch_id,
+    )
+
+    try:
+        from src.components.domain_training import get_batch_ingestion_service
+
+        service = get_batch_ingestion_service()
+        batch_status = await service.get_batch_status(batch_id)
+
+        if not batch_status:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Batch not found: {batch_id}",
+            )
+
+        # Validate domain name matches
+        if batch_status["domain_name"] != domain_name:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Batch belongs to domain '{batch_status['domain_name']}', not '{domain_name}'",
+            )
+
+        logger.info(
+            "batch_status_retrieved",
+            domain_name=domain_name,
+            batch_id=batch_id,
+            status=batch_status["status"],
+            completed=batch_status["progress"]["completed"],
+            failed=batch_status["progress"]["failed"],
+        )
+
+        return DomainBatchIngestionResponse(
+            batch_id=batch_id,
+            domain_name=batch_status["domain_name"],
+            total_documents=batch_status["total_documents"],
+            status=batch_status["status"],
+            progress=batch_status["progress"],
+            results=batch_status["results"],
+            errors=batch_status["errors"],
+        )
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        logger.error(
+            "batch_status_retrieval_failed",
+            domain_name=domain_name,
+            batch_id=batch_id,
+            error=str(e),
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve batch status: {str(e)}",
         ) from e

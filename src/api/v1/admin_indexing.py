@@ -3281,22 +3281,34 @@ class FastUploadResponse(BaseModel):
     """Response model for fast upload endpoint.
 
     Sprint 83 Feature 83.4: Two-Phase Upload Response.
+    Sprint 117 Feature 117.10: Extended with domain classification and extraction summary.
     """
 
     document_id: str = Field(..., description="Unique document ID")
+    filename: str = Field(..., description="Original filename")
     status: str = Field(..., description="Upload status (processing_background)")
     message: str = Field(..., description="User-friendly status message")
     namespace: str = Field(..., description="Document namespace")
     domain: str = Field(..., description="Document domain")
+    domain_classification: dict | None = Field(
+        None,
+        description="Domain classification result (Sprint 117.10)",
+    )
+    extraction_summary: dict | None = Field(
+        None,
+        description="Extraction summary statistics (Sprint 117.10)",
+    )
 
 
 class UploadStatusResponse(BaseModel):
     """Response model for upload status endpoint.
 
     Sprint 83 Feature 83.4: Background Job Status Tracking.
+    Sprint 117 Feature 117.10: Extended with domain classification and extraction summary.
     """
 
     document_id: str = Field(..., description="Unique document ID")
+    filename: str | None = Field(None, description="Original filename")
     status: str = Field(
         ...,
         description="Job status (processing_fast, processing_background, ready, failed)",
@@ -3308,6 +3320,14 @@ class UploadStatusResponse(BaseModel):
     updated_at: str = Field(..., description="Last update timestamp (ISO 8601)")
     namespace: str = Field(..., description="Document namespace")
     domain: str = Field(..., description="Document domain")
+    domain_classification: dict | None = Field(
+        None,
+        description="Domain classification result (Sprint 117.10)",
+    )
+    extraction_summary: dict | None = Field(
+        None,
+        description="Extraction summary statistics (Sprint 117.10)",
+    )
 
 
 @router.post(
@@ -3414,12 +3434,16 @@ async def upload_document_fast(
             domain=domain,
         )
 
+        # Sprint 117.10: Add filename and placeholders for classification/extraction
         return FastUploadResponse(
             document_id=document_id,
+            filename=file.filename or "unknown",
             status="processing_background",
             message="Document uploaded! Processing in background...",
             namespace=namespace,
             domain=domain,
+            domain_classification=None,  # Will be populated when ready
+            extraction_summary=None,  # Will be populated when ready
         )
 
     except Exception as e:

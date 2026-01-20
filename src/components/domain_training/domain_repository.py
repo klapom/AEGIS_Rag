@@ -58,10 +58,11 @@ import json
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 import structlog
 from neo4j import AsyncTransaction
+from pydantic import BaseModel, Field
 from tenacity import (
     retry,
     retry_if_exception_type,
@@ -82,6 +83,100 @@ DEFAULT_DOMAIN_DESCRIPTION = (
 )
 DEFAULT_SIMILARITY_THRESHOLD = 0.5
 MAX_RETRY_ATTEMPTS = 3
+
+
+# --- Pydantic Models ---
+
+
+class DomainLLMConfig(BaseModel):
+    """LLM configuration per domain.
+
+    Sprint 117.12: Per-domain LLM model selection.
+
+    Attributes:
+        training_model: LLM model for DSPy prompt optimization (larger, slower, better quality)
+        training_temperature: Temperature for training model (default: 0.7)
+        training_max_tokens: Max tokens for training model (default: 4096)
+        extraction_model: LLM model for production entity/relation extraction (faster)
+        extraction_temperature: Temperature for extraction model (default: 0.3)
+        extraction_max_tokens: Max tokens for extraction model (default: 2048)
+        classification_model: LLM model for C-LARA fallback LLM verification
+        provider: Model provider (ollama/alibaba/openai)
+
+    Example:
+        >>> config = DomainLLMConfig(
+        ...     training_model="qwen3:32b",
+        ...     extraction_model="nemotron3",
+        ...     classification_model="nemotron3"
+        ... )
+        >>> config.to_dict()
+    """
+
+    # DSPy Training Model (for prompt optimization)
+    training_model: str = Field(
+        default="qwen3:32b",
+        description="LLM model for DSPy training (larger, better quality)",
+    )
+    training_temperature: float = Field(
+        default=0.7,
+        ge=0.0,
+        le=2.0,
+        description="Temperature for training model",
+    )
+    training_max_tokens: int = Field(
+        default=4096,
+        ge=128,
+        le=32768,
+        description="Max tokens for training model",
+    )
+
+    # Production Extraction Model (for entity/relation extraction)
+    extraction_model: str = Field(
+        default="nemotron3",
+        description="LLM model for production extraction (faster)",
+    )
+    extraction_temperature: float = Field(
+        default=0.3,
+        ge=0.0,
+        le=2.0,
+        description="Temperature for extraction model",
+    )
+    extraction_max_tokens: int = Field(
+        default=2048,
+        ge=128,
+        le=32768,
+        description="Max tokens for extraction model",
+    )
+
+    # Classification Model (for C-LARA fallback LLM verification)
+    classification_model: str = Field(
+        default="nemotron3",
+        description="LLM model for intent classification",
+    )
+
+    # Model Provider
+    provider: Literal["ollama", "alibaba", "openai"] = Field(
+        default="ollama",
+        description="Model provider",
+    )
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to dictionary for Neo4j storage."""
+        return {
+            "training_model": self.training_model,
+            "training_temperature": self.training_temperature,
+            "training_max_tokens": self.training_max_tokens,
+            "extraction_model": self.extraction_model,
+            "extraction_temperature": self.extraction_temperature,
+            "extraction_max_tokens": self.extraction_max_tokens,
+            "classification_model": self.classification_model,
+            "provider": self.provider,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "DomainLLMConfig":
+        """Create from dictionary loaded from Neo4j."""
+        return cls(**data)
 
 
 class DomainRepository:
@@ -202,16 +297,20 @@ class DomainRepository:
         llm_model: str,
         description_embedding: list[float],
         status: str = "pending",
+        llm_config: DomainLLMConfig | None = None,
         tx: AsyncTransaction | None = None,
     ) -> dict[str, Any]:
         """Create a new domain configuration.
 
+        Sprint 117.12: Added llm_config parameter for per-domain LLM model selection.
+
         Args:
             name: Unique domain name (lowercase, underscores)
             description: Human-readable domain description
-            llm_model: LLM model to use for extraction (e.g., "qwen3:32b")
+            llm_model: LLM model to use for extraction (e.g., "qwen3:32b") - DEPRECATED, use llm_config
             description_embedding: BGE-M3 embedding of description (1024-dim)
             status: Initial domain status (default: "pending")
+            llm_config: LLM configuration (training/extraction/classification models) - Sprint 117.12
             tx: Optional transaction for rollback support
 
         Returns:
@@ -221,10 +320,19 @@ class DomainRepository:
             DatabaseConnectionError: If domain creation fails
             ValueError: If domain name already exists
         """
+        # Default llm_config if not provided
+        if llm_config is None:
+            llm_config = DomainLLMConfig(
+                training_model=llm_model,
+                extraction_model=llm_model,
+                classification_model=llm_model,
+            )
+
         logger.info(
             "creating_domain",
             name=name,
             llm_model=llm_model,
+            llm_config=llm_config.to_dict(),
             embedding_dim=len(description_embedding),
             status=status,
             transactional=tx is not None,
@@ -241,6 +349,9 @@ class DomainRepository:
         domain_id = str(uuid.uuid4())
         now = datetime.utcnow().isoformat()
 
+        # Serialize llm_config to JSON
+        llm_config_json = json.dumps(llm_config.to_dict())
+
         query = """
         CREATE (d:Domain {
             id: $id,
@@ -252,6 +363,7 @@ class DomainRepository:
             entity_examples: '[]',
             relation_examples: '[]',
             llm_model: $llm_model,
+            llm_config: $llm_config,
             extraction_settings: '{}',
             training_samples: 0,
             training_metrics: '{}',
@@ -269,6 +381,7 @@ class DomainRepository:
             "description": description,
             "embedding": description_embedding,
             "llm_model": llm_model,
+            "llm_config": llm_config_json,
             "status": status,
             "created_at": now,
             "updated_at": now,
@@ -739,6 +852,143 @@ class DomainRepository:
             logger.error("find_best_matching_domain_failed", error=str(e))
             raise DatabaseConnectionError("Neo4j", f"Find matching domain failed: {e}") from e
 
+    async def update_domain(
+        self,
+        name: str,
+        description: str | None = None,
+        entity_types: list[str] | None = None,
+        relation_types: list[str] | None = None,
+        intent_classes: list[str] | None = None,
+        confidence_threshold: float | None = None,
+        status: str | None = None,
+        llm_config: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Update domain configuration.
+
+        Sprint 117 Feature 117.1: Domain CRUD API - Update endpoint.
+
+        Args:
+            name: Domain name
+            description: Updated description (optional)
+            entity_types: Updated entity types (optional)
+            relation_types: Updated relation types (optional, MENTIONED_IN auto-added)
+            intent_classes: Updated intent classes (optional)
+            confidence_threshold: Updated confidence threshold (optional)
+            status: Updated status (optional)
+            llm_config: Updated LLM configuration (optional)
+
+        Returns:
+            Updated domain configuration dict
+
+        Raises:
+            DatabaseConnectionError: If update fails
+            ValueError: If domain not found or trying to update default domain
+        """
+        if name == DEFAULT_DOMAIN_NAME:
+            raise ValueError(f"Cannot update default domain: {name}")
+
+        logger.info("updating_domain", name=name)
+
+        # Build dynamic SET clause
+        set_clauses = ["d.updated_at = datetime($updated_at)"]
+        params: dict[str, Any] = {
+            "name": name,
+            "updated_at": datetime.utcnow().isoformat(),
+        }
+
+        if description is not None:
+            set_clauses.append("d.description = $description")
+            params["description"] = description
+
+        if entity_types is not None:
+            # Validate entity types
+            for entity_type in entity_types:
+                if not (5 <= len(entity_type) <= 50):
+                    raise ValueError(
+                        f"Entity type '{entity_type}' must be 5-50 characters, got {len(entity_type)}"
+                    )
+            set_clauses.append("d.entity_types = $entity_types")
+            params["entity_types"] = json.dumps(entity_types)
+
+        if relation_types is not None:
+            # Validate relation types
+            for relation_type in relation_types:
+                if not (5 <= len(relation_type) <= 50):
+                    raise ValueError(
+                        f"Relation type '{relation_type}' must be 5-50 characters, got {len(relation_type)}"
+                    )
+            # CRITICAL: Ensure MENTIONED_IN is always present
+            if "MENTIONED_IN" not in relation_types:
+                relation_types.append("MENTIONED_IN")
+                logger.info(
+                    "mentioned_in_auto_added",
+                    name=name,
+                    relation_types=relation_types,
+                )
+            set_clauses.append("d.relation_types = $relation_types")
+            params["relation_types"] = json.dumps(relation_types)
+
+        if intent_classes is not None:
+            set_clauses.append("d.intent_classes = $intent_classes")
+            params["intent_classes"] = json.dumps(intent_classes)
+
+        if confidence_threshold is not None:
+            if not (0.0 <= confidence_threshold <= 1.0):
+                raise ValueError(
+                    f"Confidence threshold must be 0.0-1.0, got {confidence_threshold}"
+                )
+            set_clauses.append("d.confidence_threshold = $confidence_threshold")
+            params["confidence_threshold"] = confidence_threshold
+
+        if status is not None:
+            if status not in ("active", "training", "inactive"):
+                raise ValueError(f"Invalid status: {status}")
+            set_clauses.append("d.status = $status")
+            params["status"] = status
+
+        if llm_config is not None:
+            set_clauses.append("d.llm_config = $llm_config")
+            params["llm_config"] = json.dumps(llm_config)
+
+        set_clause = ", ".join(set_clauses)
+
+        try:
+            # Check if domain exists
+            check_result = await self.neo4j_client.execute_read(
+                """
+                MATCH (d:Domain {name: $name})
+                RETURN d.id AS id
+                """,
+                {"name": name},
+            )
+
+            if not check_result:
+                raise ValueError(f"Domain '{name}' not found")
+
+            # Update domain
+            await self.neo4j_client.execute_write(
+                f"""
+                MATCH (d:Domain {{name: $name}})
+                SET {set_clause}
+                RETURN d
+                """,
+                params,
+            )
+
+            # Retrieve updated domain
+            updated_domain = await self.get_domain(name)
+            if not updated_domain:
+                raise DatabaseConnectionError("Neo4j", f"Failed to retrieve updated domain: {name}")
+
+            logger.info("domain_updated", name=name)
+            return updated_domain
+
+        except ValueError:
+            raise
+        except Exception as e:
+            logger.error("update_domain_failed", name=name, error=str(e))
+            raise DatabaseConnectionError("Neo4j", f"Update domain failed: {e}") from e
+
     async def delete_domain(self, name: str) -> bool:
         """Delete a domain and its training logs.
 
@@ -971,6 +1221,174 @@ class DomainRepository:
         except Exception as e:
             logger.error("get_latest_training_log_failed", domain=domain_name, error=str(e))
             raise DatabaseConnectionError("Neo4j", f"Get training log failed: {e}") from e
+
+    async def append_training_log_message(
+        self,
+        log_id: str,
+        timestamp: str,
+        level: str,
+        message: str,
+        step: str | None = None,
+        metrics: dict[str, Any] | None = None,
+    ) -> bool:
+        """Append a log message to a training log.
+
+        Sprint 117.6: Structured log message appending for training-logs endpoint.
+
+        Args:
+            log_id: Training log ID
+            timestamp: Log timestamp (ISO 8601)
+            level: Log level (INFO/WARNING/ERROR)
+            message: Log message
+            step: Optional training step name
+            metrics: Optional metrics dictionary
+
+        Returns:
+            True if append successful
+
+        Raises:
+            DatabaseConnectionError: If append fails
+        """
+        logger.info(
+            "appending_training_log_message",
+            log_id=log_id,
+            level=level,
+            step=step,
+        )
+
+        # Create log entry dict
+        log_entry = {
+            "timestamp": timestamp,
+            "level": level,
+            "message": message,
+        }
+        if step:
+            log_entry["step"] = step
+        if metrics:
+            log_entry["metrics"] = metrics
+
+        log_entry_json = json.dumps(log_entry)
+
+        try:
+            # Append to log_messages array
+            await self.neo4j_client.execute_write(
+                """
+                MATCH (t:TrainingLog {id: $log_id})
+                WITH t, CASE WHEN t.log_messages IS NULL OR t.log_messages = '[]'
+                         THEN []
+                         ELSE apoc.convert.fromJsonList(t.log_messages)
+                         END AS current_logs
+                SET t.log_messages = apoc.convert.toJson(current_logs + [$log_entry])
+                RETURN t.id as id
+                """,
+                {
+                    "log_id": log_id,
+                    "log_entry": log_entry,
+                },
+            )
+
+            logger.info("training_log_message_appended", log_id=log_id, level=level)
+            return True
+
+        except Exception as e:
+            logger.error("append_training_log_message_failed", log_id=log_id, error=str(e))
+            raise DatabaseConnectionError("Neo4j", f"Append training log message failed: {e}") from e
+
+    async def get_training_log_messages(
+        self,
+        domain_name: str,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> dict[str, Any]:
+        """Get paginated training log messages for a domain.
+
+        Sprint 117.6: Paginated training logs retrieval.
+
+        Args:
+            domain_name: Domain name
+            page: Page number (1-indexed)
+            page_size: Number of logs per page (max 100)
+
+        Returns:
+            Dictionary with logs, total_logs, page, page_size
+
+        Raises:
+            DatabaseConnectionError: If query fails
+        """
+        logger.info(
+            "getting_training_log_messages",
+            domain=domain_name,
+            page=page,
+            page_size=page_size,
+        )
+
+        # Validate pagination parameters
+        if page < 1:
+            raise ValueError("page must be >= 1")
+        if page_size < 1 or page_size > 100:
+            raise ValueError("page_size must be 1-100")
+
+        try:
+            # Get latest training log with messages
+            result = await self.neo4j_client.execute_read(
+                """
+                MATCH (d:Domain {name: $domain_name})-[:HAS_TRAINING_LOG]->(t:TrainingLog)
+                WITH t
+                ORDER BY t.started_at DESC
+                LIMIT 1
+                RETURN t.log_messages as log_messages
+                """,
+                {"domain_name": domain_name},
+            )
+
+            if not result or not result[0].get("log_messages"):
+                logger.info("no_training_log_messages_found", domain=domain_name)
+                return {
+                    "logs": [],
+                    "total_logs": 0,
+                    "page": page,
+                    "page_size": page_size,
+                }
+
+            # Parse log messages JSON array
+            log_messages_json = result[0]["log_messages"]
+            try:
+                all_logs = json.loads(log_messages_json) if log_messages_json else []
+            except json.JSONDecodeError:
+                logger.warning(
+                    "invalid_log_messages_json",
+                    domain=domain_name,
+                    json_value=log_messages_json,
+                )
+                all_logs = []
+
+            # Calculate pagination
+            total_logs = len(all_logs)
+            start_idx = (page - 1) * page_size
+            end_idx = start_idx + page_size
+
+            # Reverse logs (newest first) and paginate
+            logs_page = list(reversed(all_logs))[start_idx:end_idx]
+
+            logger.info(
+                "training_log_messages_retrieved",
+                domain=domain_name,
+                total_logs=total_logs,
+                page_logs=len(logs_page),
+            )
+
+            return {
+                "logs": logs_page,
+                "total_logs": total_logs,
+                "page": page,
+                "page_size": page_size,
+            }
+
+        except ValueError:
+            raise
+        except Exception as e:
+            logger.error("get_training_log_messages_failed", domain=domain_name, error=str(e))
+            raise DatabaseConnectionError("Neo4j", f"Get training log messages failed: {e}") from e
 
 
 # Global instance (singleton pattern)

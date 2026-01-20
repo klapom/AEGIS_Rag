@@ -57,6 +57,7 @@ from src.api.v1.orchestration import router as orchestration_router  # Sprint 99
 from src.api.v1.explainability import router as explainability_router  # Sprint 104 Feature 104.10: Explainability API
 from src.api.v1.certification import router as certification_router  # Sprint 107 Feature 107.3: Certification API
 from src.api.v1.context import router as context_router  # Sprint 112 Feature 112.1: Long Context API
+from src.api.v1.documents import router as documents_router  # Sprint 117 Feature 117.11: Manual Domain Override
 from src.core.config import get_settings
 from src.core.exceptions import AegisRAGException
 from src.core.logging import get_logger, setup_logging
@@ -278,6 +279,21 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             "Failed to initialize some database connections",
             error=str(e),
             note="Services will initialize on first use",
+        )
+
+    # Sprint 117 Feature 117.9: Seed default domains
+    try:
+        from src.components.domain_training.domain_seeder import seed_default_domains
+
+        logger.info("Seeding default domains...")
+        await seed_default_domains()
+        logger.info("Default domains seeded successfully")
+
+    except Exception as e:
+        logger.warning(
+            "Failed to seed default domains",
+            error=str(e),
+            note="Default domain may need manual creation",
         )
 
     yield
@@ -617,6 +633,15 @@ logger.info(
     router="context_router",
     prefix="/api/v1/context",
     note="Sprint 112 Feature 112.1: Long Context API (documents, chunks, compression, export)",
+)
+
+# Sprint 117 Feature 117.11: Document Management APIs (Domain Override)
+app.include_router(documents_router, prefix="/api/v1")
+logger.info(
+    "router_registered",
+    router="documents_router",
+    prefix="/api/v1/documents",
+    note="Sprint 117 Feature 117.11: Manual domain override with audit trail",
 )
 
 # Prometheus metrics endpoint

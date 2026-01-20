@@ -342,3 +342,196 @@ class AsyncIteratorMock:
         item = self.items[self.index]
         self.index += 1
         return item
+
+
+class TestFastUploadResponse:
+    """Tests for FastUploadResponse model.
+
+    Sprint 117 Feature 117.10: Domain Classification Display in Upload Dialog.
+    """
+
+    def test_valid_fast_upload_response(self):
+        """Test creating valid FastUploadResponse."""
+        from src.api.v1.admin_indexing import FastUploadResponse
+
+        response = FastUploadResponse(
+            document_id="doc_abc123",
+            filename="medical_report.pdf",
+            status="processing_background",
+            message="Document uploaded! Processing in background...",
+            namespace="default",
+            domain="medical",
+            domain_classification=None,
+            extraction_summary=None,
+        )
+
+        assert response.document_id == "doc_abc123"
+        assert response.filename == "medical_report.pdf"
+        assert response.status == "processing_background"
+        assert response.namespace == "default"
+        assert response.domain == "medical"
+        assert response.domain_classification is None
+        assert response.extraction_summary is None
+
+    def test_fast_upload_response_with_classification(self):
+        """Test FastUploadResponse with domain classification data."""
+        from src.api.v1.admin_indexing import FastUploadResponse
+
+        classification_data = {
+            "domain_id": "medical",
+            "domain_name": "Medical Documents",
+            "confidence": 0.94,
+            "classification_path": "fast",
+            "latency_ms": 42,
+            "model_used": "C-LARA-SetFit-v2",
+            "matched_entity_types": ["Disease", "Treatment"],
+            "matched_intent": "diagnosis_report",
+            "requires_review": False,
+            "alternatives": [],
+        }
+
+        response = FastUploadResponse(
+            document_id="doc_xyz789",
+            filename="patient_notes.docx",
+            status="ready",
+            message="Processing complete",
+            namespace="default",
+            domain="medical",
+            domain_classification=classification_data,
+            extraction_summary=None,
+        )
+
+        assert response.domain_classification is not None
+        assert response.domain_classification["domain_id"] == "medical"
+        assert response.domain_classification["confidence"] == 0.94
+
+    def test_fast_upload_response_with_extraction_summary(self):
+        """Test FastUploadResponse with extraction summary data."""
+        from src.api.v1.admin_indexing import FastUploadResponse
+
+        extraction_data = {
+            "entities_count": 47,
+            "relations_count": 23,
+            "chunks_count": 12,
+            "mentioned_in_count": 47,
+        }
+
+        response = FastUploadResponse(
+            document_id="doc_123",
+            filename="research_paper.pdf",
+            status="ready",
+            message="Processing complete",
+            namespace="research",
+            domain="general",
+            domain_classification=None,
+            extraction_summary=extraction_data,
+        )
+
+        assert response.extraction_summary is not None
+        assert response.extraction_summary["entities_count"] == 47
+        assert response.extraction_summary["relations_count"] == 23
+
+
+class TestUploadStatusResponse:
+    """Tests for UploadStatusResponse model.
+
+    Sprint 117 Feature 117.10: Domain Classification Display in Upload Dialog.
+    """
+
+    def test_valid_upload_status_response(self):
+        """Test creating valid UploadStatusResponse."""
+        from src.api.v1.admin_indexing import UploadStatusResponse
+
+        response = UploadStatusResponse(
+            document_id="doc_abc123",
+            filename="report.pdf",
+            status="processing_background",
+            progress_pct=65.5,
+            current_phase="extraction",
+            error_message=None,
+            created_at="2026-01-21T10:00:00Z",
+            updated_at="2026-01-21T10:02:30Z",
+            namespace="default",
+            domain="general",
+            domain_classification=None,
+            extraction_summary=None,
+        )
+
+        assert response.document_id == "doc_abc123"
+        assert response.filename == "report.pdf"
+        assert response.status == "processing_background"
+        assert response.progress_pct == 65.5
+        assert response.current_phase == "extraction"
+        assert response.error_message is None
+
+    def test_upload_status_response_complete(self):
+        """Test UploadStatusResponse for completed upload with all data."""
+        from src.api.v1.admin_indexing import UploadStatusResponse
+
+        classification_data = {
+            "domain_id": "legal",
+            "domain_name": "Legal Documents",
+            "confidence": 0.88,
+            "classification_path": "verified",
+            "latency_ms": 95,
+            "model_used": "Hybrid-Model",
+            "matched_entity_types": ["Contract", "Party", "Clause"],
+            "matched_intent": "contract_analysis",
+            "requires_review": False,
+            "alternatives": [],
+        }
+
+        extraction_data = {
+            "entities_count": 125,
+            "relations_count": 87,
+            "chunks_count": 34,
+            "mentioned_in_count": 125,
+        }
+
+        response = UploadStatusResponse(
+            document_id="doc_legal_001",
+            filename="contract.pdf",
+            status="ready",
+            progress_pct=100.0,
+            current_phase="completed",
+            error_message=None,
+            created_at="2026-01-21T09:00:00Z",
+            updated_at="2026-01-21T09:01:15Z",
+            namespace="legal_docs",
+            domain="legal",
+            domain_classification=classification_data,
+            extraction_summary=extraction_data,
+        )
+
+        assert response.status == "ready"
+        assert response.progress_pct == 100.0
+        assert response.domain_classification is not None
+        assert response.extraction_summary is not None
+        assert response.domain_classification["confidence"] == 0.88
+        assert response.extraction_summary["entities_count"] == 125
+
+    def test_upload_status_response_failed(self):
+        """Test UploadStatusResponse for failed upload."""
+        from src.api.v1.admin_indexing import UploadStatusResponse
+
+        response = UploadStatusResponse(
+            document_id="doc_fail_001",
+            filename="corrupted.pdf",
+            status="failed",
+            progress_pct=35.0,
+            current_phase="parsing",
+            error_message="Failed to parse document: Invalid PDF structure",
+            created_at="2026-01-21T11:00:00Z",
+            updated_at="2026-01-21T11:00:45Z",
+            namespace="default",
+            domain="general",
+            domain_classification=None,
+            extraction_summary=None,
+        )
+
+        assert response.status == "failed"
+        assert response.error_message is not None
+        assert "Invalid PDF structure" in response.error_message
+        assert response.progress_pct == 35.0
+        assert response.domain_classification is None
+        assert response.extraction_summary is None

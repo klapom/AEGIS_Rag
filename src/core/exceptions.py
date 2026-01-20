@@ -259,6 +259,26 @@ class FileTooLargeError(AegisRAGException):
         )
 
 
+class ExternalServiceError(AegisRAGException):
+    """Raised when an external service (Ollama, Neo4j, Qdrant) is unavailable or returns an error.
+
+    Sprint 117.12: Added for ModelService error handling.
+    """
+
+    def __init__(
+        self, service_name: str, message: str, details: dict[str, Any] | None = None
+    ) -> None:
+        from src.core.models import ErrorCode
+
+        super().__init__(
+            message=f"{service_name} service error: {message}",
+            error_code=ErrorCode.EXTERNAL_SERVICE_ERROR,
+            status_code=503,
+            details=details or {},
+        )
+        self.service_name = service_name
+
+
 class EvaluationError(AegisRAGException):
     """Raised when evaluation operation fails.
 
