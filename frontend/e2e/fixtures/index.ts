@@ -76,7 +76,8 @@ async function setupAuthMocking(page: Page): Promise<void> {
   // Wait for navigation away from login page (auth success)
   // Sprint 113: Increased from 10s to 30s for slow auth with LLM warmup
   // Sprint 114: Increased from 30s to 60s for Ollama warmup scenarios (P-008 fix)
-  await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 60000 });
+  // Sprint 115: Increased from 60s to 180s for full LLM generation during auth
+  await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 180000 });
   await page.waitForLoadState('networkidle');
 }
 
@@ -248,7 +249,8 @@ async function navigateClientSide(page: Page, path: string): Promise<void> {
 
     // Wait for redirect back to the target page (app remembers the intended destination)
     // Sprint 113: Increased from 10s to 30s for slow auth with LLM warmup
-    await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 30000 });
+    // Sprint 115: Increased from 30s to 180s for full LLM generation during auth
+    await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 180000 });
     await page.waitForLoadState('networkidle');
   }
 

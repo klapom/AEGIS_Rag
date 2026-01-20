@@ -444,7 +444,13 @@ services:
       - DOCLING_TIMEOUT_SECONDS=900
       - DOCLING_MAX_RETRIES=3
       # Observability
-      - LANGSMITH_TRACING=false
+      # Sprint 115 Feature 115.6: LangSmith Tracing (Optional)
+      # Enable LLM call tracing for debugging timeout issues
+      # Get API key from: https://smith.langchain.com/settings
+      - LANGSMITH_TRACING=${LANGSMITH_TRACING:-false}
+      - LANGSMITH_API_KEY=${LANGSMITH_API_KEY:-}
+      - LANGSMITH_PROJECT=${LANGSMITH_PROJECT:-aegis-rag-sprint115}
+      - LANGSMITH_ENDPOINT=${LANGSMITH_ENDPOINT:-https://api.smith.langchain.com}
       - PROMETHEUS_ENABLED=true
       # MCP
       - MCP_SERVER_PORT=3000

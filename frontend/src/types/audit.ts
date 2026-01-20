@@ -224,6 +224,10 @@ export interface AuditExportOptions {
  * Helper: Get event type badge color
  */
 export function getEventTypeColor(eventType: AuditEventType): string {
+  // Handle null/undefined eventType
+  if (!eventType) {
+    return 'gray';
+  }
   // Authentication events - blue
   if (eventType.startsWith('AUTH_')) {
     return 'blue';

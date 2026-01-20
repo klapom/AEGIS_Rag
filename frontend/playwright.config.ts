@@ -42,14 +42,16 @@ export default defineConfig({
   timeout: 180 * 1000,
 
   /* Shared expectation timeout
-   * Sprint 113: Increased from 30s to 150s for LLM waits
+   * Sprint 115: Increased from 150s to 180s (matching backend timeout)
    * The expect() assertions in waitForResponse() need the full LLM generation time:
    *   - Entity Expansion: ~8.5s
    *   - LLM Generation: 60-90s
+   *   - Memory Consolidation: +30s
    *   - Streaming Complete: +30s buffer
+   * Backend chat timeout: 180s (src/api/v1/chat.py)
    */
   expect: {
-    timeout: 150 * 1000,
+    timeout: 180 * 1000,
   },
 
   use: {

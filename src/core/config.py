@@ -832,10 +832,27 @@ class Settings(BaseSettings):
         default=True, description="Use Redis for LangGraph checkpointing (Sprint 11 Feature 11.5)"
     )
 
-    # LangSmith Observability (Optional)
-    langsmith_api_key: SecretStr | None = Field(default=None, description="LangSmith API key")
-    langsmith_project: str = Field(default="aegis-rag", description="LangSmith project name")
-    langsmith_tracing: bool = Field(default=False, description="Enable LangSmith tracing")
+    # LangSmith Observability (Optional - Sprint 115 Feature 115.6)
+    langsmith_api_key: SecretStr | None = Field(
+        default=None,
+        description="LangSmith API key (get from https://smith.langchain.com/settings)"
+    )
+    langsmith_project: str = Field(
+        default="aegis-rag-sprint115",
+        description="LangSmith project name for organizing traces"
+    )
+    langsmith_endpoint: str = Field(
+        default="https://api.smith.langchain.com",
+        description="LangSmith API endpoint (default: https://api.smith.langchain.com)"
+    )
+    langsmith_tracing: bool = Field(
+        default=False,
+        description=(
+            "Enable LangSmith tracing for LangGraph agents. "
+            "Provides instant LLM call visibility, token counts, and latency breakdown. "
+            "No code changes required - just set LANGSMITH_TRACING=true and LANGSMITH_API_KEY."
+        )
+    )
 
     # LangGraph Configuration (Sprint 4: Multi-Agent Orchestration)
     langgraph_checkpointer: str = Field(

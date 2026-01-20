@@ -232,6 +232,14 @@ class TestSmartEntityExpander:
     @pytest.mark.asyncio
     async def test_expand_entities_3stage_no_fallback(self, entity_expander, mock_llm_proxy, mock_neo4j_client):
         """Test full 3-stage pipeline when graph expansion sufficient (no synonym fallback)."""
+        # Sprint 115: Mock namespace check to avoid early-exit
+        # Stage 0: Namespace has entities
+        # Stage 2: Graph expansion returns 12 entities (above threshold of 10)
+        mock_neo4j_client.execute_read.side_effect = [
+            [{"has_entities": True}],  # Namespace check passes
+            [{"name": f"entity_{i}"} for i in range(12)],  # Graph expansion
+        ]
+
         # Stage 1: LLM extracts entities
         mock_llm_proxy.generate.return_value = LLMResponse(
             content="abortion\nreproductive rights",
@@ -243,12 +251,6 @@ class TestSmartEntityExpander:
             cost_usd=0.0,
             latency_ms=100,
         )
-
-        # Stage 2: Graph expansion returns 12 entities (above threshold of 10)
-        # Correct field name is "name" not "entity_name"
-        mock_neo4j_client.execute_read.return_value = [
-            {"name": f"entity_{i}"} for i in range(12)
-        ]
 
         # Execute
         entity_expander.min_entities_threshold = 10
@@ -266,7 +268,16 @@ class TestSmartEntityExpander:
     @pytest.mark.asyncio
     async def test_expand_entities_3stage_with_fallback(self, entity_expander, mock_llm_proxy, mock_neo4j_client):
         """Test full 3-stage pipeline when graph sparse (triggers synonym fallback)."""
+        # Sprint 115: Mock namespace check + graph expansion
+        # Stage 0: Namespace has entities
+        # Stage 2: Graph expansion returns only 5 entities (below threshold of 10)
+        mock_neo4j_client.execute_read.side_effect = [
+            [{"has_entities": True}],  # Namespace check passes
+            [{"name": f"graph_entity_{i}"} for i in range(5)],  # Graph expansion
+        ]
+
         # Stage 1: LLM extracts entities
+        # Stage 3: Synonym generation
         llm_responses = [
             # Stage 1: Entity extraction
             LLMResponse(
@@ -293,12 +304,6 @@ class TestSmartEntityExpander:
         ]
         mock_llm_proxy.generate.side_effect = llm_responses
 
-        # Stage 2: Graph expansion returns only 5 entities (below threshold of 10)
-        # Correct field name is "name" not "entity_name"
-        mock_neo4j_client.execute_read.return_value = [
-            {"name": f"graph_entity_{i}"} for i in range(5)
-        ]
-
         # Execute
         entity_expander.min_entities_threshold = 10
         expanded, hops_used = await entity_expander.expand_entities(
@@ -316,6 +321,16 @@ class TestSmartEntityExpander:
     @pytest.mark.asyncio
     async def test_expand_and_rerank_semantic(self, entity_expander, mock_llm_proxy, mock_neo4j_client, mock_embedding_service):
         """Test Stage 4: Semantic reranking with BGE-M3."""
+        # Sprint 115: Mock namespace check + graph expansion
+        mock_neo4j_client.execute_read.side_effect = [
+            [{"has_entities": True}],  # Namespace check passes
+            [
+                {"name": "abortion"},
+                {"name": "reproductive rights"},
+                {"name": "climate change"},  # Low relevance
+            ],  # Graph expansion
+        ]
+
         # Setup Stage 1-3
         mock_llm_proxy.generate.return_value = LLMResponse(
             content="abortion",
@@ -327,12 +342,6 @@ class TestSmartEntityExpander:
             cost_usd=0.0,
             latency_ms=100,
         )
-        # Correct field name is "name" not "entity_name"
-        mock_neo4j_client.execute_read.return_value = [
-            {"name": "abortion"},
-            {"name": "reproductive rights"},
-            {"name": "climate change"},  # Low relevance
-        ]
 
         # Mock embeddings for semantic similarity
         import numpy as np
@@ -448,3 +457,96 @@ class TestSmartEntityExpander:
                 max_synonyms_per_entity=10  # Above maximum
             )
             assert expander.max_synonyms_per_entity == 5
+
+    @pytest.mark.asyncio
+    async def test_early_exit_namespace_has_no_entities(self, entity_expander, mock_neo4j_client, mock_llm_proxy):
+        """Test Sprint 113 early-exit: namespace has no entities (saves ~10-12s)."""
+        # Mock namespace entity check returns False
+        mock_neo4j_client.execute_read.return_value = [{"has_entities": False}]
+
+        # Execute
+        expanded, hops_used = await entity_expander.expand_entities(
+            query="What are the global implications of abortion?",
+            namespaces=["empty_namespace"],
+            top_k=10
+        )
+
+        # Verify early-exit
+        assert expanded == []
+        assert hops_used == 0
+        # Should NOT call LLM at all (early-exit before Stage 1)
+        assert mock_llm_proxy.generate.call_count == 0
+        # Should only call Neo4j once for namespace check
+        assert mock_neo4j_client.execute_read.call_count == 1
+
+    @pytest.mark.asyncio
+    async def test_early_exit_llm_found_no_entities(self, entity_expander, mock_llm_proxy, mock_neo4j_client):
+        """Test Sprint 115 early-exit: LLM found no entities (saves ~10-15s)."""
+        # Mock namespace has entities
+        mock_neo4j_client.execute_read.side_effect = [
+            [{"has_entities": True}],  # Namespace check passes
+        ]
+
+        # Stage 1: LLM extracts NO entities
+        mock_llm_proxy.generate.return_value = LLMResponse(
+            content="",  # Empty response
+            provider="local_ollama",
+            model="nemotron-3-nano",
+            tokens_used=10,
+            tokens_input=5,
+            tokens_output=5,
+            cost_usd=0.0,
+            latency_ms=50,
+        )
+
+        # Execute
+        expanded, hops_used = await entity_expander.expand_entities(
+            query="asdfghjkl",  # Nonsense query
+            namespaces=["test_namespace"],
+            top_k=10
+        )
+
+        # Verify early-exit after Stage 1
+        assert expanded == []
+        assert hops_used == 0
+        # Should call LLM once (Stage 1), but not Stage 3 (synonyms)
+        assert mock_llm_proxy.generate.call_count == 1
+        # Should call Neo4j once (namespace check), not for graph expansion
+        assert mock_neo4j_client.execute_read.call_count == 1
+
+    @pytest.mark.asyncio
+    async def test_early_exit_graph_expansion_empty(self, entity_expander, mock_llm_proxy, mock_neo4j_client):
+        """Test Sprint 115 early-exit: graph expansion found no entities (saves ~10-15s)."""
+        # Mock namespace has entities
+        # Mock graph expansion returns empty
+        mock_neo4j_client.execute_read.side_effect = [
+            [{"has_entities": True}],  # Namespace check passes
+            [],  # Graph expansion returns empty
+        ]
+
+        # Stage 1: LLM extracts entities
+        mock_llm_proxy.generate.return_value = LLMResponse(
+            content="abortion\nreproductive rights",
+            provider="local_ollama",
+            model="nemotron-3-nano",
+            tokens_used=50,
+            tokens_input=30,
+            tokens_output=20,
+            cost_usd=0.0,
+            latency_ms=100,
+        )
+
+        # Execute
+        expanded, hops_used = await entity_expander.expand_entities(
+            query="What are the global implications of abortion?",
+            namespaces=["test_namespace"],
+            top_k=10
+        )
+
+        # Verify early-exit after Stage 2
+        assert expanded == []
+        assert hops_used == 0
+        # Should call LLM once (Stage 1), but NOT Stage 3 (synonyms)
+        assert mock_llm_proxy.generate.call_count == 1
+        # Should call Neo4j twice (namespace check + graph expansion)
+        assert mock_neo4j_client.execute_read.call_count == 2

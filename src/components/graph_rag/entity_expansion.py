@@ -149,6 +149,16 @@ class SmartEntityExpander:
             entities=initial_entities[:5],
         )
 
+        # Sprint 115: Early-exit if LLM found no entities
+        # Avoids unnecessary graph expansion and synonym generation
+        if not initial_entities or len(initial_entities) == 0:
+            logger.info(
+                "entity_expansion_early_exit",
+                reason="llm_found_no_entities",
+                query=query[:50],
+            )
+            return [], 0
+
         # STAGE 2: Graph Expansion (N-hop configurable)
         graph_expanded = await self._expand_via_graph(
             initial_entities,
@@ -161,6 +171,18 @@ class SmartEntityExpander:
             expanded_count=len(graph_expanded),
             hops_used=self.graph_expansion_hops,
         )
+
+        # Sprint 115: Early-exit if graph expansion returned nothing
+        # If both LLM extraction AND graph expansion found nothing,
+        # skip expensive synonym generation (saves ~10-15s per query)
+        if not graph_expanded or len(graph_expanded) == 0:
+            logger.info(
+                "entity_expansion_early_exit",
+                reason="graph_expansion_empty",
+                query=query[:50],
+                initial_entities_count=len(initial_entities),
+            )
+            return [], 0
 
         # STAGE 3: LLM Synonym Fallback (only if graph sparse)
         final_entities = graph_expanded

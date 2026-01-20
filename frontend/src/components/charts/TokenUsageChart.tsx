@@ -159,7 +159,7 @@ export function TokenUsageChart({
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       const svgData = new XMLSerializer().serializeToString(svgElement);
-      const img = new Image();
+      const img = document.createElement('img');
 
       // Set dimensions
       const rect = svgElement.getBoundingClientRect();

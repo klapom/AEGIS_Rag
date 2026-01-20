@@ -58,13 +58,12 @@ def setup_langsmith_tracing() -> bool:
         os.environ["LANGCHAIN_TRACING_V2"] = "true"
         os.environ["LANGCHAIN_PROJECT"] = settings.langsmith_project
         os.environ["LANGCHAIN_API_KEY"] = settings.langsmith_api_key.get_secret_value()
-
-        # Optional: Set custom endpoint if needed
-        # os.environ["LANGCHAIN_ENDPOINT"] = "https://api.smith.langchain.com"
+        os.environ["LANGCHAIN_ENDPOINT"] = settings.langsmith_endpoint
 
         logger.info(
             "langsmith_tracing_enabled",
             project=settings.langsmith_project,
+            endpoint=settings.langsmith_endpoint,
             note="All LangGraph agents will be traced",
         )
 

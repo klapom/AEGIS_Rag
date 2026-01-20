@@ -555,7 +555,7 @@ export function AdminIndexingPage() {
               className="w-full px-3 py-2 text-sm rounded-md border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="">Keine Domain (Generic Prompts)</option>
-              {domainsData?.domains?.map((domain) => (
+              {domainsData?.map((domain) => (
                 <option key={domain.name} value={domain.name}>
                   {domain.name} - {domain.description || 'No description'}
                 </option>
