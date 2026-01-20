@@ -2,6 +2,7 @@
 
 Sprint 42 - Feature: 4-Way Hybrid RRF (TD-057)
 Sprint 88 - Feature: BGE-M3 Native Hybrid Search (replaces BM25 with sparse vectors)
+Sprint 115 - Feature 115.6: Vector-First Graph-Augment (ADR-057 Option 3)
 
 This module implements a 4-channel hybrid retrieval system:
 1. Multi-Vector (Qdrant): Dense + Sparse search with server-side RRF
@@ -88,6 +89,7 @@ class FourWaySearchMetadata:
     """Metadata from 4-Way Hybrid Search execution.
 
     Sprint 92: Updated to expose dense/sparse counts instead of vector/bm25.
+    Sprint 115: Added entity_expansion_results_count for Vector-First Graph-Augment.
     BGE-M3 provides both dense (1024-dim semantic) and sparse (lexical) vectors.
     """
 
@@ -106,6 +108,9 @@ class FourWaySearchMetadata:
     namespaces_searched: list[str]
     # Sprint 52: Channel samples for UI display (extracted before fusion)
     channel_samples: dict[str, list[dict[str, Any]]] | None = None
+    # Sprint 115: Vector-First Graph-Augment (ADR-057 Option 3)
+    entity_expansion_results_count: int = 0  # Chunks found via entity overlap
+    entity_expansion_latency_ms: float = 0.0  # Entity expansion latency
     # Deprecated fields (kept for backward compatibility)
     vector_results_count: int = 0  # DEPRECATED: Use dense_results_count
     bm25_results_count: int = 0  # DEPRECATED: Use sparse_results_count
@@ -168,10 +173,12 @@ class FourWayHybridSearch:
         intent_override: Intent | None = None,
         allowed_namespaces: list[str] | None = None,
         use_cache: bool = True,
+        use_entity_expansion: bool = True,
     ) -> dict[str, Any]:
         """Execute 4-Way Hybrid Search with Intent-Weighted RRF.
 
         Sprint 68 Feature 68.4: Added query caching for latency optimization.
+        Sprint 115 Feature 115.6: Added Vector-First Graph-Augment (ADR-057 Option 3).
 
         Args:
             query: User query string
@@ -181,6 +188,9 @@ class FourWayHybridSearch:
             intent_override: Force specific intent (bypass classifier)
             allowed_namespaces: List of namespaces to search in. If None, defaults to ["default", "general"]
             use_cache: Whether to use query cache (default: True)
+            use_entity_expansion: Whether to expand vector results via entity overlap (default: True)
+                                  Sprint 115 ADR-057: Uses Neo4j to find related chunks via shared entities.
+                                  Adds ~100ms latency but improves recall without LLM calls.
 
         Returns:
             Dictionary with results and metadata:
@@ -304,9 +314,29 @@ class FourWayHybridSearch:
             else:
                 channel_results[channel] = result
 
+        # Sprint 92.21: Filter stop words for keyword display
+        query_terms = filter_stop_words(query.lower().split())
+
+        # Sprint 115 ADR-057 Option 3: Vector-First Graph-Augment
+        # Expand vector results via entity overlap in Neo4j (~100ms, no LLM calls)
+        entity_expansion_results: list[dict[str, Any]] = []
+        entity_expansion_latency_ms = 0.0
+        if use_entity_expansion and "multivector" in channel_results and channel_results["multivector"]:
+            expansion_start = time.perf_counter()
+            entity_expansion_results = await self._expand_via_vector_results(
+                vector_results=channel_results["multivector"],
+                allowed_namespaces=allowed_namespaces,
+                max_expansion_chunks=top_k,  # Match top_k for balanced fusion
+            )
+            entity_expansion_latency_ms = (time.perf_counter() - expansion_start) * 1000
+
+            if entity_expansion_results:
+                channel_results["entity_expansion"] = entity_expansion_results
+                channels_executed.append("entity_expansion")
+
         # Sprint 52: Extract channel samples BEFORE fusion for UI display
+        # Sprint 115: Moved after entity expansion to include all channels
         # This preserves the source_channel information that would be lost after RRF
-        query_terms = filter_stop_words(query.lower().split())  # Sprint 92.21: Filter stop words
         channel_samples = self._extract_channel_samples(
             channel_results, query_terms, max_per_channel=3
         )
@@ -328,6 +358,12 @@ class FourWayHybridSearch:
         if "graph_global" in channel_results:
             rankings.append(channel_results["graph_global"])
             weight_values.append(weights.global_)
+
+        # Sprint 115: Add entity expansion results to fusion
+        if "entity_expansion" in channel_results and channel_results["entity_expansion"]:
+            rankings.append(channel_results["entity_expansion"])
+            # Weight entity expansion similar to graph_local (entity-based discovery)
+            weight_values.append(weights.local * 0.5)  # Slightly lower weight than direct graph_local
 
         # Step 4: Apply Intent-Weighted RRF
         if rankings:
@@ -407,6 +443,7 @@ class FourWayHybridSearch:
         # Build metadata
         # Sprint 92: Expose dense/sparse counts separately for UI display
         multivector_count = len(channel_results.get("multivector", []))
+        entity_expansion_count = len(channel_results.get("entity_expansion", []))
         metadata = FourWaySearchMetadata(
             # Sprint 92: BGE-M3 provides both dense (semantic) and sparse (lexical) vectors
             # We report the same count for both since they're fused server-side in Qdrant
@@ -426,11 +463,15 @@ class FourWayHybridSearch:
                 "local": weights.local,
                 "global": weights.global_,
                 "multivector": max(weights.vector, weights.bm25),  # Sprint 88 (legacy)
+                "entity_expansion": weights.local * 0.5,  # Sprint 115: Entity expansion weight
             },
             total_latency_ms=total_latency_ms,
             channels_executed=channels_executed,
             namespaces_searched=allowed_namespaces,
             channel_samples=channel_samples,  # Sprint 52: Pass through for UI display
+            # Sprint 115: Vector-First Graph-Augment stats (ADR-057 Option 3)
+            entity_expansion_results_count=entity_expansion_count,
+            entity_expansion_latency_ms=entity_expansion_latency_ms,
             # Deprecated fields (for backward compatibility)
             vector_results_count=multivector_count,
             bm25_results_count=0,  # Deprecated: sparse vectors replace BM25
@@ -446,6 +487,8 @@ class FourWayHybridSearch:
             multivector_count=multivector_count,  # Sprint 88: dense + sparse combined
             local_count=metadata.graph_local_results_count,
             global_count=metadata.graph_global_results_count,
+            entity_expansion_count=entity_expansion_count,  # Sprint 115: Entity expansion
+            entity_expansion_ms=round(entity_expansion_latency_ms, 2),
         )
 
         # Sprint 68 Feature 68.4: Store results in cache
@@ -982,6 +1025,10 @@ class FourWayHybridSearch:
                     # For Graph Global: Show community ID
                     sample["community_id"] = result.get("community_id")
 
+                elif channel == "entity_expansion":
+                    # Sprint 115: For Entity Expansion: Show shared entities
+                    sample["shared_entities"] = result.get("shared_entities", [])[:5]
+
                 channel_samples.append(sample)
 
             if channel_samples:
@@ -994,6 +1041,132 @@ class FourWayHybridSearch:
         )
 
         return samples
+
+    async def _expand_via_vector_results(
+        self,
+        vector_results: list[dict[str, Any]],
+        allowed_namespaces: list[str] | None = None,
+        max_expansion_chunks: int = 10,
+    ) -> list[dict[str, Any]]:
+        """Vector-First Graph-Augment: Expand vector results via entity overlap.
+
+        Sprint 115 Feature 115.6 (ADR-057 Option 3):
+        Uses chunk_ids from vector search to find related chunks via shared entities.
+        No LLM calls - pure Cypher queries (~100ms).
+
+        This approach:
+        - Uses vector search results as semantic "anchors"
+        - Finds related chunks via entity overlap in Neo4j
+        - Adds context that may have been missed by vector similarity alone
+
+        Args:
+            vector_results: Results from multi-vector search (top 10 used as anchors)
+            allowed_namespaces: Namespaces to filter by
+            max_expansion_chunks: Maximum chunks to return (default: 10)
+
+        Returns:
+            List of expanded chunks with entity_overlap scores
+        """
+        try:
+            # Use top 10 vector results as semantic anchors
+            chunk_ids = [r.get("id") for r in vector_results[:10] if r.get("id")]
+
+            if not chunk_ids:
+                logger.debug("entity_expansion_skipped", reason="no_vector_results")
+                return []
+
+            # Build namespace-aware Cypher query
+            if allowed_namespaces:
+                cypher = """
+                // Sprint 115 ADR-057 Option 3: Vector-First Graph-Augment
+                // Stage 1: Get entities from vector result chunks
+                MATCH (c:chunk)<-[:MENTIONED_IN]-(e:base)
+                WHERE c.chunk_id IN $chunk_ids
+                  AND c.namespace_id IN $allowed_namespaces
+                WITH collect(DISTINCT e.entity_name) AS entities, collect(DISTINCT c.chunk_id) AS anchor_ids
+
+                // Stage 2: Find related chunks via shared entities
+                MATCH (e2:base)-[:MENTIONED_IN]->(c2:chunk)
+                WHERE e2.entity_name IN entities
+                  AND c2.namespace_id IN $allowed_namespaces
+                  AND NOT c2.chunk_id IN anchor_ids
+                WITH c2, count(DISTINCT e2) AS entity_overlap, collect(DISTINCT e2.entity_name)[..5] AS shared_entities
+                RETURN c2.chunk_id AS id,
+                       c2.text AS text,
+                       c2.document_id AS document_id,
+                       c2.document_path AS source,
+                       c2.namespace_id AS namespace_id,
+                       entity_overlap,
+                       shared_entities
+                ORDER BY entity_overlap DESC
+                LIMIT $max_expansion
+                """
+                params = {
+                    "chunk_ids": chunk_ids,
+                    "allowed_namespaces": allowed_namespaces,
+                    "max_expansion": max_expansion_chunks,
+                }
+            else:
+                # Fallback: No namespace filtering
+                cypher = """
+                // Sprint 115 ADR-057 Option 3: Vector-First Graph-Augment
+                // Stage 1: Get entities from vector result chunks
+                MATCH (c:chunk)<-[:MENTIONED_IN]-(e:base)
+                WHERE c.chunk_id IN $chunk_ids
+                WITH collect(DISTINCT e.entity_name) AS entities, collect(DISTINCT c.chunk_id) AS anchor_ids
+
+                // Stage 2: Find related chunks via shared entities
+                MATCH (e2:base)-[:MENTIONED_IN]->(c2:chunk)
+                WHERE e2.entity_name IN entities
+                  AND NOT c2.chunk_id IN anchor_ids
+                WITH c2, count(DISTINCT e2) AS entity_overlap, collect(DISTINCT e2.entity_name)[..5] AS shared_entities
+                RETURN c2.chunk_id AS id,
+                       c2.text AS text,
+                       c2.document_id AS document_id,
+                       c2.document_path AS source,
+                       c2.namespace_id AS namespace_id,
+                       entity_overlap,
+                       shared_entities
+                ORDER BY entity_overlap DESC
+                LIMIT $max_expansion
+                """
+                params = {
+                    "chunk_ids": chunk_ids,
+                    "max_expansion": max_expansion_chunks,
+                }
+
+            results = await self.neo4j_client.execute_read(cypher, params)
+
+            # Format results for RRF
+            formatted = []
+            for rank, record in enumerate(results, start=1):
+                formatted.append(
+                    {
+                        "id": record["id"],
+                        "text": record["text"] or "",
+                        "document_id": record.get("document_id", ""),
+                        "source": record.get("source", ""),
+                        "namespace_id": record.get("namespace_id", DEFAULT_NAMESPACE),
+                        "score": record.get("entity_overlap", 1),
+                        "rank": rank,
+                        "search_type": "entity_expansion",
+                        "source_channel": "entity_expansion",
+                        "shared_entities": record.get("shared_entities", []),
+                    }
+                )
+
+            logger.info(
+                "entity_expansion_completed",
+                anchor_chunks=len(chunk_ids),
+                expanded_chunks=len(formatted),
+                namespaces=allowed_namespaces,
+            )
+
+            return formatted
+
+        except Exception as e:
+            logger.warning("entity_expansion_failed", error=str(e))
+            return []
 
 
 # Singleton instance

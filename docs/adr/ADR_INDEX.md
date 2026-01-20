@@ -67,6 +67,7 @@ ADRs dokumentieren wichtige Architektur-Entscheidungen mit Kontext, Alternativen
 | 054 | Azure Container Apps Deployment | Proposed | 2026-01-15 |
 | 055 | LangGraph 1.0 Migration for Agentic Framework | Accepted | 2026-01-15 |
 | 056 | Graph Search Early-Exit Optimization | Accepted | 2026-01-19 |
+| 057 | Graph Query Optimization - Disable Redundant SmartEntityExpander | Accepted | 2026-01-20 |
 
 ---
 

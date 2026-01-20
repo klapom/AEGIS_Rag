@@ -197,101 +197,82 @@ async def llm_answer_node(state: dict[str, Any]) -> dict[str, Any]:
 
 
 async def hybrid_search_node(state: dict[str, Any]) -> dict[str, Any]:
-    """Execute Vector + Graph search in parallel and merge results.
+    """Execute Vector search with 4-way hybrid retrieval.
 
     Sprint 42: True Hybrid Mode - combines vector semantic search with
     graph entity/relationship search for comprehensive retrieval.
     Sprint 48 Feature 48.3: Emits phase events for hybrid search phases.
     Sprint 52: Real-time phase event emission via LangGraph stream_writer.
-              Uses asyncio.wait(FIRST_COMPLETED) to emit events as each task finishes.
+
+    Sprint 115 ADR-057: DISABLED graph_query_node (SmartEntityExpander)
+    - graph_query_node adds ~26s latency via 2 LLM calls in SmartEntityExpander
+    - vector_search_node already includes 4-way hybrid via FourWayHybridSearch:
+      * Dense vectors (BGE-M3 semantic)
+      * Sparse vectors (BGE-M3 lexical)
+      * Graph Local (term-matching via Cypher, ~100ms)
+      * Graph Global (community-based, ~100ms)
+    - Removing redundant graph_query_node reduces query time from 27s to <2s
 
     Args:
         state: Current agent state
 
     Returns:
-        State with merged retrieved_contexts from both searches and phase_event
+        State with retrieved_contexts from 4-way hybrid search and phase_event
     """
     logger.info("hybrid_search_node_start", query=state.get("query", "")[:100])
 
     # Sprint 52: Track start times for accurate duration measurement
-    bm25_start = time.perf_counter()
-    graph_start = time.perf_counter()
+    vector_start = time.perf_counter()
 
-    # Sprint 52: Emit IN_PROGRESS events for parallel searches via LangGraph stream
+    # Sprint 52: Emit IN_PROGRESS event for vector search (includes 4-way hybrid)
     stream_phase_event(
         phase_type=PhaseType.BM25_SEARCH,
         status=PhaseStatus.IN_PROGRESS,
     )
-    stream_phase_event(
-        phase_type=PhaseType.GRAPH_QUERY,
-        status=PhaseStatus.IN_PROGRESS,
-    )
 
-    # Run both searches in parallel
+    # Sprint 115 ADR-057: Only run vector_search_node (already includes 4-way hybrid)
+    # graph_query_node DISABLED - was redundant and added ~26s latency
     vector_task = asyncio.create_task(vector_search_node(state.copy()))
-    graph_task = asyncio.create_task(graph_query_node(state.copy()))
 
-    # Sprint 52: Use asyncio.wait with FIRST_COMPLETED to emit events as each task finishes
-    # This gives real-time feedback instead of waiting for both
-    task_info = {
-        vector_task: (PhaseType.BM25_SEARCH, bm25_start),
-        graph_task: (PhaseType.GRAPH_QUERY, graph_start),
-    }
-    results = {}
-    pending = {vector_task, graph_task}
+    # Sprint 115 ADR-057: Simplified - only wait for vector_task
+    # (graph_query_node disabled - was redundant, added ~26s latency)
+    try:
+        vector_result = await vector_task
+        duration_ms = (time.perf_counter() - vector_start) * 1000
+        count = len(vector_result.get("retrieved_contexts", [])) if isinstance(vector_result, dict) else 0
 
-    while pending:
-        done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
+        stream_phase_event(
+            phase_type=PhaseType.BM25_SEARCH,
+            status=PhaseStatus.COMPLETED,
+            duration_ms=duration_ms,
+            metadata={"results_count": count},
+        )
+        logger.info("hybrid_vector_results", count=count, duration_ms=duration_ms)
+    except Exception as e:
+        duration_ms = (time.perf_counter() - vector_start) * 1000
+        stream_phase_event(
+            phase_type=PhaseType.BM25_SEARCH,
+            status=PhaseStatus.FAILED,
+            duration_ms=duration_ms,
+            error=str(e),
+        )
+        vector_result = e
+        logger.warning("hybrid_vector_failed", error=str(e))
 
-        for task in done:
-            phase_type, start_time = task_info[task]
-            duration_ms = (time.perf_counter() - start_time) * 1000
-
-            try:
-                result = task.result()
-                count = len(result.get("retrieved_contexts", [])) if isinstance(result, dict) else 0
-                stream_phase_event(
-                    phase_type=phase_type,
-                    status=PhaseStatus.COMPLETED,
-                    duration_ms=duration_ms,
-                    metadata={"results_count": count},
-                )
-                results[task] = result
-            except Exception as e:
-                stream_phase_event(
-                    phase_type=phase_type,
-                    status=PhaseStatus.FAILED,
-                    duration_ms=duration_ms,
-                    error=str(e),
-                )
-                results[task] = e
-
-    # Extract results
-    vector_result = results.get(vector_task)
-    graph_result = results.get(graph_task)
-
-    # Merge retrieved contexts
+    # Sprint 115 ADR-057: No graph_result - graph search is handled by FourWayHybridSearch
+    # inside vector_search_node (channels: graph_local, graph_global)
     merged_contexts = []
 
-    # Add vector results
+    # Add vector results (includes 4-way hybrid: dense, sparse, graph_local, graph_global)
     if isinstance(vector_result, dict):
         vector_contexts = vector_result.get("retrieved_contexts", [])
         for ctx in vector_contexts:
-            ctx["search_type"] = "vector"
+            # Keep original search_type from FourWayHybridSearch (vector/graph_local/graph_global)
+            if "search_type" not in ctx:
+                ctx["search_type"] = "hybrid"
             merged_contexts.append(ctx)
-        logger.info("hybrid_vector_results", count=len(vector_contexts))
     else:
-        logger.warning("hybrid_vector_failed", error=str(vector_result))
-
-    # Add graph results
-    if isinstance(graph_result, dict):
-        graph_contexts = graph_result.get("retrieved_contexts", [])
-        for ctx in graph_contexts:
-            ctx["search_type"] = "graph"
-            merged_contexts.append(ctx)
-        logger.info("hybrid_graph_results", count=len(graph_contexts))
-    else:
-        logger.warning("hybrid_graph_failed", error=str(graph_result))
+        logger.warning("hybrid_search_no_results", error=str(vector_result))
 
     # Sprint 52: Emit RRF fusion IN_PROGRESS via LangGraph stream
     stream_phase_event(
@@ -322,19 +303,32 @@ async def hybrid_search_node(state: dict[str, Any]) -> dict[str, Any]:
         if "metadata" not in state:
             state["metadata"] = {}
 
-        vector_count = (
+        # Sprint 115 ADR-057: vector_count now includes all 4-way hybrid results
+        # (dense, sparse, graph_local, graph_global) since FourWayHybridSearch does the fusion
+        hybrid_count = (
             len(vector_result.get("retrieved_contexts", []))
             if isinstance(vector_result, dict)
             else 0
         )
-        graph_count = (
-            len(graph_result.get("retrieved_contexts", [])) if isinstance(graph_result, dict) else 0
+
+        # Sprint 115: Extract channel counts from FourWayHybridSearch metadata if available
+        search_metadata = (
+            vector_result.get("metadata", {}).get("search", {})
+            if isinstance(vector_result, dict)
+            else {}
         )
 
         state["metadata"]["hybrid_search"] = {
-            "vector_count": vector_count,
-            "graph_count": graph_count,
+            "hybrid_count": hybrid_count,  # Total from 4-way hybrid
             "merged_count": len(unique_contexts),
+            # Channel counts from FourWayHybridSearch (if available)
+            "dense_count": search_metadata.get("dense_results_count", 0),
+            "sparse_count": search_metadata.get("sparse_results_count", 0),
+            "graph_local_count": search_metadata.get("graph_local_results_count", 0),
+            "graph_global_count": search_metadata.get("graph_global_results_count", 0),
+            # Legacy field for backward compatibility
+            "vector_count": hybrid_count,
+            "graph_count": 0,  # Deprecated: graph now inside FourWayHybridSearch
         }
 
         # Complete fusion phase event
@@ -344,8 +338,7 @@ async def hybrid_search_node(state: dict[str, Any]) -> dict[str, Any]:
             fusion_event.end_time - fusion_event.start_time
         ).total_seconds() * 1000
         fusion_event.metadata = {
-            "vector_count": vector_count,
-            "graph_count": graph_count,
+            "hybrid_count": hybrid_count,
             "merged_count": len(unique_contexts),
         }
 
