@@ -78,7 +78,8 @@ test.describe('Admin LLM Config - Backend Integration (Sprint 64.6)', () => {
   }) => {
     // Navigate to page
     await page.goto('/admin/llm-config');
-    await adminLLMConfigPage.llmConfigPage.waitFor({ state: 'visible', timeout: 10000 });
+    // Sprint 114 (P-008): Increase timeout for auth and page load
+    await adminLLMConfigPage.llmConfigPage.waitFor({ state: 'visible', timeout: 60000 });
 
     // Change a model
     await adminLLMConfigPage.selectModel('entity_extraction', 'ollama/qwen3:8b');
@@ -88,7 +89,7 @@ test.describe('Admin LLM Config - Backend Integration (Sprint 64.6)', () => {
     await adminLLMConfigPage.waitForSaveSuccess();
 
     // Wait for backend save to complete
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(1000);
 
     // Verify localStorage does NOT contain config (only migration flag)
     const storedConfig = await adminLLMConfigPage.page.evaluate(() =>
@@ -128,10 +129,11 @@ test.describe('Admin LLM Config - Backend Integration (Sprint 64.6)', () => {
 
     // Step 2: Navigate to page (should trigger migration)
     await page.goto('/admin/llm-config');
-    await adminLLMConfigPage.llmConfigPage.waitFor({ state: 'visible', timeout: 10000 });
+    // Sprint 114 (P-008): Increase timeout for auth and page load
+    await adminLLMConfigPage.llmConfigPage.waitFor({ state: 'visible', timeout: 60000 });
 
     // Wait for migration to complete
-    await page.waitForTimeout(1500);
+    await page.waitForTimeout(2000);
 
     // Step 3: Verify migration flag is set
     const migrationFlag = await adminLLMConfigPage.page.evaluate(() =>
@@ -164,7 +166,8 @@ test.describe('Admin LLM Config - Backend Integration (Sprint 64.6)', () => {
   }) => {
     // Navigate and change config
     await page.goto('/admin/llm-config');
-    await adminLLMConfigPage.llmConfigPage.waitFor({ state: 'visible', timeout: 10000 });
+    // Sprint 114 (P-008): Increase timeout for auth and page load
+    await adminLLMConfigPage.llmConfigPage.waitFor({ state: 'visible', timeout: 60000 });
 
     await adminLLMConfigPage.selectModel('answer_generation', 'ollama/qwen3:8b');
     await adminLLMConfigPage.saveConfig();
@@ -179,10 +182,11 @@ test.describe('Admin LLM Config - Backend Integration (Sprint 64.6)', () => {
 
     // Reload page
     await page.reload();
-    await adminLLMConfigPage.llmConfigPage.waitFor({ state: 'visible', timeout: 10000 });
+    // Sprint 114 (P-008): Increase timeout for auth after reload
+    await adminLLMConfigPage.llmConfigPage.waitFor({ state: 'visible', timeout: 60000 });
 
     // Wait for config to load
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(1500);
 
     // Verify config persisted (from backend, NOT localStorage)
     const answerModel = await adminLLMConfigPage.getSelectedModel('answer_generation');
@@ -201,7 +205,8 @@ test.describe('Admin LLM Config - Backend Integration (Sprint 64.6)', () => {
   }) => {
     // Navigate to page
     await page.goto('/admin/llm-config');
-    await adminLLMConfigPage.llmConfigPage.waitFor({ state: 'visible', timeout: 10000 });
+    // Sprint 114 (P-008): Increase timeout for auth and page load
+    await adminLLMConfigPage.llmConfigPage.waitFor({ state: 'visible', timeout: 60000 });
 
     // Change multiple models
     await adminLLMConfigPage.selectModel('intent_classification', 'ollama/qwen3:8b');
@@ -213,7 +218,7 @@ test.describe('Admin LLM Config - Backend Integration (Sprint 64.6)', () => {
     await adminLLMConfigPage.waitForSaveSuccess();
 
     // Wait for save
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(1000);
 
     // Verify localStorage ONLY has migration flag, NOT config
     const allLocalStorageKeys = await adminLLMConfigPage.page.evaluate(() => {
@@ -318,15 +323,16 @@ test.describe('Admin LLM Config - Backend Integration Verification', () => {
   }) => {
     // Navigate to page
     await page.goto('/admin/llm-config');
-    await adminLLMConfigPage.llmConfigPage.waitFor({ state: 'visible', timeout: 10000 });
+    // Sprint 114 (P-008): Increase timeout for auth and page load
+    await adminLLMConfigPage.llmConfigPage.waitFor({ state: 'visible', timeout: 60000 });
 
     // Configure a specific model for intent classification
     await adminLLMConfigPage.selectModel('intent_classification', 'ollama/nemotron-no-think:latest');
     await adminLLMConfigPage.saveConfig();
     await adminLLMConfigPage.waitForSaveSuccess();
 
-    // Wait for cache to update (60 seconds max, but we'll wait 2 seconds for safety)
-    await page.waitForTimeout(2000);
+    // Wait for cache to update (60 seconds max, but we'll wait 3 seconds for safety)
+    await page.waitForTimeout(3000);
 
     // Verify backend config service returns correct model
     const response = await page.request.get('http://localhost:8000/api/v1/admin/llm/config');
@@ -343,7 +349,8 @@ test.describe('Admin LLM Config - Backend Integration Verification', () => {
   }) => {
     // Navigate to page
     await page.goto('/admin/llm-config');
-    await adminLLMConfigPage.llmConfigPage.waitFor({ state: 'visible', timeout: 10000 });
+    // Sprint 114 (P-008): Increase timeout for auth and page load
+    await adminLLMConfigPage.llmConfigPage.waitFor({ state: 'visible', timeout: 60000 });
 
     // Configure all use cases
     await adminLLMConfigPage.selectModel('intent_classification', 'ollama/nemotron-no-think:latest');
@@ -355,6 +362,7 @@ test.describe('Admin LLM Config - Backend Integration Verification', () => {
 
     // Save
     await adminLLMConfigPage.saveConfig();
+    // Sprint 114 (P-008): Increase wait timeout for save success
     await adminLLMConfigPage.waitForSaveSuccess();
 
     // Verify backend has all 6 use cases

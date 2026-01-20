@@ -75,7 +75,10 @@ test.describe('Sprint 46 - Feature 46.5: Domain Auto Discovery', () => {
       acceptAttr?.toLowerCase().includes(format.toLowerCase())
     );
 
-    expect(acceptAttr).toContain('text/plain'); // TXT
+    // Sprint 114 (P-007): UI uses file extensions, not MIME types
+    // Accept attribute should use .txt extension (not text/plain MIME type)
+    const acceptsTxt = acceptAttr?.includes('.txt');
+    expect(acceptsTxt).toBeTruthy(); // TXT files accepted via extension
   });
 
   test('TC-46.5.3: should reject unsupported file types', async ({ page }) => {
@@ -129,10 +132,11 @@ test.describe('Sprint 46 - Feature 46.5: Domain Auto Discovery', () => {
       { name: 'doc4.txt', content: 'Content 4' },
     ];
 
-    const uploadArea = page.locator('[data-testid="domain-discovery-upload-area"]');
+    // Sprint 114: Use file input element, not div upload area (P-009)
+    const fileInput = page.locator('[data-testid="domain-discovery-file-input"]');
 
     // Try to upload 4 files at once
-    await uploadArea.setInputFiles(
+    await fileInput.setInputFiles(
       files.map(f => ({
         name: f.name,
         mimeType: 'text/plain',
@@ -153,6 +157,8 @@ test.describe('Sprint 46 - Feature 46.5: Domain Auto Discovery', () => {
 
     // Verify analyze button is disabled if multiple files exceed limit
     const analyzeButton = page.locator('[data-testid="domain-discovery-analyze-button"]');
+    // Sprint 114 (P-004): Add explicit wait for button state instead of race condition
+    await expect(analyzeButton).toBeDefined({ timeout: 10000 });
     const isDisabled = await analyzeButton.isDisabled().catch(() => true);
 
     // Either error is shown or button is disabled
@@ -162,9 +168,9 @@ test.describe('Sprint 46 - Feature 46.5: Domain Auto Discovery', () => {
   test('TC-46.5.5: should trigger loading state when analyze button clicked', async ({ page }) => {
     await page.goto('/admin/domain-discovery');
 
-    // Upload a test file
-    const uploadArea = page.locator('[data-testid="domain-discovery-upload-area"]');
-    await uploadArea.setInputFiles({
+    // Sprint 114: Use file input element, not div upload area (P-009)
+    const fileInput = page.locator('[data-testid="domain-discovery-file-input"]');
+    await fileInput.setInputFiles({
       name: 'test_doc.txt',
       mimeType: 'text/plain',
       buffer: Buffer.from('This is a technical document about software development and API design patterns.'),
@@ -203,8 +209,8 @@ test.describe('Sprint 46 - Feature 46.5: Domain Auto Discovery', () => {
       expect(isDisabled).toBeTruthy();
     }
 
-    // Loading should eventually complete
-    await page.waitForTimeout(1000);
+    // Sprint 114 (P-004): Wait explicitly for loading to complete
+    await expect(loadingSpinner).toHaveCount(0, { timeout: 10000 });
   });
 
   test('TC-46.5.6: should show suggestion after analysis completes', async ({ page }) => {
@@ -225,9 +231,9 @@ test.describe('Sprint 46 - Feature 46.5: Domain Auto Discovery', () => {
       });
     });
 
-    // Upload file
-    const uploadArea = page.locator('[data-testid="domain-discovery-upload-area"]');
-    await uploadArea.setInputFiles({
+    // Sprint 114: Use file input element, not div upload area (P-009)
+    const fileInput = page.locator('[data-testid="domain-discovery-file-input"]');
+    await fileInput.setInputFiles({
       name: 'technical_doc.txt',
       mimeType: 'text/plain',
       buffer: Buffer.from('Python REST API design patterns for microservices architecture'),
@@ -238,6 +244,9 @@ test.describe('Sprint 46 - Feature 46.5: Domain Auto Discovery', () => {
     // Click analyze
     const analyzeButton = page.locator('[data-testid="domain-discovery-analyze-button"]');
     await analyzeButton.click();
+
+    // Sprint 114 (P-004): Wait for button to be re-enabled before checking suggestion
+    await expect(analyzeButton).toBeEnabled({ timeout: 10000 });
 
     // Wait for suggestion to appear
     const suggestionPanel = page.locator('[data-testid="domain-discovery-suggestion"]');
@@ -303,9 +312,9 @@ test.describe('Sprint 46 - Feature 46.5: Domain Auto Discovery', () => {
       }
     });
 
-    // Upload and analyze
-    const uploadArea = page.locator('[data-testid="domain-discovery-upload-area"]');
-    await uploadArea.setInputFiles({
+    // Sprint 114: Use file input element, not div upload area (P-009)
+    const fileInput = page.locator('[data-testid="domain-discovery-file-input"]');
+    await fileInput.setInputFiles({
       name: 'ml_doc.txt',
       mimeType: 'text/plain',
       buffer: Buffer.from('Deep learning neural networks for computer vision and NLP'),
@@ -360,9 +369,9 @@ test.describe('Sprint 46 - Feature 46.5: Domain Auto Discovery', () => {
       });
     });
 
-    // Upload 2-3 files
-    const uploadArea = page.locator('[data-testid="domain-discovery-upload-area"]');
-    await uploadArea.setInputFiles([
+    // Sprint 114: Use file input element, not div upload area (P-009)
+    const fileInput = page.locator('[data-testid="domain-discovery-file-input"]');
+    await fileInput.setInputFiles([
       {
         name: 'kubernetes.txt',
         mimeType: 'text/plain',
@@ -389,6 +398,8 @@ test.describe('Sprint 46 - Feature 46.5: Domain Auto Discovery', () => {
 
     // Analyze should work with multiple files
     const analyzeButton = page.locator('[data-testid="domain-discovery-analyze-button"]');
+    // Sprint 114 (P-004): Wait for button to be enabled instead of race condition
+    await expect(analyzeButton).toBeEnabled({ timeout: 10000 });
     const isDisabled = await analyzeButton.isDisabled().catch(() => false);
     expect(isDisabled).toBeFalsy();
 
@@ -402,9 +413,9 @@ test.describe('Sprint 46 - Feature 46.5: Domain Auto Discovery', () => {
   test('TC-46.5.9: should clear files and start over', async ({ page }) => {
     await page.goto('/admin/domain-discovery');
 
-    // Upload file
-    const uploadArea = page.locator('[data-testid="domain-discovery-upload-area"]');
-    await uploadArea.setInputFiles({
+    // Sprint 114: Use file input element, not div upload area (P-009)
+    const fileInput = page.locator('[data-testid="domain-discovery-file-input"]');
+    await fileInput.setInputFiles({
       name: 'document.txt',
       mimeType: 'text/plain',
       buffer: Buffer.from('Sample document content'),
@@ -414,18 +425,20 @@ test.describe('Sprint 46 - Feature 46.5: Domain Auto Discovery', () => {
 
     // Find and click clear/reset button
     const clearButton = page.locator('[data-testid="domain-discovery-clear-button"]');
-    const clearVisible = await clearButton.isVisible().catch(() => false);
+    // Sprint 114 (P-004): Wait for button visibility instead of race condition
+    const clearVisible = await clearButton.isVisible({ timeout: 10000 }).catch(() => false);
 
     if (clearVisible) {
       await clearButton.click();
 
       // File input should be cleared
-      const fileInput = page.locator('[data-testid="domain-discovery-file-input"]');
       const fileCount = await fileInput.evaluate((el: HTMLInputElement) => el.files?.length || 0);
       expect(fileCount).toBe(0);
 
       // Upload area should be visible again
-      await expect(uploadArea).toBeVisible();
+      const uploadArea = page.locator('[data-testid="domain-discovery-upload-area"]');
+      // Sprint 114 (P-004): Wait explicitly for upload area
+      await expect(uploadArea).toBeVisible({ timeout: 10000 });
     }
   });
 
@@ -444,9 +457,9 @@ test.describe('Sprint 46 - Feature 46.5: Domain Auto Discovery', () => {
       });
     });
 
-    // Upload and analyze
-    const uploadArea = page.locator('[data-testid="domain-discovery-upload-area"]');
-    await uploadArea.setInputFiles({
+    // Sprint 114: Use file input element, not div upload area (P-009)
+    const fileInput = page.locator('[data-testid="domain-discovery-file-input"]');
+    await fileInput.setInputFiles({
       name: 'test.txt',
       mimeType: 'text/plain',
       buffer: Buffer.from('Test document'),

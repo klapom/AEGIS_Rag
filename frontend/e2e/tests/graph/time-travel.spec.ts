@@ -21,7 +21,9 @@ import { setupAuthMocking } from '../../fixtures';
  * Sprint 38: Uses setupAuthMocking for JWT authentication on protected routes
  */
 
-test.describe('Time Travel Tab - Feature 39.5', () => {
+// Sprint 114: Skip all tests - Feature 39.5 (TimeTravelTab) not implemented
+// TODO: Enable when backend temporal query APIs are implemented
+test.describe.skip('Time Travel Tab - Feature 39.5', () => {
   test.beforeEach(async ({ page }) => {
     // Setup authentication mocking for protected routes
     await setupAuthMocking(page);

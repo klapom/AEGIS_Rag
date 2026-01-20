@@ -19,6 +19,10 @@ import { test, expect } from '../fixtures';
 
 test.describe('VLM Backend Configuration', () => {
   test('should select local VLM by default', async ({ adminLLMConfigPage }) => {
+    // Sprint 114 (P-002): Check initial state before clearing
+    const initialModel = await adminLLMConfigPage.getSelectedModel('vision_vlm');
+    expect(initialModel).toBeTruthy();
+
     // Clear localStorage to test defaults
     await adminLLMConfigPage.clearStoredConfig();
 

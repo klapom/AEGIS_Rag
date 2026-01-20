@@ -1,10 +1,11 @@
-name: E2E Tests (Sprint 50)
+name: E2E Tests (Python - Legacy)
 
 on:
   push:
     branches:
       - main
-      - sprint-50-e2e-tests
+      # Note: Primary E2E testing now uses Playwright in frontend/e2e/
+      # This workflow runs legacy Python E2E tests
     paths:
       - 'src/**'
       - 'tests/e2e/**'
@@ -73,7 +74,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.12'
           cache: 'pip'
@@ -173,7 +174,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 

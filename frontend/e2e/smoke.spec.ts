@@ -89,7 +89,9 @@ test.describe('Smoke Tests - Infrastructure Setup', () => {
   test('should verify frontend is running on correct port', async ({ page }) => {
     await page.goto('/');  // Navigate first to get actual URL
     const url = page.url();
-    expect(url).toContain('http://localhost:5179');  // Fixed: Sprint 31 port
+    // Sprint 114: Use PLAYWRIGHT_BASE_URL or accept both local and production URLs
+    const expectedBase = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:5179';
+    expect(url).toContain(expectedBase.replace(/\/$/, ''));  // Remove trailing slash for comparison
   });
 
   test('should verify Playwright infrastructure is working', async ({ page }) => {

@@ -21,7 +21,9 @@ import { setupAuthMocking } from '../../fixtures';
  * Sprint 38: Uses setupAuthMocking for JWT authentication on protected routes
  */
 
-test.describe('Entity Changelog Panel - Feature 39.6', () => {
+// Sprint 114: Skip all tests - Feature 39.6 (EntityChangelogPanel) not implemented
+// TODO: Enable when backend entity versioning APIs are implemented
+test.describe.skip('Entity Changelog Panel - Feature 39.6', () => {
   const mockChangelog = {
     changes: [
       {

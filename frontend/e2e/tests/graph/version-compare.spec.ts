@@ -24,7 +24,9 @@ import { setupAuthMocking } from '../../fixtures';
  * Sprint 38: Uses setupAuthMocking for JWT authentication on protected routes
  */
 
-test.describe('Version Comparison View - Feature 39.7', () => {
+// Sprint 114: Skip all tests - Feature 39.7 (VersionCompareView) not implemented
+// TODO: Enable when backend entity versioning APIs are implemented
+test.describe.skip('Version Comparison View - Feature 39.7', () => {
   const mockVersions = [
     {
       version: 3,

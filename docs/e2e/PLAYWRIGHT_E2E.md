@@ -1,10 +1,157 @@
 # AegisRAG Playwright E2E Testing Guide
 
-**Last Updated:** 2026-01-19 (Sprint 113)
+**Last Updated:** 2026-01-20 (Sprint 114 - Full Suite Run Complete)
 **Framework:** Playwright + TypeScript
 **Test Environment:** http://192.168.178.10 (Docker Container)
 **Auth Credentials:** admin / admin123
 **Documentation:** This file is the authoritative source for all E2E testing information
+
+---
+
+## 🔴 Sprint 114/115: Full E2E Test Suite Results
+
+**Date:** 2026-01-20 | **Duration:** 184 minutes (3+ hours)
+
+### Executive Summary
+
+| Metric | Value | Status |
+|--------|-------|--------|
+| **Total Tests** | 1099 | - |
+| **Passed** | 511 | 46.5% |
+| **Failed** | 538 | 49.0% |
+| **Skipped** | 50 | 4.5% |
+| **Duration** | 184 min | ⚠️ Too long |
+
+### Failure Categorization
+
+| Category | Count | % of Failures | Description |
+|----------|-------|---------------|-------------|
+| **TIMEOUT (Cat. E)** | 448 | 83.3% | Tests exceed 60s, mostly 120-183s |
+| **OTHER** | 48 | 8.9% | Various issues |
+| **ASSERTION** | 40 | 7.4% | Test logic failures |
+| **API** | 1 | 0.2% | API call failures |
+| **SELECTOR** | 1 | 0.2% | Element not found |
+
+### Category E: Long-Running Tests (>60s) - 394 Tests
+
+**Need Backend Tracing to Identify Root Cause:**
+
+| Duration | Test File | Issue Type |
+|----------|-----------|------------|
+| 183.8s | chat-multi-turn.spec.ts | ⏱️ TIMEOUT |
+| 183.6s | chat-multi-turn.spec.ts | ⏱️ TIMEOUT |
+| 121.9s | error-handling.spec.ts | ⏱️ TIMEOUT |
+| 121.8s | intent.spec.ts | ⏱️ TIMEOUT |
+| 121.8s | section-citations.spec.ts | ⏱️ TIMEOUT |
+| 121.7s | history.spec.ts | ⏱️ TIMEOUT |
+| 121.7s | namespace-isolation.spec.ts | ⏱️ TIMEOUT |
+
+**Investigation Required:**
+- Distinguish between actual long-running LLM calls vs bug-induced delays
+- Full backend trace needed for each Category E test
+- Potential mock infrastructure for CI/CD speed
+
+### Top 20 Failing Test Files
+
+| Rank | File | Failures | Category |
+|------|------|----------|----------|
+| 1 | test_domain_training_flow.spec.ts | 26 | UI/Timeout |
+| 2 | pipeline-progress.spec.ts | 25 | SSE/UI |
+| 3 | conversation-ui.spec.ts | 21 | LLM Timeout |
+| 4 | structured-output.spec.ts | 20 | UI |
+| 5 | graph-visualization.spec.ts | 19 | Graph UI |
+| 6 | error-handling.spec.ts | 17 | Error UI |
+| 7 | tool-output-viz.spec.ts | 16 | UI |
+| 8 | edge-filters.spec.ts | 15 | Graph UI |
+| 9 | group19-llm-config.spec.ts | 15 | Config |
+| 10 | multi-turn-rag.spec.ts | 15 | LLM Timeout |
+| 11 | intent.spec.ts | 15 | Intent |
+| 12 | search.spec.ts | 14 | Search |
+| 13 | memory-management.spec.ts | 14 | Admin UI |
+| 14 | vlm-integration.spec.ts | 13 | VLM |
+| 15 | test_domain_upload_integration.spec.ts | 12 | Upload |
+| 16 | single-document-test.spec.ts | 12 | Ingestion |
+| 17 | graph-visualization.spec.ts | 12 | Graph UI |
+| 18 | namespace-isolation.spec.ts | 11 | Namespace |
+| 19 | graph-communities.spec.ts | 11 | Graph |
+| 20 | conversation-search.spec.ts | 11 | Search |
+
+---
+
+## ✅ Sprint 114: E2E Test Stabilization Phase 2 (COMPLETED)
+
+**Sprint Plan:** [docs/sprints/SPRINT_114_PLAN.md](../sprints/SPRINT_114_PLAN.md)
+
+### New Patterns Discovered (Sprint 114)
+
+#### P-006: Hardcoded URL Pattern
+
+**Problem:** Tests hardcode `http://localhost:5179` but tests run against Docker at `http://192.168.178.10`
+
+```typescript
+// ❌ WRONG - Hardcoded URL
+expect(url).toContain('http://localhost:5179');
+
+// ✅ CORRECT - Use environment variable
+const expectedBase = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:5179';
+expect(url).toContain(expectedBase.replace(/\/$/, ''));
+```
+
+#### P-007: MIME Type vs Extension Pattern
+
+**Problem:** Tests expect MIME types (`text/plain`) but UI uses file extensions (`.txt`)
+
+```typescript
+// ❌ WRONG - Expects MIME type
+expect(acceptAttr).toContain('text/plain');
+
+// ✅ CORRECT - Check for extension OR MIME type
+const acceptsTxt = acceptAttr?.includes('.txt') || acceptAttr?.includes('text/plain');
+expect(acceptsTxt).toBeTruthy();
+```
+
+#### P-008: Auth Timeout Pattern
+
+**Problem:** Auth setup timeout (30s) too short when Ollama is warming up
+
+```typescript
+// ❌ WRONG - 30s timeout
+await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 30000 });
+
+// ✅ CORRECT - 60s timeout for slow auth scenarios
+await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 60000 });
+```
+
+**Location:** `e2e/fixtures/index.ts:78`
+
+#### P-009: Wrong Element Type Pattern
+
+**Problem:** `setInputFiles()` called on `<div>` drag-drop area instead of `<input type="file">`
+
+```typescript
+// ❌ WRONG - setInputFiles on div element
+const uploadArea = page.locator('[data-testid="domain-discovery-upload-area"]');
+await uploadArea.setInputFiles({ ... });  // Error: Node is not an HTMLInputElement
+
+// ✅ CORRECT - Use actual file input element
+const fileInput = page.locator('[data-testid="domain-discovery-file-input"]');
+await fileInput.setInputFiles({ ... });
+```
+
+### Test Results (After Sprint 114 Fixes)
+
+| Test Suite | Passed | Skipped | Pass Rate |
+|------------|--------|---------|-----------|
+| Smoke Tests | 12 | 0 | **100%** ✅ |
+| Domain Training API | 0 | 31 | **(Skipped)** |
+| Admin Dashboard | 14 | 1 | **100%** ✅ |
+
+### Category B: Skipped Tests (Missing Features)
+
+| Feature | Test File | Tests | Reason |
+|---------|-----------|-------|--------|
+| Domain Training API | test_domain_training_api.spec.ts | 31 | `/api/v1/admin/domains/` returns 404 |
+| Admin Domain Stats | admin-dashboard.spec.ts:338 | 1 | TC-46.8.9 depends on unimplemented stats |
 
 ---
 
