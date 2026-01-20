@@ -318,6 +318,74 @@ REDIS_HOST=localhost
 
 ---
 
+## LangSmith Tracing (Sprint 115+)
+
+### Setup
+
+LangSmith tracing ist für LangGraph-Agents aktiviert. **WICHTIG:** Die `LANGCHAIN_*` Variablen müssen beim Container-Start gesetzt sein (nicht zur Laufzeit), da LangGraph diese beim Import liest.
+
+**Benötigte Environment Variables in `.env`:**
+```bash
+LANGSMITH_TRACING=true
+LANGSMITH_API_KEY=lsv2_pt_...  # Von https://smith.langchain.com/settings
+LANGSMITH_PROJECT=aegis-rag-sprint115
+```
+
+**Docker-Compose setzt automatisch:**
+```bash
+LANGCHAIN_TRACING_V2=${LANGSMITH_TRACING}
+LANGCHAIN_API_KEY=${LANGSMITH_API_KEY}
+LANGCHAIN_PROJECT=${LANGSMITH_PROJECT}
+```
+
+### Container Restart bei Env-Änderungen
+
+**KRITISCH:** `docker compose restart` lädt `.env` NICHT neu! Immer verwenden:
+```bash
+docker compose -f docker-compose.dgx-spark.yml up -d --force-recreate api
+```
+
+### LangSmith API Abfragen
+
+```bash
+# API Key (aus .env)
+API_KEY="lsv2_pt_..."
+
+# Projekte auflisten
+curl -s "https://api.smith.langchain.com/api/v1/sessions" \
+  -H "x-api-key: $API_KEY"
+
+# Einzelnen Trace abrufen (funktioniert immer)
+curl -s "https://api.smith.langchain.com/api/v1/runs/{run_id}" \
+  -H "x-api-key: $API_KEY"
+
+# Traces per trace_id abfragen (funktioniert)
+curl -s -X POST "https://api.smith.langchain.com/api/v1/runs/query" \
+  -H "x-api-key: $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"trace": "{trace_id}", "limit": 10}'
+
+# ACHTUNG: Query mit "session" Filter funktioniert NICHT zuverlässig!
+# Nutze stattdessen die UI: https://smith.langchain.com
+```
+
+### Bekannte Einschränkungen
+
+| Feature | Status | Workaround |
+|---------|--------|------------|
+| `/runs/query` mit `session` Filter | ❌ Bug | UI verwenden oder `trace` Filter |
+| `/runs/{id}` einzelner Trace | ✅ Funktioniert | - |
+| LangGraph Auto-Tracing | ✅ Funktioniert | `LANGCHAIN_*` vars beim Start |
+| `@traceable` Decorator | ✅ Funktioniert | Für custom Functions |
+
+### UI Zugang
+
+- **URL:** https://smith.langchain.com
+- **Projekt:** `aegis-rag-sprint115`
+- **Login:** GitHub OAuth (klapom)
+
+---
+
 ## Performance Requirements
 
 | Metric | Target |
