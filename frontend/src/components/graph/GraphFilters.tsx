@@ -46,12 +46,15 @@ const ENTITY_TYPE_OPTIONS = [
 ];
 
 // Default relationship types
+// Sprint 116 Feature 116.8: Extended relationship types
 const DEFAULT_RELATIONSHIP_TYPES = [
   { value: 'CO_OCCURS', label: 'Co-Occurs', color: '#8b5cf6' },
   { value: 'RELATES_TO', label: 'Relates To', color: '#3b82f6' },
   { value: 'MENTIONED_IN', label: 'Mentioned In', color: '#6b7280' },
-  { value: 'BELONGS_TO', label: 'Belongs To', color: '#10b981' },
-  { value: 'WORKS_FOR', label: 'Works For', color: '#f59e0b' },
+  { value: 'HAS_SECTION', label: 'Has Section', color: '#10b981' },
+  { value: 'DEFINES', label: 'Defines', color: '#f59e0b' },
+  { value: 'BELONGS_TO', label: 'Belongs To', color: '#06b6d4' },
+  { value: 'WORKS_FOR', label: 'Works For', color: '#ec4899' },
   { value: 'LOCATED_IN', label: 'Located In', color: '#ef4444' },
 ];
 
@@ -82,9 +85,24 @@ export function GraphFilters({
   // Sprint 51: Search states
   const [entitySearch, setEntitySearch] = useState('');
   const [relationshipSearch, setRelationshipSearch] = useState('');
-  const [selectedRelTypes, setSelectedRelTypes] = useState<string[]>([
-    'CO_OCCURS', 'RELATES_TO', 'MENTIONED_IN'
-  ]);
+
+  // Sprint 116 Feature 116.8: Helper to get selected rel types from edge filters
+  const getSelectedRelTypesFromFilters = (filters: EdgeFilters): string[] => {
+    const types: string[] = [];
+    if (filters.showCoOccurs) types.push('CO_OCCURS');
+    if (filters.showRelatesTo) types.push('RELATES_TO');
+    if (filters.showMentionedIn) types.push('MENTIONED_IN');
+    if (filters.showHasSection) types.push('HAS_SECTION');
+    if (filters.showDefines) types.push('DEFINES');
+    if (filters.showBelongsTo) types.push('BELONGS_TO');
+    if (filters.showWorksFor) types.push('WORKS_FOR');
+    if (filters.showLocatedIn) types.push('LOCATED_IN');
+    return types;
+  };
+
+  const [selectedRelTypes, setSelectedRelTypes] = useState<string[]>(
+    getSelectedRelTypesFromFilters(localEdgeFilters)
+  );
 
   // Update local state when external value changes
   useEffect(() => {
@@ -92,10 +110,13 @@ export function GraphFilters({
   }, [value]);
 
   // Update local edge filters when external value changes
+  // Sprint 116 Feature 116.8: Also sync selectedRelTypes
   useEffect(() => {
     if (edgeFilters) {
       setLocalEdgeFilters(edgeFilters);
+      setSelectedRelTypes(getSelectedRelTypesFromFilters(edgeFilters));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [edgeFilters]);
 
   const handleEntityTypeToggle = (type: string) => {
@@ -129,6 +150,7 @@ export function GraphFilters({
   };
 
   // Sprint 51: Handle relationship type toggle
+  // Sprint 116 Feature 116.8: Extended to support all edge types
   const handleRelTypeToggle = (relType: string) => {
     const newTypes = selectedRelTypes.includes(relType)
       ? selectedRelTypes.filter((t) => t !== relType)
@@ -141,6 +163,11 @@ export function GraphFilters({
       showCoOccurs: newTypes.includes('CO_OCCURS'),
       showRelatesTo: newTypes.includes('RELATES_TO'),
       showMentionedIn: newTypes.includes('MENTIONED_IN'),
+      showHasSection: newTypes.includes('HAS_SECTION'),
+      showDefines: newTypes.includes('DEFINES'),
+      showBelongsTo: newTypes.includes('BELONGS_TO'),
+      showWorksFor: newTypes.includes('WORKS_FOR'),
+      showLocatedIn: newTypes.includes('LOCATED_IN'),
     };
     handleEdgeFilterChange(updatedEdgeFilters);
   };

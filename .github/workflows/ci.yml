@@ -352,7 +352,17 @@ jobs:
       - name: Clear Python Bytecode Cache
         run: find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 
-      - name: Run Unit Tests
+      - name: Run Unit Tests (LangSmith Disabled)
+        env:
+          # Sprint 115: Explicitly disable LangSmith in CI/CD
+          # LangSmith traces should ONLY be created during local development/debugging
+          # CI/CD runs should never generate external traces to avoid:
+          # - Cost overhead (LangSmith API calls)
+          # - Noise in trace project (200+ tests create thousands of traces)
+          # - Unnecessary dependencies on external services
+          LANGSMITH_TRACING: 'false'
+          LANGCHAIN_TRACING_V2: 'false'
+          LANGSMITH_API_KEY: ''
         run: |
           poetry run pytest tests/unit/ tests/components/ tests/api/ \
             --cov=src \
@@ -576,7 +586,7 @@ jobs:
 
           echo "🎉 All services ready for integration tests"
 
-      - name: Run Integration Tests (with Auto-Mocking)
+      - name: Run Integration Tests (with Auto-Mocking, LangSmith Disabled)
         timeout-minutes: 20
         env:
           CI: true
@@ -587,6 +597,10 @@ jobs:
           NEO4J_PASSWORD: ""
           REDIS_HOST: localhost
           REDIS_PORT: 6379
+          # Sprint 115: Explicitly disable LangSmith in CI/CD integration tests
+          LANGSMITH_TRACING: 'false'
+          LANGCHAIN_TRACING_V2: 'false'
+          LANGSMITH_API_KEY: ''
         run: |
           echo "Running integration tests with auto-mocking..."
           poetry run pytest tests/integration/ \

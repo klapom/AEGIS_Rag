@@ -53,11 +53,14 @@ export const SourceCardsScroll = forwardRef<SourceCardsScrollRef, SourceCardsScr
             inline: 'center'
           });
 
-          // Add a highlight animation
-          cardElement.classList.add('ring-2', 'ring-blue-500', 'ring-offset-2');
+          // Add a highlight pulse animation with glow effect
+          // Sprint 116 Feature 116.4: Enhanced citation linking with pulse animation
+          cardElement.classList.add('citation-highlight-pulse');
+
+          // Remove highlight after 3 seconds
           setTimeout(() => {
-            cardElement.classList.remove('ring-2', 'ring-blue-500', 'ring-offset-2');
-          }, 2000);
+            cardElement.classList.remove('citation-highlight-pulse');
+          }, 3000);
         }
       }
     }));

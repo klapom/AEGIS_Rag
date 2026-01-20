@@ -13,6 +13,7 @@
  */
 
 import { AdminNavigationBar } from '../components/admin/AdminNavigationBar';
+import { DashboardStatsCard } from '../components/admin/DashboardStatsCard';
 import { DomainSection } from '../components/admin/DomainSection';
 import { IndexingSection } from '../components/admin/IndexingSection';
 import { SettingsSection } from '../components/admin/SettingsSection';
@@ -59,6 +60,9 @@ export function AdminDashboard() {
 
         {/* Navigation Bar - Quick links to admin subpages */}
         <AdminNavigationBar />
+
+        {/* Dashboard Stats Cards - Sprint 116 Feature 116.1 */}
+        <DashboardStatsCard />
 
         {/* Main Sections */}
         <div className="space-y-4">

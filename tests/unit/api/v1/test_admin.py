@@ -2,9 +2,11 @@
 
 Sprint 17-53: Admin Statistics, Namespaces, and Relation Overrides
 Sprint 58: Fixed patching strategy for module imports
+Sprint 116: Dashboard Stats Cards
 
 Tests cover:
 - System statistics endpoint
+- Dashboard statistics endpoint (Sprint 116.1)
 - Namespace management
 - Relation synonym overrides
 - Error handling
@@ -372,3 +374,221 @@ class TestResetRelationSynonymsEndpoint:
             assert response.status_code == 200
             data = response.json()
             assert data["cleared_count"] == 0
+
+
+# ============================================================================
+# Sprint 116 Feature 116.1: Dashboard Stats Cards Tests
+# ============================================================================
+
+
+class TestGetDashboardStatsEndpoint:
+    """Tests for GET /admin/dashboard/stats endpoint."""
+
+    @pytest.mark.asyncio
+    async def test_get_dashboard_stats_success(self, test_client, monkeypatch):
+        """Test successful retrieval of dashboard statistics."""
+        # Mock Qdrant client
+        mock_qdrant = AsyncMock()
+        mock_collection_info = MagicMock()
+        mock_collection_info.points_count = 1523
+        mock_qdrant.get_collection_info = AsyncMock(return_value=mock_collection_info)
+
+        # Mock Neo4j client
+        mock_neo4j = AsyncMock()
+        mock_neo4j.execute_query = AsyncMock()
+        # First call returns entities count
+        # Second call returns relations count
+        mock_neo4j.execute_query.side_effect = [
+            [{"count": 2842}],  # entities
+            [{"count": 4103}],  # relations
+        ]
+
+        # Mock Namespace Manager
+        mock_namespace = MagicMock()
+        mock_namespace.namespace_id = "default"
+        mock_namespace.document_count = 156
+        mock_manager = AsyncMock()
+        mock_manager.list_namespaces = AsyncMock(return_value=[mock_namespace])
+
+        # Mock Domains
+        mock_domains_response = MagicMock()
+        mock_domains_response.domains = ["domain1", "domain2", "domain3", "domain4", "domain5", "domain6", "domain7", "domain8"]
+
+        with (
+            patch("src.components.vector_search.qdrant_client.get_qdrant_client", return_value=mock_qdrant),
+            patch("src.components.graph_rag.neo4j_client.get_neo4j_client", return_value=mock_neo4j),
+            patch("src.core.namespace.NamespaceManager", return_value=mock_manager),
+            patch("src.api.v1.domain_training.list_domains", new_callable=AsyncMock, return_value=mock_domains_response),
+        ):
+            response = test_client.get("/api/v1/admin/dashboard/stats")
+
+            assert response.status_code == 200
+            data = response.json()
+
+            assert data["total_documents"] == 156
+            assert data["total_entities"] == 2842
+            assert data["total_relations"] == 4103
+            assert data["total_chunks"] == 1523
+            assert data["active_domains"] == 8
+            assert "storage_used_mb" in data
+            assert isinstance(data["storage_used_mb"], (int, float))
+            assert data["storage_used_mb"] > 0
+
+    @pytest.mark.asyncio
+    async def test_get_dashboard_stats_validates_structure(self, test_client, monkeypatch):
+        """Test that response contains all required fields."""
+        # Mock minimal responses
+        mock_qdrant = AsyncMock()
+        mock_collection_info = MagicMock()
+        mock_collection_info.points_count = 100
+        mock_qdrant.get_collection_info = AsyncMock(return_value=mock_collection_info)
+
+        mock_neo4j = AsyncMock()
+        mock_neo4j.execute_query = AsyncMock(side_effect=[[{"count": 50}], [{"count": 75}]])
+
+        mock_manager = AsyncMock()
+        mock_manager.list_namespaces = AsyncMock(return_value=[])
+
+        mock_domains_response = MagicMock()
+        mock_domains_response.domains = []
+
+        with (
+            patch("src.components.vector_search.qdrant_client.get_qdrant_client", return_value=mock_qdrant),
+            patch("src.components.graph_rag.neo4j_client.get_neo4j_client", return_value=mock_neo4j),
+            patch("src.core.namespace.NamespaceManager", return_value=mock_manager),
+            patch("src.api.v1.domain_training.list_domains", new_callable=AsyncMock, return_value=mock_domains_response),
+        ):
+            response = test_client.get("/api/v1/admin/dashboard/stats")
+
+            assert response.status_code == 200
+            data = response.json()
+
+            # Validate all required fields are present
+            required_fields = [
+                "total_documents",
+                "total_entities",
+                "total_relations",
+                "total_chunks",
+                "active_domains",
+                "storage_used_mb",
+            ]
+            for field in required_fields:
+                assert field in data, f"Missing field: {field}"
+
+    @pytest.mark.asyncio
+    async def test_get_dashboard_stats_with_partial_failures(self, test_client, monkeypatch):
+        """Test stats endpoint handles partial service failures gracefully."""
+        # Mock Qdrant working
+        mock_qdrant = AsyncMock()
+        mock_collection_info = MagicMock()
+        mock_collection_info.points_count = 500
+        mock_qdrant.get_collection_info = AsyncMock(return_value=mock_collection_info)
+
+        # Mock Neo4j failing
+        mock_neo4j = AsyncMock()
+        mock_neo4j.execute_query = AsyncMock(side_effect=Exception("Neo4j unavailable"))
+
+        # Mock Namespaces working
+        mock_namespace = MagicMock()
+        mock_namespace.document_count = 42
+        mock_manager = AsyncMock()
+        mock_manager.list_namespaces = AsyncMock(return_value=[mock_namespace])
+
+        # Mock Domains working
+        mock_domains_response = MagicMock()
+        mock_domains_response.domains = ["domain1", "domain2"]
+
+        with (
+            patch("src.components.vector_search.qdrant_client.get_qdrant_client", return_value=mock_qdrant),
+            patch("src.components.graph_rag.neo4j_client.get_neo4j_client", return_value=mock_neo4j),
+            patch("src.core.namespace.NamespaceManager", return_value=mock_manager),
+            patch("src.api.v1.domain_training.list_domains", new_callable=AsyncMock, return_value=mock_domains_response),
+        ):
+            response = test_client.get("/api/v1/admin/dashboard/stats")
+
+            assert response.status_code == 200
+            data = response.json()
+
+            # Qdrant should work
+            assert data["total_chunks"] == 500
+            # Neo4j should return 0 due to error handling
+            assert data["total_entities"] == 0
+            assert data["total_relations"] == 0
+            # Namespaces should work
+            assert data["total_documents"] == 42
+            # Domains should work
+            assert data["active_domains"] == 2
+
+    @pytest.mark.asyncio
+    async def test_get_dashboard_stats_multiple_namespaces(self, test_client, monkeypatch):
+        """Test aggregation of document counts across multiple namespaces."""
+        # Mock minimal services
+        mock_qdrant = AsyncMock()
+        mock_collection_info = MagicMock()
+        mock_collection_info.points_count = 100
+        mock_qdrant.get_collection_info = AsyncMock(return_value=mock_collection_info)
+
+        mock_neo4j = AsyncMock()
+        mock_neo4j.execute_query = AsyncMock(side_effect=[[{"count": 10}], [{"count": 20}]])
+
+        # Mock 3 namespaces with different document counts
+        namespaces = []
+        for i, doc_count in enumerate([50, 75, 31]):
+            ns = MagicMock()
+            ns.namespace_id = f"namespace_{i}"
+            ns.document_count = doc_count
+            namespaces.append(ns)
+
+        mock_manager = AsyncMock()
+        mock_manager.list_namespaces = AsyncMock(return_value=namespaces)
+
+        mock_domains_response = MagicMock()
+        mock_domains_response.domains = []
+
+        with (
+            patch("src.components.vector_search.qdrant_client.get_qdrant_client", return_value=mock_qdrant),
+            patch("src.components.graph_rag.neo4j_client.get_neo4j_client", return_value=mock_neo4j),
+            patch("src.core.namespace.NamespaceManager", return_value=mock_manager),
+            patch("src.api.v1.domain_training.list_domains", new_callable=AsyncMock, return_value=mock_domains_response),
+        ):
+            response = test_client.get("/api/v1/admin/dashboard/stats")
+
+            assert response.status_code == 200
+            data = response.json()
+
+            # Should sum all namespace document counts
+            assert data["total_documents"] == 50 + 75 + 31  # 156
+
+    @pytest.mark.asyncio
+    async def test_get_dashboard_stats_storage_calculation(self, test_client, monkeypatch):
+        """Test storage size calculation is reasonable."""
+        mock_qdrant = AsyncMock()
+        mock_collection_info = MagicMock()
+        mock_collection_info.points_count = 1000  # 1000 chunks
+        mock_qdrant.get_collection_info = AsyncMock(return_value=mock_collection_info)
+
+        mock_neo4j = AsyncMock()
+        mock_neo4j.execute_query = AsyncMock(side_effect=[[{"count": 0}], [{"count": 0}]])
+
+        mock_manager = AsyncMock()
+        mock_manager.list_namespaces = AsyncMock(return_value=[])
+
+        mock_domains_response = MagicMock()
+        mock_domains_response.domains = []
+
+        with (
+            patch("src.components.vector_search.qdrant_client.get_qdrant_client", return_value=mock_qdrant),
+            patch("src.components.graph_rag.neo4j_client.get_neo4j_client", return_value=mock_neo4j),
+            patch("src.core.namespace.NamespaceManager", return_value=mock_manager),
+            patch("src.api.v1.domain_training.list_domains", new_callable=AsyncMock, return_value=mock_domains_response),
+        ):
+            response = test_client.get("/api/v1/admin/dashboard/stats")
+
+            assert response.status_code == 200
+            data = response.json()
+
+            # BGE-M3: 1024 dense + ~100 sparse = 1124 dims * 4 bytes * 1.5 overhead
+            # 1000 chunks * 1124 * 4 * 1.5 / (1024*1024) = ~6.4 MB
+            storage_mb = data["storage_used_mb"]
+            assert isinstance(storage_mb, (int, float))
+            assert 5.0 <= storage_mb <= 8.0  # Reasonable range for 1000 chunks

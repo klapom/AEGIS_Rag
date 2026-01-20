@@ -241,6 +241,114 @@ detail-panel: bg-white border-gray-200
 
 ---
 
-**Last Updated:** 2025-12-04
-**Sprint:** 35
+## BashToolExecutor (Sprint 116)
+
+**Location:** `/frontend/src/components/admin/BashToolExecutor.tsx`
+
+A reusable component for executing bash commands with real-time output and history management.
+
+### Usage
+
+```tsx
+import { BashToolExecutor } from './components/admin/BashToolExecutor';
+
+function MyPage() {
+  const authToken = localStorage.getItem('auth_token');
+
+  return (
+    <BashToolExecutor
+      apiBaseUrl="http://localhost:8000"
+      authToken={authToken}
+      onExecute={(command, result) => {
+        console.log('Command executed:', command);
+        console.log('Result:', result);
+      }}
+    />
+  );
+}
+```
+
+### Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `apiBaseUrl` | `string` | `http://localhost:8000` | Backend API base URL |
+| `authToken` | `string` | `undefined` | Optional JWT authentication token |
+| `onExecute` | `(command: string, result: BashExecutionResult) => void` | `undefined` | Callback fired after command execution |
+
+### Features
+
+- Multi-line command input with syntax highlighting
+- Execute button with loading state
+- Real-time stdout/stderr output display
+- Exit code visualization (green for 0, red for errors)
+- Command history (last 10, persisted to localStorage)
+- Keyboard shortcuts (Ctrl+Enter / ⌘+Enter)
+- Copy command to clipboard
+- Collapsible output sections
+- 30-second timeout enforcement
+
+### API Integration
+
+Calls `POST /api/v1/mcp/tools/bash/execute`:
+
+```json
+{
+  "parameters": { "command": "ls -la" },
+  "timeout": 30
+}
+```
+
+Response:
+```json
+{
+  "result": {
+    "success": true,
+    "stdout": "...",
+    "stderr": "",
+    "exit_code": 0
+  },
+  "execution_time_ms": 42,
+  "status": "success"
+}
+```
+
+### Data-testid Attributes
+
+- `bash-tool-executor` - Main container
+- `bash-command-input` - Command textarea
+- `execute-bash-button` - Execute button
+- `bash-execution-result` - Result container
+- `bash-execution-error` - Error message
+- `history-entry-{id}` - History entries
+- `toggle-stdout` - Toggle stdout button
+- `toggle-stderr` - Toggle stderr button
+
+### Testing
+
+```bash
+npm test -- BashToolExecutor.test.tsx
+```
+
+**Coverage:** 77% (20/26 tests passing)
+
+### localStorage Schema
+
+Key: `aegis_bash_command_history`
+
+```json
+[
+  {
+    "id": "1234567890-abc123",
+    "command": "ls -la",
+    "result": { /* BashExecutionResult */ },
+    "timestamp": "2026-01-20T18:00:00.000Z"
+  }
+]
+```
+
+---
+
+**Last Updated:** 2026-01-20
+**Sprint:** 116
 **Maintainer:** Frontend Agent

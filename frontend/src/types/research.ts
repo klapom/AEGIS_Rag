@@ -253,3 +253,127 @@ export const DEFAULT_RESEARCH_STATE: ResearchState = {
  * LocalStorage key for Research Mode persistence
  */
 export const RESEARCH_MODE_STORAGE_KEY = 'aegisrag-research-mode-enabled';
+
+/**
+ * Sprint 116.10: Deep Research Multi-Step Types
+ */
+
+/**
+ * Deep research status values
+ */
+export type DeepResearchStatusValue =
+  | 'pending'
+  | 'decomposing'
+  | 'retrieving'
+  | 'analyzing'
+  | 'synthesizing'
+  | 'complete'
+  | 'error'
+  | 'cancelled';
+
+/**
+ * Execution step in deep research workflow
+ * Matches backend ExecutionStepModel
+ */
+export interface ExecutionStep {
+  /** Name of the step */
+  step_name: string;
+  /** Step start time (ISO 8601) */
+  started_at: string;
+  /** Step completion time (ISO 8601) */
+  completed_at: string | null;
+  /** Duration in milliseconds */
+  duration_ms: number | null;
+  /** Step status */
+  status: 'running' | 'completed' | 'failed';
+  /** Step result data */
+  result: Record<string, unknown>;
+  /** Error message if failed */
+  error: string | null;
+}
+
+/**
+ * Source document (alias for compatibility)
+ * Matches backend Source model
+ */
+export interface Source {
+  /** Source text content */
+  text: string;
+  /** Relevance score (0-1) */
+  score: number;
+  /** Source type (vector, graph) */
+  source_type: string;
+  /** Additional metadata */
+  metadata: Record<string, unknown>;
+  /** Extracted entities */
+  entities: string[];
+  /** Extracted relationships */
+  relationships: string[];
+}
+
+/**
+ * Intermediate answer for a sub-question
+ * Matches backend IntermediateAnswer model
+ */
+export interface IntermediateAnswer {
+  /** Sub-question being answered */
+  sub_question: string;
+  /** Intermediate answer */
+  answer: string;
+  /** Number of contexts used */
+  contexts_count: number;
+  /** Sources used for this sub-question */
+  sources: Source[];
+  /** Confidence score (0-1) */
+  confidence: number;
+}
+
+/**
+ * Deep research response
+ * Matches backend DeepResearchResponse model
+ */
+export interface DeepResearchResponse {
+  /** Unique research ID */
+  id: string;
+  /** Original research question */
+  query: string;
+  /** Current status */
+  status: DeepResearchStatusValue;
+  /** Generated sub-questions */
+  sub_questions: string[];
+  /** Intermediate answers for sub-questions */
+  intermediate_answers: IntermediateAnswer[];
+  /** Final synthesized answer */
+  final_answer: string;
+  /** All sources used */
+  sources: Source[];
+  /** Execution step history */
+  execution_steps: ExecutionStep[];
+  /** Total execution time in milliseconds */
+  total_time_ms: number;
+  /** Creation timestamp (ISO 8601) */
+  created_at: string;
+  /** Completion timestamp (ISO 8601) */
+  completed_at: string | null;
+  /** Error message if failed */
+  error: string | null;
+}
+
+/**
+ * Deep research status response
+ * Matches backend DeepResearchStatusResponse model
+ */
+export interface DeepResearchStatus {
+  /** Research ID */
+  id: string;
+  /** Current status */
+  status: DeepResearchStatusValue;
+  /** Current step name */
+  current_step: string;
+  /** Progress percentage (0-100) */
+  progress_percent: number;
+  /** Estimated time remaining in milliseconds */
+  estimated_time_remaining_ms: number | null;
+  /** Completed execution steps */
+  execution_steps: ExecutionStep[];
+}

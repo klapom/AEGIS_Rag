@@ -63,6 +63,17 @@ export interface SystemStats {
   total_conversations?: number | null;
 }
 
+// Sprint 116 Feature 116.1: Dashboard Stats Cards
+
+export interface DashboardStats {
+  total_documents: number;
+  total_entities: number;
+  total_relations: number;
+  total_chunks: number;
+  active_domains: number;
+  storage_used_mb: number;
+}
+
 // ============================================================================
 // Sprint 33 Feature 33.1: Directory Scanning Types
 // ============================================================================
@@ -349,6 +360,19 @@ export interface MCPTool {
   description: string;
   server_name: string;
   parameters: MCPToolParameter[];
+  enabled?: boolean; // Sprint 116 Feature 116.5: Permission status
+}
+
+/**
+ * MCP Tool permission configuration
+ * Sprint 116 Feature 116.5: Tool permission management
+ */
+export interface MCPToolPermission {
+  tool_name: string;
+  server_name: string;
+  enabled: boolean;
+  allowed_users: string[];
+  config: Record<string, unknown>;
 }
 
 /**

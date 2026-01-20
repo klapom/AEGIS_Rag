@@ -736,3 +736,281 @@ async def reload_mcp_config(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to reload MCP configuration: {e}",
         ) from e
+
+
+# ============================================================================
+# Sprint 116 Feature 116.5: MCP Tool Permission Management
+# ============================================================================
+
+
+class ToolPermissionUpdate(BaseModel):
+    """Request to update tool permission.
+
+    Attributes:
+        enabled: Whether the tool is enabled
+    """
+
+    enabled: bool
+
+
+class ToolConfigUpdate(BaseModel):
+    """Request to update tool configuration.
+
+    Attributes:
+        config: Tool-specific configuration as key-value pairs
+    """
+
+    config: dict[str, Any] = Field(default_factory=dict)
+
+
+class ToolPermissionResponse(BaseModel):
+    """Response with tool permission status.
+
+    Attributes:
+        tool_name: Name of the tool
+        server_name: Server providing the tool
+        enabled: Whether the tool is enabled
+        allowed_users: List of user IDs allowed to use this tool (empty = all users)
+        config: Tool-specific configuration
+    """
+
+    tool_name: str
+    server_name: str
+    enabled: bool
+    allowed_users: list[str] = Field(default_factory=list)
+    config: dict[str, Any] = Field(default_factory=dict)
+
+
+# Global tool permissions storage (in-memory for MVP, should move to Redis/DB)
+_tool_permissions: dict[str, ToolPermissionResponse] = {}
+
+
+@router.get("/tools/{tool_name}/permissions", response_model=ToolPermissionResponse)
+async def get_tool_permissions(
+    tool_name: str,
+    current_user: User = Depends(get_current_user),
+) -> ToolPermissionResponse:
+    """Get permission configuration for a specific tool.
+
+    Sprint 116 Feature 116.5: Tool permission management.
+
+    Args:
+        tool_name: Name of the tool
+        current_user: Authenticated user
+
+    Returns:
+        Tool permission configuration
+
+    Raises:
+        HTTPException: 404 if tool not found
+
+    Example:
+        ```bash
+        curl -H "Authorization: Bearer $TOKEN" \\
+             "http://localhost:8000/api/v1/mcp/tools/read_file/permissions"
+        ```
+    """
+    manager = get_connection_manager()
+    tool = manager.client.get_tool(tool_name)
+
+    if not tool:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Tool not found: {tool_name}",
+        )
+
+    logger.info(
+        "mcp_tool_permissions_retrieved",
+        user_id=current_user.user_id,
+        tool_name=tool_name,
+    )
+
+    # Return existing permissions or default (enabled by default)
+    if tool_name in _tool_permissions:
+        return _tool_permissions[tool_name]
+
+    return ToolPermissionResponse(
+        tool_name=tool_name,
+        server_name=tool.server,
+        enabled=True,
+        allowed_users=[],
+        config={},
+    )
+
+
+@router.put("/tools/{tool_name}/permissions", response_model=ToolPermissionResponse)
+async def update_tool_permissions(
+    tool_name: str,
+    update: ToolPermissionUpdate,
+    current_user: User = Depends(get_current_user),
+) -> ToolPermissionResponse:
+    """Enable or disable a specific tool.
+
+    Sprint 116 Feature 116.5: Tool permission management.
+
+    Args:
+        tool_name: Name of the tool
+        update: Permission update request
+        current_user: Authenticated user
+
+    Returns:
+        Updated tool permission configuration
+
+    Raises:
+        HTTPException: 404 if tool not found
+
+    Example:
+        ```bash
+        # Disable a tool
+        curl -X PUT -H "Authorization: Bearer $TOKEN" \\
+             -H "Content-Type: application/json" \\
+             -d '{"enabled": false}' \\
+             "http://localhost:8000/api/v1/mcp/tools/read_file/permissions"
+
+        # Enable a tool
+        curl -X PUT -H "Authorization: Bearer $TOKEN" \\
+             -H "Content-Type: application/json" \\
+             -d '{"enabled": true}' \\
+             "http://localhost:8000/api/v1/mcp/tools/read_file/permissions"
+        ```
+    """
+    manager = get_connection_manager()
+    tool = manager.client.get_tool(tool_name)
+
+    if not tool:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Tool not found: {tool_name}",
+        )
+
+    # Get existing permissions or create new
+    if tool_name in _tool_permissions:
+        permissions = _tool_permissions[tool_name]
+        permissions.enabled = update.enabled
+    else:
+        permissions = ToolPermissionResponse(
+            tool_name=tool_name,
+            server_name=tool.server,
+            enabled=update.enabled,
+            allowed_users=[],
+            config={},
+        )
+        _tool_permissions[tool_name] = permissions
+
+    logger.info(
+        "mcp_tool_permissions_updated",
+        user_id=current_user.user_id,
+        tool_name=tool_name,
+        enabled=update.enabled,
+    )
+
+    return permissions
+
+
+@router.get("/tools/{tool_name}/config")
+async def get_tool_config(
+    tool_name: str,
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Get configuration for a specific tool.
+
+    Sprint 116 Feature 116.5: Tool configuration management.
+
+    Args:
+        tool_name: Name of the tool
+        current_user: Authenticated user
+
+    Returns:
+        Tool configuration as key-value pairs
+
+    Raises:
+        HTTPException: 404 if tool not found
+
+    Example:
+        ```bash
+        curl -H "Authorization: Bearer $TOKEN" \\
+             "http://localhost:8000/api/v1/mcp/tools/read_file/config"
+        ```
+    """
+    manager = get_connection_manager()
+    tool = manager.client.get_tool(tool_name)
+
+    if not tool:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Tool not found: {tool_name}",
+        )
+
+    logger.info(
+        "mcp_tool_config_retrieved",
+        user_id=current_user.user_id,
+        tool_name=tool_name,
+    )
+
+    # Return config from permissions or empty dict
+    if tool_name in _tool_permissions:
+        return {"config": _tool_permissions[tool_name].config}
+
+    return {"config": {}}
+
+
+@router.put("/tools/{tool_name}/config")
+async def update_tool_config(
+    tool_name: str,
+    update: ToolConfigUpdate,
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Update configuration for a specific tool.
+
+    Sprint 116 Feature 116.5: Tool configuration management.
+
+    Args:
+        tool_name: Name of the tool
+        update: Configuration update request
+        current_user: Authenticated user
+
+    Returns:
+        Updated configuration
+
+    Raises:
+        HTTPException: 404 if tool not found
+
+    Example:
+        ```bash
+        curl -X PUT -H "Authorization: Bearer $TOKEN" \\
+             -H "Content-Type: application/json" \\
+             -d '{"config": {"timeout": 60, "max_size": 1024}}' \\
+             "http://localhost:8000/api/v1/mcp/tools/read_file/config"
+        ```
+    """
+    manager = get_connection_manager()
+    tool = manager.client.get_tool(tool_name)
+
+    if not tool:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Tool not found: {tool_name}",
+        )
+
+    # Get existing permissions or create new
+    if tool_name in _tool_permissions:
+        permissions = _tool_permissions[tool_name]
+        permissions.config = update.config
+    else:
+        permissions = ToolPermissionResponse(
+            tool_name=tool_name,
+            server_name=tool.server,
+            enabled=True,
+            allowed_users=[],
+            config=update.config,
+        )
+        _tool_permissions[tool_name] = permissions
+
+    logger.info(
+        "mcp_tool_config_updated",
+        user_id=current_user.user_id,
+        tool_name=tool_name,
+        config_keys=list(update.config.keys()),
+    )
+
+    return {"config": permissions.config}

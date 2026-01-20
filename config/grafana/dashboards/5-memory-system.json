@@ -1,0 +1,603 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "aegis-memory-system",
+    "title": "Memory System - Graphiti 3-Layer Architecture",
+    "tags": ["aegis-rag", "memory", "graphiti", "sprint-97"],
+    "timezone": "browser",
+    "schemaVersion": 38,
+    "version": 1,
+    "refresh": "15s",
+    "time": {
+      "from": "now-6h",
+      "to": "now"
+    },
+    "timepicker": {
+      "refresh_intervals": ["5s", "10s", "15s", "30s", "1m", "5m"],
+      "time_options": ["15m", "1h", "6h", "12h", "24h"]
+    },
+    "annotations": {
+      "list": [
+        {
+          "builtIn": 1,
+          "datasource": "-- Grafana --",
+          "enable": true,
+          "hide": true,
+          "iconColor": "rgba(0, 211, 255, 1)",
+          "name": "Annotations & Alerts",
+          "type": "dashboard"
+        }
+      ]
+    },
+    "editable": true,
+    "fiscalYearStartMonth": 0,
+    "graphTooltip": 1,
+    "links": [],
+    "liveNow": false,
+    "panels": [
+      {
+        "id": 1,
+        "title": "Layer 1: Episodic Facts Count",
+        "type": "stat",
+        "gridPos": {
+          "h": 4,
+          "w": 8,
+          "x": 0,
+          "y": 0
+        },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "graphiti_facts_total{layer=\"episodic\"}",
+            "legendFormat": "Episodic Facts",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null}
+              ]
+            },
+            "mappings": []
+          }
+        },
+        "options": {
+          "graphMode": "area",
+          "colorMode": "background",
+          "justifyMode": "auto",
+          "textMode": "auto",
+          "reduceOptions": {
+            "values": false,
+            "fields": "",
+            "calcs": ["lastNotNull"]
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Layer 2: Semantic Facts Count",
+        "type": "stat",
+        "gridPos": {
+          "h": 4,
+          "w": 8,
+          "x": 8,
+          "y": 0
+        },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "graphiti_facts_total{layer=\"semantic\"}",
+            "legendFormat": "Semantic Facts",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null}
+              ]
+            },
+            "mappings": []
+          }
+        },
+        "options": {
+          "graphMode": "area",
+          "colorMode": "background",
+          "justifyMode": "auto",
+          "textMode": "auto",
+          "reduceOptions": {
+            "values": false,
+            "fields": "",
+            "calcs": ["lastNotNull"]
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "Layer 3: Procedural Facts Count",
+        "type": "stat",
+        "gridPos": {
+          "h": 4,
+          "w": 8,
+          "x": 16,
+          "y": 0
+        },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "graphiti_facts_total{layer=\"procedural\"}",
+            "legendFormat": "Procedural Facts",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null}
+              ]
+            },
+            "mappings": []
+          }
+        },
+        "options": {
+          "graphMode": "area",
+          "colorMode": "background",
+          "justifyMode": "auto",
+          "textMode": "auto",
+          "reduceOptions": {
+            "values": false,
+            "fields": "",
+            "calcs": ["lastNotNull"]
+          }
+        }
+      },
+      {
+        "id": 4,
+        "title": "Facts by Type",
+        "type": "timeseries",
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 4
+        },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "graphiti_facts_total{type=\"entity\"}",
+            "legendFormat": "Entity Facts",
+            "refId": "A"
+          },
+          {
+            "expr": "graphiti_facts_total{type=\"relationship\"}",
+            "legendFormat": "Relationship Facts",
+            "refId": "B"
+          },
+          {
+            "expr": "graphiti_facts_total{type=\"event\"}",
+            "legendFormat": "Event Facts",
+            "refId": "C"
+          },
+          {
+            "expr": "graphiti_facts_total{type=\"summary\"}",
+            "legendFormat": "Summary Facts",
+            "refId": "D"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 10,
+              "showPoints": "never"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null}
+              ]
+            }
+          }
+        },
+        "options": {
+          "tooltip": {
+            "mode": "multi",
+            "sort": "desc"
+          },
+          "legend": {
+            "displayMode": "table",
+            "placement": "bottom",
+            "calcs": ["mean", "max", "last"]
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "Layer Capacity Usage %",
+        "type": "timeseries",
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 4
+        },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "(graphiti_facts_total{layer=\"episodic\"} / 1000000) * 100",
+            "legendFormat": "Episodic (1M max)",
+            "refId": "A"
+          },
+          {
+            "expr": "(graphiti_facts_total{layer=\"semantic\"} / 500000) * 100",
+            "legendFormat": "Semantic (500K max)",
+            "refId": "B"
+          },
+          {
+            "expr": "(graphiti_facts_total{layer=\"procedural\"} / 100000) * 100",
+            "legendFormat": "Procedural (100K max)",
+            "refId": "C"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 15,
+              "showPoints": "never"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 70},
+                {"color": "red", "value": 90}
+              ]
+            },
+            "max": 100
+          }
+        },
+        "options": {
+          "tooltip": {
+            "mode": "multi",
+            "sort": "desc"
+          },
+          "legend": {
+            "displayMode": "table",
+            "placement": "bottom",
+            "calcs": ["mean", "max", "last"]
+          }
+        }
+      },
+      {
+        "id": 6,
+        "title": "Read Latency by Layer (ms)",
+        "type": "timeseries",
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 12
+        },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(graphiti_read_latency_seconds_bucket{layer=\"episodic\"}[5m])) by (le)) * 1000",
+            "legendFormat": "Episodic P95",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(graphiti_read_latency_seconds_bucket{layer=\"semantic\"}[5m])) by (le)) * 1000",
+            "legendFormat": "Semantic P95",
+            "refId": "B"
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(graphiti_read_latency_seconds_bucket{layer=\"procedural\"}[5m])) by (le)) * 1000",
+            "legendFormat": "Procedural P95",
+            "refId": "C"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ms",
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 15,
+              "showPoints": "never"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 50},
+                {"color": "red", "value": 200}
+              ]
+            }
+          }
+        },
+        "options": {
+          "tooltip": {
+            "mode": "multi",
+            "sort": "desc"
+          },
+          "legend": {
+            "displayMode": "table",
+            "placement": "bottom",
+            "calcs": ["mean", "max", "last"]
+          }
+        }
+      },
+      {
+        "id": 7,
+        "title": "Write Latency by Layer (ms)",
+        "type": "timeseries",
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 12
+        },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(graphiti_write_latency_seconds_bucket{layer=\"episodic\"}[5m])) by (le)) * 1000",
+            "legendFormat": "Episodic P95",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(graphiti_write_latency_seconds_bucket{layer=\"semantic\"}[5m])) by (le)) * 1000",
+            "legendFormat": "Semantic P95",
+            "refId": "B"
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(graphiti_write_latency_seconds_bucket{layer=\"procedural\"}[5m])) by (le)) * 1000",
+            "legendFormat": "Procedural P95",
+            "refId": "C"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ms",
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 15,
+              "showPoints": "never"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 100},
+                {"color": "red", "value": 500}
+              ]
+            }
+          }
+        },
+        "options": {
+          "tooltip": {
+            "mode": "multi",
+            "sort": "desc"
+          },
+          "legend": {
+            "displayMode": "table",
+            "placement": "bottom",
+            "calcs": ["mean", "max", "last"]
+          }
+        }
+      },
+      {
+        "id": 8,
+        "title": "Read Operations/sec",
+        "type": "timeseries",
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 20
+        },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "sum(rate(graphiti_read_ops_total[1m])) * 60 by (layer)",
+            "legendFormat": "{{layer}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 10,
+              "showPoints": "never"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null}
+              ]
+            }
+          }
+        },
+        "options": {
+          "tooltip": {
+            "mode": "multi",
+            "sort": "desc"
+          },
+          "legend": {
+            "displayMode": "table",
+            "placement": "bottom",
+            "calcs": ["mean", "max", "last"]
+          }
+        }
+      },
+      {
+        "id": 9,
+        "title": "Write Operations/sec",
+        "type": "timeseries",
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 20
+        },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "sum(rate(graphiti_write_ops_total[1m])) * 60 by (layer)",
+            "legendFormat": "{{layer}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 10,
+              "showPoints": "never"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null}
+              ]
+            }
+          }
+        },
+        "options": {
+          "tooltip": {
+            "mode": "multi",
+            "sort": "desc"
+          },
+          "legend": {
+            "displayMode": "table",
+            "placement": "bottom",
+            "calcs": ["mean", "max", "last"]
+          }
+        }
+      },
+      {
+        "id": 10,
+        "title": "Memory Layer Distribution (bytes)",
+        "type": "piechart",
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 28
+        },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "graphiti_memory_bytes_total by (layer)",
+            "legendFormat": "{{layer}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "bytes",
+            "mappings": [],
+            "custom": {
+              "hideFrom": {
+                "tooltip": false,
+                "viz": false,
+                "legend": false
+              }
+            }
+          }
+        },
+        "options": {
+          "tooltip": {
+            "mode": "single",
+            "sort": "none"
+          },
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom",
+            "calcs": ["value", "percent"]
+          }
+        }
+      },
+      {
+        "id": 11,
+        "title": "Cache Hit Rate by Layer %",
+        "type": "timeseries",
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 28
+        },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "(graphiti_cache_hits{layer=\"episodic\"} / (graphiti_cache_hits{layer=\"episodic\"} + graphiti_cache_misses{layer=\"episodic\"})) * 100",
+            "legendFormat": "Episodic",
+            "refId": "A"
+          },
+          {
+            "expr": "(graphiti_cache_hits{layer=\"semantic\"} / (graphiti_cache_hits{layer=\"semantic\"} + graphiti_cache_misses{layer=\"semantic\"})) * 100",
+            "legendFormat": "Semantic",
+            "refId": "B"
+          },
+          {
+            "expr": "(graphiti_cache_hits{layer=\"procedural\"} / (graphiti_cache_hits{layer=\"procedural\"} + graphiti_cache_misses{layer=\"procedural\"})) * 100",
+            "legendFormat": "Procedural",
+            "refId": "C"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 15,
+              "showPoints": "never"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "red", "value": null},
+                {"color": "yellow", "value": 50},
+                {"color": "green", "value": 75}
+              ]
+            },
+            "max": 100
+          }
+        },
+        "options": {
+          "tooltip": {
+            "mode": "multi",
+            "sort": "desc"
+          },
+          "legend": {
+            "displayMode": "table",
+            "placement": "bottom",
+            "calcs": ["mean", "max", "last"]
+          }
+        }
+      }
+    ]
+  }
+}

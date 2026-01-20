@@ -49,6 +49,7 @@ from src.api.v1.mcp_registry import router as mcp_registry_router  # Sprint 107 
 from src.api.v1.mcp_tools import router as mcp_tools_router  # Sprint 103 Feature 103.1: MCP Tool Execution
 from src.api.v1.memory import router as memory_router
 from src.api.v1.research import router as research_router  # Sprint 62 Feature 62.10
+from src.api.v1.deep_research import router as deep_research_router  # Sprint 116.10: Deep Research Multi-Step
 from src.api.v1.retrieval import router as retrieval_router
 from src.api.v1.skills import router as skills_router  # Sprint 99 Feature 99.1: Skill Management APIs
 from src.api.v1.agents import router as agents_router  # Sprint 99 Feature 99.2: Agent Monitoring APIs (Part 1)
@@ -487,6 +488,15 @@ logger.info(
     router="research_router",
     prefix="/api/v1/research",
     note="Sprint 62: Multi-step research workflow with LangGraph",
+)
+
+# Deep Research API router (Sprint 116.10: Deep Research Multi-Step)
+app.include_router(deep_research_router, prefix="/api/v1")
+logger.info(
+    "router_registered",
+    router="deep_research_router",
+    prefix="/api/v1/research/deep",
+    note="Sprint 116.10: Enhanced deep research with intermediate results",
 )
 
 # MCP API router (Sprint 40: Feature 40.2 - Tool Discovery & Management)

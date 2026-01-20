@@ -2,16 +2,19 @@
  * Citation Component
  * Sprint 28 Feature 28.2: Inline citations with hover previews
  * Sprint 62 Feature 62.4: Section-aware citations with section display
+ * Sprint 116 Feature 116.3: Enhanced tooltips with delay and positioning
  *
  * Features:
  * - Superscript [1] styling with blue color
- * - Hover tooltip with source preview
+ * - Hover tooltip with source preview (300ms delay)
+ * - Intelligent tooltip positioning (viewport aware)
  * - Click to scroll to source card
  * - Section information display (62.4)
  * - Document type badge (62.4)
+ * - Smooth fade animations
  */
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { FileText, File, FileCode, BookOpen, Hash } from 'lucide-react';
 import type { Source } from '../../types/chat';
 import {
@@ -138,8 +141,17 @@ function getDocumentTypeName(docType: DocumentType): string {
   }
 }
 
+/**
+ * Sprint 116.3: Tooltip position calculated from viewport
+ */
+type TooltipPosition = 'top' | 'bottom' | 'left' | 'right';
+
 export function Citation({ sourceIndex, source, onClickScrollTo }: CitationProps) {
   const [showTooltip, setShowTooltip] = useState(false);
+  const [tooltipPosition, setTooltipPosition] = useState<TooltipPosition>('top');
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
+  const hoverTimeoutRef = useRef<number | null>(null);
 
   // Sprint 62.4: Extract section metadata and document type
   const sectionMetadata = extractSectionMetadata(source);
@@ -149,6 +161,100 @@ export function Citation({ sourceIndex, source, onClickScrollTo }: CitationProps
     sectionMetadata.section_number ||
     sectionMetadata.section_id
   );
+
+  /**
+   * Sprint 116.3: Calculate intelligent tooltip position based on viewport
+   */
+  useEffect(() => {
+    if (!showTooltip || !buttonRef.current || !tooltipRef.current) return;
+
+    const buttonRect = buttonRef.current.getBoundingClientRect();
+    const tooltipRect = tooltipRef.current.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    const MARGIN = 10; // Margin from viewport edge
+
+    // Check if tooltip fits on top (preferred)
+    const fitsTop = buttonRect.top - tooltipRect.height - MARGIN >= 0;
+    // Check if tooltip fits on bottom
+    const fitsBottom = buttonRect.bottom + tooltipRect.height + MARGIN <= viewportHeight;
+    // Check if tooltip fits on right
+    const fitsRight = buttonRect.right + tooltipRect.width + MARGIN <= viewportWidth;
+    // Check if tooltip fits on left
+    const fitsLeft = buttonRect.left - tooltipRect.width - MARGIN >= 0;
+
+    // Priority: top > bottom > right > left
+    if (fitsTop) {
+      setTooltipPosition('top');
+    } else if (fitsBottom) {
+      setTooltipPosition('bottom');
+    } else if (fitsRight) {
+      setTooltipPosition('right');
+    } else if (fitsLeft) {
+      setTooltipPosition('left');
+    } else {
+      // Default to top if nothing fits perfectly
+      setTooltipPosition('top');
+    }
+  }, [showTooltip]);
+
+  /**
+   * Sprint 116.3: Handle mouse enter with 300ms delay
+   */
+  const handleMouseEnter = () => {
+    // Clear any existing timeout
+    if (hoverTimeoutRef.current !== null) {
+      window.clearTimeout(hoverTimeoutRef.current);
+    }
+
+    // Set new timeout for 300ms
+    hoverTimeoutRef.current = window.setTimeout(() => {
+      setShowTooltip(true);
+    }, 300);
+  };
+
+  /**
+   * Sprint 116.3: Handle mouse leave - cancel timeout or hide tooltip
+   */
+  const handleMouseLeave = () => {
+    // Clear the timeout if user moves away before 300ms
+    if (hoverTimeoutRef.current !== null) {
+      window.clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
+    setShowTooltip(false);
+  };
+
+  /**
+   * Sprint 116.3: Keep tooltip visible when hovering over it
+   */
+  const handleTooltipMouseEnter = () => {
+    // Keep tooltip visible
+    if (hoverTimeoutRef.current !== null) {
+      window.clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
+    setShowTooltip(true);
+  };
+
+  /**
+   * Sprint 116.3: Hide tooltip when leaving tooltip area
+   */
+  const handleTooltipMouseLeave = () => {
+    setShowTooltip(false);
+  };
+
+  /**
+   * Clean up timeout on unmount
+   */
+  useEffect(() => {
+    return () => {
+      if (hoverTimeoutRef.current !== null) {
+        window.clearTimeout(hoverTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -207,10 +313,11 @@ export function Citation({ sourceIndex, source, onClickScrollTo }: CitationProps
   return (
     <span className="inline-block relative">
       <button
+        ref={buttonRef}
         onClick={handleClick}
-        onMouseEnter={() => setShowTooltip(true)}
-        onMouseLeave={() => setShowTooltip(false)}
-        className="text-blue-600 hover:text-blue-800 cursor-pointer font-medium transition-colors"
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer font-medium transition-colors rounded px-0.5 hover:bg-blue-50"
         style={{ fontSize: '0.75em', verticalAlign: 'super' }}
         aria-label={`Quelle ${sourceIndex}: ${getDocumentName()}`}
         data-testid="citation"
@@ -219,20 +326,33 @@ export function Citation({ sourceIndex, source, onClickScrollTo }: CitationProps
         [{sourceIndex}]
       </button>
 
-      {/* Hover Tooltip */}
+      {/* Hover Tooltip - Sprint 116.3: Enhanced positioning and interactivity */}
       {showTooltip && (
         <div
-          className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 z-50
-                     w-80 p-3 bg-white border border-gray-200 rounded-lg shadow-xl
-                     pointer-events-none"
+          ref={tooltipRef}
+          onMouseEnter={handleTooltipMouseEnter}
+          onMouseLeave={handleTooltipMouseLeave}
+          className={`absolute z-50 w-80 p-3 bg-white border border-gray-200 rounded-lg shadow-xl pointer-events-auto transition-opacity duration-200 ${
+            tooltipPosition === 'top' ? 'bottom-full left-1/2 transform -translate-x-1/2 mb-2' :
+            tooltipPosition === 'bottom' ? 'top-full left-1/2 transform -translate-x-1/2 mt-2' :
+            tooltipPosition === 'right' ? 'left-full top-1/2 transform -translate-y-1/2 ml-2' :
+            'right-full top-1/2 transform -translate-y-1/2 mr-2'
+          }`}
           style={{ minWidth: '320px' }}
           data-testid="citation-tooltip"
+          data-position={tooltipPosition}
         >
-          {/* Arrow */}
+          {/* Arrow - Sprint 116.3: Dynamic positioning based on tooltip position */}
           <div
-            className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-px
-                       w-0 h-0 border-l-8 border-r-8 border-t-8
-                       border-l-transparent border-r-transparent border-t-white"
+            className={`absolute w-0 h-0 ${
+              tooltipPosition === 'top'
+                ? 'top-full left-1/2 transform -translate-x-1/2 -mt-px border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-white'
+              : tooltipPosition === 'bottom'
+                ? 'bottom-full left-1/2 transform -translate-x-1/2 -mb-px border-l-8 border-r-8 border-b-8 border-l-transparent border-r-transparent border-b-white'
+              : tooltipPosition === 'right'
+                ? 'right-full top-1/2 transform -translate-y-1/2 -mr-px border-t-8 border-b-8 border-r-8 border-t-transparent border-b-transparent border-r-white'
+                : 'left-full top-1/2 transform -translate-y-1/2 -ml-px border-t-8 border-b-8 border-l-8 border-t-transparent border-b-transparent border-l-white'
+            }`}
           />
 
           {/* Content */}

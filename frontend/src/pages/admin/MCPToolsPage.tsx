@@ -15,15 +15,17 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Wrench, Server, Activity } from 'lucide-react';
+import { ArrowLeft, Wrench, Server, Activity, Shield } from 'lucide-react';
 import { MCPHealthMonitor } from '../../components/admin/MCPHealthMonitor';
 import { MCPServerList } from '../../components/admin/MCPServerList';
 import { MCPToolExecutionPanel } from '../../components/admin/MCPToolExecutionPanel';
+import { ToolPermissionsManager } from '../../components/admin/ToolPermissionsManager';
 
 /**
  * Tab view options
+ * Sprint 116 Feature 116.5: Added permissions tab
  */
-type TabView = 'servers' | 'tools';
+type TabView = 'servers' | 'tools' | 'permissions';
 
 /**
  * MCPToolsPage - Main page for MCP tool management
@@ -72,7 +74,7 @@ export function MCPToolsPage() {
           <div className="flex sm:hidden bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
             <button
               onClick={() => setActiveTab('servers')}
-              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+              className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                 activeTab === 'servers'
                   ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
                   : 'text-gray-600 dark:text-gray-400'
@@ -84,7 +86,7 @@ export function MCPToolsPage() {
             </button>
             <button
               onClick={() => setActiveTab('tools')}
-              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+              className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                 activeTab === 'tools'
                   ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
                   : 'text-gray-600 dark:text-gray-400'
@@ -93,6 +95,58 @@ export function MCPToolsPage() {
             >
               <Wrench className="w-4 h-4" />
               Execute
+            </button>
+            <button
+              onClick={() => setActiveTab('permissions')}
+              className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                activeTab === 'permissions'
+                  ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
+                  : 'text-gray-600 dark:text-gray-400'
+              }`}
+              data-testid="tab-permissions"
+            >
+              <Shield className="w-4 h-4" />
+              Permissions
+            </button>
+          </div>
+
+          {/* Desktop Tab Navigation */}
+          <div className="hidden sm:flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+            <button
+              onClick={() => setActiveTab('servers')}
+              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                activeTab === 'servers'
+                  ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
+                  : 'text-gray-600 dark:text-gray-400'
+              }`}
+              data-testid="tab-servers-desktop"
+            >
+              <Server className="w-4 h-4" />
+              Servers
+            </button>
+            <button
+              onClick={() => setActiveTab('tools')}
+              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                activeTab === 'tools'
+                  ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
+                  : 'text-gray-600 dark:text-gray-400'
+              }`}
+              data-testid="tab-tools-desktop"
+            >
+              <Wrench className="w-4 h-4" />
+              Tool Execution
+            </button>
+            <button
+              onClick={() => setActiveTab('permissions')}
+              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                activeTab === 'permissions'
+                  ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
+                  : 'text-gray-600 dark:text-gray-400'
+              }`}
+              data-testid="tab-permissions-desktop"
+            >
+              <Shield className="w-4 h-4" />
+              Permissions
             </button>
           </div>
         </header>
@@ -117,41 +171,50 @@ export function MCPToolsPage() {
         {/* Health Monitor */}
         <MCPHealthMonitor />
 
-        {/* Main Content - Two Column Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Server List Column */}
-          <div
-            className={`space-y-4 ${
-              activeTab === 'tools' ? 'hidden lg:block' : 'block'
-            }`}
-          >
-            <div className="flex items-center gap-2 mb-4">
-              <Server className="w-5 h-5 text-gray-500" />
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                MCP Servers
-              </h2>
-            </div>
-            <MCPServerList onSelectTool={handleSelectTool} />
+        {/* Permissions Tab Content (Full Width) */}
+        {activeTab === 'permissions' && (
+          <div className="space-y-4">
+            <ToolPermissionsManager />
           </div>
+        )}
 
-          {/* Tool Execution Column */}
-          <div
-            className={`space-y-4 ${
-              activeTab === 'servers' ? 'hidden lg:block' : 'block'
-            }`}
-          >
-            <div className="flex items-center gap-2 mb-4">
-              <Activity className="w-5 h-5 text-gray-500" />
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                Tool Execution
-              </h2>
+        {/* Main Content - Two Column Layout (Servers & Tools) */}
+        {activeTab !== 'permissions' && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Server List Column */}
+            <div
+              className={`space-y-4 ${
+                activeTab === 'tools' ? 'hidden lg:block' : 'block'
+              }`}
+            >
+              <div className="flex items-center gap-2 mb-4">
+                <Server className="w-5 h-5 text-gray-500" />
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  MCP Servers
+                </h2>
+              </div>
+              <MCPServerList onSelectTool={handleSelectTool} />
             </div>
-            <MCPToolExecutionPanel
-              selectedToolName={selectedTool}
-              onClearSelection={handleClearSelection}
-            />
+
+            {/* Tool Execution Column */}
+            <div
+              className={`space-y-4 ${
+                activeTab === 'servers' ? 'hidden lg:block' : 'block'
+              }`}
+            >
+              <div className="flex items-center gap-2 mb-4">
+                <Activity className="w-5 h-5 text-gray-500" />
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  Tool Execution
+                </h2>
+              </div>
+              <MCPToolExecutionPanel
+                selectedToolName={selectedTool}
+                onClearSelection={handleClearSelection}
+              />
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Info Section */}
         <div className="bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-800 rounded-xl p-6">

@@ -12,15 +12,18 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { GraphViewer } from '../../components/graph/GraphViewer';
+import { GraphVisualization } from '../../components/graph/GraphVisualization';
 import { GraphFilters, type GraphFilterValues } from '../../components/graph/GraphFilters';
 import { CommunityHighlight } from '../../components/graph/CommunityHighlight';
 import { GraphExportButton } from '../../components/graph/GraphExportButton';
+import { CommunitiesList } from '../../components/graph/CommunitiesList';
 import { SectionCommunitiesDialog } from '../../components/admin/SectionCommunitiesDialog';
 import { CommunityComparisonDialog } from '../../components/admin/CommunityComparisonDialog';
 import { useGraphStatistics } from '../../hooks/useGraphStatistics';
 import { useCommunities } from '../../hooks/useCommunities';
+import { useGraphData } from '../../hooks/useGraphData';
 import { fetchGraphStats, type GraphStats } from '../../api/admin';
 import type { GraphFilters as GraphFiltersType, EdgeFilters } from '../../types/graph';
 
@@ -38,6 +41,12 @@ export function GraphAnalyticsPage() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState<TabView>('analytics');
 
+  // Sprint 116 Feature 116.9: Visualization mode toggle (force-graph vs vis-network)
+  const [useVisNetwork, setUseVisNetwork] = useState(true);
+
+  // Sprint 116 Feature 116.8: URL parameter support for edge filters
+  const [searchParams, setSearchParams] = useSearchParams();
+
   // Sprint 71 Feature 71.16: Community dialogs state
   const [isSectionDialogOpen, setIsSectionDialogOpen] = useState(false);
   const [isComparisonDialogOpen, setIsComparisonDialogOpen] = useState(false);
@@ -51,6 +60,16 @@ export function GraphAnalyticsPage() {
   // Fetch statistics and communities (for visualization tab)
   const { stats, loading: statsLoading, error: statsError, refetch: refetchStats } = useGraphStatistics();
   const { communities, loading: communitiesLoading } = useCommunities(20);
+
+  // Sprint 116 Feature 116.9: Fetch graph data for vis-network visualization
+  const graphFiltersForData: GraphFiltersType = {
+    maxNodes: filters.maxNodes,
+    entityTypes: filters.entityTypes,
+    highlightCommunities: selectedCommunity ? [selectedCommunity] : undefined,
+  };
+  const { data: graphData, loading: graphDataLoading, error: graphDataError } = useGraphData(
+    useVisNetwork ? graphFiltersForData : {}
+  );
 
   // Fetch enhanced graph stats
   const loadGraphStats = useCallback(async () => {
@@ -90,13 +109,66 @@ export function GraphAnalyticsPage() {
 
   const [selectedCommunity, setSelectedCommunity] = useState<string | null>(null);
 
+  // Sprint 116 Feature 116.8: Parse edge filters from URL params
+  const parseEdgeFiltersFromURL = useCallback((): EdgeFilters => {
+    return {
+      showRelatesTo: searchParams.get('showRelatesTo') !== 'false',
+      showCoOccurs: searchParams.get('showCoOccurs') !== 'false',
+      showMentionedIn: searchParams.get('showMentionedIn') !== 'false',
+      showHasSection: searchParams.get('showHasSection') !== 'false',
+      showDefines: searchParams.get('showDefines') !== 'false',
+      showBelongsTo: searchParams.get('showBelongsTo') !== 'false',
+      showWorksFor: searchParams.get('showWorksFor') !== 'false',
+      showLocatedIn: searchParams.get('showLocatedIn') !== 'false',
+      minWeight: parseFloat(searchParams.get('minWeight') || '0'),
+    };
+  }, [searchParams]);
+
   // Edge filter state for relationship type filtering
-  const [edgeFilters, setEdgeFilters] = useState<EdgeFilters>({
-    showRelatesTo: true,
-    showCoOccurs: true,
-    showMentionedIn: true,
-    minWeight: 0,
-  });
+  const [edgeFilters, setEdgeFilters] = useState<EdgeFilters>(parseEdgeFiltersFromURL());
+
+  // Sprint 116 Feature 116.8: Update URL params when edge filters change
+  const handleEdgeFilterChange = useCallback((newEdgeFilters: EdgeFilters) => {
+    setEdgeFilters(newEdgeFilters);
+
+    // Update URL params
+    const newParams = new URLSearchParams(searchParams);
+
+    // Only set params that differ from defaults to keep URL clean
+    if (!newEdgeFilters.showRelatesTo) newParams.set('showRelatesTo', 'false');
+    else newParams.delete('showRelatesTo');
+
+    if (!newEdgeFilters.showCoOccurs) newParams.set('showCoOccurs', 'false');
+    else newParams.delete('showCoOccurs');
+
+    if (!newEdgeFilters.showMentionedIn) newParams.set('showMentionedIn', 'false');
+    else newParams.delete('showMentionedIn');
+
+    if (newEdgeFilters.showHasSection === false) newParams.set('showHasSection', 'false');
+    else if (newEdgeFilters.showHasSection === true) newParams.set('showHasSection', 'true');
+    else newParams.delete('showHasSection');
+
+    if (newEdgeFilters.showDefines === false) newParams.set('showDefines', 'false');
+    else if (newEdgeFilters.showDefines === true) newParams.set('showDefines', 'true');
+    else newParams.delete('showDefines');
+
+    if (newEdgeFilters.showBelongsTo === false) newParams.set('showBelongsTo', 'false');
+    else if (newEdgeFilters.showBelongsTo === true) newParams.set('showBelongsTo', 'true');
+    else newParams.delete('showBelongsTo');
+
+    if (newEdgeFilters.showWorksFor === false) newParams.set('showWorksFor', 'false');
+    else if (newEdgeFilters.showWorksFor === true) newParams.set('showWorksFor', 'true');
+    else newParams.delete('showWorksFor');
+
+    if (newEdgeFilters.showLocatedIn === false) newParams.set('showLocatedIn', 'false');
+    else if (newEdgeFilters.showLocatedIn === true) newParams.set('showLocatedIn', 'true');
+    else newParams.delete('showLocatedIn');
+
+    if (newEdgeFilters.minWeight > 0) newParams.set('minWeight', newEdgeFilters.minWeight.toString());
+    else newParams.delete('minWeight');
+
+    setSearchParams(newParams, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   // Update entity types when statistics load
   useEffect(() => {
@@ -233,6 +305,8 @@ export function GraphAnalyticsPage() {
         <CommunitiesTab
           onOpenSectionDialog={() => setIsSectionDialogOpen(true)}
           onOpenComparisonDialog={() => setIsComparisonDialogOpen(true)}
+          communities={communities}
+          loading={communitiesLoading}
         />
       ) : (
         <div className="flex-grow flex overflow-hidden">
@@ -286,7 +360,7 @@ export function GraphAnalyticsPage() {
                   value={filters}
                   onChange={setFilters}
                   edgeFilters={edgeFilters}
-                  onEdgeFilterChange={setEdgeFilters}
+                  onEdgeFilterChange={handleEdgeFilterChange}
                 />
               </section>
 
@@ -328,12 +402,47 @@ export function GraphAnalyticsPage() {
 
           {/* Main Graph Area */}
           <div className="flex-grow relative">
-            <GraphViewer
-              maxNodes={filters.maxNodes}
-              entityTypes={filters.entityTypes}
-              highlightCommunities={selectedCommunity ? [selectedCommunity] : undefined}
-              edgeFilters={edgeFilters}
-            />
+            {/* Sprint 116 Feature 116.9: Toggle between GraphViewer and GraphVisualization */}
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg border border-gray-200 p-1 flex gap-1">
+              <button
+                onClick={() => setUseVisNetwork(false)}
+                className={`px-3 py-1.5 text-sm font-medium rounded transition-colors ${
+                  !useVisNetwork
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+                data-testid="toggle-force-graph"
+              >
+                Force Graph
+              </button>
+              <button
+                onClick={() => setUseVisNetwork(true)}
+                className={`px-3 py-1.5 text-sm font-medium rounded transition-colors ${
+                  useVisNetwork
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+                data-testid="toggle-vis-network"
+              >
+                Vis Network
+              </button>
+            </div>
+
+            {useVisNetwork ? (
+              <GraphVisualization
+                data={graphData}
+                loading={graphDataLoading}
+                error={graphDataError}
+                edgeFilters={edgeFilters}
+              />
+            ) : (
+              <GraphViewer
+                maxNodes={filters.maxNodes}
+                entityTypes={filters.entityTypes}
+                highlightCommunities={selectedCommunity ? [selectedCommunity] : undefined}
+                edgeFilters={edgeFilters}
+              />
+            )}
 
             {/* Collapse Button (Desktop) */}
             <button
@@ -889,19 +998,28 @@ function StatItem({ label, value, testid }: StatItemProps) {
 /**
  * Communities Tab Component
  * Sprint 71 Feature 71.16: Section community detection and comparison
+ * Sprint 116 Feature 116.7: Graph Communities UI with CommunitiesList
  */
 interface CommunitiesTabProps {
   onOpenSectionDialog: () => void;
   onOpenComparisonDialog: () => void;
+  communities: any[];
+  loading: boolean;
 }
 
-function CommunitiesTab({ onOpenSectionDialog, onOpenComparisonDialog }: CommunitiesTabProps) {
+function CommunitiesTab({ onOpenSectionDialog, onOpenComparisonDialog, communities, loading }: CommunitiesTabProps) {
   return (
     <div className="flex-grow p-6 overflow-y-auto" data-testid="communities-tab">
-      <div className="max-w-5xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Section-Level Communities</h2>
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Communities List - Sprint 116 Feature 116.7 */}
+        <CommunitiesList communities={communities} loading={loading} showFilters={true} />
+
+        {/* Divider */}
+        <div className="border-t-2 border-gray-200 my-8" />
+
+        {/* Section-Level Analysis Header */}
+        <div className="text-center mb-6">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Section-Level Analysis</h2>
           <p className="text-gray-600">
             Analyze and compare community structures across document sections
           </p>

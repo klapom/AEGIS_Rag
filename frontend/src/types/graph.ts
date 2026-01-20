@@ -32,11 +32,17 @@ export interface GraphFilters {
 }
 
 // Sprint 34 Feature 34.6: Edge Filter Types
+// Sprint 116 Feature 116.8: Extended edge types support
 export interface EdgeFilters {
   showRelatesTo: boolean;
   showCoOccurs: boolean;
   showMentionedIn: boolean;
-  minWeight: number;
+  showHasSection?: boolean; // Document section relationships
+  showDefines?: boolean; // Definition relationships
+  showBelongsTo?: boolean; // Membership relationships
+  showWorksFor?: boolean; // Employment relationships
+  showLocatedIn?: boolean; // Location relationships
+  minWeight: number; // 0.0 - 1.0
 }
 
 export interface GraphExportRequest {

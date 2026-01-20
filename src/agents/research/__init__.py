@@ -2,6 +2,7 @@
 
 Sprint 59 Feature 59.6: Multi-step research workflow with LangGraph.
 Sprint 70 Feature 70.4: Updated to Supervisor Pattern with component reuse.
+Sprint 116.10: Enhanced tracking with execution steps.
 
 This agent provides iterative research capabilities:
 1. Query analysis and research planning
@@ -27,10 +28,13 @@ from src.agents.research.research_graph import (
     create_research_graph,
     get_research_graph,
 )
+# Sprint 116.10: Import execution step tracking
+from src.agents.research.state import ExecutionStep
 
 __all__ = [
     "create_research_graph",
     "get_research_graph",
     "create_initial_research_state",
     "ResearchSupervisorState",
+    "ExecutionStep",
 ]

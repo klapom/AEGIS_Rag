@@ -11,11 +11,15 @@
  * Sprint 98 Feature 98.2: Agent Hierarchy Visualizer
  * Sprint 98 Feature 98.3: GDPR Consent Manager UI
  * Sprint 98 Feature 98.4: Audit Trail Viewer
+ * Sprint 116 Feature 116.2: API Error Handling
  */
 
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { SettingsProvider } from './contexts/SettingsContext';
 import { AuthProvider } from './contexts/AuthContext';
+import { ToastProvider } from './contexts/ToastContext';
+import { ErrorBoundary } from './components/error/ErrorBoundary';
+import { ToastContainer } from './components/error/ToastContainer';
 import { AppLayout } from './components/layout/AppLayout';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { HomePage } from './pages/HomePage';
@@ -51,25 +55,30 @@ import { BrowserToolsPage } from './pages/admin/BrowserToolsPage';
 import { DomainDiscoveryPage } from './pages/admin/DomainDiscoveryPage';
 import { MCPMarketplace } from './pages/admin/MCPMarketplace';
 import { LongContextPage } from './pages/admin/LongContextPage';
+import { BashToolPage } from './pages/admin/BashToolPage';
 
 function App() {
   // Sprint 46: Sidebar state moved to individual pages (HomePage, etc.)
+  // Sprint 116 Feature 116.2: Add ErrorBoundary, ToastProvider, and ToastContainer
   return (
-    <AuthProvider>
-      <SettingsProvider>
-        <BrowserRouter>
-          <Routes>
-            {/* Public routes - no layout, no auth */}
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/share/:shareToken" element={<SharedConversationPage />} />
+    <ErrorBoundary>
+      <AuthProvider>
+        <SettingsProvider>
+          <ToastProvider>
+            <BrowserRouter>
+              <ToastContainer />
+              <Routes>
+                {/* Public routes - no layout, no auth */}
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/share/:shareToken" element={<SharedConversationPage />} />
 
-            {/* Protected routes - with layout */}
-            <Route
-              path="/*"
-              element={
-                <ProtectedRoute>
-                  <AppLayout>
-                    <Routes>
+                {/* Protected routes - with layout */}
+                <Route
+                  path="/*"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout>
+                        <Routes>
                       <Route path="/" element={<HomePage />} />
                       <Route path="/search" element={<SearchResultsPage />} />
                       <Route path="/admin" element={<AdminDashboard />} />
@@ -98,6 +107,7 @@ function App() {
                       <Route path="/admin/gdpr" element={<GDPRConsentPage />} />
                       <Route path="/admin/audit" element={<AuditTrailPage />} />
                       <Route path="/admin/browser-tools" element={<BrowserToolsPage />} />
+                      <Route path="/admin/bash-tool" element={<BashToolPage />} />
                       <Route path="/admin/mcp-marketplace" element={<MCPMarketplace />} />
                       <Route path="/admin/long-context" element={<LongContextPage />} />
                       <Route path="/dashboard/costs" element={<CostDashboardPage />} />
@@ -107,10 +117,12 @@ function App() {
                 </ProtectedRoute>
               }
             />
-          </Routes>
-        </BrowserRouter>
-      </SettingsProvider>
-    </AuthProvider>
+              </Routes>
+            </BrowserRouter>
+          </ToastProvider>
+        </SettingsProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
 

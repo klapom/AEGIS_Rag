@@ -251,7 +251,10 @@ export function SourceCard({ source, index }: SourceCardProps) {
   const sourcePath = source.source || (source.metadata?.source as string | undefined) || source.title;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden transition-all duration-200 hover:border-primary/50">
+    <div
+      className="bg-white border border-gray-200 rounded-lg overflow-hidden transition-all duration-200 hover:border-primary/50"
+      data-source-id={source.document_id || `source-${index}`}
+    >
       {/* Clickable Header */}
       <div
         onClick={() => setIsExpanded(!isExpanded)}

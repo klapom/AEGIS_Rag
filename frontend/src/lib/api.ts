@@ -1,9 +1,11 @@
 /**
  * API Client with JWT Authentication
  * Sprint 38 Feature 38.1b: JWT Authentication Frontend
+ * Sprint 116 Feature 116.2: Enhanced error handling with ApiError
  */
 
 import type { LoginRequest, LoginResponse, User, TokenData } from '../types/auth';
+import { ApiError } from '../types/errors';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 const TOKEN_STORAGE_KEY = 'aegis_auth_token';
@@ -105,6 +107,7 @@ export class ApiClient {
 
   /**
    * Handle API response and check for 401
+   * Sprint 116 Feature 116.2: Enhanced error handling with ApiError
    */
   private async handleResponse<T>(response: Response): Promise<T> {
     if (response.status === 401) {
@@ -112,12 +115,28 @@ export class ApiClient {
       if (this.onUnauthorized) {
         this.onUnauthorized();
       }
-      throw new Error('Unauthorized');
+      throw new ApiError('Unauthorized', 401, null, false);
     }
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`HTTP ${response.status}: ${error}`);
+      // Try to parse error response
+      let errorData: unknown;
+      try {
+        errorData = await response.json();
+      } catch {
+        errorData = await response.text();
+      }
+
+      // Determine if error is retryable
+      const retryable = ApiError.isRetryable(response.status);
+
+      // Create ApiError with detailed information
+      throw new ApiError(
+        ApiError.getUserMessage(response.status),
+        response.status,
+        errorData,
+        retryable
+      );
     }
 
     return response.json();
@@ -136,11 +155,26 @@ export class ApiClient {
       });
       return this.handleResponse<T>(response);
     } catch (error) {
+      // Re-throw ApiError without modification
+      if (error instanceof ApiError) {
+        throw error;
+      }
+
       if (error instanceof Error && error.name === 'AbortError') {
-        throw new Error(`Request timeout: Server at ${API_BASE_URL} did not respond within 30 seconds. Please check if the backend is accessible.`);
+        throw new ApiError(
+          'Request timed out. The server is busy.',
+          504,
+          null,
+          true
+        );
       }
       if (error instanceof TypeError && error.message.includes('fetch')) {
-        throw new Error(`Network error: Cannot connect to ${API_BASE_URL}. Please check if the backend is running and accessible.`);
+        throw new ApiError(
+          `Cannot connect to server at ${API_BASE_URL}. Please check if the backend is running.`,
+          503,
+          null,
+          true
+        );
       }
       throw error;
     }
@@ -160,11 +194,26 @@ export class ApiClient {
       });
       return this.handleResponse<T>(response);
     } catch (error) {
+      // Re-throw ApiError without modification
+      if (error instanceof ApiError) {
+        throw error;
+      }
+
       if (error instanceof Error && error.name === 'AbortError') {
-        throw new Error(`Request timeout: Server at ${API_BASE_URL} did not respond within 30 seconds. Please check if the backend is accessible.`);
+        throw new ApiError(
+          'Request timed out. The server is busy.',
+          504,
+          null,
+          true
+        );
       }
       if (error instanceof TypeError && error.message.includes('fetch')) {
-        throw new Error(`Network error: Cannot connect to ${API_BASE_URL}. Please check if the backend is running and accessible.`);
+        throw new ApiError(
+          `Cannot connect to server at ${API_BASE_URL}. Please check if the backend is running.`,
+          503,
+          null,
+          true
+        );
       }
       throw error;
     }
@@ -184,11 +233,26 @@ export class ApiClient {
       });
       return this.handleResponse<T>(response);
     } catch (error) {
+      // Re-throw ApiError without modification
+      if (error instanceof ApiError) {
+        throw error;
+      }
+
       if (error instanceof Error && error.name === 'AbortError') {
-        throw new Error(`Request timeout: Server at ${API_BASE_URL} did not respond within 30 seconds. Please check if the backend is accessible.`);
+        throw new ApiError(
+          'Request timed out. The server is busy.',
+          504,
+          null,
+          true
+        );
       }
       if (error instanceof TypeError && error.message.includes('fetch')) {
-        throw new Error(`Network error: Cannot connect to ${API_BASE_URL}. Please check if the backend is running and accessible.`);
+        throw new ApiError(
+          `Cannot connect to server at ${API_BASE_URL}. Please check if the backend is running.`,
+          503,
+          null,
+          true
+        );
       }
       throw error;
     }
@@ -207,11 +271,26 @@ export class ApiClient {
       });
       return this.handleResponse<T>(response);
     } catch (error) {
+      // Re-throw ApiError without modification
+      if (error instanceof ApiError) {
+        throw error;
+      }
+
       if (error instanceof Error && error.name === 'AbortError') {
-        throw new Error(`Request timeout: Server at ${API_BASE_URL} did not respond within 30 seconds. Please check if the backend is accessible.`);
+        throw new ApiError(
+          'Request timed out. The server is busy.',
+          504,
+          null,
+          true
+        );
       }
       if (error instanceof TypeError && error.message.includes('fetch')) {
-        throw new Error(`Network error: Cannot connect to ${API_BASE_URL}. Please check if the backend is running and accessible.`);
+        throw new ApiError(
+          `Cannot connect to server at ${API_BASE_URL}. Please check if the backend is running.`,
+          503,
+          null,
+          true
+        );
       }
       throw error;
     }

@@ -1,8 +1,8 @@
 # Technical Debt Index
 
-**Last Updated:** 2026-01-15 (Sprint 94 - Feature 94.4 deferred to TD-101)
-**Total Open Items:** 6
-**Total Story Points:** ~122 SP
+**Last Updated:** 2026-01-20 (Sprint 114 - TD-120 created, deferred indefinite)
+**Total Open Items:** 7
+**Total Story Points:** ~153 SP (including TD-120 deferred: 31 SP optional)
 **Archived Items:** [29 items](archive/ARCHIVE_INDEX.md) (TD-080 resolved Sprint 92.11)
 **Sprint 51 Review:** [Analysis & Archival Decisions](SPRINT_51_REVIEW_ANALYSIS.md)
 **Sprint 52:** Community Summaries, Async Follow-ups, Admin Dashboard, CI/CD
@@ -23,8 +23,10 @@
 | CRITICAL | 1     | 21 SP        |
 | HIGH     | 1     | ~18 SP       |
 | MEDIUM   | 2     | ~19 SP       |
-| LOW      | 2     | ~55 SP       |
+| LOW      | 3     | ~86 SP       |
 | PARTIAL  | 1     | ~6 SP        |
+
+**Note:** TD-120 (31 SP) is deferred indefinitely unless customer trigger
 
 **Sprint 81:** TD-096, TD-097 RESOLVED (8 SP) - Settings UI Integration complete
 **Sprint 83:** TD-044, TD-046, TD-052, TD-079, TD-099 RESOLVED (27 SP) - Logging improvements, namespace fixes, user upload, intent classifier
@@ -116,6 +118,9 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 | [TD-055](TD-055_MCP_CLIENT_IMPLEMENTATION.md) | MCP Client Implementation | OPEN | 21 | Sprint 90+ |
 | [TD-056](TD-056_PROJECT_COLLABORATION_SYSTEM.md) | Project Collaboration System | PLANNED | 34 | Sprint 90+ |
 | [TD-064](TD-064_TEMPORAL_COMMUNITY_SUMMARIES.md) | Temporal Community Summaries | BACKLOG | 13 | Sprint 90+ (Optional) |
+| [TD-120](TD-120_GRAPHITI_TIMETRAVEL_VERSIONING.md) | **Graphiti Time-Travel & Entity Versioning** | 🔴 **DEFERRED INDEFINITE** | 31 (Full) / 10 (Minimal) | **Customer Trigger** |
+
+**TD-120 Discovery (Sprint 114):** Graphiti temporal infrastructure supports time-travel queries, entity versioning, and change history. Deferred indefinitely - low user demand, high complexity (31 SP), uncertain ROI. Decision rule: Implement only if customer contract includes "temporal query SLA" requirement. Implementation roadmap fully documented with 8 TODO markers for future development.
 
 ### PARTIAL (Refactoring)
 
@@ -340,6 +345,7 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 ### Features (Future)
 - [TD-055](TD-055_MCP_CLIENT_IMPLEMENTATION.md): MCP Client (Sprint 69+, 21 SP)
 - [TD-056](TD-056_PROJECT_COLLABORATION_SYSTEM.md): Project Collaboration (Sprint 69+, 34 SP)
+- [TD-120](TD-120_GRAPHITI_TIMETRAVEL_VERSIONING.md): Graphiti Time-Travel & Entity Versioning (Deferred, 31 SP)
 
 ---
 

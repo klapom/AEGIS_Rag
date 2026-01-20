@@ -1562,8 +1562,11 @@ After implementing comprehensive logging (Sprint 83), we expect to discover addi
 | 112 | 34 | 2,656 | ✅ |
 | 113 | 36 | 2,692 | ✅ |
 | **114** | **18** | **2,710** | ✅ **Complete** |
-| **115 (Planned)** | **50** | **2,760** | 📋 |
-| **Total** | **2,710** | - | - |
+| **115** | **48** | **2,758** | ✅ **Complete** |
+| **116 (Planned)** | **36** | **2,794** | 📋 |
+| **117 (Planned)** | **47** | **2,841** | 📋 |
+| **118 (Planned)** | **23** | **2,864** | 📋 |
+| **Total** | **2,864** | - | - |
 
 ---
 
@@ -1647,3 +1650,181 @@ After implementing comprehensive logging (Sprint 83), we expect to discover addi
 
 **See:** `docs/sprints/SPRINT_115_PLAN.md` (Full documentation)
 **ADR:** `docs/adr/ADR-057-graph-query-optimization.md` (Architecture decision)
+
+---
+
+## Sprint 116 🔄 **In Progress** (2026-01-20)
+
+**Status:** Planning (not started)
+**Focus:** UI Features, Error Handling, Citations, Graph UI, Deep Research
+**Story Points:** 36 SP planned
+**Predecessor:** Sprint 115 (Graph Query Optimization)
+**Successor:** Sprint 117 (Domain Training)
+
+**Features Planned:**
+- Domain Default Seeding (3 SP)
+- Admin Dashboard Stats Cards (5 SP)
+- API Error Handling (5 SP)
+- Citation Tooltips & Linking (8 SP)
+- Graph Edge Filters UI (5 SP)
+- Deep Research Multi-Step (13 SP)
+
+**See:** `docs/sprints/SPRINT_116_PLAN.md` (Detailed planning)
+**Analysis:** `docs/sprints/SPRINT_116_SKIPPED_TESTS_ANALYSIS.md` (Skipped test analysis)
+
+---
+
+## Sprint 117 📋 **Planned** (After Sprint 116) - Domain Training API Phase 2
+
+**Status:** Planning (Documentation Complete)
+**Focus:** Complete Domain Training API with Classification, Discovery, Augmentation & Batch Ingestion
+**Story Points:** 61 SP (9 Features)
+**Predecessor:** Sprint 116
+**Documentation:** [SPRINT_117_PLAN.md](SPRINT_117_PLAN.md)
+
+### Feature Breakdown (61 SP)
+
+| # | Feature | SP | Backend | Frontend | E2E Tests |
+|---|---------|-----|---------|----------|-----------|
+| **117.1** | **Domain Training API - CRUD** | **13** | ✅ GET/POST/PUT/DELETE /api/v1/admin/domains/* | ✅ DomainList, DomainCard, CreateModal, DetailsView | ✅ 6 tests |
+| **117.2** | **Domain Classification** | **8** | ✅ POST /api/v1/admin/domains/classify (LLM-based) | ✅ DocumentClassifier, ClassificationResults | ✅ 6 tests |
+| **117.3** | **Domain Auto-Discovery** | **8** | ✅ POST /api/v1/admin/domains/discover (Entity clustering) | ✅ DiscoveryWizard, DocumentUpload, Results | ✅ 6 tests |
+| **117.4** | **Domain Data Augmentation** | **8** | ✅ POST /api/v1/admin/domains/augment (LLM synthesis) | ✅ AugmentationWizard, ResultsDisplay | ✅ 6 tests |
+| **117.5** | **Domain Batch Ingestion** | **8** | ✅ POST /api/v1/admin/domains/ingest-batch (Routing) | ✅ BatchWizard, ProgressBar, Results | ✅ 7 tests |
+| **117.6** | **Domain Details & Status** | **5** | ✅ GET training-status, training logs | ✅ DetailsPanel, ProgressBar, Logs | ✅ 6 tests |
+| **117.7** | **Domain Validation** | **5** | ✅ POST /api/v1/admin/domains/{id}/validate | ✅ ValidationReport, HealthGauge, Issues | ✅ 6 tests |
+| **117.8** | **Response Format** | **3** | ✅ Standard envelope across all endpoints | ✅ N/A (Backend-only) | ✅ Tests |
+| **117.9** | **Default Domain Seeding** | **3** | ✅ Seed "general" domain on init | ✅ N/A (Backend-only) | ✅ 1 test |
+| **Total** | | **61** | **9 APIs** | **18 Components** | **40+ Tests** |
+
+### API Endpoints (12 total)
+
+**Core Domain Management:**
+- `GET /api/v1/admin/domains/` - List domains (pagination, filtering)
+- `POST /api/v1/admin/domains/` - Create domain
+- `GET /api/v1/admin/domains/{name}` - Get details
+- `PUT /api/v1/admin/domains/{name}` - Update
+- `DELETE /api/v1/admin/domains/{name}` - Delete
+
+**Domain Features:**
+- `POST /api/v1/admin/domains/classify` - LLM-based classification
+- `POST /api/v1/admin/domains/discover` - Auto-discover from samples
+- `POST /api/v1/admin/domains/augment` - Generate synthetic training data
+- `POST /api/v1/admin/domains/ingest-batch` - Batch document ingestion
+
+**Training & Validation:**
+- `GET /api/v1/admin/domains/{name}/training-status` - Progress tracking
+- `POST /api/v1/admin/domains/{name}/train` - Start training
+- `POST /api/v1/admin/domains/{id}/validate` - Validate domain
+
+### Frontend Components (18 total)
+
+**Domain Management (4 components):**
+- `DomainList` - Paginated domain listing
+- `DomainCard` - Individual domain display
+- `CreateDomainModal` - Wizard-style creation
+- `DomainDetailsView` - Full domain information
+
+**Classification (2 components):**
+- `DocumentClassifier` - Text input for classification
+- `ClassificationResults` - Results display with confidence
+
+**Discovery (3 components):**
+- `DomainDiscoveryWizard` - Multi-step discovery flow
+- `DocumentUploadArea` - Drag-drop file upload
+- `DiscoveryResults` - Display suggested domains
+
+**Augmentation (2 components):**
+- `AugmentationWizard` - Multi-step augmentation
+- `AugmentationResults` - Generated samples display
+
+**Batch Ingestion (3 components):**
+- `BatchIngestionWizard` - Multi-step ingestion
+- `BatchProgress` - Real-time progress tracking
+- `BatchResults` - Results summary
+
+**Training & Validation (4 components):**
+- `DomainDetailsPanel` - Domain information
+- `TrainingProgressBar` - Progress visualization
+- `TrainingLogs` - Real-time log streaming
+- `ValidationReport` - Validation results
+
+### Key Technical Details
+
+**LLM Integration:**
+- Classification: Compare document against all domains
+- Discovery: Extract entities, cluster semantically, suggest configurations
+- Augmentation: Support 5 strategies (paraphrase, substitution, back-translation, synthesis, hybrid)
+- Batch Ingestion: Auto-classify and route documents
+
+**Performance Targets:**
+- CRUD operations: <100ms
+- Classification: <500ms (excl. LLM)
+- Discovery: <2s (excl. LLM)
+- Augmentation: <60s for 100 samples
+- Batch ingestion: <5min for 100 documents
+- Validation: <10s for 1000+ samples
+
+**Data Models:**
+- DomainSchema: name, description, entity_types, relation_types, intent_classes, model_family, confidence_threshold, metrics
+- Standard Response Envelope: success, data, metadata, pagination
+
+### Test Strategy
+
+**Unit Tests:** 80%+ coverage (domain CRUD, validation, classification logic)
+**Integration Tests:** 70%+ coverage (database persistence, LLM integration)
+**E2E Tests:** 40+ tests covering all 9 features (Playwright)
+**Performance Tests:** Baseline measurements for all endpoints
+
+### Success Criteria
+
+- [ ] All 12 API endpoints implemented and documented
+- [ ] Input validation with proper HTTP status codes
+- [ ] 18 React components with responsive design
+- [ ] 40+ E2E tests passing
+- [ ] Performance targets met
+- [ ] Unit/integration test coverage >75%
+- [ ] Comprehensive error handling
+- [ ] API documentation complete
+
+### Critical Path Dependencies
+
+```
+Sprint 117.1 (Domain CRUD) - Foundation
+├── 117.2 (Classification) - Depends on 117.1
+├── 117.3 (Discovery) - Depends on 117.1
+├── 117.4 (Augmentation) - Depends on 117.1
+├── 117.5 (Batch Ingestion) - Depends on 117.1
+├── 117.6 (Training Status) - Depends on 117.1
+└── 117.7 (Validation) - Depends on 117.1
+```
+
+**Dependencies:** Sprint 116 completion (Default domain seeding provides foundation)
+**Blocked By:** None identified
+**Blocks:** Sprint 118+ (Graph versioning, deep research) may depend on domain structures
+
+**See:** [SPRINT_117_PLAN.md](SPRINT_117_PLAN.md) for complete detailed specification
+
+---
+
+## Sprint 118 📋 **Planned** (After Sprint 117)
+
+**Status:** Planning
+**Focus:** Testing Infrastructure & Quality Assurance
+**Story Points:** 23 SP planned
+**Predecessor:** Sprint 117
+
+**Primary Features (18 SP):**
+- **Visual Regression Framework** (5 SP) - Baseline infrastructure, snapshot management, CI/CD integration
+- **Performance Regression Tests** (13 SP) - Latency tracking, throughput measurement, HAR recording, baseline metrics
+
+**Secondary Features (5 SP):**
+- **Graph Communities UI** (5 SP) - Communities list, details modal, visualization
+
+**Key Metrics:**
+- 15+ visual regression tests
+- 8+ performance regression tests
+- All critical UI paths have baseline snapshots
+- Performance baselines established and documented
+
+**See:** `docs/sprints/SPRINT_118_PLAN.md` (Detailed planning)

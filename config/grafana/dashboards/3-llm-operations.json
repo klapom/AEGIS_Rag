@@ -1,0 +1,480 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "aegis-llm-operations",
+    "title": "LLM Operations & Cost Management",
+    "tags": ["aegis-rag", "llm", "cost", "sprint-97"],
+    "timezone": "browser",
+    "schemaVersion": 38,
+    "version": 1,
+    "refresh": "30s",
+    "time": {
+      "from": "now-7d",
+      "to": "now"
+    },
+    "timepicker": {
+      "refresh_intervals": ["10s", "30s", "1m", "5m", "15m"],
+      "time_options": ["1h", "6h", "12h", "24h", "7d", "30d"]
+    },
+    "annotations": {
+      "list": [
+        {
+          "builtIn": 1,
+          "datasource": "-- Grafana --",
+          "enable": true,
+          "hide": true,
+          "iconColor": "rgba(0, 211, 255, 1)",
+          "name": "Annotations & Alerts",
+          "type": "dashboard"
+        }
+      ]
+    },
+    "editable": true,
+    "fiscalYearStartMonth": 0,
+    "graphTooltip": 1,
+    "links": [],
+    "liveNow": false,
+    "panels": [
+      {
+        "id": 1,
+        "title": "Cost by Provider ($)",
+        "type": "timeseries",
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 0
+        },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "increase(llm_cost_usd{provider=\"ollama\"}[1h])",
+            "legendFormat": "Ollama",
+            "refId": "A"
+          },
+          {
+            "expr": "increase(llm_cost_usd{provider=\"alibaba\"}[1h])",
+            "legendFormat": "Alibaba Cloud",
+            "refId": "B"
+          },
+          {
+            "expr": "increase(llm_cost_usd{provider=\"openai\"}[1h])",
+            "legendFormat": "OpenAI",
+            "refId": "C"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyUSD",
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 15,
+              "showPoints": "never"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 5},
+                {"color": "red", "value": 10}
+              ]
+            }
+          }
+        },
+        "options": {
+          "tooltip": {
+            "mode": "multi",
+            "sort": "desc"
+          },
+          "legend": {
+            "displayMode": "table",
+            "placement": "bottom",
+            "calcs": ["sum", "mean", "last"]
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Token Usage by Type",
+        "type": "timeseries",
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 0
+        },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "sum(rate(llm_tokens_total{token_type=\"input\"}[1m])) * 60",
+            "legendFormat": "Input Tokens/min",
+            "refId": "A"
+          },
+          {
+            "expr": "sum(rate(llm_tokens_total{token_type=\"output\"}[1m])) * 60",
+            "legendFormat": "Output Tokens/min",
+            "refId": "B"
+          },
+          {
+            "expr": "sum(rate(llm_tokens_total{token_type=\"cached\"}[1m])) * 60",
+            "legendFormat": "Cached Tokens/min",
+            "refId": "C"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 10,
+              "showPoints": "never"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null}
+              ]
+            }
+          }
+        },
+        "options": {
+          "tooltip": {
+            "mode": "multi",
+            "sort": "desc"
+          },
+          "legend": {
+            "displayMode": "table",
+            "placement": "bottom",
+            "calcs": ["mean", "max", "last"]
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "Latency P50 by Provider (ms)",
+        "type": "timeseries",
+        "gridPos": {
+          "h": 8,
+          "w": 8,
+          "x": 0,
+          "y": 8
+        },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, sum(rate(llm_latency_seconds_bucket{provider=\"ollama\"}[5m])) by (le, provider)) * 1000",
+            "legendFormat": "Ollama",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.50, sum(rate(llm_latency_seconds_bucket{provider=\"alibaba\"}[5m])) by (le, provider)) * 1000",
+            "legendFormat": "Alibaba",
+            "refId": "B"
+          },
+          {
+            "expr": "histogram_quantile(0.50, sum(rate(llm_latency_seconds_bucket{provider=\"openai\"}[5m])) by (le, provider)) * 1000",
+            "legendFormat": "OpenAI",
+            "refId": "C"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ms",
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 15,
+              "showPoints": "never"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 500},
+                {"color": "red", "value": 2000}
+              ]
+            }
+          }
+        },
+        "options": {
+          "tooltip": {
+            "mode": "multi",
+            "sort": "desc"
+          },
+          "legend": {
+            "displayMode": "table",
+            "placement": "bottom",
+            "calcs": ["mean", "max", "last"]
+          }
+        }
+      },
+      {
+        "id": 4,
+        "title": "Latency P95 by Provider (ms)",
+        "type": "timeseries",
+        "gridPos": {
+          "h": 8,
+          "w": 8,
+          "x": 8,
+          "y": 8
+        },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(llm_latency_seconds_bucket{provider=\"ollama\"}[5m])) by (le, provider)) * 1000",
+            "legendFormat": "Ollama",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(llm_latency_seconds_bucket{provider=\"alibaba\"}[5m])) by (le, provider)) * 1000",
+            "legendFormat": "Alibaba",
+            "refId": "B"
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(llm_latency_seconds_bucket{provider=\"openai\"}[5m])) by (le, provider)) * 1000",
+            "legendFormat": "OpenAI",
+            "refId": "C"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ms",
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 15,
+              "showPoints": "never"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 1000},
+                {"color": "red", "value": 3000}
+              ]
+            }
+          }
+        },
+        "options": {
+          "tooltip": {
+            "mode": "multi",
+            "sort": "desc"
+          },
+          "legend": {
+            "displayMode": "table",
+            "placement": "bottom",
+            "calcs": ["mean", "max", "last"]
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "Latency P99 by Provider (ms)",
+        "type": "timeseries",
+        "gridPos": {
+          "h": 8,
+          "w": 8,
+          "x": 16,
+          "y": 8
+        },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.99, sum(rate(llm_latency_seconds_bucket{provider=\"ollama\"}[5m])) by (le, provider)) * 1000",
+            "legendFormat": "Ollama",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.99, sum(rate(llm_latency_seconds_bucket{provider=\"alibaba\"}[5m])) by (le, provider)) * 1000",
+            "legendFormat": "Alibaba",
+            "refId": "B"
+          },
+          {
+            "expr": "histogram_quantile(0.99, sum(rate(llm_latency_seconds_bucket{provider=\"openai\"}[5m])) by (le, provider)) * 1000",
+            "legendFormat": "OpenAI",
+            "refId": "C"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ms",
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 15,
+              "showPoints": "never"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 2000},
+                {"color": "red", "value": 5000}
+              ]
+            }
+          }
+        },
+        "options": {
+          "tooltip": {
+            "mode": "multi",
+            "sort": "desc"
+          },
+          "legend": {
+            "displayMode": "table",
+            "placement": "bottom",
+            "calcs": ["mean", "max", "last"]
+          }
+        }
+      },
+      {
+        "id": 6,
+        "title": "Current Monthly Budget",
+        "type": "gauge",
+        "gridPos": {
+          "h": 4,
+          "w": 6,
+          "x": 0,
+          "y": 16
+        },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "(llm_cost_usd_monthly / 1000) * 100",
+            "legendFormat": "Monthly %",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 50},
+                {"color": "orange", "value": 75},
+                {"color": "red", "value": 100}
+              ]
+            },
+            "min": 0,
+            "max": 100
+          }
+        },
+        "options": {
+          "orientation": "auto",
+          "showThresholdLabels": false,
+          "showThresholdMarkers": true,
+          "reduceOptions": {
+            "values": false,
+            "fields": "",
+            "calcs": ["lastNotNull"]
+          }
+        }
+      },
+      {
+        "id": 7,
+        "title": "Budget Remaining ($)",
+        "type": "stat",
+        "gridPos": {
+          "h": 4,
+          "w": 6,
+          "x": 6,
+          "y": 16
+        },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "1000 - llm_cost_usd_monthly",
+            "legendFormat": "Budget Remaining",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyUSD",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "red", "value": null},
+                {"color": "yellow", "value": 200},
+                {"color": "green", "value": 500}
+              ]
+            },
+            "mappings": []
+          }
+        },
+        "options": {
+          "graphMode": "area",
+          "colorMode": "background",
+          "justifyMode": "auto",
+          "textMode": "auto",
+          "reduceOptions": {
+            "values": false,
+            "fields": "",
+            "calcs": ["lastNotNull"]
+          }
+        }
+      },
+      {
+        "id": 8,
+        "title": "Provider Requests/min",
+        "type": "timeseries",
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 16
+        },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "sum(rate(llm_requests_total{provider=\"ollama\"}[1m])) * 60",
+            "legendFormat": "Ollama",
+            "refId": "A"
+          },
+          {
+            "expr": "sum(rate(llm_requests_total{provider=\"alibaba\"}[1m])) * 60",
+            "legendFormat": "Alibaba",
+            "refId": "B"
+          },
+          {
+            "expr": "sum(rate(llm_requests_total{provider=\"openai\"}[1m])) * 60",
+            "legendFormat": "OpenAI",
+            "refId": "C"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 15,
+              "showPoints": "never"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null}
+              ]
+            }
+          }
+        },
+        "options": {
+          "tooltip": {
+            "mode": "multi",
+            "sort": "desc"
+          },
+          "legend": {
+            "displayMode": "table",
+            "placement": "bottom",
+            "calcs": ["mean", "max", "last"]
+          }
+        }
+      }
+    ]
+  }
+}

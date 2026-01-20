@@ -10,6 +10,7 @@ import type {
   ReindexProgressChunk,
   ReindexRequest,
   SystemStats,
+  DashboardStats,
   ScanDirectoryRequest,
   ScanDirectoryResponse,
   IngestionJobResponse,
@@ -19,6 +20,7 @@ import type {
   MCPTool,
   MCPExecutionResult,
   MCPHealthStatus,
+  MCPToolPermission,
   MemoryStats,
   MemorySearchRequest,
   MemorySearchResponse,
@@ -114,6 +116,28 @@ export async function* streamReindex(
  */
 export async function getSystemStats(): Promise<SystemStats> {
   const response = await fetch(`${API_BASE_URL}/api/v1/admin/stats`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`HTTP ${response.status}: ${errorText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Get dashboard statistics for admin overview cards
+ * Sprint 116 Feature 116.1: Dashboard Stats Cards
+ *
+ * @returns DashboardStats with high-level metrics for dashboard cards
+ */
+export async function getDashboardStats(): Promise<DashboardStats> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/admin/dashboard/stats`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -753,6 +777,116 @@ export async function executeMCPTool(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ parameters }),
   });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`HTTP ${response.status}: ${errorText}`);
+  }
+
+  return response.json();
+}
+
+// ============================================================================
+// Sprint 116 Feature 116.5: MCP Tool Permission Management API
+// ============================================================================
+
+/**
+ * Get permission configuration for a tool
+ * Sprint 116 Feature 116.5: Tool permission management
+ *
+ * @param toolName Name of the tool
+ * @returns MCPToolPermission with enabled status and config
+ */
+export async function getToolPermissions(toolName: string): Promise<MCPToolPermission> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/mcp/tools/${encodeURIComponent(toolName)}/permissions`,
+    {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`HTTP ${response.status}: ${errorText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Update tool permission (enable/disable)
+ * Sprint 116 Feature 116.5: Tool permission management
+ *
+ * @param toolName Name of the tool
+ * @param enabled Whether the tool should be enabled
+ * @returns Updated MCPToolPermission
+ */
+export async function updateToolPermissions(
+  toolName: string,
+  enabled: boolean
+): Promise<MCPToolPermission> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/mcp/tools/${encodeURIComponent(toolName)}/permissions`,
+    {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled }),
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`HTTP ${response.status}: ${errorText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Get tool configuration
+ * Sprint 116 Feature 116.5: Tool configuration management
+ *
+ * @param toolName Name of the tool
+ * @returns Tool configuration object
+ */
+export async function getToolConfig(toolName: string): Promise<{ config: Record<string, unknown> }> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/mcp/tools/${encodeURIComponent(toolName)}/config`,
+    {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`HTTP ${response.status}: ${errorText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Update tool configuration
+ * Sprint 116 Feature 116.5: Tool configuration management
+ *
+ * @param toolName Name of the tool
+ * @param config Configuration object
+ * @returns Updated configuration
+ */
+export async function updateToolConfig(
+  toolName: string,
+  config: Record<string, unknown>
+): Promise<{ config: Record<string, unknown> }> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/mcp/tools/${encodeURIComponent(toolName)}/config`,
+    {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ config }),
+    }
+  );
 
   if (!response.ok) {
     const errorText = await response.text();

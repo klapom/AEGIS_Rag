@@ -38,6 +38,8 @@
     "recharts": "^3.6.0",
     "three": "^0.160.0",
     "three-spritetext": "^1.8.2",
+    "vis-data": "^8.0.3",
+    "vis-network": "^10.0.2",
     "zustand": "^5.0.8"
   },
   "devDependencies": {

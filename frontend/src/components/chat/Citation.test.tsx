@@ -1,12 +1,13 @@
 /**
  * Citation Component Tests
  * Sprint 62 Feature 62.4: Section-Aware Citations
+ * Sprint 116 Feature 116.3: Enhanced Tooltip with Delay and Positioning
  *
- * Tests for the Citation component with section metadata display
+ * Tests for the Citation component with section metadata display and intelligent tooltips
  */
 
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { Citation } from './Citation';
 import type { Source } from '../../types/chat';
 
@@ -24,6 +25,11 @@ describe('Citation', () => {
 
   beforeEach(() => {
     mockOnClickScrollTo.mockClear();
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   describe('Basic Rendering', () => {
@@ -84,7 +90,7 @@ describe('Citation', () => {
   });
 
   describe('Tooltip Display', () => {
-    it('shows tooltip on hover', () => {
+    it('shows tooltip on hover after 300ms delay (Sprint 116.3)', () => {
       render(
         <Citation
           sourceIndex={1}
@@ -95,9 +101,40 @@ describe('Citation', () => {
 
       const button = screen.getByTestId('citation');
       fireEvent.mouseEnter(button);
+      // Tooltip should not appear immediately
+      expect(screen.queryByTestId('citation-tooltip')).not.toBeInTheDocument();
+
+      // Advance timer by 300ms
+      act(() => { vi.advanceTimersByTime(300); });
 
       const tooltip = screen.getByTestId('citation-tooltip');
       expect(tooltip).toBeInTheDocument();
+    });
+
+    it('cancels tooltip show if mouse leaves before 300ms', () => {
+      render(
+        <Citation
+          sourceIndex={1}
+          source={baseSource}
+          onClickScrollTo={mockOnClickScrollTo}
+        />
+      );
+
+      const button = screen.getByTestId('citation');
+      fireEvent.mouseEnter(button);
+      act(() => { vi.advanceTimersByTime(0); });
+
+      // Advance timer by 200ms (before the 300ms threshold)
+      act(() => { vi.advanceTimersByTime(200); });
+
+      // Mouse leaves before tooltip shows
+      fireEvent.mouseLeave(button);
+
+      // Advance timer past 300ms
+      act(() => { vi.advanceTimersByTime(200); });
+
+      // Tooltip should not have appeared
+      expect(screen.queryByTestId('citation-tooltip')).not.toBeInTheDocument();
     });
 
     it('hides tooltip on mouse leave', () => {
@@ -110,7 +147,14 @@ describe('Citation', () => {
       );
 
       const button = screen.getByTestId('citation');
-      fireEvent.mouseEnter(button);
+      act(() => { vi.advanceTimersByTime(300); });
+
+      // Advance timer to show tooltip
+      act(() => { vi.advanceTimersByTime(300); });
+
+      // Verify tooltip is visible
+      expect(screen.getByTestId('citation-tooltip')).toBeInTheDocument();
+
       fireEvent.mouseLeave(button);
 
       expect(screen.queryByTestId('citation-tooltip')).not.toBeInTheDocument();
@@ -127,7 +171,9 @@ describe('Citation', () => {
 
       const button = screen.getByTestId('citation');
       fireEvent.mouseEnter(button);
+      act(() => { vi.advanceTimersByTime(300); });
 
+      vi.advanceTimersByTime(300);
       expect(screen.getByText('Sample Document')).toBeInTheDocument();
     });
 
@@ -142,7 +188,9 @@ describe('Citation', () => {
 
       const button = screen.getByTestId('citation');
       fireEvent.mouseEnter(button);
+      act(() => { vi.advanceTimersByTime(300); });
 
+      vi.advanceTimersByTime(300);
       expect(screen.getByText('95%')).toBeInTheDocument();
     });
   });
@@ -163,6 +211,7 @@ describe('Citation', () => {
       );
 
       fireEvent.mouseEnter(screen.getByTestId('citation'));
+      vi.advanceTimersByTime(300);
       const badge = screen.getByTestId('document-type-badge');
       expect(badge).toBeInTheDocument();
       expect(badge).toHaveClass('bg-red-100');
@@ -532,8 +581,126 @@ describe('Citation', () => {
       );
 
       fireEvent.mouseEnter(screen.getByTestId('citation'));
+      act(() => { vi.advanceTimersByTime(300); });
       expect(screen.getByText('vector')).toBeInTheDocument();
       expect(screen.getByText('bm25')).toBeInTheDocument();
+    });
+  });
+
+  describe('Citation Linking (Sprint 116 Feature 116.4)', () => {
+    it('has hover state with underline', () => {
+      render(
+        <Citation
+          sourceIndex={1}
+          source={baseSource}
+          onClickScrollTo={mockOnClickScrollTo}
+        />
+      );
+
+      const button = screen.getByTestId('citation');
+      expect(button).toHaveClass('hover:underline');
+      expect(button).toHaveClass('hover:bg-blue-50');
+    });
+
+    it('has cursor pointer to indicate clickability', () => {
+      render(
+        <Citation
+          sourceIndex={1}
+          source={baseSource}
+          onClickScrollTo={mockOnClickScrollTo}
+        />
+      );
+
+      const button = screen.getByTestId('citation');
+      expect(button).toHaveClass('cursor-pointer');
+    });
+
+    it('calls onClickScrollTo with correct source ID when clicked', () => {
+      render(
+        <Citation
+          sourceIndex={3}
+          source={{ ...baseSource, document_id: 'doc-456' }}
+          onClickScrollTo={mockOnClickScrollTo}
+        />
+      );
+
+      const button = screen.getByTestId('citation');
+      fireEvent.click(button);
+
+      expect(mockOnClickScrollTo).toHaveBeenCalledTimes(1);
+      expect(mockOnClickScrollTo).toHaveBeenCalledWith('doc-456');
+    });
+
+    it('falls back to source-{index} ID when document_id is missing', () => {
+      const sourceWithoutId: Source = {
+        text: 'Content',
+        title: 'Document',
+        score: 0.8,
+      };
+
+      render(
+        <Citation
+          sourceIndex={5}
+          source={sourceWithoutId}
+          onClickScrollTo={mockOnClickScrollTo}
+        />
+      );
+
+      const button = screen.getByTestId('citation');
+      fireEvent.click(button);
+
+      expect(mockOnClickScrollTo).toHaveBeenCalledWith('source-5');
+    });
+
+    it('shows tooltip with "Klicken zum Scrollen" hint', () => {
+      render(
+        <Citation
+          sourceIndex={1}
+          source={baseSource}
+          onClickScrollTo={mockOnClickScrollTo}
+        />
+      );
+
+      const button = screen.getByTestId('citation');
+      fireEvent.mouseEnter(button);
+      act(() => { vi.advanceTimersByTime(300); });
+
+      expect(screen.getByText('Klicken zum Scrollen')).toBeInTheDocument();
+    });
+
+    it('tooltip has pointer-events-auto to allow interaction', () => {
+      render(
+        <Citation
+          sourceIndex={1}
+          source={baseSource}
+          onClickScrollTo={mockOnClickScrollTo}
+        />
+      );
+
+      const button = screen.getByTestId('citation');
+      fireEvent.mouseEnter(button);
+      act(() => { vi.advanceTimersByTime(300); });
+
+      const tooltip = screen.getByTestId('citation-tooltip');
+      expect(tooltip).toHaveClass('pointer-events-auto');
+    });
+
+    it('prevents default behavior on click', () => {
+      render(
+        <Citation
+          sourceIndex={1}
+          source={baseSource}
+          onClickScrollTo={mockOnClickScrollTo}
+        />
+      );
+
+      const button = screen.getByTestId('citation');
+      const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
+      const preventDefault = vi.spyOn(clickEvent, 'preventDefault');
+
+      button.dispatchEvent(clickEvent);
+
+      expect(preventDefault).toHaveBeenCalled();
     });
   });
 });

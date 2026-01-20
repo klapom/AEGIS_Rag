@@ -73,11 +73,22 @@ export function GraphViewer({
   const [hoveredNode, setHoveredNode] = useState<ForceGraphNode | null>(null);
 
   // Sprint 34 Feature 34.6: Filter graph data by edge types
+  // Sprint 116 Feature 116.8: Extended edge type filtering
   const filteredData = useMemo(() => {
     if (!data) return null;
 
     // Default edge filters: show all edges
-    const filters = edgeFilters || { showRelatesTo: true, showCoOccurs: true, showMentionedIn: true, minWeight: 0 };
+    const filters = edgeFilters || {
+      showRelatesTo: true,
+      showCoOccurs: true,
+      showMentionedIn: true,
+      showHasSection: true,
+      showDefines: true,
+      showBelongsTo: true,
+      showWorksFor: true,
+      showLocatedIn: true,
+      minWeight: 0
+    };
 
     const filteredLinks = data.links.filter((link) => {
       const linkType = (link.label || '').toUpperCase();
@@ -86,6 +97,11 @@ export function GraphViewer({
       if (linkType === 'RELATES_TO' && !filters.showRelatesTo) return false;
       if (linkType === 'CO_OCCURS' && !filters.showCoOccurs) return false;
       if (linkType === 'MENTIONED_IN' && !filters.showMentionedIn) return false;
+      if (linkType === 'HAS_SECTION' && filters.showHasSection === false) return false;
+      if (linkType === 'DEFINES' && filters.showDefines === false) return false;
+      if (linkType === 'BELONGS_TO' && filters.showBelongsTo === false) return false;
+      if (linkType === 'WORKS_FOR' && filters.showWorksFor === false) return false;
+      if (linkType === 'LOCATED_IN' && filters.showLocatedIn === false) return false;
 
       // Filter by weight (for RELATES_TO and CO_OCCURS which have meaningful weights)
       if ((linkType === 'RELATES_TO' || linkType === 'CO_OCCURS') && link.weight !== undefined) {

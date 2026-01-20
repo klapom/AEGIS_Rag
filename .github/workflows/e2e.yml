@@ -121,21 +121,36 @@ jobs:
           poetry run uvicorn src.api.main:app --host 0.0.0.0 --port 8000 &
           sleep 10
 
-      - name: Run E2E tests (Feature 50.7 - Cost Monitoring)
+      - name: Run E2E tests (Feature 50.7 - Cost Monitoring, LangSmith Disabled)
+        env:
+          # Sprint 115: Disable LangSmith in CI/CD E2E tests
+          LANGSMITH_TRACING: 'false'
+          LANGCHAIN_TRACING_V2: 'false'
+          LANGSMITH_API_KEY: ''
         run: |
           BASE_URL=http://localhost:5179 \
           API_BASE_URL=http://localhost:8000 \
           poetry run pytest tests/e2e/test_e2e_cost_monitoring_workflow.py -v --tb=short
         continue-on-error: true
 
-      - name: Run E2E tests (Feature 50.8 - Health Monitoring)
+      - name: Run E2E tests (Feature 50.8 - Health Monitoring, LangSmith Disabled)
+        env:
+          # Sprint 115: Disable LangSmith in CI/CD E2E tests
+          LANGSMITH_TRACING: 'false'
+          LANGCHAIN_TRACING_V2: 'false'
+          LANGSMITH_API_KEY: ''
         run: |
           BASE_URL=http://localhost:5179 \
           API_BASE_URL=http://localhost:8000 \
           poetry run pytest tests/e2e/test_e2e_health_monitoring.py -v --tb=short
         continue-on-error: true
 
-      - name: Run E2E tests (Feature 50.9 - Indexing Pipeline)
+      - name: Run E2E tests (Feature 50.9 - Indexing Pipeline, LangSmith Disabled)
+        env:
+          # Sprint 115: Disable LangSmith in CI/CD E2E tests
+          LANGSMITH_TRACING: 'false'
+          LANGCHAIN_TRACING_V2: 'false'
+          LANGSMITH_API_KEY: ''
         run: |
           BASE_URL=http://localhost:5179 \
           API_BASE_URL=http://localhost:8000 \

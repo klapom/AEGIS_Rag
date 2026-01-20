@@ -665,6 +665,177 @@ async def reset_relation_synonyms() -> RelationOverridesResetResponse:
 
 
 # ============================================================================
+# Sprint 116 Feature 116.1: Admin Dashboard Stats Cards
+# ============================================================================
+
+
+class DashboardStats(BaseModel):
+    """Dashboard statistics for admin overview.
+
+    Sprint 116 Feature 116.1: Stats cards for admin dashboard.
+    """
+
+    total_documents: int = Field(..., description="Total documents indexed across all namespaces")
+    total_entities: int = Field(..., description="Total entities in knowledge graph")
+    total_relations: int = Field(..., description="Total relationships in knowledge graph")
+    total_chunks: int = Field(..., description="Total chunks indexed in Qdrant")
+    active_domains: int = Field(..., description="Number of active domains")
+    storage_used_mb: float = Field(..., description="Approximate storage used in MB")
+
+
+@router.get("/dashboard/stats", response_model=DashboardStats)
+async def get_dashboard_stats() -> DashboardStats:
+    """Get dashboard statistics for admin overview cards.
+
+    **Sprint 116 Feature 116.1: Admin Dashboard Stats Cards**
+
+    Returns high-level metrics displayed as stat cards on the admin dashboard:
+    - Total documents indexed (from Qdrant namespace metadata)
+    - Total entities in knowledge graph (from Neo4j)
+    - Total relationships in knowledge graph (from Neo4j)
+    - Total chunks indexed (from Qdrant)
+    - Active domains count
+    - Approximate storage used (from Qdrant collection info)
+
+    **Example Response:**
+    ```json
+    {
+      "total_documents": 156,
+      "total_entities": 2842,
+      "total_relations": 4103,
+      "total_chunks": 1523,
+      "active_domains": 8,
+      "storage_used_mb": 245.7
+    }
+    ```
+
+    Returns:
+        DashboardStats with comprehensive dashboard metrics
+
+    Raises:
+        HTTPException: If statistics retrieval fails
+    """
+    logger.info(
+        "dashboard_stats_endpoint_called",
+        endpoint="/api/v1/admin/dashboard/stats",
+        method="GET",
+    )
+
+    try:
+        # Initialize counters
+        total_documents = 0
+        total_entities = 0
+        total_relations = 0
+        total_chunks = 0
+        active_domains = 0
+        storage_used_mb = 0.0
+
+        # Get Qdrant statistics
+        logger.info("dashboard_stats_phase", phase="qdrant", status="starting")
+        try:
+            from src.components.vector_search.qdrant_client import get_qdrant_client
+
+            qdrant_client = get_qdrant_client()
+            collection_name = settings.qdrant_collection
+
+            collection_info = await qdrant_client.get_collection_info(collection_name)
+            if collection_info:
+                total_chunks = collection_info.points_count
+                # Estimate storage: vectors_count * vector_size * 4 bytes (float32) + metadata overhead
+                # For BGE-M3: 1024 dim dense + ~100 sparse dimensions average
+                bytes_per_point = (1024 + 100) * 4 * 1.5  # 1.5x overhead for metadata
+                storage_used_mb = (total_chunks * bytes_per_point) / (1024 * 1024)
+                logger.info(
+                    "qdrant_stats_retrieved",
+                    chunks=total_chunks,
+                    storage_mb=round(storage_used_mb, 2),
+                )
+        except Exception as e:
+            logger.warning("failed_to_get_qdrant_stats", error=str(e))
+
+        # Get Neo4j statistics (entities and relations)
+        logger.info("dashboard_stats_phase", phase="neo4j", status="starting")
+        try:
+            from src.components.graph_rag.neo4j_client import get_neo4j_client
+
+            neo4j_client = get_neo4j_client()
+
+            # Query for entities (LightRAG uses "base" label)
+            query_entities = "MATCH (e:base) RETURN count(e) as count"
+            entities_result = await neo4j_client.execute_query(query_entities)
+            if entities_result and len(entities_result) > 0:
+                total_entities = entities_result[0].get("count", 0)
+                logger.info("neo4j_entities_retrieved", count=total_entities)
+
+            # Query for relationships
+            query_relations = "MATCH ()-[r]->() RETURN count(r) as count"
+            relations_result = await neo4j_client.execute_query(query_relations)
+            if relations_result and len(relations_result) > 0:
+                total_relations = relations_result[0].get("count", 0)
+                logger.info("neo4j_relations_retrieved", count=total_relations)
+
+        except Exception as e:
+            logger.warning("failed_to_get_neo4j_stats", error=str(e))
+
+        # Get document count from namespaces
+        logger.info("dashboard_stats_phase", phase="namespaces", status="starting")
+        try:
+            from src.core.namespace import NamespaceManager
+
+            manager = NamespaceManager()
+            namespace_infos = await manager.list_namespaces()
+
+            # Sum up document counts across all namespaces
+            total_documents = sum(ns.document_count for ns in namespace_infos)
+            logger.info(
+                "namespace_stats_retrieved",
+                namespaces=len(namespace_infos),
+                total_docs=total_documents,
+            )
+        except Exception as e:
+            logger.warning("failed_to_get_namespace_stats", error=str(e))
+
+        # Get active domains count
+        logger.info("dashboard_stats_phase", phase="domains", status="starting")
+        try:
+            from src.api.v1.domain_training import list_domains
+
+            domains_response = await list_domains()
+            active_domains = len(domains_response.domains)
+            logger.info("domains_stats_retrieved", count=active_domains)
+        except Exception as e:
+            logger.warning("failed_to_get_domains_stats", error=str(e))
+
+        stats = DashboardStats(
+            total_documents=total_documents,
+            total_entities=total_entities,
+            total_relations=total_relations,
+            total_chunks=total_chunks,
+            active_domains=active_domains,
+            storage_used_mb=round(storage_used_mb, 2),
+        )
+
+        logger.info(
+            "dashboard_stats_successfully_retrieved",
+            stats=stats.model_dump(),
+        )
+
+        return stats
+
+    except Exception as e:
+        logger.error(
+            "dashboard_stats_failed",
+            error=str(e),
+            error_type=type(e).__name__,
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve dashboard statistics: {str(e)}",
+        ) from e
+
+
+# ============================================================================
 # Sprint 110 Feature 110.0: Admin Memory Search (Bug Fix)
 # ============================================================================
 
