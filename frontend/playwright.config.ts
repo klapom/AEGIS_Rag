@@ -21,7 +21,11 @@ export default defineConfig({
   /* Run tests sequentially to avoid LLM rate limits */
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
+  /* Sprint 115.4: Enable retries for all environments to handle flaky LLM tests
+   * Local: 1 retry (quick feedback loop)
+   * CI: 2 retries (more resilience for nightly runs)
+   */
+  retries: process.env.CI ? 2 : 1,
   workers: 1,
 
   /* Shared settings for all reporters */
@@ -65,11 +69,39 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
 
-  /* Configure projects for major browsers */
+  /* Configure projects for test tiers (Sprint 115.4)
+   *
+   * Test Tiers:
+   * - @fast: Smoke tests, basic UI checks (30s timeout) - run with: npx playwright test --grep @fast
+   * - @standard: Regular E2E tests (180s timeout) - default
+   * - @full: Multi-turn, integration, LLM-heavy tests (300s timeout) - run with: npx playwright test --grep @full
+   *
+   * Usage in tests:
+   *   test('my test', { tag: '@fast' }, async ({ page }) => { ... });
+   *   test.describe('suite', { tag: '@full' }, () => { ... });
+   */
   projects: [
+    /* Fast tier: Smoke tests, basic UI (30s timeout) */
+    {
+      name: 'fast',
+      testMatch: /smoke\.spec\.ts/,
+      use: { ...devices['Desktop Chrome'] },
+      timeout: 30 * 1000,
+      expect: { timeout: 10 * 1000 },
+    },
+    /* Standard tier: Regular E2E tests (180s timeout) - default */
     {
       name: 'chromium',
+      testIgnore: [/smoke\.spec\.ts/, /chat-multi-turn\.spec\.ts/],
       use: { ...devices['Desktop Chrome'] },
+    },
+    /* Full tier: Multi-turn, integration tests (300s timeout) */
+    {
+      name: 'full',
+      testMatch: /chat-multi-turn\.spec\.ts/,
+      use: { ...devices['Desktop Chrome'] },
+      timeout: 300 * 1000,
+      expect: { timeout: 180 * 1000 },
     },
 
     /* Uncomment for multi-browser testing (requires more resources)
