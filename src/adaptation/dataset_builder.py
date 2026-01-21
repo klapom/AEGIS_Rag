@@ -1115,10 +1115,11 @@ class DatasetBuilder:
         try:
             import pandas as pd
         except ImportError:
+            # Sprint 118 Fix: B904 - raise from None to distinguish from handler errors
             raise DatasetBuilderError(
                 operation="export_to_parquet",
                 reason="pandas is required for Parquet export. Install with: pip install pandas pyarrow",
-            )
+            ) from None
 
         if not examples:
             self.logger.warning("no_examples_to_export", dataset_type=dataset_type)

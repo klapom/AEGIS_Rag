@@ -55,7 +55,7 @@ from pydantic import BaseModel, Field
 
 from src.core.config import get_settings
 from src.core.exceptions import DatabaseConnectionError
-from src.core.models import ErrorCode
+from src.core.models import DomainUpdateRequest, ErrorCode
 from src.core.models.response import ApiResponse
 from src.core.response_utils import error_response_from_request, success_response_from_request
 
@@ -891,7 +891,7 @@ async def get_domain(domain_name: str) -> DomainResponse:
 @router.put("/{domain_name}")
 async def update_domain(
     domain_name: str,
-    update_request: "DomainUpdateRequest",
+    update_request: DomainUpdateRequest,
 ) -> dict[str, Any]:
     """Update domain configuration.
 
@@ -917,11 +917,8 @@ async def update_domain(
 
     try:
         from src.components.domain_training import get_domain_repository
-        from src.core.models import DomainUpdateRequest
 
-        # Import here to avoid circular dependency
-        if not isinstance(update_request, DomainUpdateRequest):
-            update_request = DomainUpdateRequest(**update_request.model_dump())
+        # Sprint 118 Fix: DomainUpdateRequest now imported at module level
 
         repo = get_domain_repository()
 

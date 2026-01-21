@@ -296,10 +296,9 @@ class UnifiedTracer:
             # Serialize to JSON line
             json_line = json.dumps(event_dict, ensure_ascii=False) + "\n"
 
-            # Async write with lock
-            async with self._write_lock:
-                async with aiofiles.open(self.log_path, mode="a", encoding="utf-8") as f:
-                    await f.write(json_line)
+            # Async write with lock (Sprint 118 Fix: SIM117 - single with statement)
+            async with self._write_lock, aiofiles.open(self.log_path, mode="a", encoding="utf-8") as f:
+                await f.write(json_line)
 
             logger.debug(
                 "Event logged",
@@ -362,7 +361,8 @@ class UnifiedTracer:
             return self._empty_metrics()
 
         try:
-            async with aiofiles.open(self.log_path, mode="r", encoding="utf-8") as f:
+            # Sprint 118 Fix: UP015 - mode="r" is default
+            async with aiofiles.open(self.log_path, encoding="utf-8") as f:
                 async for line in f:
                     try:
                         event_dict = json.loads(line.strip())
@@ -514,7 +514,8 @@ class UnifiedTracer:
             return events
 
         try:
-            async with aiofiles.open(self.log_path, mode="r", encoding="utf-8") as f:
+            # Sprint 118 Fix: UP015 - mode="r" is default
+            async with aiofiles.open(self.log_path, encoding="utf-8") as f:
                 async for line in f:
                     # Early termination if limit reached
                     if limit and len(events) >= limit:

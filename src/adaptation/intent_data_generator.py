@@ -752,8 +752,8 @@ Generate exactly {num_examples} queries now:
         query_lengths = [len(ex.query.split()) for ex in examples]
         avg_length = sum(query_lengths) / len(query_lengths)
 
-        # Duplicate detection
-        unique_queries = len(set(ex.query.lower() for ex in examples))
+        # Duplicate detection (Sprint 118 Fix: C401 - use set comprehension)
+        unique_queries = len({ex.query.lower() for ex in examples})
         duplicate_pct = ((len(examples) - unique_queries) / len(examples)) * 100
 
         # Quality assessment

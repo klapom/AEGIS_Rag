@@ -295,7 +295,8 @@ class EvalHarness:
         citation_matches = self.CITATION_PATTERN.findall(answer)
         if citation_matches:
             # Verify citations are sequential (1, 2, 3, not 1, 3, 5)
-            citation_numbers = sorted(set(int(c) for c in citation_matches))
+            # Sprint 118 Fix: C401 - use set comprehension
+            citation_numbers = sorted({int(c) for c in citation_matches})
             expected = list(range(1, len(citation_numbers) + 1))
             if citation_numbers != expected:
                 issues.append(
@@ -348,7 +349,8 @@ class EvalHarness:
 
         # Extract citations from answer
         citation_matches = self.CITATION_PATTERN.findall(answer)
-        cited_numbers = set(int(c) for c in citation_matches)
+        # Sprint 118 Fix: C401 - use set comprehension
+        cited_numbers = {int(c) for c in citation_matches}
 
         # Split answer into sentences
         sentences = re.split(r"[.!?]+", answer)
@@ -489,7 +491,8 @@ IMPORTANT: Return ONLY valid JSON, no other text."""
                 if json_match:
                     result = json.loads(json_match.group(1))
                 else:
-                    raise ValueError(f"Invalid JSON response: {response.content[:200]}")
+                    # Sprint 118 Fix: B904 - raise from None
+                    raise ValueError(f"Invalid JSON response: {response.content[:200]}") from None
 
             score = result.get("grounding_score", 0.0)
             passed = score >= self.thresholds[QualityCheck.GROUNDING]

@@ -284,8 +284,8 @@ async def extract_rerank_pairs(
     filtered_by_quality = 0
     filtered_by_missing_labels = 0
 
-    # Stream events from JSONL file
-    async with aiofiles.open(trace_file, mode="r", encoding="utf-8") as f:
+    # Stream events from JSONL file (Sprint 118 Fix: UP015 - mode="r" is default)
+    async with aiofiles.open(trace_file, encoding="utf-8") as f:
         async for line in f:
             try:
                 event = json.loads(line.strip())
@@ -410,7 +410,8 @@ async def load_training_pairs(input_path: str) -> list[RerankTrainingPair]:
 
     pairs: list[RerankTrainingPair] = []
 
-    async with aiofiles.open(input_file, mode="r", encoding="utf-8") as f:
+    # Sprint 118 Fix: UP015 - mode="r" is default
+    async with aiofiles.open(input_file, encoding="utf-8") as f:
         async for line in f:
             try:
                 pair_dict = json.loads(line.strip())

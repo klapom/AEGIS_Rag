@@ -280,8 +280,12 @@ export function getOutcomeIcon(outcome: AuditEventOutcome): string {
 
 /**
  * Helper: Format event type for display
+ * Sprint 118 Fix: Add null/undefined check to prevent TypeError
  */
-export function formatEventType(eventType: AuditEventType): string {
+export function formatEventType(eventType: AuditEventType | undefined | null): string {
+  if (!eventType) {
+    return 'Unknown';
+  }
   return eventType
     .split('_')
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
