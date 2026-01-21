@@ -76,11 +76,21 @@ export interface ClassifyDocumentResponse {
 // ============================================================================
 
 /**
+ * API Response wrapper for standardized responses
+ * Sprint 117.8: Response Format Standardization
+ */
+interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  metadata?: Record<string, unknown>;
+}
+
+/**
  * Fetch all domains with auto-refresh
  * Sprint 51 Feature 51.4: Auto-refresh domain status
+ * Sprint 117.8 Fix: Handle ApiResponse wrapper (data is inside response.data)
  *
  * Note: The API endpoint requires a trailing slash (/admin/domains/)
- * and returns a direct array of Domain objects, not wrapped in { domains: [...] }
  *
  * @param options.refetchInterval - Polling interval in ms (default: 5000)
  * @param options.enabled - Whether to enable auto-refresh (default: true)
@@ -99,10 +109,12 @@ export function useDomains(options?: { refetchInterval?: number; enabled?: boole
     }
     setError(null);
     try {
-      // API returns Domain[] directly (not wrapped in { domains: [...] })
+      // Sprint 117.8 Fix: API now returns ApiResponse wrapper with data inside
       // Trailing slash is required by FastAPI router configuration
-      const response = await apiClient.get<Domain[]>('/admin/domains/');
-      setData(response);
+      const response = await apiClient.get<ApiResponse<Domain[]>>('/admin/domains/');
+      // Handle both old format (direct array) and new format (wrapped in ApiResponse)
+      const domains = Array.isArray(response) ? response : response.data;
+      setData(domains);
       isFirstLoad.current = false;
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to fetch domains'));
