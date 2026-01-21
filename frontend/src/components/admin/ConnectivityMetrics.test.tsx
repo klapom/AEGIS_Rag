@@ -79,12 +79,14 @@ describe('ConnectivityMetrics', () => {
     });
 
     it('should render error state', () => {
-      mockError = new Error('Failed to load connectivity metrics');
+      mockError = new Error('Network error: API unreachable');
       render(<ConnectivityMetrics namespaceId="test" domainType="factual" enabled={true} />);
 
       expect(screen.getByTestId('connectivity-metrics-section')).toBeInTheDocument();
+      // Component shows hardcoded error title
       expect(screen.getByText('Failed to load connectivity metrics')).toBeInTheDocument();
-      expect(screen.getByText('Failed to load connectivity metrics')).toBeInTheDocument();
+      // Component also shows the actual error message
+      expect(screen.getByText('Network error: API unreachable')).toBeInTheDocument();
     });
 
     it('should not render when data is null', () => {
