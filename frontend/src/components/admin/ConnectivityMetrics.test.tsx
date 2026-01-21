@@ -252,8 +252,10 @@ describe('ConnectivityMetrics', () => {
       render(<ConnectivityMetrics namespaceId="test" domainType="factual" />);
 
       const gauge = screen.getByTestId('connectivity-gauge');
-      // 0.55 - 0.3 = 0.25, range = 0.5, percentage = 50%
-      expect(gauge).toHaveStyle({ width: '50%' });
+      // 0.55 - 0.3 = 0.25, range = 0.5, percentage ~= 50% (allow floating point tolerance)
+      const widthStyle = gauge.style.width;
+      const widthValue = parseFloat(widthStyle);
+      expect(widthValue).toBeCloseTo(50, 0); // Within 0.5% tolerance
     });
 
     it('should clamp gauge to 0% when below range', () => {
@@ -266,8 +268,10 @@ describe('ConnectivityMetrics', () => {
       render(<ConnectivityMetrics namespaceId="test" domainType="factual" />);
 
       const gauge = screen.getByTestId('connectivity-gauge');
-      // Should be clamped to 0% (negative values not allowed)
-      expect(gauge).toHaveStyle({ width: expect.stringMatching(/^0%|^-/) });
+      // Should be clamped to 0% or negative (component should clamp to 0)
+      const widthStyle = gauge.style.width;
+      const widthValue = parseFloat(widthStyle);
+      expect(widthValue).toBeLessThanOrEqual(0);
     });
 
     it('should clamp gauge to 100% when above range', () => {

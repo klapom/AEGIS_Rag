@@ -149,7 +149,8 @@ describe('AdminNavigationBar', () => {
       renderComponent();
 
       const links = screen.getAllByRole('link');
-      expect(links).toHaveLength(10);
+      // Sprint 95/96: Added Skills Registry, GDPR, Audit, Explainability, Certification
+      expect(links).toHaveLength(16);
     });
   });
 });
