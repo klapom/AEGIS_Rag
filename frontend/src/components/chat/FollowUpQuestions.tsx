@@ -3,6 +3,7 @@
  * Sprint 28 Feature 28.1: Display follow-up questions below answers
  * Sprint 52 Feature 52.3: Async Follow-up Questions (TD-043)
  * Sprint 65 Feature 65.1: Increased poll timeout for async generation
+ * Sprint 118 Fix: Increased poll timeout from 15s to 60s for LLM generation
  *
  * Features:
  * - Fetch follow-up questions from backend API (async after answer completes)
@@ -12,6 +13,7 @@
  *
  * CRITICAL: Questions are generated asynchronously AFTER answer completes.
  * This component polls the endpoint until questions are ready.
+ * LLM generation typically takes 20-60s on Nemotron3/DGX Spark.
  */
 
 import { useState, useEffect, useRef } from 'react';
@@ -30,8 +32,9 @@ export function FollowUpQuestions({ sessionId, onQuestionClick, answerComplete =
   const [error, setError] = useState<string | null>(null);
   const pollIntervalRef = useRef<number | null>(null);
   const pollCountRef = useRef(0);
-  // Sprint 65 Feature 65.1: Increased timeout to 15s for LLM generation
-  const maxPollAttempts = 15; // Poll for up to 15 seconds (15 * 1s)
+  // Sprint 118 Fix: Increased timeout from 15s to 60s for LLM generation
+  // Nemotron3 on DGX Spark typically takes 20-60s for follow-up generation
+  const maxPollAttempts = 60; // Poll for up to 60 seconds (60 * 1s)
 
   useEffect(() => {
     // Sprint 52.3: Only start fetching when answer completes
