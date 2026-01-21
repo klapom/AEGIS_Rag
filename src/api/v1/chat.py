@@ -1827,35 +1827,10 @@ async def get_followup_questions(session_id: str) -> FollowUpQuestionsResponse:
         from src.components.memory import get_redis_memory
 
         redis_memory = get_redis_memory()
-
-        # Sprint 52 Feature 52.3: Check if async generation already completed
-        # Try to retrieve from the async-generated context first
-        from src.agents.followup_generator import generate_followup_questions_async
-
-        async_questions = await generate_followup_questions_async(session_id)
-        if async_questions:
-            logger.info(
-                "followup_questions_from_async_generation",
-                session_id=session_id,
-                count=len(async_questions),
-            )
-            # Cache for future requests
-            cache_key = f"{session_id}:followup"
-            await redis_memory.store(
-                key=cache_key,
-                value={"questions": async_questions},
-                namespace="cache",
-                ttl_seconds=300,  # 5 minutes
-            )
-            return FollowUpQuestionsResponse(
-                session_id=session_id,
-                followup_questions=async_questions,
-                generated_at=_get_iso_timestamp(),
-                from_cache=False,
-            )
-
-        # Check cache (5min TTL) - fallback
         cache_key = f"{session_id}:followup"
+
+        # Sprint 118 Fix: Check cache FIRST - coordinator already stores questions here
+        # This avoids expensive LLM regeneration on every request
         cached_questions = await redis_memory.retrieve(key=cache_key, namespace="cache")
 
         if cached_questions:
@@ -2032,7 +2007,12 @@ async def stream_followup_questions(session_id: str) -> StreamingResponse:
     logger.info("followup_questions_stream_started", session_id=session_id)
 
     async def generate_sse_events():
-        """Generate SSE events for follow-up questions."""
+        """Generate SSE events for follow-up questions.
+
+        Sprint 118 Fix: Check cache FIRST before calling LLM.
+        The coordinator already generates questions in background and stores in cache.
+        We should check the cache to avoid duplicate LLM calls (30x per session!).
+        """
         max_wait_seconds = 60
         poll_interval = 2  # Poll every 2 seconds
         elapsed = 0
@@ -2041,8 +2021,38 @@ async def stream_followup_questions(session_id: str) -> StreamingResponse:
             from src.components.memory import get_redis_memory
             from src.agents.followup_generator import generate_followup_questions_async
 
+            redis_memory = get_redis_memory()
+            cache_key = f"{session_id}:followup"
+
             while elapsed < max_wait_seconds:
-                # Check if questions are ready
+                # Sprint 118 Fix: Check cache FIRST - coordinator stores questions here
+                cached_questions = await redis_memory.retrieve(key=cache_key, namespace="cache")
+
+                if cached_questions:
+                    # Extract value from Redis wrapper
+                    if isinstance(cached_questions, dict) and "value" in cached_questions:
+                        cached_questions = cached_questions["value"]
+
+                    questions = cached_questions.get("questions", [])
+                    if questions and len(questions) > 0:
+                        # Questions ready from cache - send and close
+                        event_data = {
+                            "questions": questions,
+                            "count": len(questions),
+                            "elapsed_seconds": elapsed,
+                            "from_cache": True,
+                        }
+                        yield f"event: questions\ndata: {json.dumps(event_data)}\n\n"
+                        logger.info(
+                            "followup_questions_stream_from_cache",
+                            session_id=session_id,
+                            count=len(questions),
+                            elapsed_seconds=elapsed,
+                        )
+                        return
+
+                # Fallback: Try async generation (only if cache miss)
+                # This is a safety net - ideally coordinator already cached
                 async_questions = await generate_followup_questions_async(session_id)
 
                 if async_questions and len(async_questions) > 0:
