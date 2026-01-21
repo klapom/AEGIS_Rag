@@ -507,7 +507,7 @@ test.describe('Memory Consolidation Control (Feature 72.3)', () => {
       });
     });
 
-    await page.route('**/api/v1/memory/consolidate/status', (route) => {
+    await page.route('**/api/v1/memory/consolidation/status', (route) => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -565,7 +565,7 @@ test.describe('Memory Consolidation Control (Feature 72.3)', () => {
     });
 
     // Return consolidation status with empty history to test the empty state
-    await page.route('**/api/v1/memory/consolidate/status', (route) => {
+    await page.route('**/api/v1/memory/consolidation/status', (route) => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -611,7 +611,7 @@ test.describe('Memory Management UI Interactions (Feature 72.3)', () => {
       });
     });
 
-    await page.route('**/api/v1/memory/consolidate/status', (route) => {
+    await page.route('**/api/v1/memory/consolidation/status', (route) => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -733,7 +733,7 @@ test.describe('Memory Management Accessibility (Feature 72.3)', () => {
       });
     });
 
-    await page.route('**/api/v1/memory/consolidate/status', (route) => {
+    await page.route('**/api/v1/memory/consolidation/status', (route) => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
