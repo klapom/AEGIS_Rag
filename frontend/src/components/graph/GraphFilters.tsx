@@ -415,7 +415,7 @@ export function GraphFilters({
               <label
                 key={option.value}
                 className="flex items-center space-x-2 cursor-pointer group"
-                data-testid={`edge-filter-${option.value.toLowerCase()}`}
+                data-testid={`edge-filter-${option.value.toLowerCase().replace(/_/g, '-')}`}
               >
                 <input
                   type="checkbox"
@@ -424,7 +424,7 @@ export function GraphFilters({
                   className="w-4 h-4 text-primary border-2 border-gray-300 rounded
                              focus:ring-2 focus:ring-primary/20 focus:ring-offset-0 cursor-pointer"
                   aria-label={`Show ${option.value} relationships`}
-                  data-testid={`edge-filter-${option.value.toLowerCase()}-checkbox`}
+                  data-testid={`edge-filter-${option.value.toLowerCase().replace(/_/g, '-')}-checkbox`}
                 />
                 <div
                   className="w-4 h-0.5"
