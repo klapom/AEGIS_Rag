@@ -71,6 +71,12 @@ test.describe('Error Handling - Timeout & Recovery', () => {
 });
 
 test.describe('Error Handling - Input Validation', () => {
+  /**
+   * Sprint 118 Fix: Improved empty query test resilience
+   * - The send button should be disabled when input is empty
+   * - If not disabled, the click should be gracefully handled
+   * - Increased timeouts for LLM response verification
+   */
   test('should handle empty query gracefully', async ({ chatPage }) => {
     // Try to send empty message
     await chatPage.messageInput.fill('');
@@ -79,15 +85,28 @@ test.describe('Error Handling - Input Validation', () => {
     const inputValue = await chatPage.messageInput.inputValue();
     expect(inputValue).toBe('');
 
-    // Try to send (might be blocked by UI or backend)
-    try {
-      await chatPage.sendButton.click();
-      await chatPage.page.waitForTimeout(1000);
-    } catch {
-      // Empty send might fail, which is fine
+    // Check if send button is disabled (expected UI behavior)
+    const isDisabled = await chatPage.sendButton.isDisabled();
+
+    if (!isDisabled) {
+      // If button is enabled, try to click and verify nothing bad happens
+      try {
+        await chatPage.sendButton.click();
+        // Wait briefly for any UI reaction
+        await chatPage.page.waitForTimeout(500);
+      } catch {
+        // Empty send might fail, which is fine
+      }
     }
 
-    // Input should still be functional
+    // Ensure input is still ready for use
+    await chatPage.messageInput.waitFor({ state: 'visible', timeout: 5000 });
+
+    // Clear any potential state issues
+    await chatPage.messageInput.clear();
+    await chatPage.page.waitForTimeout(200);
+
+    // Input should still be functional - send a real message
     await chatPage.sendMessage('What is AI?');
     await chatPage.waitForResponse();
 

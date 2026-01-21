@@ -202,6 +202,7 @@ test.describe('Sprint 46 - Feature 46.1: ConversationView', () => {
    * TC-46.1.9: Verify multiple messages maintain proper layout
    * Conversation should grow vertically with proper spacing
    * Sprint 113 Fix: Added explicit waits for message rendering
+   * Sprint 118 Fix: Increased timeouts for LLM response times (60-90s per response)
    */
   test('TC-46.1.9: should maintain proper layout with multiple messages', async ({ chatPage }) => {
     // Send first message
@@ -209,16 +210,18 @@ test.describe('Sprint 46 - Feature 46.1: ConversationView', () => {
     await chatPage.waitForResponse();
 
     // Sprint 113: Wait for first message pair to be rendered
+    // Sprint 118: Increased timeout from 10s to 30s for slow renders
     const messages = chatPage.page.locator('[data-testid="message"]');
-    await expect(messages).toHaveCount(2, { timeout: 10000 });
+    await expect(messages).toHaveCount(2, { timeout: 30000 });
 
     // Send second message
     await chatPage.sendMessage('What is Java?');
     await chatPage.waitForResponse();
 
     // Sprint 113: Wait for all 4 messages to be rendered (with timeout)
-    // Sometimes the second response takes longer to render
-    await expect(messages).toHaveCount(4, { timeout: 30000 });
+    // Sprint 118 Fix: Increased timeout from 30s to 150s (matching waitForResponse)
+    // LLM responses take 60-90s each, so 30s was insufficient
+    await expect(messages).toHaveCount(4, { timeout: 150000 });
 
     // All messages should be visible
     const allMessages = await chatPage.getAllMessages();
