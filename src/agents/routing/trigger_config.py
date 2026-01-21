@@ -197,9 +197,7 @@ class TriggerConfigLoader:
         logger.info("patterns_compiled", count=len(patterns))
         return patterns
 
-    def get_triggered_skills(
-        self, query: str, intent: Optional[str] = None
-    ) -> List[TriggerMatch]:
+    def get_triggered_skills(self, query: str, intent: Optional[str] = None) -> List[TriggerMatch]:
         """Get all skills triggered by query and intent.
 
         Combines triggers from multiple sources:
@@ -315,10 +313,7 @@ class TriggerConfigLoader:
         # Deduplicate: Keep highest confidence for each skill
         seen: Dict[str, TriggerMatch] = {}
         for match in matches:
-            if (
-                match.skill not in seen
-                or match.confidence > seen[match.skill].confidence
-            ):
+            if match.skill not in seen or match.confidence > seen[match.skill].confidence:
                 seen[match.skill] = match
 
         deduplicated = list(seen.values())

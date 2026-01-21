@@ -226,7 +226,9 @@ class DomainOverrideService:
                 "classification_path": result[0].get("classification_path", "auto"),
             }
 
-            logger.info("document_domain_info_retrieved", document_id=document_id, domain=domain_info)
+            logger.info(
+                "document_domain_info_retrieved", document_id=document_id, domain=domain_info
+            )
             return domain_info
 
         except Exception as e:

@@ -696,7 +696,9 @@ class HybridSearch:
                         # Sprint 77 Feature 77.1 (TD-090): Include namespace for multi-tenant filtering
                         # Sprint 81: TD-099 fix - Use namespace_id (consistent with ingestion)
                         "namespace_id": (
-                            str(point.payload.get("namespace_id", "default")) if point.payload else "default"
+                            str(point.payload.get("namespace_id", "default"))
+                            if point.payload
+                            else "default"
                         ),
                     }
                     documents.append(doc)

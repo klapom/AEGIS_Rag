@@ -14,7 +14,9 @@ class DomainClassificationResult(BaseModel):
 
     domain_id: str = Field(..., description="Classified domain ID")
     domain_name: str = Field(..., description="Human-readable domain name")
-    confidence: float = Field(..., description="Classification confidence (0.0-1.0)", ge=0.0, le=1.0)
+    confidence: float = Field(
+        ..., description="Classification confidence (0.0-1.0)", ge=0.0, le=1.0
+    )
     classification_path: str = Field(
         ...,
         description="Classification path used (fast, verified, fallback)",

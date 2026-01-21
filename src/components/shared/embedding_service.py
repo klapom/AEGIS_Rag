@@ -532,4 +532,5 @@ def get_embedding_service():
         Embedding service instance (type varies by backend configuration)
     """
     from src.components.shared.embedding_factory import get_embedding_service as factory_get_service
+
     return factory_get_service()

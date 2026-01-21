@@ -390,6 +390,7 @@ class GraphRAGRetriever:
         # Step 1: Vector search
         # Sprint 80 Feature 80.3: Enable cross-encoder reranking with BAAI/bge-reranker-v2-m3
         from src.core.config import settings
+
         search_result = await self.hybrid_search.hybrid_search(
             query=query,
             top_k=top_k,

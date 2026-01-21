@@ -334,9 +334,7 @@ class DatasetBuilder:
 
         except Exception as e:
             self.logger.error("intent_dataset_build_failed", error=str(e), exc_info=True)
-            raise DatasetBuilderError(
-                operation="build_intent_dataset", reason=str(e)
-            ) from e
+            raise DatasetBuilderError(operation="build_intent_dataset", reason=str(e)) from e
 
     async def build_rerank_dataset(
         self,
@@ -432,9 +430,7 @@ class DatasetBuilder:
 
         except Exception as e:
             self.logger.error("rerank_dataset_build_failed", error=str(e), exc_info=True)
-            raise DatasetBuilderError(
-                operation="build_rerank_dataset", reason=str(e)
-            ) from e
+            raise DatasetBuilderError(operation="build_rerank_dataset", reason=str(e)) from e
 
     async def build_qa_dataset(
         self,
@@ -538,8 +534,7 @@ class DatasetBuilder:
                     citations = trace.get("evidence", {}).get("citations", [])
                     # Handle both string IDs and dict citations
                     citation_ids = [
-                        c if isinstance(c, str) else c.get("chunk_id", "")
-                        for c in citations
+                        c if isinstance(c, str) else c.get("chunk_id", "") for c in citations
                     ]
 
                     example = QAExample(
@@ -628,9 +623,7 @@ class DatasetBuilder:
             high_quality_graph = []
             for trace in traces:
                 # Skip traces without graph queries
-                if "graph_query" not in trace or not trace.get("retrieval", {}).get(
-                    "graph_local"
-                ):
+                if "graph_query" not in trace or not trace.get("retrieval", {}).get("graph_local"):
                     continue
 
                 quality_score = trace.get("metrics", {}).get("quality_score", 0.0)
@@ -733,9 +726,7 @@ class DatasetBuilder:
 
         except Exception as e:
             self.logger.error("graph_dataset_build_failed", error=str(e), exc_info=True)
-            raise DatasetBuilderError(
-                operation="build_graph_dataset", reason=str(e)
-            ) from e
+            raise DatasetBuilderError(operation="build_graph_dataset", reason=str(e)) from e
 
     async def _load_traces(self) -> list[dict[str, Any]]:
         """Load all traces from JSONL file(s).
@@ -887,15 +878,11 @@ class DatasetBuilder:
         examples: list[RerankExample] = []
 
         # Sort by score (descending)
-        sorted_chunks = sorted(
-            all_chunks, key=lambda x: x.get("score", 0.0), reverse=True
-        )
+        sorted_chunks = sorted(all_chunks, key=lambda x: x.get("score", 0.0), reverse=True)
 
         # Find positive and negative chunks
         positive_chunks = [c for c in sorted_chunks if c.get("chunk_id") in cited_chunk_ids]
-        negative_chunks = [
-            c for c in sorted_chunks if c.get("chunk_id") not in cited_chunk_ids
-        ]
+        negative_chunks = [c for c in sorted_chunks if c.get("chunk_id") not in cited_chunk_ids]
 
         # Create pairs: cited chunk (positive) vs high-ranked uncited (hard negative)
         for pos_chunk in positive_chunks:
@@ -944,14 +931,10 @@ class DatasetBuilder:
         examples: list[RerankExample] = []
 
         # Sort by score
-        sorted_chunks = sorted(
-            all_chunks, key=lambda x: x.get("score", 0.0), reverse=True
-        )
+        sorted_chunks = sorted(all_chunks, key=lambda x: x.get("score", 0.0), reverse=True)
 
         positive_chunks = [c for c in sorted_chunks if c.get("chunk_id") in cited_chunk_ids]
-        negative_chunks = [
-            c for c in sorted_chunks if c.get("chunk_id") not in cited_chunk_ids
-        ]
+        negative_chunks = [c for c in sorted_chunks if c.get("chunk_id") not in cited_chunk_ids]
 
         # Create all combinations of pos/neg pairs
         for pos_chunk in positive_chunks:
@@ -978,9 +961,7 @@ class DatasetBuilder:
 
         return examples
 
-    async def _save_intent_dataset(
-        self, examples: list[TrainingExample], output_path: str
-    ) -> None:
+    async def _save_intent_dataset(self, examples: list[TrainingExample], output_path: str) -> None:
         """Save intent dataset to JSONL format.
 
         Args:
@@ -1007,9 +988,7 @@ class DatasetBuilder:
 
         self.logger.info("intent_dataset_saved", output_path=output_path, count=len(examples))
 
-    async def _save_rerank_dataset(
-        self, examples: list[RerankExample], output_path: str
-    ) -> None:
+    async def _save_rerank_dataset(self, examples: list[RerankExample], output_path: str) -> None:
         """Save rerank dataset to JSONL format.
 
         Args:
@@ -1041,9 +1020,7 @@ class DatasetBuilder:
 
         self.logger.info("qa_dataset_saved", output_path=output_path, count=len(examples))
 
-    async def _save_graph_dataset(
-        self, examples: list[GraphExample], output_path: str
-    ) -> None:
+    async def _save_graph_dataset(self, examples: list[GraphExample], output_path: str) -> None:
         """Save graph dataset to JSONL format.
 
         Args:
@@ -1075,9 +1052,7 @@ class DatasetBuilder:
         for ex in examples:
             intent_counts[ex.intent] += 1
 
-        avg_quality = (
-            sum(ex.quality_score for ex in examples) / len(examples) if examples else 0.0
-        )
+        avg_quality = sum(ex.quality_score for ex in examples) / len(examples) if examples else 0.0
 
         return DatasetStats(
             total_traces=total_traces,

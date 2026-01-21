@@ -122,9 +122,7 @@ class CertificationReport:
     checks: List[CertificationCheck]
     recommendations: List[str] = field(default_factory=list)
     timestamp: datetime = field(default_factory=datetime.utcnow)
-    expiry: datetime = field(
-        default_factory=lambda: datetime.utcnow() + timedelta(days=90)
-    )
+    expiry: datetime = field(default_factory=lambda: datetime.utcnow() + timedelta(days=90))
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert report to dictionary.
@@ -233,9 +231,7 @@ class SkillCertificationFramework:
             ... )
             >>> print(f"Achieved: {report.achieved_level.value}")
         """
-        logger.info(
-            f"Starting certification for {skill_path} | target={target_level.value}"
-        )
+        logger.info(f"Starting certification for {skill_path} | target={target_level.value}")
 
         # Load skill metadata
         meta_path = skill_path / "SKILL.md"
@@ -607,9 +603,7 @@ class SkillCertificationFramework:
                 passed=audit_exists,
                 level_required=CertificationLevel.ENTERPRISE,
                 message=(
-                    "Audit configuration present"
-                    if audit_exists
-                    else "Audit configuration missing"
+                    "Audit configuration present" if audit_exists else "Audit configuration missing"
                 ),
             )
         )

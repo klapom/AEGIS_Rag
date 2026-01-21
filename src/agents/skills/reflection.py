@@ -136,9 +136,7 @@ class ReflectionSkill:
         self.max_iterations = max_iterations
         self.confidence_threshold = confidence_threshold
 
-    async def reflect(
-        self, query: str, answer: str, contexts: List[str]
-    ) -> ReflectionResult:
+    async def reflect(self, query: str, answer: str, contexts: List[str]) -> ReflectionResult:
         """Reflect on an answer and identify issues.
 
         Steps:
@@ -264,9 +262,7 @@ Only use information from the provided contexts.
 
 Improved Answer:"""
 
-        logger.debug(
-            "reflection_improve_start", iteration=reflection.iteration + 1
-        )
+        logger.debug("reflection_improve_start", iteration=reflection.iteration + 1)
 
         # Invoke LLM
         response = await self.llm.ainvoke(improve_prompt)

@@ -114,11 +114,13 @@ async def _list_documents_internal(
                     name=source,
                     token_count=0,
                     chunk_count=0,
-                    uploaded_at=datetime.fromisoformat(
-                        payload.get("uploaded_at", datetime.now().isoformat())
-                    )
-                    if payload.get("uploaded_at")
-                    else datetime.now(),
+                    uploaded_at=(
+                        datetime.fromisoformat(
+                            payload.get("uploaded_at", datetime.now().isoformat())
+                        )
+                        if payload.get("uploaded_at")
+                        else datetime.now()
+                    ),
                     status="ready",
                     namespace=namespace,
                     metadata={
@@ -470,8 +472,7 @@ async def compress_context(
             kept_points = [
                 p
                 for p in points
-                if p.payload.get("relevance_score", 0.7)
-                >= request.min_relevance_threshold
+                if p.payload.get("relevance_score", 0.7) >= request.min_relevance_threshold
             ]
         elif request.strategy == "truncation":
             # Sort by relevance and keep top N
@@ -491,8 +492,7 @@ async def compress_context(
             filtered = [
                 p
                 for p in points
-                if p.payload.get("relevance_score", 0.7)
-                >= request.min_relevance_threshold
+                if p.payload.get("relevance_score", 0.7) >= request.min_relevance_threshold
             ]
             sorted_filtered = sorted(
                 filtered,

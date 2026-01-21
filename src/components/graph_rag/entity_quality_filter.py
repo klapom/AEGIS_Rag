@@ -74,24 +74,36 @@ class EntityQualityFilter:
 
     # SpaCy types to ALWAYS filter (language-agnostic!)
     NOISE_TYPES = {
-        "CARDINAL",   # Numbers: "3", "100", "twenty"
-        "ORDINAL",    # Ordinals: "first", "second", "3rd"
-        "MONEY",      # Currency: "$100", "€50"
-        "PERCENT",    # Percentages: "20%", ".236 per cent"
-        "QUANTITY",   # Quantities: "3 kg", "100 meters"
-        "TIME",       # Time expressions: "3 pm", "noon"
+        "CARDINAL",  # Numbers: "3", "100", "twenty"
+        "ORDINAL",  # Ordinals: "first", "second", "3rd"
+        "MONEY",  # Currency: "$100", "€50"
+        "PERCENT",  # Percentages: "20%", ".236 per cent"
+        "QUANTITY",  # Quantities: "3 kg", "100 meters"
+        "TIME",  # Time expressions: "3 pm", "noon"
     }
 
     # Types to keep only if they meet conditions
     CONDITIONAL_TYPES = {
-        "DATE": {"min_length": 8},    # "December 31, 2009" ✓, "2009" ✗
-        "LANGUAGE": {"min_length": 3}, # "English" ✓, "EN" ✗
+        "DATE": {"min_length": 8},  # "December 31, 2009" ✓, "2009" ✗
+        "LANGUAGE": {"min_length": 3},  # "English" ✓, "EN" ✗
     }
 
     # Article patterns (multilingual)
     ARTICLE_PATTERNS = {
         "en": ["the ", "a ", "an "],
-        "de": ["der ", "die ", "das ", "den ", "dem ", "des ", "ein ", "eine ", "einer ", "einem ", "einen "],
+        "de": [
+            "der ",
+            "die ",
+            "das ",
+            "den ",
+            "dem ",
+            "des ",
+            "ein ",
+            "eine ",
+            "einer ",
+            "einem ",
+            "einen ",
+        ],
         "fr": ["le ", "la ", "les ", "l'", "un ", "une ", "des ", "du ", "de la ", "de l'"],
         "es": ["el ", "la ", "los ", "las ", "un ", "una ", "unos ", "unas ", "lo "],
         "it": ["il ", "lo ", "la ", "i ", "gli ", "le ", "un ", "uno ", "una ", "un'"],
@@ -100,8 +112,52 @@ class EntityQualityFilter:
 
     # Stopwords that should never be entity names
     STOPWORD_NAMES = {
-        "en": {"it", "he", "she", "they", "them", "this", "that", "these", "those", "which", "who", "what", "where", "when", "how", "all", "some", "any", "none", "each", "every", "both", "either", "neither"},
-        "de": {"es", "er", "sie", "sie", "dies", "das", "diese", "jene", "welche", "wer", "was", "wo", "wann", "wie", "alle", "einige", "manche", "keine"},
+        "en": {
+            "it",
+            "he",
+            "she",
+            "they",
+            "them",
+            "this",
+            "that",
+            "these",
+            "those",
+            "which",
+            "who",
+            "what",
+            "where",
+            "when",
+            "how",
+            "all",
+            "some",
+            "any",
+            "none",
+            "each",
+            "every",
+            "both",
+            "either",
+            "neither",
+        },
+        "de": {
+            "es",
+            "er",
+            "sie",
+            "sie",
+            "dies",
+            "das",
+            "diese",
+            "jene",
+            "welche",
+            "wer",
+            "was",
+            "wo",
+            "wann",
+            "wie",
+            "alle",
+            "einige",
+            "manche",
+            "keine",
+        },
     }
 
     def __init__(
@@ -239,7 +295,7 @@ class EntityQualityFilter:
         for pattern in patterns:
             if name_lower.startswith(pattern):
                 # Preserve original casing for the rest
-                return name[len(pattern):].strip()
+                return name[len(pattern) :].strip()
 
         return name
 

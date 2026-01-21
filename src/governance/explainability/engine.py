@@ -149,9 +149,7 @@ class ExplainabilityEngine:
         await self.storage.save(trace)
         return trace
 
-    def _extract_skill_reasons(
-        self, skill_context: Dict[str, Any]
-    ) -> List[SkillSelectionReason]:
+    def _extract_skill_reasons(self, skill_context: Dict[str, Any]) -> List[SkillSelectionReason]:
         """
         Extract skill selection reasoning from context.
 
@@ -174,9 +172,7 @@ class ExplainabilityEngine:
             )
         return reasons
 
-    def _extract_attributions(
-        self, retrieval_context: Dict[str, Any]
-    ) -> List[SourceAttribution]:
+    def _extract_attributions(self, retrieval_context: Dict[str, Any]) -> List[SourceAttribution]:
         """
         Extract source attributions from retrieval context.
 
@@ -200,9 +196,7 @@ class ExplainabilityEngine:
             )
         return attributions
 
-    async def explain(
-        self, trace_id: str, level: ExplanationLevel = ExplanationLevel.USER
-    ) -> str:
+    async def explain(self, trace_id: str, level: ExplanationLevel = ExplanationLevel.USER) -> str:
         """
         Generate human-readable explanation for a decision.
 
@@ -405,9 +399,7 @@ Answer with just the numbers or "UNSUPPORTED"."""
                 return []
 
             indices = [int(i.strip()) for i in response_text.split(",")]
-            return [
-                trace.attributions[i] for i in indices if i < len(trace.attributions)
-            ]
+            return [trace.attributions[i] for i in indices if i < len(trace.attributions)]
         except (ValueError, IndexError):
             # Fallback: return all attributions if parsing fails
             return trace.attributions

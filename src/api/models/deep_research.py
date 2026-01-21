@@ -98,7 +98,7 @@ class DeepResearchResponse(BaseModel):
         "synthesizing",
         "complete",
         "error",
-        "cancelled"
+        "cancelled",
     ] = Field(..., description="Current status")
     sub_questions: list[str] = Field(default_factory=list, description="Generated sub-questions")
     intermediate_answers: list[IntermediateAnswer] = Field(
@@ -132,7 +132,7 @@ class DeepResearchStatusResponse(BaseModel):
         "synthesizing",
         "complete",
         "error",
-        "cancelled"
+        "cancelled",
     ] = Field(..., description="Current status")
     current_step: str = Field(..., description="Current step name")
     progress_percent: int = Field(..., description="Progress percentage (0-100)")

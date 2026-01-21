@@ -281,9 +281,7 @@ class DomainDiscoveryService:
         embed_start = time.perf_counter()
 
         # Truncate documents to 2000 chars for efficiency
-        truncated = [
-            doc[:2000] + "..." if len(doc) > 2000 else doc for doc in documents
-        ]
+        truncated = [doc[:2000] + "..." if len(doc) > 2000 else doc for doc in documents]
 
         # Get dense embeddings using BGE-M3
         results = await self.embedding_service.embed_batch(truncated)
@@ -300,9 +298,7 @@ class DomainDiscoveryService:
 
         return embeddings
 
-    def _cluster_documents(
-        self, embeddings: np.ndarray, suggested_count: int
-    ) -> np.ndarray:
+    def _cluster_documents(self, embeddings: np.ndarray, suggested_count: int) -> np.ndarray:
         """Cluster document embeddings using K-means.
 
         Args:
@@ -412,8 +408,7 @@ class DomainDiscoveryService:
 
         # Truncate documents to 1500 chars each for prompt
         truncated_docs = [
-            doc[:1500] + "..." if len(doc) > 1500 else doc
-            for doc in cluster_documents
+            doc[:1500] + "..." if len(doc) > 1500 else doc for doc in cluster_documents
         ]
 
         # Format documents for prompt
@@ -494,9 +489,7 @@ class DomainDiscoveryService:
                 )
                 raise
 
-    def _parse_llm_response(
-        self, response: str, cluster_id: int
-    ) -> DiscoveredDomain:
+    def _parse_llm_response(self, response: str, cluster_id: int) -> DiscoveredDomain:
         """Parse LLM response to DiscoveredDomain.
 
         Args:

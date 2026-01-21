@@ -187,9 +187,7 @@ class TrainingStatusResponse(BaseModel):
     metrics: dict[str, Any] = Field(
         default_factory=dict, description="Current training metrics (entity_f1, relation_f1, etc.)"
     )
-    started_at: str | None = Field(
-        default=None, description="Training start timestamp (ISO 8601)"
-    )
+    started_at: str | None = Field(default=None, description="Training start timestamp (ISO 8601)")
     estimated_completion: str | None = Field(
         default=None, description="Estimated completion timestamp (ISO 8601)"
     )
@@ -418,7 +416,9 @@ class DiscoveredDomainResponse(BaseModel):
     suggested_description: str = Field(..., description="Domain description")
     confidence: float = Field(..., ge=0, le=1, description="Confidence score")
     entity_types: list[str] = Field(..., description="Suggested entity types")
-    relation_types: list[str] = Field(..., description="Suggested relation types (includes MENTIONED_IN)")
+    relation_types: list[str] = Field(
+        ..., description="Suggested relation types (includes MENTIONED_IN)"
+    )
     intent_classes: list[str] = Field(..., description="Suggested intent classes")
     sample_entities: dict[str, list[str]] = Field(..., description="Example entities by type")
     recommended_model_family: str = Field(..., description="Recommended model family")
@@ -2959,61 +2959,65 @@ class DomainValidationResponse(BaseModel):
     issues: list[ValidationIssueResponse] = Field(..., description="Validation issues")
     recommendations: list[str] = Field(..., description="Actionable recommendations")
 
-    model_config = {"json_schema_extra": {"example": {
-        "domain_name": "medical",
-        "validation_status": "warning",
-        "health_score": 72,
-        "checks": [
-            {
-                "name": "training_samples_count",
-                "status": "pass",
-                "message": "1247 training samples (minimum: 20)",
-                "details": {"count": 1247, "minimum": 20},
-            },
-            {
-                "name": "entity_type_coverage",
-                "status": "warning",
-                "message": "3/5 entity types have samples",
-                "details": {"covered": 3, "total": 5, "missing": ["Medication", "Dosage"]},
-            },
-            {
-                "name": "relation_type_coverage",
-                "status": "pass",
-                "message": "All relation types have samples",
-                "details": {"covered": 4, "total": 4},
-            },
-            {
-                "name": "mentioned_in_relations",
-                "status": "pass",
-                "message": "MENTIONED_IN relations present",
-                "details": {"count": 2847},
-            },
-            {
-                "name": "model_trained",
-                "status": "fail",
-                "message": "DSPy model not trained",
-                "details": {"last_trained": None},
-            },
-        ],
-        "issues": [
-            {
-                "severity": "warning",
-                "category": "coverage",
-                "message": "Entity types 'Medication', 'Dosage' have no training samples",
-                "recommendation": "Add training samples for missing entity types: Medication, Dosage",
-            },
-            {
-                "severity": "error",
-                "category": "model",
-                "message": "Domain model not trained",
-                "recommendation": "Run POST /api/v1/admin/domains/medical/train to optimize prompts",
-            },
-        ],
-        "recommendations": [
-            "Add training samples for missing entity types: Medication, Dosage",
-            "Run POST /api/v1/admin/domains/medical/train to optimize prompts",
-        ],
-    }}}
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "domain_name": "medical",
+                "validation_status": "warning",
+                "health_score": 72,
+                "checks": [
+                    {
+                        "name": "training_samples_count",
+                        "status": "pass",
+                        "message": "1247 training samples (minimum: 20)",
+                        "details": {"count": 1247, "minimum": 20},
+                    },
+                    {
+                        "name": "entity_type_coverage",
+                        "status": "warning",
+                        "message": "3/5 entity types have samples",
+                        "details": {"covered": 3, "total": 5, "missing": ["Medication", "Dosage"]},
+                    },
+                    {
+                        "name": "relation_type_coverage",
+                        "status": "pass",
+                        "message": "All relation types have samples",
+                        "details": {"covered": 4, "total": 4},
+                    },
+                    {
+                        "name": "mentioned_in_relations",
+                        "status": "pass",
+                        "message": "MENTIONED_IN relations present",
+                        "details": {"count": 2847},
+                    },
+                    {
+                        "name": "model_trained",
+                        "status": "fail",
+                        "message": "DSPy model not trained",
+                        "details": {"last_trained": None},
+                    },
+                ],
+                "issues": [
+                    {
+                        "severity": "warning",
+                        "category": "coverage",
+                        "message": "Entity types 'Medication', 'Dosage' have no training samples",
+                        "recommendation": "Add training samples for missing entity types: Medication, Dosage",
+                    },
+                    {
+                        "severity": "error",
+                        "category": "model",
+                        "message": "Domain model not trained",
+                        "recommendation": "Run POST /api/v1/admin/domains/medical/train to optimize prompts",
+                    },
+                ],
+                "recommendations": [
+                    "Add training samples for missing entity types: Medication, Dosage",
+                    "Run POST /api/v1/admin/domains/medical/train to optimize prompts",
+                ],
+            }
+        }
+    }
 
 
 @router.post("/{domain_name}/validate", response_model=DomainValidationResponse)

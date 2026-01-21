@@ -156,7 +156,8 @@ class ModelService:
                     total_models=len(models),
                     small_models=sum(1 for m in models if m.size_gb < SMALL_MODEL_THRESHOLD_GB),
                     medium_models=sum(
-                        1 for m in models
+                        1
+                        for m in models
                         if SMALL_MODEL_THRESHOLD_GB <= m.size_gb < MEDIUM_MODEL_THRESHOLD_GB
                     ),
                     large_models=sum(1 for m in models if m.size_gb >= LARGE_MODEL_THRESHOLD_GB),
@@ -206,7 +207,7 @@ class ModelService:
 
             # Extract size in GB
             size_bytes = raw_model.get("size", 0)
-            size_gb = size_bytes / (1024 ** 3)  # Convert bytes to GB
+            size_gb = size_bytes / (1024**3)  # Convert bytes to GB
 
             # Extract parameter count from details
             details = raw_model.get("details", {})
@@ -270,9 +271,7 @@ class ModelService:
         else:
             return base_name
 
-    def _categorize_model(
-        self, size_gb: float, model_id: str
-    ) -> tuple[str, str, list[str]]:
+    def _categorize_model(self, size_gb: float, model_id: str) -> tuple[str, str, list[str]]:
         """Categorize model by size and capabilities.
 
         Args:
@@ -309,9 +308,7 @@ class ModelService:
 
         return speed, quality, recommended_for
 
-    def get_model_recommendations(
-        self, models: list[ModelInfo]
-    ) -> dict[str, str]:
+    def get_model_recommendations(self, models: list[ModelInfo]) -> dict[str, str]:
         """Get recommended models for each use case.
 
         Args:

@@ -398,7 +398,9 @@ async def generate_community_summaries(
                         community_id = int(str(community_id_val).split("_")[-1])
                     community_ids.append(community_id)
                 except (ValueError, IndexError, AttributeError):
-                    logger.warning("invalid_community_id_format_skipped", community_id=community_id_val)
+                    logger.warning(
+                        "invalid_community_id_format_skipped", community_id=community_id_val
+                    )
 
         total_communities = len(community_ids)
 
@@ -465,7 +467,9 @@ async def generate_community_summaries(
                 failed += 1
 
         total_time_s = time.time() - start_time
-        avg_time_per_summary_s = total_time_s / summaries_generated if summaries_generated > 0 else 0
+        avg_time_per_summary_s = (
+            total_time_s / summaries_generated if summaries_generated > 0 else 0
+        )
 
         logger.info(
             "community_summarization_complete",

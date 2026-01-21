@@ -47,9 +47,7 @@ class MCPServerConfig(BaseModel):
     enabled: bool = Field(True, description="Server is enabled")
     timeout: int = Field(30, ge=1, description="Connection timeout (seconds)")
     retry_attempts: int = Field(3, ge=0, description="Connection retry attempts")
-    dependencies: dict[str, Any] = Field(
-        default_factory=dict, description="Server dependencies"
-    )
+    dependencies: dict[str, Any] = Field(default_factory=dict, description="Server dependencies")
 
     @field_validator("transport")
     @classmethod
@@ -188,9 +186,7 @@ class MCPConfigLoader:
                 f"Loaded {len(config.servers)} MCP servers from {self.config_path}",
                 extra={
                     "enabled": sum(1 for s in config.servers if s.enabled),
-                    "auto_connect": sum(
-                        1 for s in config.servers if s.enabled and s.auto_connect
-                    ),
+                    "auto_connect": sum(1 for s in config.servers if s.enabled and s.auto_connect),
                 },
             )
 

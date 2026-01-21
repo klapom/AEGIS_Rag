@@ -99,6 +99,7 @@ class ToolStatus(Enum):
         SKIPPED: Step skipped (optional step or dependency failure)
         DENIED: Permission denied by policy engine
     """
+
     PENDING = "pending"
     RUNNING = "running"
     SUCCESS = "success"
@@ -131,6 +132,7 @@ class ToolStep:
         ...     output_key="search_results"
         ... )
     """
+
     name: str
     tool: str
     inputs: dict[str, Any]
@@ -171,6 +173,7 @@ class ToolChain:
         ...     final_output_key="analyze"
         ... )
     """
+
     id: str
     skill_name: str
     steps: list[ToolStep]
@@ -193,6 +196,7 @@ class ChainExecutionResult:
         total_duration_ms: Total execution time
         errors: List of errors encountered
     """
+
     chain_id: str
     success: bool
     final_result: Any
@@ -210,21 +214,25 @@ class ChainExecutionResult:
 
 class ToolChainError(Exception):
     """Base exception for tool chain errors."""
+
     pass
 
 
 class ToolPermissionError(ToolChainError):
     """Skill does not have permission to use tool."""
+
     pass
 
 
 class ToolExecutionError(ToolChainError):
     """Tool execution failed."""
+
     pass
 
 
 class ToolTimeoutError(ToolChainError):
     """Tool execution timed out."""
+
     pass
 
 
@@ -274,10 +282,14 @@ class ToolComposer:
 
         # Create LangGraph ToolNode with error handling
         # This enables automatic retry on transient failures
-        self._tool_node = ToolNode(
-            tools=list(tool_registry.values()),
-            handle_tool_errors=True,  # LangGraph 1.0: Auto error recovery
-        ) if tool_registry else None
+        self._tool_node = (
+            ToolNode(
+                tools=list(tool_registry.values()),
+                handle_tool_errors=True,  # LangGraph 1.0: Auto error recovery
+            )
+            if tool_registry
+            else None
+        )
 
         # Execution metrics
         self._execution_count = 0
@@ -426,8 +438,7 @@ class ToolComposer:
         # Get final result
         final_result = context.get(chain.final_output_key)
         success = steps_succeeded == len(chain.steps) or all(
-            s.status in (ToolStatus.SUCCESS, ToolStatus.SKIPPED)
-            for s in chain.steps
+            s.status in (ToolStatus.SUCCESS, ToolStatus.SKIPPED) for s in chain.steps
         )
 
         if success:
@@ -510,9 +521,11 @@ class ToolComposer:
             elif isinstance(value, list):
                 # Resolve list items
                 resolved[key] = [
-                    self._resolve_inputs({"_": item}, context).get("_", item)
-                    if isinstance(item, (dict, str))
-                    else item
+                    (
+                        self._resolve_inputs({"_": item}, context).get("_", item)
+                        if isinstance(item, (dict, str))
+                        else item
+                    )
                     for item in value
                 ]
             else:
@@ -670,6 +683,7 @@ def skill_aware_tool(
         ...     # Use skill context in tool logic
         ...     return f"Results for {query} (skill: {skill})"
     """
+
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         # Store metadata on function
         func._tool_name = name
@@ -686,7 +700,11 @@ def skill_aware_tool(
             # Inject state if function accepts it
             if state is not None:
                 kwargs["state"] = state
-            return await func(*args, **kwargs) if asyncio.iscoroutinefunction(func) else func(*args, **kwargs)
+            return (
+                await func(*args, **kwargs)
+                if asyncio.iscoroutinefunction(func)
+                else func(*args, **kwargs)
+            )
 
         return wrapper
 

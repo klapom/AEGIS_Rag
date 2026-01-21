@@ -222,10 +222,12 @@ class CLARADomainClassifier:
                         confidence = float(prob)
 
                         if confidence >= threshold:
-                            candidates.append({
-                                "domain_id": domain_id,
-                                "confidence": confidence,
-                            })
+                            candidates.append(
+                                {
+                                    "domain_id": domain_id,
+                                    "confidence": confidence,
+                                }
+                            )
 
                 # Sort by confidence (descending)
                 candidates.sort(key=lambda x: x["confidence"], reverse=True)

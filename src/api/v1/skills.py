@@ -125,7 +125,9 @@ def get_lifecycle():
 async def list_skills(
     page: int = Query(1, ge=1, description="Page number (1-indexed)"),
     page_size: int = Query(20, ge=10, le=100, description="Items per page"),
-    status_filter: Optional[str] = Query(None, description="Filter by status (active, inactive, all)", alias="status"),
+    status_filter: Optional[str] = Query(
+        None, description="Filter by status (active, inactive, all)", alias="status"
+    ),
     category: Optional[SkillCategory] = Query(None, description="Filter by category"),
     tags: Optional[str] = Query(None, description="Filter by tags (comma-separated)"),
     search: Optional[str] = Query(None, description="Full-text search query"),
@@ -234,7 +236,7 @@ async def list_skills(
                     continue
 
             # Count tools and triggers
-            tools_count = len(metadata.tools) if hasattr(metadata, 'tools') else 0
+            tools_count = len(metadata.tools) if hasattr(metadata, "tools") else 0
             triggers_count = len(metadata.triggers)
 
             # Map category to emoji icon
@@ -307,6 +309,7 @@ async def list_skills(
 
 class SkillRegistryResponse(SkillListResponse):
     """Extended response for skill registry with metadata."""
+
     registry_version: str = "1.0.0"
     total_categories: int = 0
     categories_summary: dict = {}
@@ -876,9 +879,7 @@ async def get_skill_config(skill_name: str) -> SkillConfigResponse:
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(
-            "get_skill_config_failed", skill_name=skill_name, error=str(e), exc_info=True
-        )
+        logger.error("get_skill_config_failed", skill_name=skill_name, error=str(e), exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve config: {str(e)}",
@@ -1065,7 +1066,9 @@ async def validate_skill_config(
             if not isinstance(key, str):
                 errors.append(f"Config key must be a string: {key}")
             elif key not in known_fields:
-                warnings.append(f"Unknown config field: '{key}' (will be ignored if not used by skill)")
+                warnings.append(
+                    f"Unknown config field: '{key}' (will be ignored if not used by skill)"
+                )
 
         valid = len(errors) == 0
 
@@ -1174,9 +1177,7 @@ async def get_skill_tools(skill_name: str) -> SkillToolsResponse:
 
 
 @router.post("/{skill_name}/tools", status_code=status.HTTP_201_CREATED)
-async def add_tool_authorization(
-    skill_name: str, request: ToolAuthorizationRequest
-) -> dict:
+async def add_tool_authorization(skill_name: str, request: ToolAuthorizationRequest) -> dict:
     """Add tool authorization for a skill.
 
     Sprint 99 Feature 99.1: Skill Management APIs

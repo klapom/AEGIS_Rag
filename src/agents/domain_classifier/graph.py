@@ -400,7 +400,9 @@ def llm_fallback_all_domains(state: DomainClassificationState) -> DomainClassifi
         }
 
 
-def route_by_confidence(state: DomainClassificationState) -> Literal["fast_return", "llm_verify", "llm_fallback"]:
+def route_by_confidence(
+    state: DomainClassificationState,
+) -> Literal["fast_return", "llm_verify", "llm_fallback"]:
     """Route classification based on confidence score.
 
     Routing Logic:

@@ -203,9 +203,7 @@ class SkillRouter:
             intent_mappings=list(self.INTENT_SKILL_MAP.keys()),
         )
 
-    async def route(
-        self, query: str, user_context: Optional[Dict] = None
-    ) -> SkillActivationPlan:
+    async def route(self, query: str, user_context: Optional[Dict] = None) -> SkillActivationPlan:
         """Determine which skills to activate for a query.
 
         Process:
@@ -245,9 +243,7 @@ class SkillRouter:
 
         # Step 2: Map C-LARA intent to routing intent
         if clara_intent:
-            routing_intent = self.CLARA_TO_ROUTING_INTENT.get(
-                clara_intent, Intent.HYBRID
-            )
+            routing_intent = self.CLARA_TO_ROUTING_INTENT.get(clara_intent, Intent.HYBRID)
         else:
             # Fallback: Map legacy Intent to routing intent
             legacy_to_routing = {
@@ -257,24 +253,16 @@ class SkillRouter:
                 "summary": Intent.RESEARCH,
             }
             routing_intent = Intent(
-                legacy_to_routing.get(
-                    classification_result.intent.value, Intent.HYBRID
-                )
+                legacy_to_routing.get(classification_result.intent.value, Intent.HYBRID)
             )
 
         # Step 3: Get skill mapping for routing intent
-        mapping = self.INTENT_SKILL_MAP.get(
-            routing_intent, self.INTENT_SKILL_MAP[Intent.HYBRID]
-        )
+        mapping = self.INTENT_SKILL_MAP.get(routing_intent, self.INTENT_SKILL_MAP[Intent.HYBRID])
 
         # Step 4: Filter by availability (only load skills that exist)
         available_skills = set(self.registry.list_available())
-        required = [
-            s for s in mapping["required"] if s in available_skills
-        ]
-        optional = [
-            s for s in mapping["optional"] if s in available_skills
-        ]
+        required = [s for s in mapping["required"] if s in available_skills]
+        optional = [s for s in mapping["optional"] if s in available_skills]
 
         # Step 5: Additional skills from query pattern matching
         pattern_matches = self.registry.match_intent(query)
@@ -305,9 +293,7 @@ class SkillRouter:
             # Filter required skills by permissions
             filtered_required = []
             for skill in required:
-                allowed, reason = self.permissions.check_skill_permission(
-                    user_id, skill
-                )
+                allowed, reason = self.permissions.check_skill_permission(user_id, skill)
                 if allowed:
                     filtered_required.append(skill)
                 else:
@@ -322,9 +308,7 @@ class SkillRouter:
             # Filter optional skills by permissions
             filtered_optional = []
             for skill in optional:
-                allowed, reason = self.permissions.check_skill_permission(
-                    user_id, skill
-                )
+                allowed, reason = self.permissions.check_skill_permission(user_id, skill)
                 if allowed:
                     filtered_optional.append(skill)
             optional = filtered_optional
@@ -485,9 +469,7 @@ class SkillAwareCoordinator:
             llm_model=getattr(llm, "model", "unknown"),
         )
 
-    async def process(
-        self, query: str, user_context: Optional[Dict] = None
-    ) -> str:
+    async def process(self, query: str, user_context: Optional[Dict] = None) -> str:
         """Process query with skill-aware context.
 
         Args:

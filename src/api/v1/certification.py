@@ -436,9 +436,9 @@ async def get_expiring_certifications(
 
     # Sort by expiration date (soonest first)
     expiring.sort(
-        key=lambda c: datetime.fromisoformat(c.valid_until.replace("Z", "+00:00"))
-        if c.valid_until
-        else now
+        key=lambda c: (
+            datetime.fromisoformat(c.valid_until.replace("Z", "+00:00")) if c.valid_until else now
+        )
     )
 
     logger.info(
@@ -533,8 +533,7 @@ async def get_skill_validation_report(skill_name: str) -> ValidationReport:
                 )
             elif check.category == "audit":
                 recommendations.append(
-                    "Implement 7-year audit trail with SHA-256 chaining "
-                    "(EU AI Act Article 12)"
+                    "Implement 7-year audit trail with SHA-256 chaining " "(EU AI Act Article 12)"
                 )
             elif check.category == "explainability":
                 recommendations.append(
@@ -553,8 +552,7 @@ async def get_skill_validation_report(skill_name: str) -> ValidationReport:
         )
     elif skill_cert.level == "standard":
         recommendations.append(
-            "Upgrade to enterprise: Implement all explainability levels "
-            "and ISO 27001 controls"
+            "Upgrade to enterprise: Implement all explainability levels " "and ISO 27001 controls"
         )
 
     return ValidationReport(

@@ -439,9 +439,7 @@ class DSPyOptimizer:
 
             return f1
 
-        await self._call_progress_callback(
-            progress_callback, "Running MIPROv2 optimization", 50.0
-        )
+        await self._call_progress_callback(progress_callback, "Running MIPROv2 optimization", 50.0)
 
         # Optimize with MIPROv2 using async-safe context (Feature 64.3)
         # MIPROv2 provides better optimization than BootstrapFewShot with:
@@ -698,9 +696,7 @@ class DSPyOptimizer:
 
             return f1
 
-        await self._call_progress_callback(
-            progress_callback, "Running MIPROv2 optimization", 50.0
-        )
+        await self._call_progress_callback(progress_callback, "Running MIPROv2 optimization", 50.0)
 
         # Optimize with MIPROv2 using async-safe context (Feature 64.3)
         # MIPROv2 provides better optimization than BootstrapFewShot

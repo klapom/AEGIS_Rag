@@ -253,6 +253,7 @@ class GraphQueryAgent(BaseAgent):
         # Start timing
         timing = self._measure_latency()
         import time
+
         phase_timings = {}  # Track timing for each phase
 
         # Extract query

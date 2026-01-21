@@ -375,7 +375,9 @@ async def graph_extraction_node(state: IngestionState) -> IngestionState:
 
                         # Sprint 83 Feature 83.1: Log chunk-entity provenance mapping
                         entity_ids = [e["name"] for e in entities]  # Entity names as IDs
-                        relation_ids = [f"Rel_{i}" for i in range(relations_created)]  # Synthetic IDs
+                        relation_ids = [
+                            f"Rel_{i}" for i in range(relations_created)
+                        ]  # Synthetic IDs
                         # Get section hierarchy from adaptive_chunks if available
                         section_hierarchy = []
                         matching_adaptive_chunk = None

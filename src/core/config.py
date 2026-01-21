@@ -85,32 +85,21 @@ class RecursiveLevelConfig(BaseModel):
 
     level: int = Field(description="Recursion depth (0=top level)")
 
-    segment_size_tokens: int = Field(
-        description="Target segment size in tokens",
-        ge=1000,
-        le=32000
-    )
+    segment_size_tokens: int = Field(description="Target segment size in tokens", ge=1000, le=32000)
 
     overlap_tokens: int = Field(
-        default=200,
-        description="Overlap between segments to prevent information loss"
+        default=200, description="Overlap between segments to prevent information loss"
     )
 
-    top_k_subsegments: int = Field(
-        default=3,
-        description="Number of sub-segments to explore"
-    )
+    top_k_subsegments: int = Field(default=3, description="Number of sub-segments to explore")
 
     scoring_method: Literal["dense+sparse", "multi-vector", "llm", "adaptive"] = Field(
         default="dense+sparse",
-        description="BGE-M3 scoring method: dense+sparse (fast), multi-vector (precise), llm (reasoning), adaptive (query-based)"
+        description="BGE-M3 scoring method: dense+sparse (fast), multi-vector (precise), llm (reasoning), adaptive (query-based)",
     )
 
     relevance_threshold: float = Field(
-        default=0.5,
-        ge=0.0,
-        le=1.0,
-        description="Minimum relevance score to explore"
+        default=0.5, ge=0.0, le=1.0, description="Minimum relevance score to explore"
     )
 
 
@@ -140,10 +129,7 @@ class RecursiveLLMSettings(BaseModel):
     """
 
     max_depth: int = Field(
-        default=3,
-        ge=1,
-        le=5,
-        description="Maximum recursion depth (1-5 levels)"
+        default=3, ge=1, le=5, description="Maximum recursion depth (1-5 levels)"
     )
 
     levels: list[RecursiveLevelConfig] = Field(
@@ -190,7 +176,7 @@ class RecursiveLLMSettings(BaseModel):
     # Feature 92.10: Parallel worker configuration
     max_parallel_workers: int = Field(
         default=1,
-        description="Max parallel segment processing workers (1 for DGX Spark, 5-10 for cloud)"
+        description="Max parallel segment processing workers (1 for DGX Spark, 5-10 for cloud)",
     )
 
     worker_limits: dict[str, int] = Field(
@@ -199,7 +185,7 @@ class RecursiveLLMSettings(BaseModel):
             "openai": 10,  # OpenAI: high parallelism
             "alibaba": 5,  # Alibaba DashScope: moderate
         },
-        description="Worker limits per LLM backend"
+        description="Worker limits per LLM backend",
     )
 
 
@@ -753,8 +739,11 @@ class Settings(BaseSettings):
     # Sprint 80 Quick Win: Increased from 1→2 for better multi-hop reasoning (RAGAS Context Recall)
     # Higher values find more related entities for complex questions. Use 3 for HotpotQA-style queries.
     graph_expansion_hops: int = Field(
-        default=2, ge=1, le=3, description="Number of hops for graph entity expansion (1-3). "
-        "2+ recommended for multi-hop reasoning questions like HotpotQA."
+        default=2,
+        ge=1,
+        le=3,
+        description="Number of hops for graph entity expansion (1-3). "
+        "2+ recommended for multi-hop reasoning questions like HotpotQA.",
     )
     graph_min_entities_threshold: int = Field(
         default=10, ge=5, le=20, description="Minimum entities before LLM synonym fallback (5-20)"
@@ -835,15 +824,14 @@ class Settings(BaseSettings):
     # LangSmith Observability (Optional - Sprint 115 Feature 115.6)
     langsmith_api_key: SecretStr | None = Field(
         default=None,
-        description="LangSmith API key (get from https://smith.langchain.com/settings)"
+        description="LangSmith API key (get from https://smith.langchain.com/settings)",
     )
     langsmith_project: str = Field(
-        default="aegis-rag-sprint115",
-        description="LangSmith project name for organizing traces"
+        default="aegis-rag-sprint115", description="LangSmith project name for organizing traces"
     )
     langsmith_endpoint: str = Field(
         default="https://api.smith.langchain.com",
-        description="LangSmith API endpoint (default: https://api.smith.langchain.com)"
+        description="LangSmith API endpoint (default: https://api.smith.langchain.com)",
     )
     langsmith_tracing: bool = Field(
         default=False,
@@ -851,7 +839,7 @@ class Settings(BaseSettings):
             "Enable LangSmith tracing for LangGraph agents. "
             "Provides instant LLM call visibility, token counts, and latency breakdown. "
             "No code changes required - just set LANGSMITH_TRACING=true and LANGSMITH_API_KEY."
-        )
+        ),
     )
 
     # LangGraph Configuration (Sprint 4: Multi-Agent Orchestration)

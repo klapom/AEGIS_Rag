@@ -118,11 +118,7 @@ class HygieneReport:
     @property
     def is_healthy(self) -> bool:
         """Check if graph passes hygiene checks."""
-        return (
-            self.self_loops == 0
-            and self.orphan_relations == 0
-            and self.invalid_types == 0
-        )
+        return self.self_loops == 0 and self.orphan_relations == 0 and self.invalid_types == 0
 
     @property
     def health_score(self) -> float:

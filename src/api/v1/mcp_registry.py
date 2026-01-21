@@ -498,10 +498,7 @@ async def install_server(
             )
 
         # If installed with auto_connect, inform about tool discovery
-        if (
-            result["status"] == "installed"
-            and request.auto_connect
-        ):
+        if result["status"] == "installed" and request.auto_connect:
             response.message += (
                 " Server will auto-connect on next startup. "
                 "Use POST /api/v1/mcp/reload-config to connect immediately."

@@ -234,9 +234,7 @@ class SkillMetricsCollector:
             metrics = self._metrics
 
         # Aggregate by skill
-        stats_dict: Dict[str, SkillUsageStats] = defaultdict(
-            lambda: SkillUsageStats(skill_name="")
-        )
+        stats_dict: Dict[str, SkillUsageStats] = defaultdict(lambda: SkillUsageStats(skill_name=""))
 
         for metric in metrics:
             stats = stats_dict[metric.skill_name]
@@ -246,22 +244,14 @@ class SkillMetricsCollector:
             stats.activation_count += 1
             stats.total_context_tokens += metric.context_used
             stats.total_duration_ms += metric.duration_ms
-            stats.min_duration_ms = min(
-                stats.min_duration_ms, metric.duration_ms
-            )
-            stats.max_duration_ms = max(
-                stats.max_duration_ms, metric.duration_ms
-            )
+            stats.min_duration_ms = min(stats.min_duration_ms, metric.duration_ms)
+            stats.max_duration_ms = max(stats.max_duration_ms, metric.duration_ms)
 
         # Calculate averages
         for skill, stats in stats_dict.items():
             if stats.activation_count > 0:
-                stats.avg_context_tokens = (
-                    stats.total_context_tokens / stats.activation_count
-                )
-                stats.avg_duration_ms = (
-                    stats.total_duration_ms / stats.activation_count
-                )
+                stats.avg_context_tokens = stats.total_context_tokens / stats.activation_count
+                stats.avg_duration_ms = stats.total_duration_ms / stats.activation_count
 
         logger.debug(
             "usage_stats_calculated",
@@ -318,9 +308,7 @@ class SkillMetricsCollector:
         # Calculate savings
         total_tokens_saved = baseline_tokens - total_tokens_used
         savings_percentage = (
-            (total_tokens_saved / baseline_tokens) * 100
-            if baseline_tokens > 0
-            else 0.0
+            (total_tokens_saved / baseline_tokens) * 100 if baseline_tokens > 0 else 0.0
         )
 
         result = {

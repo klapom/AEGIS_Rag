@@ -100,11 +100,13 @@ logger = structlog.get_logger(__name__)
 
 class DSLParseError(Exception):
     """Error parsing DSL chain definition."""
+
     pass
 
 
 class DSLValidationError(Exception):
     """Error validating DSL chain structure."""
+
     pass
 
 
@@ -292,9 +294,7 @@ class ChainBuilder:
         for group in self.parallel_groups:
             for step_name in group:
                 if step_name not in step_names:
-                    raise DSLValidationError(
-                        f"Parallel group references unknown step: {step_name}"
-                    )
+                    raise DSLValidationError(f"Parallel group references unknown step: {step_name}")
 
         # Validate final output key exists
         if self._final_output not in step_names and self._final_output != "result":

@@ -323,9 +323,11 @@ class RecursiveLLMProcessor:
         scored_segments = await self._score_relevance(segments, query, recursive_skill, level=0)
         logger.info(
             "segments_scored",
-            avg_score=sum(s.relevance_score for s in scored_segments) / len(scored_segments)
-            if scored_segments
-            else 0.0,
+            avg_score=(
+                sum(s.relevance_score for s in scored_segments) / len(scored_segments)
+                if scored_segments
+                else 0.0
+            ),
         )
 
         # Step 3: Recursive exploration with parallel workers (Feature 92.10)
@@ -334,37 +336,35 @@ class RecursiveLLMProcessor:
         # Determine worker count based on LLM backend
         llm_backend = self._detect_llm_backend()
         max_workers = min(
-            self.settings.max_parallel_workers,
-            self.settings.worker_limits.get(llm_backend, 1)
+            self.settings.max_parallel_workers, self.settings.worker_limits.get(llm_backend, 1)
         )
 
         logger.info(
             "parallel_exploration_starting",
             max_workers=max_workers,
             segment_count=len(scored_segments),
-            backend=llm_backend
+            backend=llm_backend,
         )
 
         # Filter relevant segments
         level_config = self.settings.levels[0]  # Use Level 0 config for threshold
         relevant_segments = [
-            s for s in scored_segments
-            if s.relevance_score >= level_config.relevance_threshold
+            s for s in scored_segments if s.relevance_score >= level_config.relevance_threshold
         ]
 
         # Process in batches of max_workers
         for batch in self._batched(relevant_segments, max_workers):
             # Process batch in parallel
-            batch_findings = await asyncio.gather(*[
-                self._explore_segment(segment, query, depth=1, skill=recursive_skill)
-                for segment in batch
-            ])
+            batch_findings = await asyncio.gather(
+                *[
+                    self._explore_segment(segment, query, depth=1, skill=recursive_skill)
+                    for segment in batch
+                ]
+            )
             findings.extend(batch_findings)
 
             logger.debug(
-                "batch_processed",
-                batch_size=len(batch),
-                findings_count=len(batch_findings)
+                "batch_processed", batch_size=len(batch), findings_count=len(batch_findings)
             )
 
         logger.info("exploration_complete", findings_count=len(findings))
@@ -1018,7 +1018,10 @@ Summary:"""
         level_config = self.settings.levels[min(depth, len(self.settings.levels) - 1)]
 
         # Recursive dive if depth allows and segment is large enough
-        if depth < self.settings.max_depth and len(segment.content) > level_config.segment_size_tokens * 2:
+        if (
+            depth < self.settings.max_depth
+            and len(segment.content) > level_config.segment_size_tokens * 2
+        ):
             sub_segments = self._segment_document(
                 segment.content,
                 level=depth,

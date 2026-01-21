@@ -55,9 +55,7 @@ def _create_execution_step_model(step: ExecutionStep) -> ExecutionStepModel:
         step_name=step.get("step_name", ""),
         started_at=datetime.fromisoformat(step.get("started_at", datetime.utcnow().isoformat())),
         completed_at=(
-            datetime.fromisoformat(step["completed_at"])
-            if step.get("completed_at")
-            else None
+            datetime.fromisoformat(step["completed_at"]) if step.get("completed_at") else None
         ),
         duration_ms=step.get("duration_ms"),
         status=step.get("status", "running"),
@@ -111,7 +109,7 @@ def _extract_intermediate_answers(
         if contexts:
             avg_score = sum(ctx.get("score", 0.0) for ctx in contexts) / len(contexts)
             coverage = min(len(contexts) / 5.0, 1.0)
-            confidence = (avg_score * 0.7 + coverage * 0.3)
+            confidence = avg_score * 0.7 + coverage * 0.3
 
         results.append(
             IntermediateAnswer(
@@ -198,14 +196,16 @@ async def _execute_deep_research(
         )
 
         # Update state with final results
-        _active_research[research_id].update({
-            "state": final_state,
-            "status": "complete",
-            "completed_at": end_time,
-            "total_time_ms": total_time_ms,
-            "sources": sources,
-            "intermediate_answers": intermediate_answers_list,
-        })
+        _active_research[research_id].update(
+            {
+                "state": final_state,
+                "status": "complete",
+                "completed_at": end_time,
+                "total_time_ms": total_time_ms,
+                "sources": sources,
+                "intermediate_answers": intermediate_answers_list,
+            }
+        )
 
         logger.info(
             "deep_research_completed",
@@ -216,17 +216,21 @@ async def _execute_deep_research(
 
     except asyncio.TimeoutError:
         logger.error("deep_research_timeout", research_id=research_id)
-        _active_research[research_id].update({
-            "status": "error",
-            "error": f"Research timeout after {request.timeout_seconds}s",
-        })
+        _active_research[research_id].update(
+            {
+                "status": "error",
+                "error": f"Research timeout after {request.timeout_seconds}s",
+            }
+        )
 
     except Exception as e:
         logger.error("deep_research_error", research_id=research_id, error=str(e), exc_info=True)
-        _active_research[research_id].update({
-            "status": "error",
-            "error": str(e),
-        })
+        _active_research[research_id].update(
+            {
+                "status": "error",
+                "error": str(e),
+            }
+        )
 
 
 @router.post("", response_model=DeepResearchResponse)
@@ -413,7 +417,9 @@ async def cancel_research(
     Raises:
         HTTPException: If research not found
     """
-    logger.info("cancel_research", research_id=research_id, reason=request.reason if request else None)
+    logger.info(
+        "cancel_research", research_id=research_id, reason=request.reason if request else None
+    )
 
     if research_id not in _active_research:
         raise HTTPException(
@@ -428,10 +434,16 @@ async def cancel_research(
         del _research_tasks[research_id]
 
     # Update status
-    _active_research[research_id].update({
-        "status": "cancelled",
-        "error": f"Cancelled by user: {request.reason}" if request and request.reason else "Cancelled by user",
-    })
+    _active_research[research_id].update(
+        {
+            "status": "cancelled",
+            "error": (
+                f"Cancelled by user: {request.reason}"
+                if request and request.reason
+                else "Cancelled by user"
+            ),
+        }
+    )
 
     return {"status": "cancelled", "message": "Research cancelled successfully"}
 
@@ -491,45 +503,51 @@ async def export_research(
 
         # Add intermediate answers if requested
         if include_intermediate and research_data.get("intermediate_answers"):
-            markdown_lines.extend([
-                "## Intermediate Findings",
-                "",
-            ])
+            markdown_lines.extend(
+                [
+                    "## Intermediate Findings",
+                    "",
+                ]
+            )
 
             for ia in research_data["intermediate_answers"]:
-                markdown_lines.extend([
-                    f"### {ia.sub_question}",
-                    "",
-                    f"**Confidence:** {ia.confidence:.2%}",
-                    f"**Contexts:** {ia.contexts_count}",
-                    "",
-                    ia.answer,
-                    "",
-                ])
+                markdown_lines.extend(
+                    [
+                        f"### {ia.sub_question}",
+                        "",
+                        f"**Confidence:** {ia.confidence:.2%}",
+                        f"**Contexts:** {ia.contexts_count}",
+                        "",
+                        ia.answer,
+                        "",
+                    ]
+                )
 
         # Add sources if requested
         if include_sources and research_data.get("sources"):
-            markdown_lines.extend([
-                "## Sources",
-                "",
-            ])
+            markdown_lines.extend(
+                [
+                    "## Sources",
+                    "",
+                ]
+            )
 
             for idx, source in enumerate(research_data["sources"], 1):
-                markdown_lines.extend([
-                    f"**[{idx}]** _{source.source_type}_ (Score: {source.score:.3f})",
-                    "",
-                    source.text[:500] + ("..." if len(source.text) > 500 else ""),
-                    "",
-                ])
+                markdown_lines.extend(
+                    [
+                        f"**[{idx}]** _{source.source_type}_ (Score: {source.score:.3f})",
+                        "",
+                        source.text[:500] + ("..." if len(source.text) > 500 else ""),
+                        "",
+                    ]
+                )
 
         markdown_content = "\n".join(markdown_lines)
 
         return StreamingResponse(
             iter([markdown_content.encode()]),
             media_type="text/markdown",
-            headers={
-                "Content-Disposition": f"attachment; filename=research_{research_id}.md"
-            },
+            headers={"Content-Disposition": f"attachment; filename=research_{research_id}.md"},
         )
 
     elif format == "pdf":

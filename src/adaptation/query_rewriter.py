@@ -332,7 +332,7 @@ Expanded query:"""
             expanded = response.content.strip()
 
             # Remove quotes if LLM added them
-            expanded = expanded.strip('"\'')
+            expanded = expanded.strip("\"'")
 
             # Fallback to original if expansion failed
             if not expanded or len(expanded) < len(query):
@@ -417,7 +417,7 @@ Refined query:"""
             refined = response.content.strip()
 
             # Remove quotes if LLM added them
-            refined = refined.strip('"\'')
+            refined = refined.strip("\"'")
 
             # Fallback to original if refinement failed
             if not refined or len(refined) < len(query):

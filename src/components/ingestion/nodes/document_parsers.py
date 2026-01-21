@@ -68,6 +68,7 @@ async def docling_extraction_node(state: IngestionState) -> IngestionState:
 
     # Sprint 83 Feature 83.1: Log memory snapshot before Docling processing
     import psutil
+
     process = psutil.Process()
     mem_info = process.memory_info()
     log_memory_snapshot(

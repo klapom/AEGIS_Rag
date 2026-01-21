@@ -104,6 +104,7 @@ def _get_coreference_resolver():
             from src.components.graph_rag.coreference_resolver import (
                 get_coreference_resolver,
             )
+
             _coreference_resolver = get_coreference_resolver("en")
             logger.info(
                 "coreference_resolver_loaded",
@@ -141,7 +142,11 @@ def _apply_coreference_resolution(text: str) -> tuple[str, dict]:
 
     resolver = _get_coreference_resolver()
     if resolver is None:
-        return text, {"coreference_enabled": False, "resolutions_count": 0, "error": "resolver_not_loaded"}
+        return text, {
+            "coreference_enabled": False,
+            "resolutions_count": 0,
+            "error": "resolver_not_loaded",
+        }
 
     try:
         result = resolver.resolve(text)
@@ -193,6 +198,7 @@ def _should_use_cross_sentence(text: str) -> bool:
     # Quick heuristic: count sentence-ending punctuation followed by whitespace or end
     # Handles both ". " and ".\n" patterns
     import re
+
     sentence_endings = re.findall(r"[.!?][\s\n]", text)
     sentence_count = len(sentence_endings)
     # Add 1 for the last sentence (no trailing whitespace)
@@ -436,7 +442,9 @@ def _extract_json_objects_individually(
                         normalized = {
                             "source": obj["subject"],
                             "target": obj["object"],
-                            "type": _normalize_predicate_to_type(obj.get("predicate", "RELATES_TO")),
+                            "type": _normalize_predicate_to_type(
+                                obj.get("predicate", "RELATES_TO")
+                            ),
                             "description": obj.get("predicate", ""),
                         }
                         objects.append(normalized)
@@ -976,8 +984,12 @@ class ExtractionService:
             # Log LLM cost summary
             if document_id:
                 # Sprint 84: Handle both old (prompt_tokens) and new (tokens_input) SDK formats
-                prompt_tokens = getattr(result, "prompt_tokens", None) or getattr(result, "tokens_input", 0)
-                completion_tokens = getattr(result, "completion_tokens", None) or getattr(result, "tokens_output", 0)
+                prompt_tokens = getattr(result, "prompt_tokens", None) or getattr(
+                    result, "tokens_input", 0
+                )
+                completion_tokens = getattr(result, "completion_tokens", None) or getattr(
+                    result, "tokens_output", 0
+                )
                 model = getattr(result, "model", "unknown")
                 cost_usd = getattr(result, "cost_usd", 0.0)
                 log_llm_cost_summary(
@@ -1229,9 +1241,9 @@ class ExtractionService:
         )
 
         # Format SpaCy entities for prompt
-        spacy_entities_str = ", ".join([
-            f"{e.name} ({e.type})" for e in spacy_entities
-        ]) or "None found"
+        spacy_entities_str = (
+            ", ".join([f"{e.name} ({e.type})" for e in spacy_entities]) or "None found"
+        )
 
         prompt = ENTITY_ENRICHMENT_PROMPT.format(
             spacy_entities=spacy_entities_str,
@@ -1303,10 +1315,7 @@ class ExtractionService:
 
             # Filter out any entities that duplicate SpaCy entities
             spacy_names_lower = {e.name.lower() for e in spacy_entities}
-            new_entities = [
-                e for e in enriched
-                if e.name.lower() not in spacy_names_lower
-            ]
+            new_entities = [e for e in enriched if e.name.lower() not in spacy_names_lower]
 
             logger.info(
                 "stage2_entities_filtered",
@@ -1372,10 +1381,9 @@ class ExtractionService:
             return []
 
         # Format entities for prompt
-        entities_str = "\n".join([
-            f"- {e.name} ({e.type}): {e.description or 'No description'}"
-            for e in all_entities
-        ])
+        entities_str = "\n".join(
+            [f"- {e.name} ({e.type}): {e.description or 'No description'}" for e in all_entities]
+        )
 
         prompt = RELATION_EXTRACTION_FROM_ENTITIES_PROMPT.format(
             entities=entities_str,
@@ -1598,9 +1606,7 @@ class ExtractionService:
             )
 
             # Use existing _parse_json_response method
-            relations_dicts = self._parse_json_response(
-                response_content, data_type="relationship"
-            )
+            relations_dicts = self._parse_json_response(response_content, data_type="relationship")
 
             logger.info(
                 "parse_relationship_response_json_extracted",
@@ -1780,7 +1786,8 @@ class ExtractionService:
                 "coreference_preprocessing_complete",
                 document_id=document_id,
                 resolutions=coref_metadata["resolutions_count"],
-                text_delta=coref_metadata.get("resolved_length", len(text)) - coref_metadata.get("original_length", len(text)),
+                text_delta=coref_metadata.get("resolved_length", len(text))
+                - coref_metadata.get("original_length", len(text)),
             )
 
         # Get gleaning_steps from ChunkingConfig if not provided
@@ -1968,7 +1975,9 @@ class ExtractionService:
             List of newly extracted entities
         """
         # Format existing entities for prompt
-        entity_list = "\n".join([f"- {e.name} ({e.type}): {e.description}" for e in existing_entities])
+        entity_list = "\n".join(
+            [f"- {e.name} ({e.type}): {e.description}" for e in existing_entities]
+        )
 
         # Create continuation prompt
         prompt = CONTINUATION_EXTRACTION_PROMPT.format(
@@ -2363,8 +2372,12 @@ class ExtractionService:
             # Log LLM cost summary
             if document_id:
                 # Sprint 84: Handle both old (prompt_tokens) and new (tokens_input) SDK formats
-                prompt_tokens = getattr(result, "prompt_tokens", None) or getattr(result, "tokens_input", 0)
-                completion_tokens = getattr(result, "completion_tokens", None) or getattr(result, "tokens_output", 0)
+                prompt_tokens = getattr(result, "prompt_tokens", None) or getattr(
+                    result, "tokens_input", 0
+                )
+                completion_tokens = getattr(result, "completion_tokens", None) or getattr(
+                    result, "tokens_output", 0
+                )
                 model = getattr(result, "model", "unknown")
                 cost_usd = getattr(result, "cost_usd", 0.0)
                 log_llm_cost_summary(
@@ -2698,7 +2711,9 @@ class ExtractionService:
         # Format existing relationships for prompt
         rel_strs = []
         for rel in existing_relationships:
-            rel_strs.append(f'{{"source": "{rel.source}", "target": "{rel.target}", "type": "{rel.type}"}}')
+            rel_strs.append(
+                f'{{"source": "{rel.source}", "target": "{rel.target}", "type": "{rel.type}"}}'
+            )
         relationship_list = "\n".join(rel_strs) if rel_strs else "(no relationships extracted yet)"
 
         # Format entities for prompt
@@ -2726,7 +2741,9 @@ class ExtractionService:
 
             # Create GraphRelationship objects
             new_relationships = []
-            existing_pairs = {(r.source.lower(), r.target.lower(), r.type.upper()) for r in existing_relationships}
+            existing_pairs = {
+                (r.source.lower(), r.target.lower(), r.type.upper()) for r in existing_relationships
+            }
 
             for rel_dict in relationships_data:
                 try:

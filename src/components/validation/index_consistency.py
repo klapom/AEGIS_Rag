@@ -217,9 +217,7 @@ class IndexConsistencyValidator:
     async def _count_qdrant_chunks(self) -> int:
         """Count total chunks in Qdrant."""
         try:
-            collection_info = await self.qdrant_client.get_collection(
-                settings.qdrant_collection
-            )
+            collection_info = await self.qdrant_client.get_collection(settings.qdrant_collection)
             return collection_info.points_count
         except Exception as e:
             logger.warning("count_qdrant_chunks_failed", error=str(e))

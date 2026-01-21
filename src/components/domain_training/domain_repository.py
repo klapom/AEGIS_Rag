@@ -1292,7 +1292,9 @@ class DomainRepository:
 
         except Exception as e:
             logger.error("append_training_log_message_failed", log_id=log_id, error=str(e))
-            raise DatabaseConnectionError("Neo4j", f"Append training log message failed: {e}") from e
+            raise DatabaseConnectionError(
+                "Neo4j", f"Append training log message failed: {e}"
+            ) from e
 
     async def get_training_log_messages(
         self,

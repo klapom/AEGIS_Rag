@@ -293,23 +293,33 @@ class QueryRewriterV2:
             if i == 0:
                 continue
             # Check if word is capitalized and not a common word
-            clean_word = re.sub(r'[^\w]', '', word)
+            clean_word = re.sub(r"[^\w]", "", word)
             if clean_word and clean_word[0].isupper() and len(clean_word) > 1:
                 # Exclude common question words
-                if clean_word.lower() not in ['the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been']:
+                if clean_word.lower() not in [
+                    "the",
+                    "a",
+                    "an",
+                    "is",
+                    "are",
+                    "was",
+                    "were",
+                    "be",
+                    "been",
+                ]:
                     entities.append(clean_word)
 
         # 3. Extract technical terms (all-caps, snake_case, CamelCase)
         # All-caps acronyms (e.g., RAG, LLM, API)
-        acronyms = re.findall(r'\b[A-Z]{2,}\b', query)
+        acronyms = re.findall(r"\b[A-Z]{2,}\b", query)
         entities.extend(acronyms)
 
         # snake_case terms
-        snake_case = re.findall(r'\b[a-z]+_[a-z_]+\b', query)
+        snake_case = re.findall(r"\b[a-z]+_[a-z_]+\b", query)
         entities.extend(snake_case)
 
         # CamelCase terms
-        camel_case = re.findall(r'\b[A-Z][a-z]+[A-Z][a-zA-Z]*\b', query)
+        camel_case = re.findall(r"\b[A-Z][a-z]+[A-Z][a-zA-Z]*\b", query)
         entities.extend(camel_case)
 
         # 4. Remove duplicates while preserving order
@@ -381,9 +391,7 @@ class QueryRewriterV2:
                         "exploratory": "procedural",
                         "summary": "recommendation",
                     }
-                    clara_intent_value = intent_to_clara.get(
-                        clara_result.intent.value, "factual"
-                    )
+                    clara_intent_value = intent_to_clara.get(clara_result.intent.value, "factual")
                 confidence = clara_result.confidence
 
                 self.logger.debug(
@@ -404,8 +412,7 @@ class QueryRewriterV2:
 
         # Step 2: Map C-LARA intent to graph intents
         mapping = CLARA_TO_GRAPH_INTENT_MAP.get(
-            clara_intent_value,
-            CLARA_TO_GRAPH_INTENT_MAP["factual"]  # Default mapping
+            clara_intent_value, CLARA_TO_GRAPH_INTENT_MAP["factual"]  # Default mapping
         )
 
         graph_intents = list(mapping["default_intents"])
@@ -462,9 +469,7 @@ class QueryRewriterV2:
 
         return result
 
-    async def extract_graph_intents(
-        self, query: str, force_llm: bool = False
-    ) -> GraphIntentResult:
+    async def extract_graph_intents(self, query: str, force_llm: bool = False) -> GraphIntentResult:
         """Extract graph reasoning intents from query.
 
         Sprint 113: Now uses C-LARA fast inference by default (50ms vs 17s).

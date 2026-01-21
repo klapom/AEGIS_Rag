@@ -870,10 +870,16 @@ async def chunking_node(state: IngestionState) -> IngestionState:
                     chunk_bboxes.append(
                         {
                             "picture_ref": annotation["picture_ref"],
-                            "bbox_full": annotation.get("bbox"),  # Rename to bbox_full for embedding node
+                            "bbox_full": annotation.get(
+                                "bbox"
+                            ),  # Rename to bbox_full for embedding node
                             "iou_score": annotation.get("iou_score", 0.0),
-                            "description": annotation.get("description", ""),  # Preserve VLM description
-                            "vlm_model": annotation.get("vlm_model", "unknown"),  # Preserve VLM model
+                            "description": annotation.get(
+                                "description", ""
+                            ),  # Preserve VLM description
+                            "vlm_model": annotation.get(
+                                "vlm_model", "unknown"
+                            ),  # Preserve VLM model
                         }
                     )
 

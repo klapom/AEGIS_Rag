@@ -362,9 +362,7 @@ async def generate_audit_report(
                     f"Processed {report['total_events']} events during this period."
                 )
                 if not report.get("integrity_verified", False):
-                    recommendations.append(
-                        "⚠️ Integrity violations detected - review chain breaks."
-                    )
+                    recommendations.append("⚠️ Integrity violations detected - review chain breaks.")
 
         elif report_type == ReportTypeEnum.SECURITY_AUDIT:
             security_data = report.get("security_summary", {})

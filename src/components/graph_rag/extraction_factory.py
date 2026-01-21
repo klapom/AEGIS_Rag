@@ -190,8 +190,10 @@ class ExtractionPipelineFactory:
                     # Stage 1: SpaCy NER (~50ms)
                     # Stage 2: LLM Entity Enrichment (MANDATORY, ~5-15s)
                     # Stage 3: LLM Relation Extraction (~10-30s)
-                    entities_graph, relationships_graph = await self.service.extract_with_spacy_first_pipeline(
-                        text, document_id, domain
+                    entities_graph, relationships_graph = (
+                        await self.service.extract_with_spacy_first_pipeline(
+                            text, document_id, domain
+                        )
                     )
                     logger.info(
                         "spacy_first_pipeline_complete",

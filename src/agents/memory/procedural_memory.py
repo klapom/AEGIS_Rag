@@ -798,7 +798,9 @@ class PatternLearner:
 
             if error_rate > 0.1:  # >10% error rate
                 if "timeout" in error_type.lower():
-                    suggestions.append("Frequent timeouts detected. Consider increasing timeout threshold")
+                    suggestions.append(
+                        "Frequent timeouts detected. Consider increasing timeout threshold"
+                    )
                 elif "not found" in error_type.lower():
                     suggestions.append(
                         "Frequent 'not found' errors. Improve input validation or error handling"

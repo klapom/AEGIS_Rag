@@ -452,9 +452,7 @@ class MessageBus:
                     tool_name=f"message:{recipient}",
                 )
                 if not can_message:
-                    raise ValueError(
-                        f"Policy denied messaging from '{sender}' to '{recipient}'"
-                    )
+                    raise ValueError(f"Policy denied messaging from '{sender}' to '{recipient}'")
             except ValueError:
                 # Re-raise ValueError (permission denied)
                 raise
@@ -491,7 +489,9 @@ class MessageBus:
             await redis_client.zadd(queue_key, {message_json: score})
 
             # Set expiration on message
-            expiry_time = int((message.timestamp + timedelta(seconds=message.ttl_seconds)).timestamp())
+            expiry_time = int(
+                (message.timestamp + timedelta(seconds=message.ttl_seconds)).timestamp()
+            )
             await redis_client.expireat(queue_key, expiry_time)
 
             logger.debug(

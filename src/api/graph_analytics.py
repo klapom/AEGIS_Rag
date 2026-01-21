@@ -365,7 +365,7 @@ async def get_graph_statistics(response: Response = None) -> GraphStatistics:
     if response:
         response.headers["Warning"] = (
             '299 - "DEPRECATED: This endpoint will be removed in Sprint 73. '
-            'Use /api/v1/graph/viz/statistics instead. '
+            "Use /api/v1/graph/viz/statistics instead. "
             'See docs/sprints/SPRINT_72_MIGRATION_GUIDE_GRAPH_ANALYTICS.md"'
         )
         response.headers["X-Deprecation-Date"] = "2026-01-06"

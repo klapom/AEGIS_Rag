@@ -24,6 +24,7 @@ models_py_path = Path(__file__).parent.parent / "models.py"
 if models_py_path.exists():
     # Import all public symbols from models.py
     import importlib.util
+
     spec = importlib.util.spec_from_file_location("_legacy_models", models_py_path)
     if spec and spec.loader:
         _legacy_models = importlib.util.module_from_spec(spec)

@@ -93,9 +93,7 @@ async def should_use_tools(state: dict[str, Any]) -> str:
         return await _should_use_tools_hybrid(state, config)
     else:
         logger.warning(
-            "unknown_tool_detection_strategy",
-            strategy=strategy,
-            falling_back_to="markers"
+            "unknown_tool_detection_strategy", strategy=strategy, falling_back_to="markers"
         )
         return _should_use_tools_markers(state, config)
 
@@ -152,17 +150,23 @@ async def _should_use_tools_llm(state: dict[str, Any], config: Any) -> str:
     # Define structured output schema
     class ToolDecision(BaseModel):
         """LLM decision on whether to use tools."""
+
         use_tools: bool = Field(description="True if external tools needed, False otherwise")
         reasoning: str = Field(description="Brief explanation why tools are/aren't needed")
-        tool_type: str | None = Field(None, description="Type of tool: search, fetch, compute, etc.")
+        tool_type: str | None = Field(
+            None, description="Type of tool: search, fetch, compute, etc."
+        )
         query: str | None = Field(None, description="Specific query for tool if use_tools=True")
 
     answer = state.get("answer", "")
     question = state.get("question", "")
 
     # Create decision prompt
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", """You are a tool usage classifier. Analyze the assistant's response and determine if external tools are needed.
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            (
+                "system",
+                """You are a tool usage classifier. Analyze the assistant's response and determine if external tools are needed.
 
 Tools should be used when:
 - Real-time data is needed (weather, stock prices, current events)
@@ -177,13 +181,18 @@ Tools should NOT be used when:
 - The information is general knowledge
 - The assistant is providing a complete answer
 
-Be conservative - only use tools when truly necessary."""),
-        ("user", """Question: {question}
+Be conservative - only use tools when truly necessary.""",
+            ),
+            (
+                "user",
+                """Question: {question}
 
 Assistant's Response: {answer}
 
-Does this response require external tool use? Provide your decision.""")
-    ])
+Does this response require external tool use? Provide your decision.""",
+            ),
+        ]
+    )
 
     try:
         # Get LLM with structured output
@@ -193,10 +202,12 @@ Does this response require external tool use? Provide your decision.""")
 
         # Run decision
         chain = prompt | structured_llm
-        decision: ToolDecision = await chain.ainvoke({
-            "question": question,
-            "answer": answer,
-        })
+        decision: ToolDecision = await chain.ainvoke(
+            {
+                "question": question,
+                "answer": answer,
+            }
+        )
 
         logger.info(
             "llm_tool_decision",

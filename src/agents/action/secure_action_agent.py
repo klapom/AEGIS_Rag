@@ -144,9 +144,7 @@ class SecureActionAgent:
             reward_loop_enabled=self.enable_reward_loop,
         )
 
-    async def execute_action(
-        self, command: str, working_dir: str | None = None
-    ) -> dict[str, Any]:
+    async def execute_action(self, command: str, working_dir: str | None = None) -> dict[str, Any]:
         """Execute action in secure sandbox with retry logic.
 
         Args:
@@ -180,9 +178,7 @@ class SecureActionAgent:
         for attempt in range(self.config.max_retries):
             try:
                 # Execute via sandbox
-                result = await self.sandbox.execute(
-                    command=command, working_dir=working_dir
-                )
+                result = await self.sandbox.execute(command=command, working_dir=working_dir)
 
                 execution_time_ms = (time.time() - start_time) * 1000
 
@@ -490,9 +486,7 @@ class SecureActionAgent:
             self.logger.info("cleanup_completed", workspace=self.config.workspace_path)
 
         except Exception as e:
-            self.logger.error(
-                "cleanup_failed", error=str(e), error_type=type(e).__name__
-            )
+            self.logger.error("cleanup_failed", error=str(e), error_type=type(e).__name__)
 
     def get_workspace_path(self) -> str:
         """Get absolute path to workspace directory.

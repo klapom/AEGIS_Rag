@@ -955,7 +955,9 @@ async def admin_memory_search(
                     score = 0.5
 
                 # Generate ID if missing
-                result_id = result.get("id", result.get("memory_id", f"{layer_key}_{len(all_results)}"))
+                result_id = result.get(
+                    "id", result.get("memory_id", f"{layer_key}_{len(all_results)}")
+                )
 
                 all_results.append(
                     AdminMemorySearchResult(
@@ -967,14 +969,25 @@ async def admin_memory_search(
                         metadata={
                             k: v
                             for k, v in result.items()
-                            if k not in ["id", "content", "text", "score", "relevance_score", "timestamp", "layer"]
+                            if k
+                            not in [
+                                "id",
+                                "content",
+                                "text",
+                                "score",
+                                "relevance_score",
+                                "timestamp",
+                                "layer",
+                            ]
                         },
                     )
                 )
 
         # Apply pagination
         total_count = len(all_results)
-        paginated_results = all_results[search_request.offset : search_request.offset + search_request.limit]
+        paginated_results = all_results[
+            search_request.offset : search_request.offset + search_request.limit
+        ]
 
         logger.info(
             "admin_memory_search_complete",

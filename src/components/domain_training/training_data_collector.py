@@ -271,11 +271,13 @@ class TrainingDataCollector:
             target = r.target if hasattr(r, "target") else r.get("target", "")
             rel_type = r.type if hasattr(r, "type") else r.get("type", "RELATES_TO")
             if source and target:
-                relation_dicts.append({
-                    "subject": source,
-                    "predicate": rel_type,
-                    "object": target,
-                })
+                relation_dicts.append(
+                    {
+                        "subject": source,
+                        "predicate": rel_type,
+                        "object": target,
+                    }
+                )
 
         # Create sample
         sample = DSPyTrainingSample(
@@ -318,9 +320,9 @@ class TrainingDataCollector:
             "rejected_low_confidence": self.rejected_low_confidence,
             "rejected_low_evidence": self.rejected_low_evidence,
             "rejected_too_few_items": self.rejected_too_few_items,
-            "acceptance_rate": len(self.samples) / self.total_candidates
-            if self.total_candidates > 0
-            else 0.0,
+            "acceptance_rate": (
+                len(self.samples) / self.total_candidates if self.total_candidates > 0 else 0.0
+            ),
         }
 
     def get_stratification(self) -> dict[str, dict[str, int]]:

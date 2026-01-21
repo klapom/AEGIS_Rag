@@ -65,13 +65,7 @@ class ResearchSupervisorState(TypedDict, total=False):
 
     # Sprint 116.10: Enhanced tracking
     current_step: Literal[
-        "pending",
-        "decomposing",
-        "retrieving",
-        "analyzing",
-        "synthesizing",
-        "complete",
-        "error"
+        "pending", "decomposing", "retrieving", "analyzing", "synthesizing", "complete", "error"
     ]
     execution_steps: list[ExecutionStep]
     intermediate_answers: dict[str, str]  # sub_question -> answer

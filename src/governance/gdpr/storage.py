@@ -70,10 +70,7 @@ class ConsentStore:
         consents = self._consents.get(data_subject_id, [])
 
         if data_category:
-            consents = [
-                c for c in consents
-                if data_category in c.data_categories
-            ]
+            consents = [c for c in consents if data_category in c.data_categories]
 
         return consents
 
@@ -188,10 +185,7 @@ class ProcessingLog:
         Returns:
             List of processing records
         """
-        records = [
-            r for r in self._records
-            if data_subject_id in r.data_subjects
-        ]
+        records = [r for r in self._records if data_subject_id in r.data_subjects]
 
         if start_date:
             records = [r for r in records if r.processed_at >= start_date]
@@ -217,10 +211,7 @@ class ProcessingLog:
         Returns:
             List of processing records
         """
-        records = [
-            r for r in self._records
-            if r.processing_purpose == purpose
-        ]
+        records = [r for r in self._records if r.processing_purpose == purpose]
 
         if start_date:
             records = [r for r in records if r.processed_at >= start_date]
@@ -264,10 +255,7 @@ class ProcessingLog:
             Number of records deleted
         """
         original_count = len(self._records)
-        self._records = [
-            r for r in self._records
-            if data_subject_id not in r.data_subjects
-        ]
+        self._records = [r for r in self._records if data_subject_id not in r.data_subjects]
         return original_count - len(self._records)
 
     def clear(self) -> None:

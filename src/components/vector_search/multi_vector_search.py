@@ -335,7 +335,9 @@ class MultiVectorHybridSearch:
             search_duration_ms = (time.perf_counter() - search_start_api) * 1000
 
             # Format results
-            formatted_results = self._format_results(search_results, query, search_type="dense_only")
+            formatted_results = self._format_results(
+                search_results, query, search_type="dense_only"
+            )
 
             total_duration_ms = (time.perf_counter() - search_start) * 1000
 
@@ -505,7 +507,9 @@ class MultiVectorHybridSearch:
                         "section_id": payload.get("section_id", ""),
                         "section_headings": payload.get("section_headings", []),
                         "primary_section": payload.get("primary_section", ""),
-                        "namespace": payload.get("namespace", payload.get("namespace_id", "default")),
+                        "namespace": payload.get(
+                            "namespace", payload.get("namespace_id", "default")
+                        ),
                     },
                 }
             )
@@ -514,9 +518,11 @@ class MultiVectorHybridSearch:
             "results_formatted",
             results_count=len(formatted_results),
             search_type=search_type,
-            avg_score=round(sum(r["score"] for r in formatted_results) / len(formatted_results), 3)
-            if formatted_results
-            else 0.0,
+            avg_score=(
+                round(sum(r["score"] for r in formatted_results) / len(formatted_results), 3)
+                if formatted_results
+                else 0.0
+            ),
         )
 
         return formatted_results

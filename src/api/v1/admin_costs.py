@@ -350,6 +350,7 @@ from pydantic import BaseModel
 
 class TimeseriesDataPoint(BaseModel):
     """Individual data point for timeseries chart."""
+
     date: str
     tokens: int
     cost_usd: float
@@ -358,6 +359,7 @@ class TimeseriesDataPoint(BaseModel):
 
 class TimeseriesResponse(BaseModel):
     """Response for timeseries endpoint."""
+
     data: list[TimeseriesDataPoint]
     total_tokens: int = 0
     total_cost_usd: float = 0.0

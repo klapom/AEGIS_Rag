@@ -183,11 +183,13 @@ class CrossSentenceExtractor:
         for sent in doc.sents:
             sent_text = sent.text.strip()
             if sent_text:  # Skip empty sentences
-                sentences_data.append({
-                    "text": sent_text,
-                    "char_start": sent.start_char,
-                    "char_end": sent.end_char,
-                })
+                sentences_data.append(
+                    {
+                        "text": sent_text,
+                        "char_start": sent.start_char,
+                        "char_end": sent.end_char,
+                    }
+                )
 
         total_sentences = len(sentences_data)
 

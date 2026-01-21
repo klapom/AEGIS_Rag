@@ -397,7 +397,9 @@ class AegisLLMProxy:
                             "task_type": task.task_type,  # Already string due to use_enum_values
                             "prompt_length": len(task.prompt),
                             "quality": task.quality_requirement,  # Already string
-                            "complexity": task.complexity if task.complexity else "unknown",  # Already string
+                            "complexity": (
+                                task.complexity if task.complexity else "unknown"
+                            ),  # Already string
                             "provider": provider,
                         },
                     )
@@ -507,7 +509,9 @@ class AegisLLMProxy:
                             },
                         )
                     except ImportError:
-                        logger.debug("phase_events_queue_not_available_skipping_fallback_completion")
+                        logger.debug(
+                            "phase_events_queue_not_available_skipping_fallback_completion"
+                        )
 
                 return result
 

@@ -576,9 +576,7 @@ class SkillLifecycleManager:
         """
         # Find previous version from events
         skill_events = [
-            e
-            for e in self._events
-            if e.skill_name == skill_name and e.event_type == "upgrade"
+            e for e in self._events if e.skill_name == skill_name and e.event_type == "upgrade"
         ]
 
         if len(skill_events) < event_count:
@@ -764,9 +762,7 @@ class SkillLifecycleManager:
     async def _evict_lru(self):
         """Evict least recently used loaded skill."""
         # Find loaded but not active skills
-        candidates = [
-            name for name, state in self._states.items() if state == SkillState.LOADED
-        ]
+        candidates = [name for name, state in self._states.items() if state == SkillState.LOADED]
 
         if candidates:
             # Evict first candidate (could use access time for true LRU)
@@ -779,8 +775,7 @@ class SkillLifecycleManager:
         active_events = [
             e
             for e in self._events
-            if e.event_type == "activate"
-            and self._states.get(e.skill_name) == SkillState.ACTIVE
+            if e.event_type == "activate" and self._states.get(e.skill_name) == SkillState.ACTIVE
         ]
 
         if active_events:

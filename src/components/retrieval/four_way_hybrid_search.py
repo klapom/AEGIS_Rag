@@ -321,7 +321,11 @@ class FourWayHybridSearch:
         # Expand vector results via entity overlap in Neo4j (~100ms, no LLM calls)
         entity_expansion_results: list[dict[str, Any]] = []
         entity_expansion_latency_ms = 0.0
-        if use_entity_expansion and "multivector" in channel_results and channel_results["multivector"]:
+        if (
+            use_entity_expansion
+            and "multivector" in channel_results
+            and channel_results["multivector"]
+        ):
             expansion_start = time.perf_counter()
             entity_expansion_results = await self._expand_via_vector_results(
                 vector_results=channel_results["multivector"],
@@ -363,7 +367,9 @@ class FourWayHybridSearch:
         if "entity_expansion" in channel_results and channel_results["entity_expansion"]:
             rankings.append(channel_results["entity_expansion"])
             # Weight entity expansion similar to graph_local (entity-based discovery)
-            weight_values.append(weights.local * 0.5)  # Slightly lower weight than direct graph_local
+            weight_values.append(
+                weights.local * 0.5
+            )  # Slightly lower weight than direct graph_local
 
         # Step 4: Apply Intent-Weighted RRF
         if rankings:
@@ -631,9 +637,7 @@ class FourWayHybridSearch:
         # Sprint 92 Fix: Handle both list (Ollama/ST) and dict (FlagEmbedding) returns
         embedding_result = await embedding_service.embed_single(query)
         query_embedding = (
-            embedding_result["dense"]
-            if isinstance(embedding_result, dict)
-            else embedding_result
+            embedding_result["dense"] if isinstance(embedding_result, dict) else embedding_result
         )
 
         # Search with namespace filter

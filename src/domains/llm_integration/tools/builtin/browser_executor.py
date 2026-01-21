@@ -443,7 +443,9 @@ async def browser_screenshot(
         >>> "data" in result
         True
     """
-    logger.info("browser_screenshot_called", selector=selector, timeout=timeout, full_page=full_page)
+    logger.info(
+        "browser_screenshot_called", selector=selector, timeout=timeout, full_page=full_page
+    )
 
     # Security check: validate selector if provided
     if selector:

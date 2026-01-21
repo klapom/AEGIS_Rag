@@ -170,10 +170,10 @@ class CLARADataGenerator:
     # Sprint 81: Multi-Teacher configuration to reduce single-model bias
     # NOTE: qwen3:8b has "thinking mode" that breaks JSON parsing, use qwen2.5:7b instead
     MULTI_TEACHER_CONFIG = {
-        "qwen2.5:7b": {"examples": 300, "style": "precise"},    # Alibaba - structured (tested, works)
-        "mistral:7b": {"examples": 300, "style": "creative"},   # Mistral - natural
-        "phi4-mini": {"examples": 200, "style": "technical"},   # Microsoft - logical
-        "gemma3:4b": {"examples": 200, "style": "diverse"},     # Google - varied
+        "qwen2.5:7b": {"examples": 300, "style": "precise"},  # Alibaba - structured (tested, works)
+        "mistral:7b": {"examples": 300, "style": "creative"},  # Mistral - natural
+        "phi4-mini": {"examples": 200, "style": "technical"},  # Microsoft - logical
+        "gemma3:4b": {"examples": 200, "style": "diverse"},  # Google - varied
     }
 
     # Sprint 81: Explicit edge cases for robustness (40 examples)
@@ -181,15 +181,31 @@ class CLARADataGenerator:
     EDGE_CASES = {
         "factual": [
             # Typos
-            {"query": "Waht is the defualt port for Redis?", "confidence": 0.95, "edge_type": "typo"},
+            {
+                "query": "Waht is the defualt port for Redis?",
+                "confidence": 0.95,
+                "edge_type": "typo",
+            },
             {"query": "Wsa ist die maximale Dateigrösse?", "confidence": 0.90, "edge_type": "typo"},
             {"query": "Who is teh author of LangChain?", "confidence": 0.95, "edge_type": "typo"},
             # Code snippets
-            {"query": "What does `SELECT * FROM users` return?", "confidence": 0.92, "edge_type": "code"},
+            {
+                "query": "What does `SELECT * FROM users` return?",
+                "confidence": 0.92,
+                "edge_type": "code",
+            },
             {"query": "Was macht os.path.join() genau?", "confidence": 0.95, "edge_type": "code"},
             # Mixed language
-            {"query": "Was ist ein embedding vector?", "confidence": 0.95, "edge_type": "mixed_lang"},
-            {"query": "Wie funktioniert der retry mechanism?", "confidence": 0.90, "edge_type": "mixed_lang"},
+            {
+                "query": "Was ist ein embedding vector?",
+                "confidence": 0.95,
+                "edge_type": "mixed_lang",
+            },
+            {
+                "query": "Wie funktioniert der retry mechanism?",
+                "confidence": 0.90,
+                "edge_type": "mixed_lang",
+            },
             # Short queries
             {"query": "RAG?", "confidence": 0.70, "edge_type": "short"},
             {"query": "Port Neo4j", "confidence": 0.75, "edge_type": "short"},
@@ -200,25 +216,61 @@ class CLARADataGenerator:
             {"query": "How to isntall Docker on Ubunutu?", "confidence": 0.95, "edge_type": "typo"},
             {"query": "Wie konfigurier ich den Proxy?", "confidence": 0.90, "edge_type": "typo"},
             # Code snippets
-            {"query": "How to fix `ModuleNotFoundError: No module named 'torch'`?", "confidence": 0.95, "edge_type": "code"},
-            {"query": "Wie behebe ich den Error: connection refused?", "confidence": 0.92, "edge_type": "code"},
+            {
+                "query": "How to fix `ModuleNotFoundError: No module named 'torch'`?",
+                "confidence": 0.95,
+                "edge_type": "code",
+            },
+            {
+                "query": "Wie behebe ich den Error: connection refused?",
+                "confidence": 0.92,
+                "edge_type": "code",
+            },
             # Mixed language
-            {"query": "Wie deploye ich mit Docker Compose?", "confidence": 0.95, "edge_type": "mixed_lang"},
-            {"query": "How to configure der Authentication Flow?", "confidence": 0.85, "edge_type": "mixed_lang"},
+            {
+                "query": "Wie deploye ich mit Docker Compose?",
+                "confidence": 0.95,
+                "edge_type": "mixed_lang",
+            },
+            {
+                "query": "How to configure der Authentication Flow?",
+                "confidence": 0.85,
+                "edge_type": "mixed_lang",
+            },
             # Short queries
             {"query": "install qdrant", "confidence": 0.80, "edge_type": "short"},
             {"query": "setup neo4j", "confidence": 0.80, "edge_type": "short"},
         ],
         "comparison": [
             # Typos
-            {"query": "Differnece between Qdrant and Pinecone?", "confidence": 0.95, "edge_type": "typo"},
-            {"query": "Vergleich LangChainn vs LlamaIndex", "confidence": 0.90, "edge_type": "typo"},
+            {
+                "query": "Differnece between Qdrant and Pinecone?",
+                "confidence": 0.95,
+                "edge_type": "typo",
+            },
+            {
+                "query": "Vergleich LangChainn vs LlamaIndex",
+                "confidence": 0.90,
+                "edge_type": "typo",
+            },
             # Code snippets
-            {"query": "async def vs def - which is faster?", "confidence": 0.90, "edge_type": "code"},
+            {
+                "query": "async def vs def - which is faster?",
+                "confidence": 0.90,
+                "edge_type": "code",
+            },
             {"query": "Dict vs TypedDict performance?", "confidence": 0.88, "edge_type": "code"},
             # Mixed language
-            {"query": "Was ist besser: vector search oder BM25?", "confidence": 0.95, "edge_type": "mixed_lang"},
-            {"query": "Unterschied between SetFit and fine-tuning?", "confidence": 0.90, "edge_type": "mixed_lang"},
+            {
+                "query": "Was ist besser: vector search oder BM25?",
+                "confidence": 0.95,
+                "edge_type": "mixed_lang",
+            },
+            {
+                "query": "Unterschied between SetFit and fine-tuning?",
+                "confidence": 0.90,
+                "edge_type": "mixed_lang",
+            },
             # Short queries
             {"query": "qdrant vs milvus", "confidence": 0.85, "edge_type": "short"},
             {"query": "redis vs memcached", "confidence": 0.85, "edge_type": "short"},
@@ -228,11 +280,27 @@ class CLARADataGenerator:
             {"query": "Wich database schould I use?", "confidence": 0.90, "edge_type": "typo"},
             {"query": "Welches Framwork empfehlen Sie?", "confidence": 0.90, "edge_type": "typo"},
             # Code snippets
-            {"query": "Should I use `asyncio.gather()` or `asyncio.wait()`?", "confidence": 0.92, "edge_type": "code"},
-            {"query": "Best practice für @lru_cache usage?", "confidence": 0.90, "edge_type": "code"},
+            {
+                "query": "Should I use `asyncio.gather()` or `asyncio.wait()`?",
+                "confidence": 0.92,
+                "edge_type": "code",
+            },
+            {
+                "query": "Best practice für @lru_cache usage?",
+                "confidence": 0.90,
+                "edge_type": "code",
+            },
             # Mixed language
-            {"query": "Was ist die beste embedding dimension?", "confidence": 0.95, "edge_type": "mixed_lang"},
-            {"query": "Recommended chunk size für RAG?", "confidence": 0.95, "edge_type": "mixed_lang"},
+            {
+                "query": "Was ist die beste embedding dimension?",
+                "confidence": 0.95,
+                "edge_type": "mixed_lang",
+            },
+            {
+                "query": "Recommended chunk size für RAG?",
+                "confidence": 0.95,
+                "edge_type": "mixed_lang",
+            },
             # Short queries
             {"query": "best llm model", "confidence": 0.75, "edge_type": "short"},
             {"query": "empfohlene settings", "confidence": 0.70, "edge_type": "short"},
@@ -245,8 +313,16 @@ class CLARADataGenerator:
             {"query": "Where is `settings.py` located?", "confidence": 0.95, "edge_type": "code"},
             {"query": "Location of docker-compose.yml?", "confidence": 0.92, "edge_type": "code"},
             # Mixed language
-            {"query": "Wo finde ich die deployment docs?", "confidence": 0.95, "edge_type": "mixed_lang"},
-            {"query": "Where is der Admin Dashboard?", "confidence": 0.85, "edge_type": "mixed_lang"},
+            {
+                "query": "Wo finde ich die deployment docs?",
+                "confidence": 0.95,
+                "edge_type": "mixed_lang",
+            },
+            {
+                "query": "Where is der Admin Dashboard?",
+                "confidence": 0.85,
+                "edge_type": "mixed_lang",
+            },
             # Short queries
             {"query": "api docs", "confidence": 0.80, "edge_type": "short"},
             {"query": "logs location", "confidence": 0.80, "edge_type": "short"},
@@ -432,7 +508,8 @@ Generate exactly {num_examples} queries now:
             except json.JSONDecodeError as e:
                 # Try to extract JSON array from text response
                 import re
-                array_match = re.search(r'\[[\s\S]*?\]', raw_response)
+
+                array_match = re.search(r"\[[\s\S]*?\]", raw_response)
                 if array_match:
                     try:
                         generated = json.loads(array_match.group())
@@ -524,7 +601,14 @@ Generate exactly {num_examples} queries now:
             for case in cases:
                 # Infer language from query content
                 query = case["query"]
-                language = "de" if any(w in query.lower() for w in ["was", "wie", "wo", "der", "die", "das", "ist", "ich"]) else "en"
+                language = (
+                    "de"
+                    if any(
+                        w in query.lower()
+                        for w in ["was", "wie", "wo", "der", "die", "das", "ist", "ich"]
+                    )
+                    else "en"
+                )
 
                 edge_examples.append(
                     IntentExample(
@@ -683,7 +767,9 @@ Generate exactly {num_examples} queries now:
 
                 all_examples.extend(intent_examples)
 
-            self.stats[f"teacher_{teacher_model}"] = len([e for e in all_examples if True])  # Track per teacher
+            self.stats[f"teacher_{teacher_model}"] = len(
+                [e for e in all_examples if True]
+            )  # Track per teacher
 
             logger.info(
                 "teacher_complete",
@@ -800,9 +886,7 @@ Generate exactly {num_examples} queries now:
 
         return report
 
-    async def save_dataset(
-        self, examples: list[IntentExample], output_path: str | Path
-    ) -> None:
+    async def save_dataset(self, examples: list[IntentExample], output_path: str | Path) -> None:
         """Save generated dataset to JSONL file.
 
         Args:

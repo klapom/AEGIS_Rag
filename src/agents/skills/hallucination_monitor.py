@@ -162,9 +162,7 @@ class HallucinationMonitor:
             "claims_unsupported": 0,
         }
 
-    async def check(
-        self, answer: str, contexts: List[str]
-    ) -> HallucinationReport:
+    async def check(self, answer: str, contexts: List[str]) -> HallucinationReport:
         """Check answer for hallucinations.
 
         Args:
@@ -270,9 +268,7 @@ Claims:"""
         self.logger.debug("hallucination_extract_claims_complete", count=len(claims))
         return claims
 
-    async def _verify_claim(
-        self, claim: Claim, contexts: List[str]
-    ) -> ClaimVerification:
+    async def _verify_claim(self, claim: Claim, contexts: List[str]) -> ClaimVerification:
         """Verify a claim against contexts.
 
         Args:
@@ -385,9 +381,7 @@ Verification:"""
                 "answer_length": len(answer),
                 "num_claims": len(claims),
                 "num_verified": sum(1 for v in verifications if v.is_supported),
-                "num_unsupported": sum(
-                    1 for v in verifications if not v.is_supported
-                ),
+                "num_unsupported": sum(1 for v in verifications if not v.is_supported),
                 "hallucination_score": score,
                 "verdict": verdict,
             },
@@ -395,9 +389,7 @@ Verification:"""
 
         # Log unsupported claims at WARN/ERROR level
         if score >= 0.1:
-            unsupported = [
-                v.claim.text for v in verifications if not v.is_supported
-            ]
+            unsupported = [v.claim.text for v in verifications if not v.is_supported]
             if score >= 0.3:
                 self.logger.error(
                     "hallucination_detected",

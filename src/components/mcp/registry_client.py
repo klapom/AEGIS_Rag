@@ -149,10 +149,7 @@ def get_available_registries() -> list[dict[str, str]]:
         >>> for reg in registries:
         ...     print(f"{reg['name']}: {reg['url']}")
     """
-    return [
-        {"id": key, **value}
-        for key, value in PREDEFINED_REGISTRIES.items()
-    ]
+    return [{"id": key, **value} for key, value in PREDEFINED_REGISTRIES.items()]
 
 
 @dataclass
@@ -220,9 +217,7 @@ class MCPRegistryClient:
         self.cache_ttl = timedelta(seconds=cache_ttl_seconds)
         self._http_client = httpx.AsyncClient(timeout=30.0)
 
-    async def discover_servers(
-        self, registry: str = "official"
-    ) -> list[MCPServerDefinition]:
+    async def discover_servers(self, registry: str = "official") -> list[MCPServerDefinition]:
         """Fetch available servers from registry.
 
         Sprint 112 Fix: Accepts both registry names ("official") and full URLs.
@@ -492,7 +487,9 @@ class MCPRegistryClient:
 
         return MCPServerDefinition(
             id=server_name,
-            name=data.get("displayName", server_name.split("/")[-1] if "/" in server_name else server_name),
+            name=data.get(
+                "displayName", server_name.split("/")[-1] if "/" in server_name else server_name
+            ),
             description=data.get("description", ""),
             transport=data.get("transport", "stdio"),
             command=command,
@@ -508,9 +505,7 @@ class MCPRegistryClient:
             metadata=data.get("metadata", {}),
         )
 
-    def _deduplicate_servers(
-        self, servers: list[MCPServerDefinition]
-    ) -> list[MCPServerDefinition]:
+    def _deduplicate_servers(self, servers: list[MCPServerDefinition]) -> list[MCPServerDefinition]:
         """Deduplicate servers - keep only the latest version of each server.
 
         Sprint 112 Fix: Registry returns all versions of each server.
@@ -554,9 +549,7 @@ class MCPRegistryClient:
                     logger.warning(f"Version parsing failed for {server_id}: {e}")
                     latest_servers.append(versions[-1])
 
-        logger.info(
-            f"Deduplicated servers: {len(servers)} → {len(latest_servers)} unique"
-        )
+        logger.info(f"Deduplicated servers: {len(servers)} → {len(latest_servers)} unique")
         return latest_servers
 
     def _server_to_dict(self, server: MCPServerDefinition) -> dict[str, Any]:
@@ -737,9 +730,7 @@ class MCPRegistryClient:
             logger.error(f"Failed to add server to config: {e}")
             return False
 
-    async def _install_dependencies(
-        self, server: MCPServerDefinition
-    ) -> dict[str, Any]:
+    async def _install_dependencies(self, server: MCPServerDefinition) -> dict[str, Any]:
         """Install server dependencies (npm, pip, etc.).
 
         Sprint 107 Feature 107.4: Automatic dependency installation.
@@ -765,11 +756,13 @@ class MCPRegistryClient:
                     results["env"].append({"variable": var, "status": "found"})
                 else:
                     results["env"].append({"variable": var, "status": "missing"})
-                    results["errors"].append({
-                        "type": "env",
-                        "variable": var,
-                        "error": f"Environment variable {var} is not set"
-                    })
+                    results["errors"].append(
+                        {
+                            "type": "env",
+                            "variable": var,
+                            "error": f"Environment variable {var} is not set",
+                        }
+                    )
 
         # Install npm packages
         npm_packages = server.dependencies.get("npm", [])
@@ -780,9 +773,10 @@ class MCPRegistryClient:
 
                     # Check if npm is available
                     npm_check = await asyncio.create_subprocess_exec(
-                        "npm", "--version",
+                        "npm",
+                        "--version",
                         stdout=asyncio.subprocess.PIPE,
-                        stderr=asyncio.subprocess.PIPE
+                        stderr=asyncio.subprocess.PIPE,
                     )
                     await npm_check.communicate()
 
@@ -793,9 +787,12 @@ class MCPRegistryClient:
 
                     # Install package globally
                     process = await asyncio.create_subprocess_exec(
-                        "npm", "install", "-g", package,
+                        "npm",
+                        "install",
+                        "-g",
+                        package,
                         stdout=asyncio.subprocess.PIPE,
-                        stderr=asyncio.subprocess.PIPE
+                        stderr=asyncio.subprocess.PIPE,
                     )
                     stdout, stderr = await process.communicate()
 
@@ -806,20 +803,14 @@ class MCPRegistryClient:
                         error_msg = stderr.decode() if stderr else "Unknown error"
                         logger.error(f"Failed to install npm package {package}: {error_msg}")
                         results["npm"].append({"package": package, "status": "failed"})
-                        results["errors"].append({
-                            "type": "npm",
-                            "package": package,
-                            "error": error_msg
-                        })
+                        results["errors"].append(
+                            {"type": "npm", "package": package, "error": error_msg}
+                        )
 
                 except Exception as e:
                     logger.error(f"Failed to install npm package {package}: {e}")
                     results["npm"].append({"package": package, "status": "error"})
-                    results["errors"].append({
-                        "type": "npm",
-                        "package": package,
-                        "error": str(e)
-                    })
+                    results["errors"].append({"type": "npm", "package": package, "error": str(e)})
 
         # Install pip packages
         pip_packages = server.dependencies.get("pip", [])
@@ -830,9 +821,11 @@ class MCPRegistryClient:
 
                     # Install package
                     process = await asyncio.create_subprocess_exec(
-                        "pip", "install", package,
+                        "pip",
+                        "install",
+                        package,
                         stdout=asyncio.subprocess.PIPE,
-                        stderr=asyncio.subprocess.PIPE
+                        stderr=asyncio.subprocess.PIPE,
                     )
                     stdout, stderr = await process.communicate()
 
@@ -843,20 +836,14 @@ class MCPRegistryClient:
                         error_msg = stderr.decode() if stderr else "Unknown error"
                         logger.error(f"Failed to install pip package {package}: {error_msg}")
                         results["pip"].append({"package": package, "status": "failed"})
-                        results["errors"].append({
-                            "type": "pip",
-                            "package": package,
-                            "error": error_msg
-                        })
+                        results["errors"].append(
+                            {"type": "pip", "package": package, "error": error_msg}
+                        )
 
                 except Exception as e:
                     logger.error(f"Failed to install pip package {package}: {e}")
                     results["pip"].append({"package": package, "status": "error"})
-                    results["errors"].append({
-                        "type": "pip",
-                        "package": package,
-                        "error": str(e)
-                    })
+                    results["errors"].append({"type": "pip", "package": package, "error": str(e)})
 
         return results
 

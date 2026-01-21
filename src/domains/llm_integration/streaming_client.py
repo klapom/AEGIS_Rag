@@ -163,7 +163,9 @@ class StreamingClient:
                 task_id=str(task.id),
                 total_tokens=total_tokens,
                 latency_ms=total_latency_ms,
-                tokens_per_second=total_tokens / (total_latency_ms / 1000) if total_latency_ms > 0 else 0,
+                tokens_per_second=(
+                    total_tokens / (total_latency_ms / 1000) if total_latency_ms > 0 else 0
+                ),
             )
 
             yield {

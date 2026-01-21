@@ -220,9 +220,7 @@ async def run_dspy_optimization(
             from src.components.llm_config import LLMUseCase, get_llm_config_service
 
             config_service = get_llm_config_service()
-            llm_model = await config_service.get_model_for_use_case(
-                LLMUseCase.ENTITY_EXTRACTION
-            )
+            llm_model = await config_service.get_model_for_use_case(LLMUseCase.ENTITY_EXTRACTION)
 
             # Store config for later domain creation (after training succeeds)
             domain_config = {

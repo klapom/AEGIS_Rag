@@ -120,7 +120,12 @@ class MemoryProfiler:
 
             return (used_mb, available_mb, percent)
 
-        except (subprocess.CalledProcessError, FileNotFoundError, ValueError, subprocess.TimeoutExpired) as e:
+        except (
+            subprocess.CalledProcessError,
+            FileNotFoundError,
+            ValueError,
+            subprocess.TimeoutExpired,
+        ) as e:
             logger.debug("gpu_memory_read_failed", error=str(e))
             return (0.0, 0.0, 0.0)
 

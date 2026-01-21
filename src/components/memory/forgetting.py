@@ -235,7 +235,9 @@ class ForgettingMechanism:
                 importance = metadata.get("importance_score", 0)
                 importance_scores.append(importance)
 
-            avg_importance = sum(importance_scores) / len(importance_scores) if importance_scores else 0
+            avg_importance = (
+                sum(importance_scores) / len(importance_scores) if importance_scores else 0
+            )
 
             logger.info(
                 "Removed least important facts",
@@ -253,9 +255,7 @@ class ForgettingMechanism:
             logger.error("Failed to remove least important facts", error=str(e))
             raise MemoryError(operation="forget_by_importance", reason=str(e)) from e
 
-    async def consolidate_related_facts(
-        self, batch_size: int = 100
-    ) -> dict[str, Any]:
+    async def consolidate_related_facts(self, batch_size: int = 100) -> dict[str, Any]:
         """Merge related facts into consolidated higher-level concepts.
 
         Finds fact clusters with high similarity and merges them into
@@ -446,7 +446,9 @@ class ForgettingMechanism:
                 created_times.append(fact["created_at"])
 
         # Calculate consolidated metadata
-        avg_importance = sum(importance_scores) / len(importance_scores) if importance_scores else 0.5
+        avg_importance = (
+            sum(importance_scores) / len(importance_scores) if importance_scores else 0.5
+        )
         earliest_time = min(created_times) if created_times else datetime.now(UTC).isoformat()
 
         consolidated = {

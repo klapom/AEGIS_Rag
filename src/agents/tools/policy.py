@@ -72,6 +72,7 @@ class PolicyDecision(Enum):
         RATE_LIMITED: Temporarily denied due to rate limit
         VALIDATION_FAILED: Input validation failed
     """
+
     ALLOW = "allow"
     DENY = "deny"
     RATE_LIMITED = "rate_limited"
@@ -91,6 +92,7 @@ class PolicyRule:
         required_params: Parameters that must be present
         forbidden_params: Parameters that must NOT be present
     """
+
     tool_name: str
     allowed_skills: list[str] | None = None  # None = all allowed
     denied_skills: list[str] = field(default_factory=list)
@@ -113,6 +115,7 @@ class AuditLogEntry:
         reason: Human-readable reason
         duration_ms: Time taken for policy check
     """
+
     timestamp: datetime
     skill_name: str
     tool_name: str
@@ -132,6 +135,7 @@ class SkillPermissions:
         denied_tools: Explicitly denied tools
         is_admin: Admin skills bypass restrictions
     """
+
     skill_name: str
     allowed_tools: list[str] = field(default_factory=list)
     denied_tools: list[str] = field(default_factory=list)
@@ -282,8 +286,11 @@ class PolicyEngine:
             # Admin bypass
             if skill.is_admin:
                 await self._log_access(
-                    skill_name, tool_name, inputs,
-                    PolicyDecision.ALLOW, "admin_bypass",
+                    skill_name,
+                    tool_name,
+                    inputs,
+                    PolicyDecision.ALLOW,
+                    "admin_bypass",
                     start_time,
                 )
                 return True
@@ -291,8 +298,11 @@ class PolicyEngine:
             # Explicit deny
             if tool_name in skill.denied_tools:
                 await self._log_access(
-                    skill_name, tool_name, inputs,
-                    PolicyDecision.DENY, "skill_denied",
+                    skill_name,
+                    tool_name,
+                    inputs,
+                    PolicyDecision.DENY,
+                    "skill_denied",
                     start_time,
                 )
                 return False
@@ -300,8 +310,11 @@ class PolicyEngine:
             # Allowed check
             if skill.allowed_tools and tool_name not in skill.allowed_tools:
                 await self._log_access(
-                    skill_name, tool_name, inputs,
-                    PolicyDecision.DENY, "not_in_allowed_list",
+                    skill_name,
+                    tool_name,
+                    inputs,
+                    PolicyDecision.DENY,
+                    "not_in_allowed_list",
                     start_time,
                 )
                 return False
@@ -311,8 +324,11 @@ class PolicyEngine:
         if rule:
             decision = await self._check_rule(skill_name, rule, inputs)
             await self._log_access(
-                skill_name, tool_name, inputs,
-                decision, f"rule_check_{decision.value}",
+                skill_name,
+                tool_name,
+                inputs,
+                decision,
+                f"rule_check_{decision.value}",
                 start_time,
             )
             return decision == PolicyDecision.ALLOW
@@ -320,15 +336,21 @@ class PolicyEngine:
         # Default: allow if skill registered, deny otherwise
         if skill:
             await self._log_access(
-                skill_name, tool_name, inputs,
-                PolicyDecision.ALLOW, "default_allow",
+                skill_name,
+                tool_name,
+                inputs,
+                PolicyDecision.ALLOW,
+                "default_allow",
                 start_time,
             )
             return True
         else:
             await self._log_access(
-                skill_name, tool_name, inputs,
-                PolicyDecision.DENY, "unknown_skill",
+                skill_name,
+                tool_name,
+                inputs,
+                PolicyDecision.DENY,
+                "unknown_skill",
                 start_time,
             )
             return False
@@ -421,10 +443,7 @@ class PolicyEngine:
                 self._rate_trackers[key] = []
 
             # Remove old entries
-            self._rate_trackers[key] = [
-                t for t in self._rate_trackers[key]
-                if now - t < window
-            ]
+            self._rate_trackers[key] = [t for t in self._rate_trackers[key] if now - t < window]
 
             # Check limit
             if len(self._rate_trackers[key]) >= limit:
@@ -477,7 +496,7 @@ class PolicyEngine:
 
             # Trim if over limit
             if len(self._audit_log) > self._max_audit:
-                self._audit_log = self._audit_log[-self._max_audit:]
+                self._audit_log = self._audit_log[-self._max_audit :]
 
         logger.debug(
             "policy_access_logged",
@@ -575,14 +594,8 @@ class PolicyEngine:
         Returns:
             Dict with counts and stats
         """
-        allow_count = sum(
-            1 for e in self._audit_log
-            if e.decision == PolicyDecision.ALLOW
-        )
-        deny_count = sum(
-            1 for e in self._audit_log
-            if e.decision == PolicyDecision.DENY
-        )
+        allow_count = sum(1 for e in self._audit_log if e.decision == PolicyDecision.ALLOW)
+        deny_count = sum(1 for e in self._audit_log if e.decision == PolicyDecision.DENY)
 
         return {
             "registered_skills": len(self._skills),
@@ -635,21 +648,27 @@ def create_default_policy_engine() -> PolicyEngine:
     )
 
     # Add restrictive rules for sensitive tools
-    engine.add_rule(PolicyRule(
-        tool_name="file_write",
-        allowed_skills=["admin"],
-        rate_limit=10,
-    ))
+    engine.add_rule(
+        PolicyRule(
+            tool_name="file_write",
+            allowed_skills=["admin"],
+            rate_limit=10,
+        )
+    )
 
-    engine.add_rule(PolicyRule(
-        tool_name="shell_exec",
-        allowed_skills=["admin"],
-        rate_limit=5,
-    ))
+    engine.add_rule(
+        PolicyRule(
+            tool_name="shell_exec",
+            allowed_skills=["admin"],
+            rate_limit=5,
+        )
+    )
 
-    engine.add_rule(PolicyRule(
-        tool_name="browser",
-        rate_limit=30,  # 30 requests per minute
-    ))
+    engine.add_rule(
+        PolicyRule(
+            tool_name="browser",
+            rate_limit=30,  # 30 requests per minute
+        )
+    )
 
     return engine

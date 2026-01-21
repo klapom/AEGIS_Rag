@@ -54,7 +54,9 @@ class VectorSearchAgent(BaseAgent):
         self.four_way_search = four_way_search or FourWayHybridSearch()
         self.top_k = top_k or settings.retrieval_top_k
         # Sprint 76: Use config default (Ollama reranker available since Sprint 48)
-        self.use_reranking = use_reranking if use_reranking is not None else settings.reranker_enabled
+        self.use_reranking = (
+            use_reranking if use_reranking is not None else settings.reranker_enabled
+        )
         self.max_retries = max_retries
 
         self.logger.info(
@@ -337,7 +339,9 @@ class VectorSearchAgent(BaseAgent):
             try:
                 context = RetrievedContext(
                     id=result.get("id", ""),
-                    text=result.get("text", result.get("content", "")),  # Sprint 76: Fallback to content field
+                    text=result.get(
+                        "text", result.get("content", "")
+                    ),  # Sprint 76: Fallback to content field
                     score=float(score),
                     source=result.get("source", "unknown"),
                     document_id=result.get("document_id", ""),
@@ -354,7 +358,9 @@ class VectorSearchAgent(BaseAgent):
                     search_type=result.get("search_type", "unknown"),
                     score=score,
                     rank=rank,
-                    text_preview=result.get("text", result.get("content", ""))[:100],  # Sprint 76: Fallback to content
+                    text_preview=result.get("text", result.get("content", ""))[
+                        :100
+                    ],  # Sprint 76: Fallback to content
                 )
                 # Continue with next result instead of failing completely
                 continue

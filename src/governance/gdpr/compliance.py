@@ -143,65 +143,59 @@ class PIIDetector:
     """
 
     # Email pattern (RFC 5322 simplified)
-    EMAIL_PATTERN = re.compile(
-        r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
-    )
+    EMAIL_PATTERN = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b")
 
     # Phone patterns (E.164, US, EU formats)
     PHONE_PATTERNS = [
-        re.compile(r'\+?[1-9]\d{1,14}'),  # E.164 international
-        re.compile(r'\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}'),  # US format
-        re.compile(r'\d{2,4}[-.\s]?\d{3,4}[-.\s]?\d{4}'),  # EU format
+        re.compile(r"\+?[1-9]\d{1,14}"),  # E.164 international
+        re.compile(r"\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}"),  # US format
+        re.compile(r"\d{2,4}[-.\s]?\d{3,4}[-.\s]?\d{4}"),  # EU format
     ]
 
     # SSN patterns (US: 123-45-6789)
-    SSN_PATTERN = re.compile(r'\b\d{3}-\d{2}-\d{4}\b')
+    SSN_PATTERN = re.compile(r"\b\d{3}-\d{2}-\d{4}\b")
 
     # Credit card pattern (13-19 digits with optional spaces/hyphens)
-    CREDIT_CARD_PATTERN = re.compile(
-        r'\b(?:\d{4}[-\s]?){3}\d{4,7}\b'
-    )
+    CREDIT_CARD_PATTERN = re.compile(r"\b(?:\d{4}[-\s]?){3}\d{4,7}\b")
 
     # IBAN pattern (EU bank accounts)
-    IBAN_PATTERN = re.compile(
-        r'\b[A-Z]{2}\d{2}[A-Z0-9]{1,30}\b'
-    )
+    IBAN_PATTERN = re.compile(r"\b[A-Z]{2}\d{2}[A-Z0-9]{1,30}\b")
 
     # Postal code patterns (US: 12345, DE: 12345, UK: SW1A 1AA)
     POSTAL_CODE_PATTERNS = [
-        re.compile(r'\b\d{5}(?:-\d{4})?\b'),  # US ZIP
-        re.compile(r'\b[A-Z]{1,2}\d{1,2}[A-Z]?\s?\d[A-Z]{2}\b'),  # UK
-        re.compile(r'\b\d{5}\b'),  # DE/FR
+        re.compile(r"\b\d{5}(?:-\d{4})?\b"),  # US ZIP
+        re.compile(r"\b[A-Z]{1,2}\d{1,2}[A-Z]?\s?\d[A-Z]{2}\b"),  # UK
+        re.compile(r"\b\d{5}\b"),  # DE/FR
     ]
 
     # IP address patterns (IPv4 and IPv6)
-    IPV4_PATTERN = re.compile(
-        r'\b(?:\d{1,3}\.){3}\d{1,3}\b'
-    )
-    IPV6_PATTERN = re.compile(
-        r'\b(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}\b'
-    )
+    IPV4_PATTERN = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")
+    IPV6_PATTERN = re.compile(r"\b(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}\b")
 
     # Tax ID patterns (US EIN, DE Steuernummer)
     TAX_ID_PATTERNS = [
-        re.compile(r'\b\d{2}-\d{7}\b'),  # US EIN
-        re.compile(r'\b\d{2}/\d{3}/\d{5}\b'),  # DE Steuernummer
+        re.compile(r"\b\d{2}-\d{7}\b"),  # US EIN
+        re.compile(r"\b\d{2}/\d{3}/\d{5}\b"),  # DE Steuernummer
     ]
 
     # National ID patterns (simplified)
     NATIONAL_ID_PATTERNS = [
-        re.compile(r'\b[A-Z]{2}\d{6,9}\b'),  # Generic EU format
-        re.compile(r'\b\d{9,12}\b'),  # Generic numeric ID
+        re.compile(r"\b[A-Z]{2}\d{6,9}\b"),  # Generic EU format
+        re.compile(r"\b\d{9,12}\b"),  # Generic numeric ID
     ]
 
     # Pattern mapping to data categories
     PATTERNS: Dict[DataCategory, List[re.Pattern]] = {
         DataCategory.CONTACT: [
             EMAIL_PATTERN,
-        ] + PHONE_PATTERNS + POSTAL_CODE_PATTERNS,
+        ]
+        + PHONE_PATTERNS
+        + POSTAL_CODE_PATTERNS,
         DataCategory.IDENTIFIER: [
             SSN_PATTERN,
-        ] + TAX_ID_PATTERNS + NATIONAL_ID_PATTERNS,
+        ]
+        + TAX_ID_PATTERNS
+        + NATIONAL_ID_PATTERNS,
         DataCategory.FINANCIAL: [
             CREDIT_CARD_PATTERN,
             IBAN_PATTERN,

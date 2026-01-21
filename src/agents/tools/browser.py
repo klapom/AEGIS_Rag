@@ -92,6 +92,7 @@ class BrowserAction(Enum):
         FILL_FORM: Fill multiple form fields
         WAIT: Wait for element or time
     """
+
     NAVIGATE = "navigate"
     CLICK = "click"
     TYPE = "type"
@@ -114,6 +115,7 @@ class BrowserSession:
         is_active: Whether session is active
         interaction_count: Number of interactions performed
     """
+
     session_id: str
     created_at: datetime = field(default_factory=datetime.now)
     current_url: str = ""
@@ -133,6 +135,7 @@ class BrowserResult:
         error: Error message if failed
         duration_ms: Execution time in milliseconds
     """
+
     success: bool
     action: BrowserAction
     data: dict[str, Any] = field(default_factory=dict)
@@ -147,16 +150,19 @@ class BrowserResult:
 
 class BrowserToolError(Exception):
     """Base exception for browser tool errors."""
+
     pass
 
 
 class BrowserNavigationError(BrowserToolError):
     """Navigation failed."""
+
     pass
 
 
 class BrowserInteractionError(BrowserToolError):
     """Element interaction failed."""
+
     pass
 
 

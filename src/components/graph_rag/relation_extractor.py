@@ -305,7 +305,6 @@ class RelationExtractor:
             logger.warning("relation_json_parse_failed", response_preview=cleaned[:200])
             return {"relations": []}
 
-
     async def extract_with_gleaning(
         self,
         text: str,

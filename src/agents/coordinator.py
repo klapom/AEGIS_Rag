@@ -260,11 +260,11 @@ class CoordinatorAgent:
 
         from src.agents.graph import compile_graph_with_tools_config
 
-        logger.info("compiling_graph_with_fresh_config", cache_ttl_seconds=self._graph_cache_ttl_seconds)
-
-        self.compiled_graph = await compile_graph_with_tools_config(
-            checkpointer=self.checkpointer
+        logger.info(
+            "compiling_graph_with_fresh_config", cache_ttl_seconds=self._graph_cache_ttl_seconds
         )
+
+        self.compiled_graph = await compile_graph_with_tools_config(checkpointer=self.checkpointer)
 
         # Set cache expiration
         self._graph_cache_expires_at = now + timedelta(seconds=self._graph_cache_ttl_seconds)
@@ -774,8 +774,12 @@ class CoordinatorAgent:
 
             # Get raw counts
             # Sprint 92: Support both new (dense/sparse) and legacy (vector/bm25) field names
-            dense_count = search_metadata.get("dense_results_count", search_metadata.get("vector_results_count", 0))
-            sparse_count = search_metadata.get("sparse_results_count", search_metadata.get("bm25_results_count", 0))
+            dense_count = search_metadata.get(
+                "dense_results_count", search_metadata.get("vector_results_count", 0)
+            )
+            sparse_count = search_metadata.get(
+                "sparse_results_count", search_metadata.get("bm25_results_count", 0)
+            )
             graph_local_count = search_metadata.get("graph_local_results_count", 0)
             graph_global_count = search_metadata.get("graph_global_results_count", 0)
             total_count = dense_count + sparse_count + graph_local_count + graph_global_count
@@ -909,6 +913,7 @@ class CoordinatorAgent:
                         # Sprint 65 Fix: STORE the generated questions in Redis
                         # So frontend can retrieve them without regenerating
                         from src.components.memory import get_redis_memory
+
                         redis_memory = get_redis_memory()
                         cache_key = f"{session_id}:followup"
                         await redis_memory.store(

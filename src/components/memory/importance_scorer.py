@@ -374,9 +374,9 @@ class ImportanceScorer:
         logger.info(
             "Batch scored facts",
             total_facts=len(facts),
-            avg_score=round(sum(s.total_score for _, s in results) / len(results), 3)
-            if results
-            else 0.0,
+            avg_score=(
+                round(sum(s.total_score for _, s in results) / len(results), 3) if results else 0.0
+            ),
             above_threshold=sum(1 for _, s in results if self.should_remember(s)),
         )
 

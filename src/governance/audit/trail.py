@@ -414,8 +414,10 @@ class AuditTrailManager:
         if report_type == "gdpr_art30":
             # GDPR Article 30: Processing activities
             data_events = [
-                e for e in all_events
-                if e.event_type in [
+                e
+                for e in all_events
+                if e.event_type
+                in [
                     AuditEventType.DATA_READ,
                     AuditEventType.DATA_WRITE,
                     AuditEventType.DATA_DELETE,
@@ -433,8 +435,10 @@ class AuditTrailManager:
         elif report_type == "security":
             # Security events
             security_events = [
-                e for e in all_events
-                if e.event_type in [
+                e
+                for e in all_events
+                if e.event_type
+                in [
                     AuditEventType.AUTH_SUCCESS,
                     AuditEventType.AUTH_FAILURE,
                     AuditEventType.POLICY_VIOLATION,
@@ -444,22 +448,22 @@ class AuditTrailManager:
             report["security_summary"] = {
                 "total": len(security_events),
                 "by_type": self._count_by_event_type(security_events),
-                "failed_auth": len([
-                    e for e in security_events
-                    if e.event_type == AuditEventType.AUTH_FAILURE
-                ]),
-                "violations": len([
-                    e for e in security_events
-                    if e.event_type == AuditEventType.POLICY_VIOLATION
-                ]),
+                "failed_auth": len(
+                    [e for e in security_events if e.event_type == AuditEventType.AUTH_FAILURE]
+                ),
+                "violations": len(
+                    [e for e in security_events if e.event_type == AuditEventType.POLICY_VIOLATION]
+                ),
                 "events": [e.to_dict() for e in security_events],
             }
 
         elif report_type == "skill_usage":
             # Skill execution audit
             skill_events = [
-                e for e in all_events
-                if e.event_type in [
+                e
+                for e in all_events
+                if e.event_type
+                in [
                     AuditEventType.SKILL_LOADED,
                     AuditEventType.SKILL_EXECUTED,
                     AuditEventType.SKILL_FAILED,
@@ -467,14 +471,12 @@ class AuditTrailManager:
             ]
 
             report["skill_usage"] = {
-                "total_executions": len([
-                    e for e in skill_events
-                    if e.event_type == AuditEventType.SKILL_EXECUTED
-                ]),
-                "failures": len([
-                    e for e in skill_events
-                    if e.event_type == AuditEventType.SKILL_FAILED
-                ]),
+                "total_executions": len(
+                    [e for e in skill_events if e.event_type == AuditEventType.SKILL_EXECUTED]
+                ),
+                "failures": len(
+                    [e for e in skill_events if e.event_type == AuditEventType.SKILL_FAILED]
+                ),
                 "by_skill": self._count_by_metadata_key(skill_events, "skill_id"),
                 "by_actor": self._count_by_actor(skill_events),
                 "events": [e.to_dict() for e in skill_events],
@@ -483,8 +485,10 @@ class AuditTrailManager:
         elif report_type == "data_access":
             # Data access audit
             data_events = [
-                e for e in all_events
-                if e.event_type in [
+                e
+                for e in all_events
+                if e.event_type
+                in [
                     AuditEventType.DATA_READ,
                     AuditEventType.DATA_WRITE,
                     AuditEventType.DATA_DELETE,
@@ -494,8 +498,12 @@ class AuditTrailManager:
             report["data_access"] = {
                 "total": len(data_events),
                 "reads": len([e for e in data_events if e.event_type == AuditEventType.DATA_READ]),
-                "writes": len([e for e in data_events if e.event_type == AuditEventType.DATA_WRITE]),
-                "deletes": len([e for e in data_events if e.event_type == AuditEventType.DATA_DELETE]),
+                "writes": len(
+                    [e for e in data_events if e.event_type == AuditEventType.DATA_WRITE]
+                ),
+                "deletes": len(
+                    [e for e in data_events if e.event_type == AuditEventType.DATA_DELETE]
+                ),
                 "by_actor": self._count_by_actor(data_events),
                 "events": [e.to_dict() for e in data_events],
             }
@@ -518,9 +526,7 @@ class AuditTrailManager:
         """
         count = await self.storage.purge_old_events(self.retention_days)
 
-        logger.info(
-            f"Purged {count} audit events older than {self.retention_days} days"
-        )
+        logger.info(f"Purged {count} audit events older than {self.retention_days} days")
 
         return count
 
@@ -629,6 +635,7 @@ class SkillAuditDecorator:
         Returns:
             Wrapped function
         """
+
         @wraps(func)
         async def wrapper(*args, **kwargs):
             # Log skill loaded (once)

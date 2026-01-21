@@ -187,11 +187,11 @@ def _parse_path(path: str) -> list[str | int]:
     parts: list[str | int] = []
 
     # Match either a field name or array index
-    pattern = r'([a-zA-Z_][a-zA-Z0-9_]*|\[\d+\])'
+    pattern = r"([a-zA-Z_][a-zA-Z0-9_]*|\[\d+\])"
     matches = re.findall(pattern, path)
 
     for match in matches:
-        if match.startswith('['):
+        if match.startswith("["):
             # Array index
             idx = int(match[1:-1])
             parts.append(idx)
@@ -231,7 +231,7 @@ def template_tool(template: str, context: dict[str, Any]) -> str:
         result = template
 
         # Replace {{ variable }} patterns
-        pattern = r'\{\{\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*\}\}'
+        pattern = r"\{\{\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*\}\}"
 
         def replace_var(match: re.Match[str]) -> str:
             var_name = match.group(1)

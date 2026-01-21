@@ -95,9 +95,7 @@ class SmartEntityExpander:
         LIMIT 1
         """
         try:
-            results = await self.neo4j_client.execute_read(
-                cypher, {"namespaces": namespaces}
-            )
+            results = await self.neo4j_client.execute_read(cypher, {"namespaces": namespaces})
             if results and len(results) > 0:
                 return results[0].get("has_entities", False)
             return False
@@ -112,10 +110,7 @@ class SmartEntityExpander:
             return True
 
     async def expand_entities(
-        self,
-        query: str,
-        namespaces: list[str],
-        top_k: int = 10
+        self, query: str, namespaces: list[str], top_k: int = 10
     ) -> tuple[list[str], int]:
         """Execute 3-stage entity expansion.
 
@@ -161,9 +156,7 @@ class SmartEntityExpander:
 
         # STAGE 2: Graph Expansion (N-hop configurable)
         graph_expanded = await self._expand_via_graph(
-            initial_entities,
-            namespaces,
-            max_hops=self.graph_expansion_hops
+            initial_entities, namespaces, max_hops=self.graph_expansion_hops
         )
         logger.info(
             "stage2_graph_expansion",
@@ -189,7 +182,7 @@ class SmartEntityExpander:
         if len(graph_expanded) < self.min_entities_threshold:
             synonyms = await self._generate_synonyms_llm(
                 initial_entities[:2],  # Top-2 only for performance
-                max_per_entity=self.max_synonyms_per_entity
+                max_per_entity=self.max_synonyms_per_entity,
             )
             final_entities = graph_expanded + synonyms
             logger.info(
@@ -210,10 +203,7 @@ class SmartEntityExpander:
         return final_entities, self.graph_expansion_hops
 
     async def expand_and_rerank(
-        self,
-        query: str,
-        namespaces: list[str],
-        top_k: int = 10
+        self, query: str, namespaces: list[str], top_k: int = 10
     ) -> tuple[list[tuple[str, float]], int]:
         """Expand entities and rerank by semantic similarity.
 
@@ -301,8 +291,8 @@ Entities:"""
         # Parse entities (one per line)
         entities = [
             line.strip()
-            for line in response.content.split('\n')
-            if line.strip() and not line.startswith('#') and not line.startswith('-')
+            for line in response.content.split("\n")
+            if line.strip() and not line.startswith("#") and not line.startswith("-")
         ]
 
         # Deduplicate and limit
@@ -317,10 +307,7 @@ Entities:"""
         return unique_entities[:10]  # Max 10 initial entities
 
     async def _expand_via_graph(
-        self,
-        initial_entities: list[str],
-        namespaces: list[str],
-        max_hops: int = 1
+        self, initial_entities: list[str], namespaces: list[str], max_hops: int = 1
     ) -> list[str]:
         """Stage 2: Expand entities via graph traversal.
 
@@ -382,9 +369,7 @@ Entities:"""
             return initial_entities
 
     async def _generate_synonyms_llm(
-        self,
-        entities: list[str],
-        max_per_entity: int = 3
+        self, entities: list[str], max_per_entity: int = 3
     ) -> list[str]:
         """Stage 3: Generate synonyms for entities using LLM.
 
@@ -429,8 +414,8 @@ Synonyms:"""
 
         synonyms = [
             line.strip()
-            for line in response.content.split('\n')
-            if line.strip() and not line.startswith('-') and not line.startswith('#')
+            for line in response.content.split("\n")
+            if line.strip() and not line.startswith("-") and not line.startswith("#")
         ]
 
         # Deduplicate
@@ -442,7 +427,7 @@ Synonyms:"""
                 unique_synonyms.append(s)
                 seen.add(s_lower)
 
-        return unique_synonyms[:len(entities) * max_per_entity]
+        return unique_synonyms[: len(entities) * max_per_entity]
 
     @staticmethod
     def _cosine_similarity(vec1: np.ndarray, vec2: np.ndarray) -> float:

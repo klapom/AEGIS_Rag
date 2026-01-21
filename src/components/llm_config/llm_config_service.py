@@ -160,9 +160,7 @@ class LLMConfig:
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
-            "use_cases": {
-                uc.value: config.to_dict() for uc, config in self.use_cases.items()
-            },
+            "use_cases": {uc.value: config.to_dict() for uc, config in self.use_cases.items()},
             "version": self.version,
             "updated_at": self.updated_at,
         }
@@ -242,9 +240,7 @@ class LLMConfigService:
 
             if config_json:
                 config_str = (
-                    config_json.decode("utf-8")
-                    if isinstance(config_json, bytes)
-                    else config_json
+                    config_json.decode("utf-8") if isinstance(config_json, bytes) else config_json
                 )
                 config_dict = json.loads(config_str)
                 config = LLMConfig.from_dict(config_dict)

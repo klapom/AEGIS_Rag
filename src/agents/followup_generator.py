@@ -278,15 +278,15 @@ Output ONLY a JSON array of question strings (no other text):
         # Sprint 113 Fix: Extract JSON array even if LLM adds extra text
         # The LLM sometimes adds explanatory text after the JSON array
         # Find the JSON array by bracket matching
-        start_idx = content.find('[')
+        start_idx = content.find("[")
         if start_idx != -1:
             # Find matching closing bracket (handles nested arrays)
             bracket_count = 0
             end_idx = start_idx
             for i, char in enumerate(content[start_idx:], start_idx):
-                if char == '[':
+                if char == "[":
                     bracket_count += 1
-                elif char == ']':
+                elif char == "]":
                     bracket_count -= 1
                     if bracket_count == 0:
                         end_idx = i + 1

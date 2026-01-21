@@ -636,7 +636,9 @@ class DomainValidator:
             )
 
         except Exception as e:
-            logger.error("confidence_calibration_check_failed", domain_name=domain_name, error=str(e))
+            logger.error(
+                "confidence_calibration_check_failed", domain_name=domain_name, error=str(e)
+            )
             return ValidationCheck(
                 name="confidence_calibration",
                 status=ValidationStatus.WARNING,

@@ -521,7 +521,9 @@ class SkillOrchestrator:
             result.errors.append(f"Workflow execution error: {e!s}")
             result.total_duration = time.time() - start_time
 
-            logger.error("workflow_execution_failed", workflow_id=wf_id, error=str(e), exc_info=True)
+            logger.error(
+                "workflow_execution_failed", workflow_id=wf_id, error=str(e), exc_info=True
+            )
 
         finally:
             self._active_workflows.pop(wf_id, None)
@@ -563,7 +565,9 @@ class SkillOrchestrator:
         # Route to appropriate manager based on capabilities
         manager = self._route_to_manager(required_capabilities)
 
-        logger.debug("complex_workflow_routed", manager=manager.name, capabilities=manager.capabilities)
+        logger.debug(
+            "complex_workflow_routed", manager=manager.name, capabilities=manager.capabilities
+        )
 
         # Create workflow definition using LLM planning
         workflow = await self._plan_workflow(
@@ -634,8 +638,7 @@ class SkillOrchestrator:
         # For now, use simple heuristic planning
         # In future Sprint, integrate with LLM for complex planning
         skills_to_use = [
-            skill for skill in available_skills
-            if any(cap in skill for cap in capabilities)
+            skill for skill in available_skills if any(cap in skill for cap in capabilities)
         ]
 
         if not skills_to_use:
@@ -744,11 +747,17 @@ class SkillOrchestrator:
                 logger.warning("circular_dependency_detected", remaining=list(remaining))
                 ready_skills = list(remaining)  # Force execution
 
-            phases.append({
-                "name": f"phase_{phase_num}",
-                "skills": ready_skills,
-                "mode": ExecutionMode.PARALLEL if len(ready_skills) > 1 else ExecutionMode.SEQUENTIAL,
-            })
+            phases.append(
+                {
+                    "name": f"phase_{phase_num}",
+                    "skills": ready_skills,
+                    "mode": (
+                        ExecutionMode.PARALLEL
+                        if len(ready_skills) > 1
+                        else ExecutionMode.SEQUENTIAL
+                    ),
+                }
+            )
 
             executed.update(ready_skills)
             remaining -= set(ready_skills)

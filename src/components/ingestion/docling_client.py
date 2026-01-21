@@ -857,7 +857,9 @@ class DoclingClient:
             logger.error(
                 "docling_txt_parse_error", file_path=str(file_path), error=str(e), exc_info=True
             )
-            raise IngestionError(str(file_path), f"Unexpected error parsing .txt document: {e}") from e
+            raise IngestionError(
+                str(file_path), f"Unexpected error parsing .txt document: {e}"
+            ) from e
 
     async def parse_document(self, file_path: Path) -> DoclingParsedDocument:
         """Parse a single document via Docling container (async pattern).

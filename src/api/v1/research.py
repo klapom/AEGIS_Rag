@@ -143,7 +143,9 @@ async def _stream_research_progress(
                         num_contexts = len(all_contexts)
                         avg_score = 0.0
                         if num_contexts > 0:
-                            avg_score = sum(ctx.get("score", 0.0) for ctx in all_contexts) / num_contexts
+                            avg_score = (
+                                sum(ctx.get("score", 0.0) for ctx in all_contexts) / num_contexts
+                            )
 
                         # Determine quality level
                         if num_contexts >= 10 and avg_score > 0.7:
@@ -178,14 +180,16 @@ async def _stream_research_progress(
                         # Sprint 92: Show which contexts are being used
                         # Top contexts by score for synthesis
                         top_contexts = sorted(
-                            all_contexts,
-                            key=lambda c: c.get("score", 0.0),
-                            reverse=True
+                            all_contexts, key=lambda c: c.get("score", 0.0), reverse=True
                         )[:10]
 
                         context_summaries = []
                         for i, ctx in enumerate(top_contexts[:5], 1):
-                            text = ctx.get("text", "")[:80] + "..." if len(ctx.get("text", "")) > 80 else ctx.get("text", "")
+                            text = (
+                                ctx.get("text", "")[:80] + "..."
+                                if len(ctx.get("text", "")) > 80
+                                else ctx.get("text", "")
+                            )
                             source = ctx.get("source", ctx.get("source_channel", "unknown"))
                             context_summaries.append(f"[{i}] {source}: {text}")
 
@@ -196,7 +200,9 @@ async def _stream_research_progress(
                             metadata={
                                 "num_contexts": len(all_contexts),
                                 # Sprint 92: Show contexts being synthesized
-                                "num_sources_cited": metadata_update.get("num_sources_cited", len(top_contexts)),
+                                "num_sources_cited": metadata_update.get(
+                                    "num_sources_cited", len(top_contexts)
+                                ),
                                 "top_sources": context_summaries,
                             },
                         )
@@ -380,9 +386,7 @@ async def research_query(
                     sources=sources,
                     research_plan=final_state.get("sub_queries", []),
                     iterations=final_state.get("iteration", 0),
-                    quality_metrics=final_state.get("metadata", {}).get(
-                        "quality_metrics", {}
-                    ),
+                    quality_metrics=final_state.get("metadata", {}).get("quality_metrics", {}),
                     start_time=start_time,
                 )
                 return structured_response.model_dump()

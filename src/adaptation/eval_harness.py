@@ -164,8 +164,7 @@ class EvalHarness:
         for check, threshold in self.thresholds.items():
             if not 0.0 <= threshold <= 1.0:
                 raise ValueError(
-                    f"Threshold for {check.value} must be between 0.0 and 1.0, "
-                    f"got {threshold}"
+                    f"Threshold for {check.value} must be between 0.0 and 1.0, " f"got {threshold}"
                 )
 
         self.logger.info(
@@ -487,7 +486,9 @@ IMPORTANT: Return ONLY valid JSON, no other text."""
                 result = json.loads(response.content)
             except json.JSONDecodeError:
                 # Try to extract JSON from markdown code block
-                json_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", response.content, re.DOTALL)
+                json_match = re.search(
+                    r"```(?:json)?\s*(\{.*?\})\s*```", response.content, re.DOTALL
+                )
                 if json_match:
                     result = json.loads(json_match.group(1))
                 else:

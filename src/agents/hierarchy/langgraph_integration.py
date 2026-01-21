@@ -331,9 +331,7 @@ class LangGraphHierarchyBuilder:
         hierarchy = {
             "executive": executive,
             "managers": manager_agents,
-            "workers": {
-                manager_id: workers for manager_id, workers in workers_by_manager.items()
-            },
+            "workers": {manager_id: workers for manager_id, workers in workers_by_manager.items()},
         }
 
         logger.info(

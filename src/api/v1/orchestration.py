@@ -66,7 +66,9 @@ async def list_active_orchestrations(
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Page size (max 100)"),
     skill: str | None = Query(None, description="Filter by skill name"),
-    status_filter: str | None = Query(None, description="Filter by status (running/completed/failed)"),
+    status_filter: str | None = Query(
+        None, description="Filter by status (running/completed/failed)"
+    ),
 ) -> OrchestrationListResponse:
     """List active orchestrations with pagination and filtering.
 
@@ -189,9 +191,7 @@ async def list_active_orchestrations(
             # Extract skill name
             workflow_def = result.metadata.get("workflow")
             skill_name = (
-                getattr(workflow_def, "skills", ["unknown"])[0]
-                if workflow_def
-                else "unknown"
+                getattr(workflow_def, "skills", ["unknown"])[0] if workflow_def else "unknown"
             )
 
             # Current phase
@@ -309,9 +309,7 @@ async def get_orchestration_trace(orchestration_id: str) -> OrchestrationTrace:
 
         # Extract skill name
         workflow_def = workflow_result.metadata.get("workflow")
-        skill_name = (
-            getattr(workflow_def, "skills", ["unknown"])[0] if workflow_def else "unknown"
-        )
+        skill_name = getattr(workflow_def, "skills", ["unknown"])[0] if workflow_def else "unknown"
 
         # Build timeline from phase results
         events: list[TraceEvent] = []
@@ -380,9 +378,7 @@ async def get_orchestration_trace(orchestration_id: str) -> OrchestrationTrace:
                 skill_name=None,
                 duration_ms=total_duration_ms,
                 success=workflow_result.success,
-                error=(
-                    workflow_result.errors[0] if workflow_result.errors else None
-                ),
+                error=(workflow_result.errors[0] if workflow_result.errors else None),
             )
         )
 

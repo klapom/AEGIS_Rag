@@ -50,9 +50,7 @@ class DocumentChunk(BaseModel):
 
     id: str = Field(..., description="Unique chunk identifier")
     content: str = Field(..., description="Text content of the chunk")
-    relevance_score: float = Field(
-        ..., ge=0.0, le=1.0, description="Relevance score (0.0-1.0)"
-    )
+    relevance_score: float = Field(..., ge=0.0, le=1.0, description="Relevance score (0.0-1.0)")
     token_count: int = Field(..., description="Number of tokens in this chunk")
     chunk_index: int = Field(..., ge=0, description="Position in document (0-indexed)")
     metadata: ChunkMetadata | None = Field(None, description="Additional metadata")
@@ -77,9 +75,7 @@ class ContextDocument(BaseModel):
     token_count: int = Field(..., description="Total tokens in document")
     chunk_count: int = Field(..., description="Number of chunks")
     uploaded_at: datetime = Field(..., description="Upload timestamp")
-    status: Literal["ready", "processing", "error"] = Field(
-        ..., description="Processing status"
-    )
+    status: Literal["ready", "processing", "error"] = Field(..., description="Processing status")
     namespace: str | None = Field(None, description="Document namespace")
     metadata: dict | None = Field(None, description="Additional metadata")
 
@@ -111,9 +107,7 @@ class ContextMetricsResponse(BaseModel):
     total_tokens: int = Field(..., description="Total tokens across all documents")
     max_tokens: int = Field(default=128000, description="Maximum context window size")
     document_count: int = Field(..., description="Number of documents")
-    average_relevance: float = Field(
-        ..., ge=0.0, le=1.0, description="Average relevance score"
-    )
+    average_relevance: float = Field(..., ge=0.0, le=1.0, description="Average relevance score")
     chunks_total: int = Field(default=0, description="Total number of chunks")
     utilization_percent: float = Field(
         default=0.0, description="Context window utilization percentage"
@@ -145,9 +139,7 @@ class CompressionRequest(BaseModel):
         max_chunks: Maximum chunks to keep (for truncation)
     """
 
-    document_id: str | None = Field(
-        None, description="Specific document to compress (optional)"
-    )
+    document_id: str | None = Field(None, description="Specific document to compress (optional)")
     strategy: Literal["summarization", "filtering", "truncation", "hybrid"] = Field(
         ..., description="Compression strategy"
     )

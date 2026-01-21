@@ -238,8 +238,7 @@ class SemanticRelationDeduplicator:
                 max_concurrent=10,
             )
             embeddings_list = [
-                emb["dense"] if isinstance(emb, dict) else emb
-                for emb in batch_result
+                emb["dense"] if isinstance(emb, dict) else emb for emb in batch_result
             ]
 
             for rel_type, embedding in zip(unique_types, embeddings_list, strict=True):

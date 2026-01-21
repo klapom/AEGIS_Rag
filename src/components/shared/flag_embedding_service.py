@@ -541,12 +541,14 @@ class FlagEmbeddingService:
                 encode_duration_ms=round(encode_duration_ms, 2),
                 batch_size=len(uncached_texts),
                 embeddings_per_sec=round(len(uncached_texts) / (encode_duration_ms / 1000), 2),
-                avg_sparse_tokens=round(
-                    sum(len(r["sparse_vector"].indices) for r in results if r) / len(results),
-                    0,
-                )
-                if results
-                else 0,
+                avg_sparse_tokens=(
+                    round(
+                        sum(len(r["sparse_vector"].indices) for r in results if r) / len(results),
+                        0,
+                    )
+                    if results
+                    else 0
+                ),
             )
 
         batch_end = time.perf_counter()

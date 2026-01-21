@@ -111,7 +111,9 @@ class AgentMessage(BaseModel):
     payload: dict[str, Any] = Field(..., description="Message content")
     priority: MessagePriority = Field(..., description="Message priority level")
     timestamp: datetime = Field(..., description="Message creation timestamp")
-    correlation_id: str | None = Field(None, description="Correlation ID for request-response pairs")
+    correlation_id: str | None = Field(
+        None, description="Correlation ID for request-response pairs"
+    )
     ttl_seconds: int = Field(60, description="Time-to-live in seconds")
     metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
@@ -460,7 +462,9 @@ class AgentDetails(BaseModel):
     status: AgentStatus = Field(..., description="Operational status")
     capabilities: list[str] = Field(default_factory=list, description="Agent capabilities")
     skills: list[str] = Field(default_factory=list, description="Available skills")
-    active_tasks: list[ActiveTask] = Field(default_factory=list, description="Currently active tasks")
+    active_tasks: list[ActiveTask] = Field(
+        default_factory=list, description="Currently active tasks"
+    )
     performance: AgentPerformance | None = Field(None, description="Performance metrics")
 
 

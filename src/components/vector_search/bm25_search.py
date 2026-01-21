@@ -21,6 +21,7 @@ from src.core.exceptions import VectorSearchError
 
 logger = structlog.get_logger(__name__)
 
+
 # Sprint 70 Feature 70.14: Multilingual stopwords for BM25 preprocessing
 # Loaded from `stop-words` package (55+ languages supported)
 # These dilute BM25 term-frequency signals → removed for sharper keyword matching
@@ -33,7 +34,7 @@ def _load_multilingual_stopwords() -> frozenset[str]:
     Returns:
         Frozen set of stopwords from all supported languages
     """
-    languages = ['de', 'en', 'es', 'fr', 'it', 'pt', 'ru', 'nl', 'pl', 'tr']
+    languages = ["de", "en", "es", "fr", "it", "pt", "ru", "nl", "pl", "tr"]
     all_stopwords = set()
 
     for lang in languages:
@@ -44,8 +45,11 @@ def _load_multilingual_stopwords() -> frozenset[str]:
         except Exception as e:
             logger.warning(f"stopwords_load_failed", language=lang, error=str(e))
 
-    logger.info("multilingual_stopwords_loaded", languages=languages, total_count=len(all_stopwords))
+    logger.info(
+        "multilingual_stopwords_loaded", languages=languages, total_count=len(all_stopwords)
+    )
     return frozenset(all_stopwords)
+
 
 # Load stopwords at module level (cached for all BM25Search instances)
 MULTILINGUAL_STOPWORDS = _load_multilingual_stopwords()

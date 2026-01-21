@@ -77,6 +77,7 @@ class NativeBGEM3Embeddings(Embeddings):
         from src.domains.vector_search.embedding.native_embedding_service import (
             get_native_embedding_service,
         )
+
         self.service = get_native_embedding_service()
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:

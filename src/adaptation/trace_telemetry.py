@@ -297,7 +297,10 @@ class UnifiedTracer:
             json_line = json.dumps(event_dict, ensure_ascii=False) + "\n"
 
             # Async write with lock (Sprint 118 Fix: SIM117 - single with statement)
-            async with self._write_lock, aiofiles.open(self.log_path, mode="a", encoding="utf-8") as f:
+            async with (
+                self._write_lock,
+                aiofiles.open(self.log_path, mode="a", encoding="utf-8") as f,
+            ):
                 await f.write(json_line)
 
             logger.debug(
@@ -316,9 +319,7 @@ class UnifiedTracer:
                 exc_info=True,
             )
 
-    async def get_metrics(
-        self, time_range: tuple[datetime, datetime]
-    ) -> dict[str, Any]:
+    async def get_metrics(self, time_range: tuple[datetime, datetime]) -> dict[str, Any]:
         """Aggregate metrics for given time range.
 
         Args:
@@ -368,7 +369,11 @@ class UnifiedTracer:
                         event_dict = json.loads(line.strip())
 
                         # Validate required fields
-                        if "timestamp" not in event_dict or "latency_ms" not in event_dict or "stage" not in event_dict:
+                        if (
+                            "timestamp" not in event_dict
+                            or "latency_ms" not in event_dict
+                            or "stage" not in event_dict
+                        ):
                             logger.warning("Skipping event with missing required fields")
                             continue
 
@@ -428,9 +433,7 @@ class UnifiedTracer:
         stage_metrics = {}
         for stage, data in stage_breakdown.items():
             avg_stage_latency = sum(data["latencies"]) / len(data["latencies"])
-            avg_stage_tokens = (
-                sum(data["tokens"]) / len(data["tokens"]) if data["tokens"] else 0
-            )
+            avg_stage_tokens = sum(data["tokens"]) / len(data["tokens"]) if data["tokens"] else 0
             stage_metrics[stage] = {
                 "count": data["count"],
                 "avg_latency_ms": round(avg_stage_latency, 2),

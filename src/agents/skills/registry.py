@@ -467,9 +467,7 @@ class SkillRegistry:
         for name in self._active:
             if name in self._loaded:
                 skill = self._loaded[name]
-                instructions.append(
-                    f"## Skill: {skill.metadata.name}\n\n{skill.instructions}"
-                )
+                instructions.append(f"## Skill: {skill.metadata.name}\n\n{skill.instructions}")
         return "\n\n---\n\n".join(instructions)
 
     def list_available(self) -> List[str]:
@@ -516,9 +514,7 @@ class SkillRegistry:
         """
         return self._available.get(name)
 
-    def match_intent(
-        self, intent: str, similarity_threshold: float = 0.75
-    ) -> List[str]:
+    def match_intent(self, intent: str, similarity_threshold: float = 0.75) -> List[str]:
         """Find skills that match an intent using embedding-based semantic matching.
 
         Uses BGE-M3 embeddings for semantic similarity instead of string matching.
@@ -606,9 +602,7 @@ class SkillRegistry:
                 trigger_key = f"{name}:{trigger}"
                 self._trigger_embeddings[trigger_key] = trigger_embedding
 
-        logger.info(
-            "trigger_embeddings_precomputed", count=len(self._trigger_embeddings)
-        )
+        logger.info("trigger_embeddings_precomputed", count=len(self._trigger_embeddings))
 
     def _cosine_similarity(self, a: list, b: list) -> float:
         """Compute cosine similarity between two vectors.

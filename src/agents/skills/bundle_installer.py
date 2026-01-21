@@ -154,9 +154,7 @@ class BundleInstaller:
                 Defaults to src/agents/skills/bundles/
         """
         if bundles_dir is None:
-            self.bundles_dir = (
-                Path(__file__).parent / "bundles"
-            )
+            self.bundles_dir = Path(__file__).parent / "bundles"
         else:
             self.bundles_dir = Path(bundles_dir)
 
@@ -284,9 +282,7 @@ class BundleInstaller:
         # Validate dependencies
         missing_deps = self.validate_dependencies(bundle)
         if missing_deps:
-            logger.warning(
-                "bundle_missing_dependencies", bundle_id=bundle_id, missing=missing_deps
-            )
+            logger.warning("bundle_missing_dependencies", bundle_id=bundle_id, missing=missing_deps)
 
         # Install skills in order
         report = InstallationReport(bundle_id=bundle_id, success=True)
@@ -297,9 +293,7 @@ class BundleInstaller:
         for skill_name in skill_names:
             try:
                 # Find skill config
-                skill_config = next(
-                    (s for s in bundle.skills if s["name"] == skill_name), None
-                )
+                skill_config = next((s for s in bundle.skills if s["name"] == skill_name), None)
                 if not skill_config:
                     logger.warning("skill_not_in_bundle", skill=skill_name)
                     continue

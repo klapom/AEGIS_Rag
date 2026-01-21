@@ -191,7 +191,9 @@ async def execute_tool(
 
     # Check if tool exists
     if tool_name not in TOOL_EXECUTORS:
-        logger.warning("tool_not_found", tool_name=tool_name, available_tools=list(TOOL_EXECUTORS.keys()))
+        logger.warning(
+            "tool_not_found", tool_name=tool_name, available_tools=list(TOOL_EXECUTORS.keys())
+        )
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Tool not found: {tool_name}. Available tools: {', '.join(TOOL_EXECUTORS.keys())}",

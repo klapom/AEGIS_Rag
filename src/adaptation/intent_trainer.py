@@ -197,9 +197,7 @@ class IntentTrainer:
         features = Features(
             {
                 "text": Value("string"),
-                "label": ClassLabel(
-                    names=list(self.INTENT_LABELS.keys())
-                ),
+                "label": ClassLabel(names=list(self.INTENT_LABELS.keys())),
             }
         )
 
@@ -454,9 +452,7 @@ class IntentTrainer:
         Returns:
             Total size in megabytes
         """
-        total_size = sum(
-            f.stat().st_size for f in model_path.rglob("*") if f.is_file()
-        )
+        total_size = sum(f.stat().st_size for f in model_path.rglob("*") if f.is_file())
         return round(total_size / (1024 * 1024), 2)
 
 

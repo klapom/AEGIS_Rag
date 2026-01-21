@@ -276,9 +276,7 @@ class EntityCanonicalizer:
         if len(entity.name) < 20:
             for canonical in existing_entities:
                 for surface_form in canonical.surface_forms:
-                    distance = self._levenshtein_distance(
-                        entity.name.lower(), surface_form.lower()
-                    )
+                    distance = self._levenshtein_distance(entity.name.lower(), surface_form.lower())
                     if distance <= self.word_distance_threshold:
                         logger.debug(
                             "canonical_match_levenshtein",

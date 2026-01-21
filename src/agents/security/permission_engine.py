@@ -137,9 +137,7 @@ class PermissionEngine:
 
         logger.info("permission_engine_initialized")
 
-    def register_skill_permissions(
-        self, skill_name: str, required: List[str]
-    ) -> None:
+    def register_skill_permissions(self, skill_name: str, required: List[str]) -> None:
         """Register permissions required by a skill.
 
         Args:
@@ -244,9 +242,7 @@ class PermissionEngine:
             rate_limits=rate_limits or {},
         )
 
-    def check_skill_permission(
-        self, user_id: str, skill_name: str
-    ) -> tuple[bool, str]:
+    def check_skill_permission(self, user_id: str, skill_name: str) -> tuple[bool, str]:
         """Check if user can use a skill.
 
         Checks:
@@ -395,9 +391,7 @@ class PermissionEngine:
             self._rate_counters = {}
             logger.info("all_rate_counters_reset")
 
-    def get_user_permissions(
-        self, user_id: str
-    ) -> Set[Permission]:
+    def get_user_permissions(self, user_id: str) -> Set[Permission]:
         """Get allowed permissions for a user.
 
         Args:

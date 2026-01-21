@@ -550,7 +550,9 @@ class SkillLibraryManager:
                     bundle = self._parse_bundle(bundle_dir)
                     if bundle:
                         self._bundles[bundle.name] = bundle
-                        logger.info("bundle_discovered", name=bundle.name, skills=len(bundle.skills))
+                        logger.info(
+                            "bundle_discovered", name=bundle.name, skills=len(bundle.skills)
+                        )
 
         logger.info(
             "discovery_complete",
@@ -986,9 +988,7 @@ class SkillLibraryManager:
             "bundles": len(self._bundles),
             "registered_skills": len(self._skill_metadata),
             "loaded_bundles": len(self._loaded_bundles),
-            "skills_per_library": {
-                name: len(lib.skills) for name, lib in self._libraries.items()
-            },
+            "skills_per_library": {name: len(lib.skills) for name, lib in self._libraries.items()},
         }
 
     # Private methods

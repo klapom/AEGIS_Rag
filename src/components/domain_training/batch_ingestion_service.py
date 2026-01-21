@@ -90,6 +90,7 @@ class DocumentRequest:
         content: Document text content
         metadata: Optional metadata (source, page, etc.)
     """
+
     document_id: str
     content: str
     metadata: dict[str, Any] = field(default_factory=dict)
@@ -105,6 +106,7 @@ class IngestionOptions:
         chunk_strategy: Chunking strategy to use (default: section_aware)
         parallel_workers: Number of parallel workers (default: 4, max: 10)
     """
+
     extract_entities: bool = True
     extract_relations: bool = True
     chunk_strategy: str = "section_aware"
@@ -132,6 +134,7 @@ class DocumentResult:
         error: Error message if status is "error"
         error_code: Error code if status is "error"
     """
+
     document_id: str
     status: DocumentStatus
     entities_extracted: int = 0
@@ -156,6 +159,7 @@ class BatchProgress:
         results: List of document results
         errors: List of document errors
     """
+
     batch_id: str
     domain_name: str
     total_documents: int
@@ -372,19 +376,23 @@ class BatchIngestionService:
                             error=str(result),
                             exc_info=result,
                         )
-                        batch.errors.append({
-                            "document_id": "unknown",
-                            "error": str(result),
-                            "error_code": "UNEXPECTED_ERROR",
-                        })
+                        batch.errors.append(
+                            {
+                                "document_id": "unknown",
+                                "error": str(result),
+                                "error_code": "UNEXPECTED_ERROR",
+                            }
+                        )
                     elif isinstance(result, DocumentResult):
                         batch.results.append(result)
                         if result.status == "error":
-                            batch.errors.append({
-                                "document_id": result.document_id,
-                                "error": result.error,
-                                "error_code": result.error_code,
-                            })
+                            batch.errors.append(
+                                {
+                                    "document_id": result.document_id,
+                                    "error": result.error,
+                                    "error_code": result.error_code,
+                                }
+                            )
 
                 # Update final status
                 if batch.failed_count > 0:

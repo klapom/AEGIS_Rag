@@ -80,12 +80,8 @@ class ConsentCreateRequest(BaseModel):
     data_categories: List[DataCategoryEnum] = Field(
         ..., min_length=1, description="Categories of personal data"
     )
-    retention_period: Optional[int] = Field(
-        None, ge=1, description="Retention period in days"
-    )
-    explicit_consent: bool = Field(
-        True, description="Whether explicit consent was obtained"
-    )
+    retention_period: Optional[int] = Field(None, ge=1, description="Retention period in days")
+    explicit_consent: bool = Field(True, description="Whether explicit consent was obtained")
 
     @field_validator("retention_period")
     @classmethod
@@ -114,9 +110,7 @@ class DataSubjectRequestCreate(BaseModel):
 class PIISettingsUpdate(BaseModel):
     """Request model for updating PII detection settings."""
 
-    entity_types: Optional[List[str]] = Field(
-        None, description="PII entity types to detect"
-    )
+    entity_types: Optional[List[str]] = Field(None, description="PII entity types to detect")
     confidence_threshold: Optional[float] = Field(
         None, ge=0.0, le=1.0, description="Detection confidence threshold"
     )

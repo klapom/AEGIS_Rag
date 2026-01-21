@@ -102,7 +102,11 @@ async def llm_answer_node(state: dict[str, Any]) -> dict[str, Any]:
 
         # Sprint 81 Feature 81.8: Pass no_hedging to eliminate meta-commentary
         async for token_event in generator.generate_with_citations_streaming(
-            query, contexts, intent=intent, strict_faithfulness=strict_faithfulness, no_hedging=no_hedging
+            query,
+            contexts,
+            intent=intent,
+            strict_faithfulness=strict_faithfulness,
+            no_hedging=no_hedging,
         ):
             event_type = token_event.get("event")
 
@@ -239,7 +243,11 @@ async def hybrid_search_node(state: dict[str, Any]) -> dict[str, Any]:
     try:
         vector_result = await vector_task
         duration_ms = (time.perf_counter() - vector_start) * 1000
-        count = len(vector_result.get("retrieved_contexts", [])) if isinstance(vector_result, dict) else 0
+        count = (
+            len(vector_result.get("retrieved_contexts", []))
+            if isinstance(vector_result, dict)
+            else 0
+        )
 
         stream_phase_event(
             phase_type=PhaseType.BM25_SEARCH,

@@ -252,7 +252,9 @@ class MemoryWritePolicy:
         scored_facts.sort(key=lambda x: x[1].total_score, reverse=True)
 
         for fact, score in scored_facts:
-            result = await self.write_fact(fact, importance_score=score, domain_context=domain_context)
+            result = await self.write_fact(
+                fact, importance_score=score, domain_context=domain_context
+            )
 
             if result["written"]:
                 results["written"] += 1
@@ -272,9 +274,11 @@ class MemoryWritePolicy:
             total=results["total_facts"],
             written=results["written"],
             rejected=results["rejected"],
-            write_rate=round(results["written"] / results["total_facts"], 3)
-            if results["total_facts"] > 0
-            else 0,
+            write_rate=(
+                round(results["written"] / results["total_facts"], 3)
+                if results["total_facts"] > 0
+                else 0
+            ),
         )
 
         return results

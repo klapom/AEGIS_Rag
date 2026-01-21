@@ -59,21 +59,30 @@ class ToolsConfig(BaseModel):
 
     # Sprint 70 Feature 70.11: Tool Detection Strategy
     tool_detection_strategy: str = Field(
-        default="markers",
-        description="Detection strategy: 'markers', 'llm', or 'hybrid'"
+        default="markers", description="Detection strategy: 'markers', 'llm', or 'hybrid'"
     )
     explicit_tool_markers: list[str] = Field(
         default_factory=lambda: ["[TOOL:", "[SEARCH:", "[FETCH:"],
-        description="Explicit markers triggering immediate tool use"
+        description="Explicit markers triggering immediate tool use",
     )
     action_hint_phrases: list[str] = Field(
         default_factory=lambda: [
-            "need to", "haben zu", "muss",  # Multilingual support
-            "check", "search", "look up", "prüfen", "suchen",
-            "current", "latest", "aktuell", "aktuell",
-            "I'll need to access", "Let me check",
+            "need to",
+            "haben zu",
+            "muss",  # Multilingual support
+            "check",
+            "search",
+            "look up",
+            "prüfen",
+            "suchen",
+            "current",
+            "latest",
+            "aktuell",
+            "aktuell",
+            "I'll need to access",
+            "Let me check",
         ],
-        description="Phrases suggesting potential tool use (triggers LLM decision in hybrid mode)"
+        description="Phrases suggesting potential tool use (triggers LLM decision in hybrid mode)",
     )
 
     updated_at: str | None = Field(None, description="Last update timestamp")

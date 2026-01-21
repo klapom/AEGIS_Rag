@@ -161,9 +161,7 @@ class IntegrityCheckResponse(BaseModel):
         description="List of chain integrity violations",
     )
     last_verified_at: datetime
-    verification_duration_ms: float = Field(
-        ..., description="Time taken to verify chain"
-    )
+    verification_duration_ms: float = Field(..., description="Time taken to verify chain")
 
     @field_serializer("last_verified_at")
     def serialize_datetime(self, value: datetime, _info) -> str:

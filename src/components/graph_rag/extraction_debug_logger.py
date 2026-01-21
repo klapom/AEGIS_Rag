@@ -366,7 +366,9 @@ class ExtractionDebugLogger:
                 entity_name=entity.get("name", ""),
                 entity_type=entity.get("type", ""),
                 entity_name_length=len(entity.get("name", "")),
-                entity_description=entity.get("description", "")[:200] if entity.get("description") else "",
+                entity_description=(
+                    entity.get("description", "")[:200] if entity.get("description") else ""
+                ),
             )
 
     def log_relations(self, relations: list[Any], source: str = "combined") -> None:
@@ -416,7 +418,9 @@ class ExtractionDebugLogger:
                 relation_source=relation.get("source", ""),
                 relation_target=relation.get("target", ""),
                 relation_type=relation.get("type", ""),
-                relation_description=relation.get("description", "")[:200] if relation.get("description") else "",
+                relation_description=(
+                    relation.get("description", "")[:200] if relation.get("description") else ""
+                ),
             )
 
     def log_validation_error(self, error: str, context: str = "") -> None:
@@ -497,7 +501,9 @@ class ExtractionDebugLogger:
         """
         try:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"extraction_{self.session.document_id}_{self.session.chunk_index}_{timestamp}.json"
+            filename = (
+                f"extraction_{self.session.document_id}_{self.session.chunk_index}_{timestamp}.json"
+            )
             filepath = EXTRACTION_DEBUG_DIR / filename
 
             full_data = {

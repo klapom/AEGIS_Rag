@@ -199,9 +199,7 @@ class ToolRewardCalculator:
             return 0.5 * speedup
         return 0.0
 
-    def _calculate_quality_reward(
-        self, tool_name: str, execution_result: dict[str, Any]
-    ) -> float:
+    def _calculate_quality_reward(self, tool_name: str, execution_result: dict[str, Any]) -> float:
         """Calculate reward based on output quality.
 
         Validates output format and content based on tool-specific rules.

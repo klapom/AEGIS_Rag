@@ -319,11 +319,10 @@ class SemanticDeduplicator:
 
         # Compute embeddings using BGE-M3 (async batch embedding)
         # Sprint 92 Fix: Handle both list (Ollama/ST) and dict (FlagEmbedding) returns
-        batch_result = await self.embedding_service.embed_batch(names, max_concurrent=self.batch_size)
-        embeddings = [
-            emb["dense"] if isinstance(emb, dict) else emb
-            for emb in batch_result
-        ]
+        batch_result = await self.embedding_service.embed_batch(
+            names, max_concurrent=self.batch_size
+        )
+        embeddings = [emb["dense"] if isinstance(emb, dict) else emb for emb in batch_result]
 
         # Convert to numpy for sklearn
         embeddings_np = np.array(embeddings)
@@ -566,10 +565,7 @@ class MultiCriteriaDeduplicator(SemanticDeduplicator):
             batch_result = await self.embedding_service.embed_batch(
                 rep_names, max_concurrent=self.batch_size
             )
-            embeddings = [
-                emb["dense"] if isinstance(emb, dict) else emb
-                for emb in batch_result
-            ]
+            embeddings = [emb["dense"] if isinstance(emb, dict) else emb for emb in batch_result]
             embeddings_np = np.array(embeddings)
             similarity_matrix = cosine_similarity(embeddings_np)
 

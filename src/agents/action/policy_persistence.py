@@ -323,14 +323,10 @@ class PolicyPersistenceManager:
             return keys
 
         except RedisError as e:
-            self.logger.error(
-                "policy_list_failed", error=str(e), error_type=type(e).__name__
-            )
+            self.logger.error("policy_list_failed", error=str(e), error_type=type(e).__name__)
             return []
 
-    async def update_policy_field(
-        self, agent_id: str, field_path: str, value: Any
-    ) -> bool:
+    async def update_policy_field(self, agent_id: str, field_path: str, value: Any) -> bool:
         """Update specific field in policy without loading entire state.
 
         Useful for atomic updates to Q-values or counts.

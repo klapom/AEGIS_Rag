@@ -167,9 +167,7 @@ class DualLevelSearch:
             # Sprint 92: Use expand_entities() instead of expand_and_rerank()
             # Semantic reranking adds 2-5s due to multiple embedding calls
             expanded_entity_names, hops_used = await expander.expand_entities(
-                query=query,
-                namespaces=namespaces or ["default"],
-                top_k=top_k * 3
+                query=query, namespaces=namespaces or ["default"], top_k=top_k * 3
             )
             phase_timings["entity_expansion_ms"] = (time.time() - phase_start) * 1000
             phase_timings["graph_hops_used"] = hops_used
@@ -514,7 +512,9 @@ Answer:"""
             global_k = max(top_k - local_k, 2)
 
             # Execute both searches in parallel would be ideal, but for simplicity:
-            entities, local_metadata = await self.local_search(query, top_k=local_k, namespaces=namespaces)
+            entities, local_metadata = await self.local_search(
+                query, top_k=local_k, namespaces=namespaces
+            )
             topics = await self.global_search(query, top_k=global_k, namespaces=namespaces)
 
             # Retrieve relationships for found entities

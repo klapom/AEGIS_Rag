@@ -808,9 +808,7 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
 
 
 @router.get("/sessions", response_model=SessionListResponse)
-async def list_sessions(
-    limit: int = 50, offset: int = 0
-) -> SessionListResponse:
+async def list_sessions(limit: int = 50, offset: int = 0) -> SessionListResponse:
     """list active conversation sessions with pagination.
 
     Sprint 15 Feature 15.5: Session Management for History Sidebar
@@ -1421,6 +1419,7 @@ def _extract_sources(result: dict[str, Any]) -> list[SourceDocument]:
                     # Entity count from graph search (1, 2, 3...) - normalize to 0-1
                     # Use logarithmic scale: score of 5 entities ≈ 0.85
                     import math
+
                     normalized_score = min(1.0, math.log10(raw_score + 1) / math.log10(10))
                 else:
                     # Already in 0-1 range (vector similarity or rerank score)

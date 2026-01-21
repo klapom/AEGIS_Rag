@@ -417,7 +417,9 @@ async def get_research_graph_with_config() -> StateGraph:
         and _research_graph_cache_expires_at is not None
         and now < _research_graph_cache_expires_at
     ):
-        logger.debug("using_cached_research_graph_config", enable_tools=_research_graph_config_cache)
+        logger.debug(
+            "using_cached_research_graph_config", enable_tools=_research_graph_config_cache
+        )
         return get_research_graph(enable_tools=_research_graph_config_cache)
 
     # Load fresh config from Redis

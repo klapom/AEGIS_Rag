@@ -99,9 +99,7 @@ class ToolSelectionPolicy:
             min_epsilon=min_epsilon,
         )
 
-    def select_tool(
-        self, task: str, available_tools: list[str], context: str | None = None
-    ) -> str:
+    def select_tool(self, task: str, available_tools: list[str], context: str | None = None) -> str:
         """Select tool using ε-greedy policy.
 
         With probability ε, selects random tool (exploration).
@@ -142,9 +140,7 @@ class ToolSelectionPolicy:
             return tool
 
         # Exploitation: Best Q-value
-        tool_scores = {
-            tool: self.q_values[(tool, context)] for tool in available_tools
-        }
+        tool_scores = {tool: self.q_values[(tool, context)] for tool in available_tools}
 
         best_tool = max(tool_scores, key=tool_scores.get)
         best_q_value = tool_scores[best_tool]
@@ -240,9 +236,7 @@ class ToolSelectionPolicy:
         if not available_tools:
             return None
 
-        tool_scores = {
-            tool: self.q_values.get((tool, context), 0.0) for tool in available_tools
-        }
+        tool_scores = {tool: self.q_values.get((tool, context), 0.0) for tool in available_tools}
 
         return max(tool_scores, key=tool_scores.get)
 
@@ -267,8 +261,7 @@ class ToolSelectionPolicy:
                 "q_values": {ctx: self.q_values[(tool, ctx)] for ctx in contexts},
                 "counts": {ctx: self.counts[(tool, ctx)] for ctx in contexts},
                 "total_executions": sum(self.counts[(tool, ctx)] for ctx in contexts),
-                "avg_q_value": sum(self.q_values[(tool, ctx)] for ctx in contexts)
-                / len(contexts),
+                "avg_q_value": sum(self.q_values[(tool, ctx)] for ctx in contexts) / len(contexts),
             }
 
         # Statistics for all tools

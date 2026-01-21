@@ -309,8 +309,7 @@ def merge_sparse_vectors(
             final_dict[idx] = sum(values) / len(values)
         else:
             raise ValueError(
-                f"Invalid merge_strategy: {merge_strategy}. "
-                "Must be 'sum', 'max', or 'avg'"
+                f"Invalid merge_strategy: {merge_strategy}. " "Must be 'sum', 'max', or 'avg'"
             )
 
     # Convert to SparseVector

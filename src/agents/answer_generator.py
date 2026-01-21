@@ -461,7 +461,9 @@ class AnswerGenerator:
             prompt = FAITHFULNESS_STRICT_PROMPT.format(contexts=context_text, query=query)
             prompt_mode = "strict_faithfulness"
         else:
-            prompt = ANSWER_GENERATION_WITH_CITATIONS_PROMPT.format(contexts=context_text, query=query)
+            prompt = ANSWER_GENERATION_WITH_CITATIONS_PROMPT.format(
+                contexts=context_text, query=query
+            )
             prompt_mode = "standard_citations"
 
         # Phase 1 Diagnostic Logging: Log full prompt for debugging
@@ -846,7 +848,10 @@ class AnswerGenerator:
             answer = self._no_context_answer(query)
             yield {"event": "citation_map", "data": {}}
             yield {"event": "token", "data": {"content": answer}}
-            yield {"event": "complete", "data": {"done": True, "answer": answer, "citation_map": {}}}
+            yield {
+                "event": "complete",
+                "data": {"done": True, "answer": answer, "citation_map": {}},
+            }
             return
 
         # Sprint 92: Check context relevance before generating
@@ -858,7 +863,10 @@ class AnswerGenerator:
             answer = self._no_relevant_context_answer(query, max_score)
             yield {"event": "citation_map", "data": {}}
             yield {"event": "token", "data": {"content": answer}}
-            yield {"event": "complete", "data": {"done": True, "answer": answer, "citation_map": {}}}
+            yield {
+                "event": "complete",
+                "data": {"done": True, "answer": answer, "citation_map": {}},
+            }
             return
 
         # TD-097: Load strict_faithfulness from Redis config if not explicitly passed
@@ -898,7 +906,9 @@ class AnswerGenerator:
             prompt = FAITHFULNESS_STRICT_PROMPT.format(contexts=context_text, query=query)
             prompt_mode = "strict_faithfulness"
         else:
-            prompt = ANSWER_GENERATION_WITH_CITATIONS_PROMPT.format(contexts=context_text, query=query)
+            prompt = ANSWER_GENERATION_WITH_CITATIONS_PROMPT.format(
+                contexts=context_text, query=query
+            )
             prompt_mode = "standard_citations"
 
         logger.debug(

@@ -384,10 +384,10 @@ class IntentClassifier:
         prediction = predictions[0]
 
         # Convert tensor to native Python type if needed
-        if hasattr(prediction, 'item'):
+        if hasattr(prediction, "item"):
             # PyTorch/NumPy tensor - convert to Python scalar
             prediction = prediction.item()
-        elif hasattr(prediction, 'numpy'):
+        elif hasattr(prediction, "numpy"):
             # Tensor without .item() - convert via numpy
             prediction = prediction.numpy().item()
 
@@ -419,9 +419,9 @@ class IntentClassifier:
         try:
             probs = self.setfit_model.predict_proba([query])[0]
             # Convert tensor to list/array if needed
-            if hasattr(probs, 'tolist'):
+            if hasattr(probs, "tolist"):
                 probs = probs.tolist()
-            elif hasattr(probs, 'numpy'):
+            elif hasattr(probs, "numpy"):
                 probs = probs.numpy().tolist()
             confidence = float(max(probs))
 
@@ -474,14 +474,22 @@ class IntentClassifier:
             else:
                 # Legacy cache format
                 cached_intent, cached_time = cached_data
-                cached_intent_val = cached_intent.value if hasattr(cached_intent, 'value') else str(cached_intent)
-                cached_weights = INTENT_WEIGHT_PROFILES.get(cached_intent, INTENT_WEIGHT_PROFILES[Intent.FACTUAL])
+                cached_intent_val = (
+                    cached_intent.value if hasattr(cached_intent, "value") else str(cached_intent)
+                )
+                cached_weights = INTENT_WEIGHT_PROFILES.get(
+                    cached_intent, INTENT_WEIGHT_PROFILES[Intent.FACTUAL]
+                )
                 cached_clara_val = None
 
             logger.debug("intent_cache_hit", query=query[:50], intent=cached_intent_val)
             # Reconstruct intent enum
             try:
-                legacy_intent = Intent(cached_intent_val) if cached_intent_val in [e.value for e in Intent] else Intent.FACTUAL
+                legacy_intent = (
+                    Intent(cached_intent_val)
+                    if cached_intent_val in [e.value for e in Intent]
+                    else Intent.FACTUAL
+                )
             except ValueError:
                 legacy_intent = Intent.FACTUAL
 
@@ -636,9 +644,7 @@ class IntentClassifier:
         embed_start = time.perf_counter()
         embedding_result = await embedding_service.embed_single(query)
         query_embedding = (
-            embedding_result["dense"]
-            if isinstance(embedding_result, dict)
-            else embedding_result
+            embedding_result["dense"] if isinstance(embedding_result, dict) else embedding_result
         )
         embed_time_ms = (time.perf_counter() - embed_start) * 1000
 

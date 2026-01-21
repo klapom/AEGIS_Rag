@@ -798,7 +798,9 @@ async def add_documents_stream(
                             overall_progress = doc_base_progress + (
                                 phase_progress * doc_progress_range
                             )
-                            message = f"[{event_timestamp}] {PathLib(doc_path).name}: {event_message}"
+                            message = (
+                                f"[{event_timestamp}] {PathLib(doc_path).name}: {event_message}"
+                            )
 
                             # Sprint 51: Include entity/relation counts for Live Metrics
                             event_details = progress_event.get("details", {})
@@ -906,7 +908,9 @@ async def add_documents_stream(
                                 pipeline_status="completed",
                             )
 
-                            message = f"[{_ts()}] Added {PathLib(doc_path).name}: {chunk_count} chunks"
+                            message = (
+                                f"[{_ts()}] Added {PathLib(doc_path).name}: {chunk_count} chunks"
+                            )
                             yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': doc_base_progress + doc_progress_range, 'message': message, 'documents_processed': doc_index + 1, 'documents_total': total_docs, 'current_document': PathLib(doc_path).name, 'detailed_progress': detailed_progress})}\n\n"
 
                             logger.info(
@@ -3403,7 +3407,9 @@ async def upload_document_fast(
 
     try:
         # Save uploaded file to temp directory
-        with tempfile.NamedTemporaryFile(delete=False, suffix=PathLib(file.filename).suffix) as tmp_file:
+        with tempfile.NamedTemporaryFile(
+            delete=False, suffix=PathLib(file.filename).suffix
+        ) as tmp_file:
             content = await file.read()
             tmp_file.write(content)
             tmp_file_path = tmp_file.name

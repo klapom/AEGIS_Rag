@@ -58,7 +58,22 @@ FRENCH_PRONOUNS = {
 
 # Spanish pronouns
 SPANISH_PRONOUNS = {
-    "person": {"él", "ella", "ellos", "ellas", "le", "les", "lo", "la", "los", "las", "su", "sus", "suyo", "suya"},
+    "person": {
+        "él",
+        "ella",
+        "ellos",
+        "ellas",
+        "le",
+        "les",
+        "lo",
+        "la",
+        "los",
+        "las",
+        "su",
+        "sus",
+        "suyo",
+        "suya",
+    },
     "thing": {"ello", "lo", "la", "esto", "eso", "aquello"},
     "relative": {"que", "quien", "quienes", "cual", "cuales", "cuyo", "cuya"},
 }
@@ -190,26 +205,24 @@ class HeuristicCoreferenceResolver:
         for sent_idx, sent in enumerate(doc.sents):
             for token in sent:
                 if self._is_pronoun(token):
-                    antecedent = self._find_antecedent(
-                        token, sent_idx, entities, doc
-                    )
+                    antecedent = self._find_antecedent(token, sent_idx, entities, doc)
 
                     if antecedent:
-                        resolutions.append({
-                            "start": token.idx,
-                            "end": token.idx + len(token.text),
-                            "pronoun": token.text,
-                            "replacement": antecedent["name"],
-                            "antecedent_type": antecedent["type"],
-                        })
+                        resolutions.append(
+                            {
+                                "start": token.idx,
+                                "end": token.idx + len(token.text),
+                                "pronoun": token.text,
+                                "replacement": antecedent["name"],
+                                "antecedent_type": antecedent["type"],
+                            }
+                        )
 
         # Apply resolutions (in reverse order to maintain positions)
         resolved_text = text
         for res in sorted(resolutions, key=lambda x: x["start"], reverse=True):
             resolved_text = (
-                resolved_text[:res["start"]] +
-                res["replacement"] +
-                resolved_text[res["end"]:]
+                resolved_text[: res["start"]] + res["replacement"] + resolved_text[res["end"] :]
             )
 
             # Track chain
@@ -242,13 +255,15 @@ class HeuristicCoreferenceResolver:
 
         for sent_idx, sent in enumerate(doc.sents):
             for ent in sent.ents:
-                entities.append({
-                    "name": ent.text,
-                    "type": ent.label_,
-                    "start": ent.start_char,
-                    "end": ent.end_char,
-                    "sent_idx": sent_idx,
-                })
+                entities.append(
+                    {
+                        "name": ent.text,
+                        "type": ent.label_,
+                        "start": ent.start_char,
+                        "end": ent.end_char,
+                        "sent_idx": sent_idx,
+                    }
+                )
 
         return entities
 

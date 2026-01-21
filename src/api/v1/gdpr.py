@@ -199,19 +199,19 @@ async def list_consents(
             all_consents = [c for c in all_consents if purpose.lower() in c.purpose.lower()]
 
         if legal_basis:
-            all_consents = [
-                c for c in all_consents
-                if c.legal_basis.value == legal_basis.value
-            ]
+            all_consents = [c for c in all_consents if c.legal_basis.value == legal_basis.value]
 
         if status:
             filtered = []
             for c in all_consents:
                 consent_status = (
-                    ConsentStatusEnum.WITHDRAWN if c.withdrawn_at
-                    else ConsentStatusEnum.EXPIRED
-                    if c.expires_at and datetime.utcnow() > c.expires_at
-                    else ConsentStatusEnum.GRANTED
+                    ConsentStatusEnum.WITHDRAWN
+                    if c.withdrawn_at
+                    else (
+                        ConsentStatusEnum.EXPIRED
+                        if c.expires_at and datetime.utcnow() > c.expires_at
+                        else ConsentStatusEnum.GRANTED
+                    )
                 )
                 if consent_status == status:
                     filtered.append(c)
@@ -280,7 +280,9 @@ async def create_consent(request: Request, consent_request: ConsentCreateRequest
     try:
         # Map API enums to internal enums
         legal_basis_internal = LegalBasis(consent_request.legal_basis.value)
-        data_categories_internal = [DataCategory(cat.value) for cat in consent_request.data_categories]
+        data_categories_internal = [
+            DataCategory(cat.value) for cat in consent_request.data_categories
+        ]
 
         # Calculate expiration
         expires_at = None
@@ -325,7 +327,9 @@ async def create_consent(request: Request, consent_request: ConsentCreateRequest
         )
 
 
-@router.post("/request", response_model=DataSubjectRequestResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/request", response_model=DataSubjectRequestResponse, status_code=status.HTTP_201_CREATED
+)
 @limiter.limit("20/minute")
 async def create_data_subject_request(
     request: Request,
@@ -456,9 +460,7 @@ async def get_processing_activities(
                 controller_name=record.controller_name,
                 processing_purpose=record.processing_purpose,
                 legal_basis=_map_legal_basis_to_enum(record.legal_basis),
-                data_categories=[
-                    _map_data_category_to_enum(cat) for cat in record.data_categories
-                ],
+                data_categories=[_map_data_category_to_enum(cat) for cat in record.data_categories],
                 data_subjects=record.data_subjects,
                 recipients=record.recipients,
                 retention_period=record.retention_period,
@@ -519,7 +521,9 @@ async def get_pii_settings(request: Request) -> PIISettingsResponse:
 
 @router.put("/pii-settings", response_model=PIISettingsResponse)
 @limiter.limit("20/minute")
-async def update_pii_settings(request: Request, settings_update: PIISettingsUpdate) -> PIISettingsResponse:
+async def update_pii_settings(
+    request: Request, settings_update: PIISettingsUpdate
+) -> PIISettingsResponse:
     """Update PII detection settings.
 
     Allows configuration of:

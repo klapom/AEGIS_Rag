@@ -176,22 +176,73 @@ class HybridExtractionService:
         # Sprint 92.18 Fix: English indicators (previously missing!)
         # English-specific patterns that rarely appear in other languages
         english_indicators = [
-            " the ", " is ", " are ", " was ", " were ", " have ", " has ", " been ",
-            " with ", " that ", " this ", " from ", " which ", " their ", " they ",
-            " would ", " could ", " should ", " about ", " than ", " into "
+            " the ",
+            " is ",
+            " are ",
+            " was ",
+            " were ",
+            " have ",
+            " has ",
+            " been ",
+            " with ",
+            " that ",
+            " this ",
+            " from ",
+            " which ",
+            " their ",
+            " they ",
+            " would ",
+            " could ",
+            " should ",
+            " about ",
+            " than ",
+            " into ",
         ]
         english_score = sum(1 for indicator in english_indicators if indicator in text_lower)
 
         # German indicators (unique German patterns)
-        german_indicators = ["der ", "die ", "das ", "und ", "ist ", "von ", "zu ", "im ", " nicht ", " sich "]
+        german_indicators = [
+            "der ",
+            "die ",
+            "das ",
+            "und ",
+            "ist ",
+            "von ",
+            "zu ",
+            "im ",
+            " nicht ",
+            " sich ",
+        ]
         german_score = sum(1 for indicator in german_indicators if indicator in text_lower)
 
         # French indicators (unique French patterns)
-        french_indicators = ["le ", "la ", "les ", " que ", " dans ", "pour ", " avec ", " mais ", " sont ", " aux "]
+        french_indicators = [
+            "le ",
+            "la ",
+            "les ",
+            " que ",
+            " dans ",
+            "pour ",
+            " avec ",
+            " mais ",
+            " sont ",
+            " aux ",
+        ]
         french_score = sum(1 for indicator in french_indicators if indicator in text_lower)
 
         # Spanish indicators (unique Spanish patterns, removed "de ", "es ", "en " - too common in English)
-        spanish_indicators = ["el ", "los ", "las ", " que ", " para ", " como ", " pero ", " está ", " son ", " muy "]
+        spanish_indicators = [
+            "el ",
+            "los ",
+            "las ",
+            " que ",
+            " para ",
+            " como ",
+            " pero ",
+            " está ",
+            " son ",
+            " muy ",
+        ]
         spanish_score = sum(1 for indicator in spanish_indicators if indicator in text_lower)
 
         # Determine language by highest score
@@ -308,7 +359,8 @@ class HybridExtractionService:
                 # Rebuild entity list with filtered entities
                 filtered_names = {d["name"].lower() for d in filtered_dicts}
                 entities = [
-                    e for e in entities
+                    e
+                    for e in entities
                     if e.name.lower() in filtered_names or
                     # Also check normalized name (article removed)
                     filter_instance._remove_article(e.name, language).lower() in filtered_names

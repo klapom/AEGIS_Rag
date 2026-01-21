@@ -120,8 +120,7 @@ class CLARAGranularityMapper:
         ]
 
     async def classify_granularity(
-        self,
-        query: str
+        self, query: str
     ) -> tuple[Literal["fine-grained", "holistic"], float]:
         """Classify query granularity using C-LARA + heuristics.
 
@@ -181,9 +180,7 @@ class CLARAGranularityMapper:
         return self._heuristic_only_fallback(query)
 
     def _map_clara_to_granularity(
-        self,
-        clara_intent,
-        query: str
+        self, clara_intent, query: str
     ) -> tuple[Literal["fine-grained", "holistic"], float]:
         """Map C-LARA intent to granularity.
 
@@ -206,21 +203,21 @@ class CLARAGranularityMapper:
                 "clara_granularity_mapped",
                 clara_intent="navigation",
                 granularity="fine-grained",
-                confidence=0.95
+                confidence=0.95,
             )
             return "fine-grained", 0.95
 
         elif clara_intent in [
             CLARAIntent.PROCEDURAL,
             CLARAIntent.COMPARISON,
-            CLARAIntent.RECOMMENDATION
+            CLARAIntent.RECOMMENDATION,
         ]:
             # How-to, Compare, Recommend → reasoning needed → holistic
             logger.debug(
                 "clara_granularity_mapped",
                 clara_intent=clara_intent.value,
                 granularity="holistic",
-                confidence=0.90
+                confidence=0.90,
             )
             return "holistic", 0.90
 
@@ -230,16 +227,11 @@ class CLARAGranularityMapper:
 
         else:
             # Unknown intent → fallback to heuristic
-            logger.warning(
-                "unknown_clara_intent",
-                intent=str(clara_intent),
-                fallback="heuristic"
-            )
+            logger.warning("unknown_clara_intent", intent=str(clara_intent), fallback="heuristic")
             return self._heuristic_only_fallback(query)
 
     def _classify_factual_granularity(
-        self,
-        query: str
+        self, query: str
     ) -> tuple[Literal["fine-grained", "holistic"], float]:
         """Sub-classify FACTUAL intent into fine-grained vs holistic.
 
@@ -251,21 +243,15 @@ class CLARAGranularityMapper:
         Returns:
             Tuple of (granularity, confidence)
         """
-        fine_score = sum(
-            1 for pattern in self.fine_grained_factual
-            if pattern.search(query)
-        )
+        fine_score = sum(1 for pattern in self.fine_grained_factual if pattern.search(query))
 
-        holistic_score = sum(
-            1 for pattern in self.holistic_factual
-            if pattern.search(query)
-        )
+        holistic_score = sum(1 for pattern in self.holistic_factual if pattern.search(query))
 
         logger.debug(
             "factual_subclassification",
             query=query[:100],
             fine_score=fine_score,
-            holistic_score=holistic_score
+            holistic_score=holistic_score,
         )
 
         # Decision logic
@@ -282,8 +268,7 @@ class CLARAGranularityMapper:
             return "holistic", min(confidence, 0.90)
 
     def _heuristic_only_fallback(
-        self,
-        query: str
+        self, query: str
     ) -> tuple[Literal["fine-grained", "holistic"], float]:
         """Pure heuristic fallback if C-LARA not available.
 
@@ -302,7 +287,7 @@ class CLARAGranularityMapper:
             "heuristic_only_classification",
             query=query[:100],
             fine_score=fine_score,
-            holistic_score=holistic_score
+            holistic_score=holistic_score,
         )
 
         if fine_score >= holistic_score:

@@ -413,9 +413,7 @@ class BackgroundJobQueue:
             Number of active jobs
         """
         # Clean up completed tasks
-        completed_ids = [
-            doc_id for doc_id, task in self._active_jobs.items() if task.done()
-        ]
+        completed_ids = [doc_id for doc_id, task in self._active_jobs.items() if task.done()]
         for doc_id in completed_ids:
             del self._active_jobs[doc_id]
 
