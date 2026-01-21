@@ -2,6 +2,9 @@
 
 Sprint 67 Feature 67.1: BubblewrapSandboxBackend testing
 Tests cover security features, isolation, error handling, and edge cases.
+
+Note: Requires bubblewrap (bwrap) to be installed on the system.
+CI/CD workflow installs it via: sudo apt-get install -y bubblewrap
 """
 
 import asyncio

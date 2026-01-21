@@ -44,7 +44,7 @@ describe('DomainAutoDiscovery', () => {
       render(<DomainAutoDiscovery {...defaultProps} />);
 
       expect(screen.getByTestId('domain-auto-discovery')).toBeInTheDocument();
-      expect(screen.getByTestId('drop-zone')).toBeInTheDocument();
+      expect(screen.getByTestId('domain-discovery-upload-area')).toBeInTheDocument();
     });
 
     it('should render description text', () => {
@@ -71,7 +71,7 @@ describe('DomainAutoDiscovery', () => {
     it('should not render analyze button when no files are uploaded', () => {
       render(<DomainAutoDiscovery {...defaultProps} />);
 
-      expect(screen.queryByTestId('analyze-button')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('domain-discovery-analyze-button')).not.toBeInTheDocument();
     });
   });
 
@@ -85,7 +85,7 @@ describe('DomainAutoDiscovery', () => {
       render(<DomainAutoDiscovery {...defaultProps} />);
 
       const file = new File(['test content'], 'test.txt', { type: 'text/plain' });
-      const input = screen.getByTestId('file-input');
+      const input = screen.getByTestId('domain-discovery-file-input');
 
       await user.upload(input, file);
 
@@ -98,7 +98,7 @@ describe('DomainAutoDiscovery', () => {
       render(<DomainAutoDiscovery {...defaultProps} />);
 
       const file = new File(['# Test'], 'readme.md', { type: 'text/markdown' });
-      const input = screen.getByTestId('file-input');
+      const input = screen.getByTestId('domain-discovery-file-input');
 
       await user.upload(input, file);
 
@@ -112,7 +112,7 @@ describe('DomainAutoDiscovery', () => {
       const file = new File(['content'], 'document.docx', {
         type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       });
-      const input = screen.getByTestId('file-input');
+      const input = screen.getByTestId('domain-discovery-file-input');
 
       await user.upload(input, file);
 
@@ -124,7 +124,7 @@ describe('DomainAutoDiscovery', () => {
       render(<DomainAutoDiscovery {...defaultProps} />);
 
       const file = new File(['<html></html>'], 'page.html', { type: 'text/html' });
-      const input = screen.getByTestId('file-input');
+      const input = screen.getByTestId('domain-discovery-file-input');
 
       await user.upload(input, file);
 
@@ -135,7 +135,7 @@ describe('DomainAutoDiscovery', () => {
       render(<DomainAutoDiscovery {...defaultProps} />);
 
       const file = new File(['content'], 'image.png', { type: 'image/png' });
-      const input = screen.getByTestId('file-input') as HTMLInputElement;
+      const input = screen.getByTestId('domain-discovery-file-input') as HTMLInputElement;
 
       // Manually trigger file input change since userEvent may not handle all file types
       Object.defineProperty(input, 'files', {
@@ -145,7 +145,7 @@ describe('DomainAutoDiscovery', () => {
       fireEvent.change(input);
 
       await waitFor(() => {
-        expect(screen.getByTestId('upload-error')).toBeInTheDocument();
+        expect(screen.getByTestId('domain-discovery-error')).toBeInTheDocument();
       });
       expect(screen.getByText(/nicht unterstütztes format/i)).toBeInTheDocument();
     });
@@ -157,11 +157,11 @@ describe('DomainAutoDiscovery', () => {
       // Create a file larger than 10MB
       const largeContent = 'x'.repeat(11 * 1024 * 1024);
       const file = new File([largeContent], 'large.txt', { type: 'text/plain' });
-      const input = screen.getByTestId('file-input');
+      const input = screen.getByTestId('domain-discovery-file-input');
 
       await user.upload(input, file);
 
-      expect(screen.getByTestId('upload-error')).toBeInTheDocument();
+      expect(screen.getByTestId('domain-discovery-error')).toBeInTheDocument();
       expect(screen.getByText(/datei zu groß/i)).toBeInTheDocument();
     });
 
@@ -169,7 +169,7 @@ describe('DomainAutoDiscovery', () => {
       const user = userEvent.setup();
       render(<DomainAutoDiscovery {...defaultProps} />);
 
-      const input = screen.getByTestId('file-input');
+      const input = screen.getByTestId('domain-discovery-file-input');
 
       // Upload 3 files first
       await user.upload(input, [
@@ -181,7 +181,7 @@ describe('DomainAutoDiscovery', () => {
       // Try to upload a 4th file
       await user.upload(input, new File(['4'], 'file4.txt', { type: 'text/plain' }));
 
-      expect(screen.getByTestId('upload-error')).toBeInTheDocument();
+      expect(screen.getByTestId('domain-discovery-error')).toBeInTheDocument();
       expect(screen.getByText(/maximal 3 dateien/i)).toBeInTheDocument();
     });
 
@@ -189,7 +189,7 @@ describe('DomainAutoDiscovery', () => {
       const user = userEvent.setup();
       render(<DomainAutoDiscovery {...defaultProps} />);
 
-      const input = screen.getByTestId('file-input');
+      const input = screen.getByTestId('domain-discovery-file-input');
 
       // Upload first file
       await user.upload(input, new File(['content'], 'test.txt', { type: 'text/plain' }));
@@ -197,7 +197,7 @@ describe('DomainAutoDiscovery', () => {
       // Try to upload same file again
       await user.upload(input, new File(['different'], 'test.txt', { type: 'text/plain' }));
 
-      expect(screen.getByTestId('upload-error')).toBeInTheDocument();
+      expect(screen.getByTestId('domain-discovery-error')).toBeInTheDocument();
       expect(screen.getByText(/datei bereits hochgeladen/i)).toBeInTheDocument();
     });
 
@@ -206,11 +206,11 @@ describe('DomainAutoDiscovery', () => {
       render(<DomainAutoDiscovery {...defaultProps} />);
 
       const file = new File(['content'], 'test.txt', { type: 'text/plain' });
-      const input = screen.getByTestId('file-input');
+      const input = screen.getByTestId('domain-discovery-file-input');
 
       await user.upload(input, file);
 
-      expect(screen.getByTestId('analyze-button')).toBeInTheDocument();
+      expect(screen.getByTestId('domain-discovery-analyze-button')).toBeInTheDocument();
     });
 
     it('should remove file when remove button clicked', async () => {
@@ -218,7 +218,7 @@ describe('DomainAutoDiscovery', () => {
       render(<DomainAutoDiscovery {...defaultProps} />);
 
       const file = new File(['content'], 'test.txt', { type: 'text/plain' });
-      const input = screen.getByTestId('file-input');
+      const input = screen.getByTestId('domain-discovery-file-input');
 
       await user.upload(input, file);
       expect(screen.getByTestId('uploaded-file-test.txt')).toBeInTheDocument();
@@ -233,7 +233,7 @@ describe('DomainAutoDiscovery', () => {
 
       const content = 'test content here';
       const file = new File([content], 'test.txt', { type: 'text/plain' });
-      const input = screen.getByTestId('file-input');
+      const input = screen.getByTestId('domain-discovery-file-input');
 
       await user.upload(input, file);
 
@@ -250,7 +250,7 @@ describe('DomainAutoDiscovery', () => {
     it('should highlight drop zone on drag over', () => {
       render(<DomainAutoDiscovery {...defaultProps} />);
 
-      const dropZone = screen.getByTestId('drop-zone');
+      const dropZone = screen.getByTestId('domain-discovery-upload-area');
 
       fireEvent.dragOver(dropZone, {
         dataTransfer: { files: [] },
@@ -262,7 +262,7 @@ describe('DomainAutoDiscovery', () => {
     it('should remove highlight on drag leave', () => {
       render(<DomainAutoDiscovery {...defaultProps} />);
 
-      const dropZone = screen.getByTestId('drop-zone');
+      const dropZone = screen.getByTestId('domain-discovery-upload-area');
 
       fireEvent.dragOver(dropZone, {
         dataTransfer: { files: [] },
@@ -277,7 +277,7 @@ describe('DomainAutoDiscovery', () => {
     it('should handle file drop', async () => {
       render(<DomainAutoDiscovery {...defaultProps} />);
 
-      const dropZone = screen.getByTestId('drop-zone');
+      const dropZone = screen.getByTestId('domain-discovery-upload-area');
       const file = new File(['content'], 'dropped.txt', { type: 'text/plain' });
 
       fireEvent.drop(dropZone, {
@@ -309,11 +309,11 @@ describe('DomainAutoDiscovery', () => {
 
       // Upload a file first
       const file = new File(['content'], 'test.txt', { type: 'text/plain' });
-      const input = screen.getByTestId('file-input');
+      const input = screen.getByTestId('domain-discovery-file-input');
       await user.upload(input, file);
 
       // Click analyze
-      await user.click(screen.getByTestId('analyze-button'));
+      await user.click(screen.getByTestId('domain-discovery-analyze-button'));
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
       expect(mockFetch).toHaveBeenCalledWith(
@@ -339,10 +339,10 @@ describe('DomainAutoDiscovery', () => {
       render(<DomainAutoDiscovery {...defaultProps} />);
 
       const file = new File(['content'], 'test.txt', { type: 'text/plain' });
-      const input = screen.getByTestId('file-input');
+      const input = screen.getByTestId('domain-discovery-file-input');
       await user.upload(input, file);
 
-      await user.click(screen.getByTestId('analyze-button'));
+      await user.click(screen.getByTestId('domain-discovery-analyze-button'));
 
       expect(screen.getByText(/analysiere dokumente/i)).toBeInTheDocument();
 
@@ -364,17 +364,17 @@ describe('DomainAutoDiscovery', () => {
       render(<DomainAutoDiscovery {...defaultProps} />);
 
       const file = new File(['content'], 'test.txt', { type: 'text/plain' });
-      const input = screen.getByTestId('file-input');
+      const input = screen.getByTestId('domain-discovery-file-input');
       await user.upload(input, file);
 
-      await user.click(screen.getByTestId('analyze-button'));
+      await user.click(screen.getByTestId('domain-discovery-analyze-button'));
 
       await waitFor(() => {
-        expect(screen.getByTestId('suggestion-panel')).toBeInTheDocument();
+        expect(screen.getByTestId('domain-discovery-suggestion')).toBeInTheDocument();
       });
 
-      expect(screen.getByTestId('suggested-title')).toHaveTextContent('omnitracker_docs');
-      expect(screen.getByTestId('suggested-description')).toHaveTextContent(
+      expect(screen.getByTestId('domain-discovery-suggestion-title')).toHaveTextContent('omnitracker_docs');
+      expect(screen.getByTestId('domain-discovery-suggestion-description')).toHaveTextContent(
         'Documentation for OmniTracker'
       );
     });
@@ -391,10 +391,10 @@ describe('DomainAutoDiscovery', () => {
       render(<DomainAutoDiscovery {...defaultProps} onDomainSuggested={onDomainSuggested} />);
 
       const file = new File(['content'], 'test.txt', { type: 'text/plain' });
-      const input = screen.getByTestId('file-input');
+      const input = screen.getByTestId('domain-discovery-file-input');
       await user.upload(input, file);
 
-      await user.click(screen.getByTestId('analyze-button'));
+      await user.click(screen.getByTestId('domain-discovery-analyze-button'));
 
       await waitFor(() => {
         expect(onDomainSuggested).toHaveBeenCalledWith(mockSuggestion);
@@ -413,13 +413,13 @@ describe('DomainAutoDiscovery', () => {
       render(<DomainAutoDiscovery {...defaultProps} />);
 
       const file = new File(['content'], 'test.txt', { type: 'text/plain' });
-      const input = screen.getByTestId('file-input');
+      const input = screen.getByTestId('domain-discovery-file-input');
       await user.upload(input, file);
 
-      await user.click(screen.getByTestId('analyze-button'));
+      await user.click(screen.getByTestId('domain-discovery-analyze-button'));
 
       await waitFor(() => {
-        expect(screen.getByTestId('analysis-error')).toBeInTheDocument();
+        expect(screen.getByTestId('domain-discovery-error')).toBeInTheDocument();
       });
 
       expect(screen.getByText(/http 500/i)).toBeInTheDocument();
@@ -433,13 +433,13 @@ describe('DomainAutoDiscovery', () => {
       render(<DomainAutoDiscovery {...defaultProps} />);
 
       const file = new File(['content'], 'test.txt', { type: 'text/plain' });
-      const input = screen.getByTestId('file-input');
+      const input = screen.getByTestId('domain-discovery-file-input');
       await user.upload(input, file);
 
-      await user.click(screen.getByTestId('analyze-button'));
+      await user.click(screen.getByTestId('domain-discovery-analyze-button'));
 
       await waitFor(() => {
-        expect(screen.getByTestId('analysis-error')).toBeInTheDocument();
+        expect(screen.getByTestId('domain-discovery-error')).toBeInTheDocument();
       });
 
       expect(screen.getByText(/network error/i)).toBeInTheDocument();
@@ -462,12 +462,12 @@ describe('DomainAutoDiscovery', () => {
       render(<DomainAutoDiscovery {...defaultProps} />);
 
       const file = new File(['content'], 'test.txt', { type: 'text/plain' });
-      const input = screen.getByTestId('file-input');
+      const input = screen.getByTestId('domain-discovery-file-input');
       await user.upload(input, file);
-      await user.click(screen.getByTestId('analyze-button'));
+      await user.click(screen.getByTestId('domain-discovery-analyze-button'));
 
       await waitFor(() => {
-        expect(screen.getByTestId('suggestion-panel')).toBeInTheDocument();
+        expect(screen.getByTestId('domain-discovery-suggestion')).toBeInTheDocument();
       });
 
       return user;
@@ -492,7 +492,7 @@ describe('DomainAutoDiscovery', () => {
       await setupWithSuggestion();
 
       expect(screen.getByTestId('edit-button')).toBeInTheDocument();
-      expect(screen.getByTestId('accept-button')).toBeInTheDocument();
+      expect(screen.getByTestId('domain-discovery-accept-button')).toBeInTheDocument();
     });
   });
 
@@ -512,12 +512,12 @@ describe('DomainAutoDiscovery', () => {
       render(<DomainAutoDiscovery {...defaultProps} />);
 
       const file = new File(['content'], 'test.txt', { type: 'text/plain' });
-      const input = screen.getByTestId('file-input');
+      const input = screen.getByTestId('domain-discovery-file-input');
       await user.upload(input, file);
-      await user.click(screen.getByTestId('analyze-button'));
+      await user.click(screen.getByTestId('domain-discovery-analyze-button'));
 
       await waitFor(() => {
-        expect(screen.getByTestId('suggestion-panel')).toBeInTheDocument();
+        expect(screen.getByTestId('domain-discovery-suggestion')).toBeInTheDocument();
       });
 
       return user;
@@ -601,7 +601,7 @@ describe('DomainAutoDiscovery', () => {
       await user.click(screen.getByTestId('cancel-edit-button'));
 
       // Should show original values in non-edit mode
-      expect(screen.getByTestId('suggested-title')).toHaveTextContent('omnitracker_docs');
+      expect(screen.getByTestId('domain-discovery-suggestion-title')).toHaveTextContent('omnitracker_docs');
     });
   });
 
@@ -622,12 +622,12 @@ describe('DomainAutoDiscovery', () => {
       render(<DomainAutoDiscovery {...defaultProps} onAccept={onAccept} />);
 
       const file = new File(['content'], 'test.txt', { type: 'text/plain' });
-      const input = screen.getByTestId('file-input');
+      const input = screen.getByTestId('domain-discovery-file-input');
       await user.upload(input, file);
-      await user.click(screen.getByTestId('analyze-button'));
+      await user.click(screen.getByTestId('domain-discovery-analyze-button'));
 
       await waitFor(() => {
-        expect(screen.getByTestId('suggestion-panel')).toBeInTheDocument();
+        expect(screen.getByTestId('domain-discovery-suggestion')).toBeInTheDocument();
       });
 
       return { user, onAccept };
@@ -636,7 +636,7 @@ describe('DomainAutoDiscovery', () => {
     it('should call onAccept with suggestion values when accept clicked', async () => {
       const { user, onAccept } = await setupWithSuggestion();
 
-      await user.click(screen.getByTestId('accept-button'));
+      await user.click(screen.getByTestId('domain-discovery-accept-button'));
 
       expect(onAccept).toHaveBeenCalledWith('omnitracker_docs', mockSuggestion.description);
     });
@@ -654,7 +654,7 @@ describe('DomainAutoDiscovery', () => {
       await user.clear(descInput);
       await user.type(descInput, 'Custom description');
 
-      await user.click(screen.getByTestId('accept-button'));
+      await user.click(screen.getByTestId('domain-discovery-accept-button'));
 
       expect(onAccept).toHaveBeenCalledWith('custom_domain', 'Custom description');
     });
@@ -687,12 +687,12 @@ describe('DomainAutoDiscovery', () => {
       render(<DomainAutoDiscovery {...defaultProps} />);
 
       const file = new File(['content'], 'test.txt', { type: 'text/plain' });
-      const input = screen.getByTestId('file-input');
+      const input = screen.getByTestId('domain-discovery-file-input');
       await user.upload(input, file);
-      await user.click(screen.getByTestId('analyze-button'));
+      await user.click(screen.getByTestId('domain-discovery-analyze-button'));
 
       await waitFor(() => {
-        expect(screen.getByTestId('suggestion-panel')).toBeInTheDocument();
+        expect(screen.getByTestId('domain-discovery-suggestion')).toBeInTheDocument();
       });
     };
 
@@ -723,7 +723,7 @@ describe('DomainAutoDiscovery', () => {
     it('should have accessible drop zone', () => {
       render(<DomainAutoDiscovery {...defaultProps} />);
 
-      const dropZone = screen.getByTestId('drop-zone');
+      const dropZone = screen.getByTestId('domain-discovery-upload-area');
       expect(dropZone).toHaveAttribute('role', 'button');
       expect(dropZone).toHaveAttribute('tabIndex', '0');
       expect(dropZone).toHaveAttribute('aria-label', 'Dateien hochladen');
@@ -732,7 +732,7 @@ describe('DomainAutoDiscovery', () => {
     it('should have accessible file input', () => {
       render(<DomainAutoDiscovery {...defaultProps} />);
 
-      const input = screen.getByTestId('file-input');
+      const input = screen.getByTestId('domain-discovery-file-input');
       expect(input).toHaveAttribute('aria-label', 'Datei auswählen');
     });
 
@@ -741,7 +741,7 @@ describe('DomainAutoDiscovery', () => {
       render(<DomainAutoDiscovery {...defaultProps} />);
 
       const file = new File(['content'], 'test.txt', { type: 'text/plain' });
-      const input = screen.getByTestId('file-input');
+      const input = screen.getByTestId('domain-discovery-file-input');
       await user.upload(input, file);
 
       const removeButton = screen.getByTestId('remove-file-test.txt');
@@ -751,8 +751,8 @@ describe('DomainAutoDiscovery', () => {
     it('should activate drop zone on keyboard (Enter)', async () => {
       render(<DomainAutoDiscovery {...defaultProps} />);
 
-      const dropZone = screen.getByTestId('drop-zone');
-      const fileInput = screen.getByTestId('file-input');
+      const dropZone = screen.getByTestId('domain-discovery-upload-area');
+      const fileInput = screen.getByTestId('domain-discovery-file-input');
 
       // Spy on click event
       const clickSpy = vi.spyOn(fileInput, 'click');
@@ -765,8 +765,8 @@ describe('DomainAutoDiscovery', () => {
     it('should activate drop zone on keyboard (Space)', async () => {
       render(<DomainAutoDiscovery {...defaultProps} />);
 
-      const dropZone = screen.getByTestId('drop-zone');
-      const fileInput = screen.getByTestId('file-input');
+      const dropZone = screen.getByTestId('domain-discovery-upload-area');
+      const fileInput = screen.getByTestId('domain-discovery-file-input');
 
       const clickSpy = vi.spyOn(fileInput, 'click');
 
@@ -779,7 +779,7 @@ describe('DomainAutoDiscovery', () => {
       render(<DomainAutoDiscovery {...defaultProps} />);
 
       const file = new File(['content'], 'test.exe', { type: 'application/x-msdownload' });
-      const input = screen.getByTestId('file-input') as HTMLInputElement;
+      const input = screen.getByTestId('domain-discovery-file-input') as HTMLInputElement;
 
       // Manually trigger file input change since userEvent may not handle all file types
       Object.defineProperty(input, 'files', {
@@ -789,10 +789,10 @@ describe('DomainAutoDiscovery', () => {
       fireEvent.change(input);
 
       await waitFor(() => {
-        expect(screen.getByTestId('upload-error')).toBeInTheDocument();
+        expect(screen.getByTestId('domain-discovery-error')).toBeInTheDocument();
       });
 
-      const error = screen.getByTestId('upload-error');
+      const error = screen.getByTestId('domain-discovery-error');
       expect(error).toHaveAttribute('role', 'alert');
     });
   });

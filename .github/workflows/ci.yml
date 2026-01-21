@@ -341,6 +341,12 @@ jobs:
           echo "$HOME/.local/bin" >> $GITHUB_PATH
           poetry config virtualenvs.in-project true
 
+      - name: Install System Dependencies
+        run: |
+          # Sprint 118: Install bubblewrap for sandbox tests
+          sudo apt-get update
+          sudo apt-get install -y bubblewrap
+
       - name: Install Dependencies (Core + Dev)
         run: poetry install --without monitoring --with dev --no-interaction --no-ansi
 
