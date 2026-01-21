@@ -1,10 +1,75 @@
 # AegisRAG Playwright E2E Testing Guide
 
-**Last Updated:** 2026-01-20 (Sprint 114 - Full Suite Run Complete)
+**Last Updated:** 2026-01-21 (Sprint 117/118 - Test Categories & Domain API)
 **Framework:** Playwright + TypeScript
 **Test Environment:** http://192.168.178.10 (Docker Container)
 **Auth Credentials:** admin / admin123
 **Documentation:** This file is the authoritative source for all E2E testing information
+
+---
+
+## 🆕 Sprint 117/118: Test Categories & Prioritization
+
+### Test Categories (Sprint 118 Feature)
+
+**New Playwright Projects for prioritized test execution:**
+
+| Category | Tests | Files | Priority | Command |
+|----------|-------|-------|----------|---------|
+| **enduser** | 313 | 23 | ⬆️ HIGH | `npx playwright test --project=enduser` |
+| **admin** | 293 | 17 | Normal | `npx playwright test --project=admin` |
+
+**End-User Tests (Higher Priority):**
+- `chat/`, `citations/`, `errors/`, `followup/`, `graph/`, `history/`, `ingestion/`, `memory/`
+- `smoke.spec.ts`
+- `group01-10` (Core user-facing features)
+
+**Admin Tests (Lower Priority):**
+- `admin/` directory
+- `group11-17` (Admin/config features)
+
+**Usage:**
+```bash
+# Run high-priority end-user tests first
+PLAYWRIGHT_BASE_URL=http://192.168.178.10 npx playwright test --project=enduser
+
+# Then run admin tests
+PLAYWRIGHT_BASE_URL=http://192.168.178.10 npx playwright test --project=admin
+
+# Run all tests (default behavior)
+PLAYWRIGHT_BASE_URL=http://192.168.178.10 npx playwright test
+```
+
+### Sprint 117: Domain Training API Complete ✅
+
+**Date:** 2026-01-20 | **Story Points:** 69 SP | **Features:** 12
+
+Sprint 117 implemented the complete Domain Training API with:
+- Domain CRUD Operations (117.1)
+- C-LARA Hybrid Classification (117.2)
+- Domain Auto-Discovery (117.3)
+- Data Augmentation (117.4)
+- Batch Ingestion (117.5)
+- Training Status/Progress (117.6)
+- Domain Validation (117.7)
+- Response Format Standardization (117.8)
+- Default Domain Seeding (117.9)
+- Upload Classification Display (117.10)
+- Manual Domain Override (117.11)
+- LLM Model Selection per Domain (117.12)
+
+**API Response Format Fix (117.8):**
+```typescript
+// Frontend hook updated to handle new ApiResponse wrapper
+interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  metadata?: Record<string, unknown>;
+}
+
+// useDomains hook handles both formats for backwards compatibility
+const domains = Array.isArray(response) ? response : response.data;
+```
 
 ---
 
@@ -253,11 +318,20 @@ Added `toHaveCount()` timeouts to prevent race conditions:
 # Navigate to frontend directory
 cd /home/admin/projects/aegisrag/AEGIS_Rag/frontend
 
+# Run high-priority end-user tests first (Sprint 118)
+PLAYWRIGHT_BASE_URL=http://192.168.178.10 npx playwright test --project=enduser --reporter=list
+
+# Run admin tests (lower priority)
+PLAYWRIGHT_BASE_URL=http://192.168.178.10 npx playwright test --project=admin --reporter=list
+
 # Run all tests against production Docker container
 PLAYWRIGHT_BASE_URL=http://192.168.178.10 npx playwright test --reporter=list
 
 # Run specific group
 PLAYWRIGHT_BASE_URL=http://192.168.178.10 npx playwright test e2e/group09-long-context.spec.ts --reporter=list
+
+# Run domain-related tests only
+PLAYWRIGHT_BASE_URL=http://192.168.178.10 npx playwright test --grep "domain" --reporter=list
 
 # Run with parallel workers
 PLAYWRIGHT_BASE_URL=http://192.168.178.10 npx playwright test --workers=3 --reporter=list
@@ -934,8 +1008,10 @@ docs/e2e/
 
 ---
 
-**Last Test Run:** 2026-01-19 (Sprint 113 Full Suite: 538/1099 = 49%)
+**Last Test Run:** 2026-01-21 (Sprint 117 End-User Tests: In Progress)
+**Test Categories:** enduser (313 tests, HIGH priority) | admin (293 tests, Normal priority)
 **Critical Finding:** LLM Response Timeout (60% of failures) - Ollama takes 11-15min per request
-**Sprint 113 Plan:** [SPRINT_113_PLAN.md](../sprints/SPRINT_113_PLAN.md) - 108 SP across 10 features
+**Sprint 117 Complete:** Domain Training API with 12 features (69 SP)
+**Sprint 118 In Progress:** Test Categories, Visual Regression, Performance Tests
 **Target:** ≥85% pass rate (935+ tests passing)
 **Maintained By:** Claude Code + Sprint Team

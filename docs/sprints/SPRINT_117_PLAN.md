@@ -1,9 +1,9 @@
 # Sprint 117 Plan: Domain Training API & Features
 
 **Date:** 2026-01-20
-**Status:** Planned
+**Status:** ✅ Complete
 **Epic:** Domain Training System Completion
-**Total Story Points:** 61 SP
+**Total Story Points:** 69 SP (61 original + 8 SP for features 117.10-117.12)
 
 ---
 
@@ -1944,5 +1944,36 @@ Nach Sprint 117 Implementation:
 
 ---
 
+---
+
+## Sprint 117/118: Test Categories & Prioritization
+
+**Added:** 2026-01-21 (Sprint 118 preparation)
+
+### Test Category System
+
+Playwright-Konfiguration wurde erweitert, um **enduser** und **admin** Tests separat auszuführen:
+
+| Category | Tests | Files | Priority | Command |
+|----------|-------|-------|----------|---------|
+| **enduser** | 313 | 23 | ⬆️ HIGH | `npx playwright test --project=enduser` |
+| **admin** | 293 | 17 | Normal | `npx playwright test --project=admin` |
+
+**End-User Tests (Higher Priority):**
+- `chat/`, `citations/`, `errors/`, `followup/`, `graph/`, `history/`, `ingestion/`, `memory/`
+- `smoke.spec.ts`, `group01-10`
+
+**Admin Tests (Lower Priority):**
+- `admin/` directory, `group11-17`
+
+**Commit:** `057875e feat(e2e): Add enduser/admin test categories for prioritized execution`
+
+### Documentation Updates
+- **PLAYWRIGHT_E2E.md:** Aktualisiert mit Sprint 117/118 Test-Kategorien
+- **playwright.config.ts:** Neue `enduser` und `admin` Projekte hinzugefügt
+
+---
+
 **Document History**
+- 2026-01-21: Added Test Categories documentation, marked Sprint 117 as Complete
 - 2026-01-20: Initial Sprint 117 Plan created based on SPRINT_116_SKIPPED_TESTS_ANALYSIS.md
