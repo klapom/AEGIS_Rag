@@ -77,8 +77,8 @@ def get_processing_log() -> ProcessingLog:
     return _processing_log
 
 
-def get_pii_settings() -> PIISettingsResponse:
-    """Get or create PII settings singleton."""
+def _get_pii_settings_singleton() -> PIISettingsResponse:
+    """Get or create PII settings singleton (internal helper)."""
     global _pii_settings
     if _pii_settings is None:
         _pii_settings = PIISettingsResponse()
@@ -505,7 +505,7 @@ async def get_pii_settings(request: Request) -> PIISettingsResponse:
     logger.info("get_pii_settings_request")
 
     try:
-        settings = get_pii_settings()
+        settings = _get_pii_settings_singleton()
         logger.info("get_pii_settings_success")
         return settings
 
@@ -542,7 +542,7 @@ async def update_pii_settings(request: Request, settings_update: PIISettingsUpda
 
     try:
         global _pii_settings
-        current_settings = get_pii_settings()
+        current_settings = _get_pii_settings_singleton()
 
         # Update settings
         if settings_update.entity_types is not None:
