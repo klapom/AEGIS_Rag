@@ -69,16 +69,25 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
 
-  /* Configure projects for test tiers (Sprint 115.4)
+  /* Configure projects for test tiers (Sprint 115.4) and user categories (Sprint 118)
    *
    * Test Tiers:
    * - @fast: Smoke tests, basic UI checks (30s timeout) - run with: npx playwright test --grep @fast
    * - @standard: Regular E2E tests (180s timeout) - default
    * - @full: Multi-turn, integration, LLM-heavy tests (300s timeout) - run with: npx playwright test --grep @full
    *
+   * User Categories (Sprint 118):
+   * - enduser: End-user facing tests (HIGHER PRIORITY) - run with: npx playwright test --project=enduser
+   * - admin: Admin/backend tests (lower priority) - run with: npx playwright test --project=admin
+   *
    * Usage in tests:
    *   test('my test', { tag: '@fast' }, async ({ page }) => { ... });
    *   test.describe('suite', { tag: '@full' }, () => { ... });
+   *
+   * Run by category:
+   *   npx playwright test --project=enduser  # High priority end-user tests
+   *   npx playwright test --project=admin    # Lower priority admin tests
+   *   npx playwright test                    # All tests (default chromium project)
    */
   projects: [
     /* Fast tier: Smoke tests, basic UI (30s timeout) */
@@ -89,6 +98,41 @@ export default defineConfig({
       timeout: 30 * 1000,
       expect: { timeout: 10 * 1000 },
     },
+
+    /* Sprint 118: End-User Tests (HIGHER PRIORITY)
+     * Includes: chat/, citations/, errors/, followup/, graph/, history/, ingestion/, memory/
+     * Also includes: smoke.spec.ts, group01-10 (core user-facing features)
+     */
+    {
+      name: 'enduser',
+      testMatch: [
+        /smoke\.spec\.ts/,
+        /e2e\/chat\//,
+        /e2e\/citations\//,
+        /e2e\/errors\//,
+        /e2e\/followup\//,
+        /e2e\/graph\//,
+        /e2e\/history\//,
+        /e2e\/ingestion\//,
+        /e2e\/memory\//,
+        /group0[1-9]-/,
+        /group10-/,
+      ],
+      use: { ...devices['Desktop Chrome'] },
+    },
+
+    /* Sprint 118: Admin Tests (lower priority)
+     * Includes: admin/, group11-17 (admin/config features)
+     */
+    {
+      name: 'admin',
+      testMatch: [
+        /e2e\/admin\//,
+        /group1[1-7]-/,
+      ],
+      use: { ...devices['Desktop Chrome'] },
+    },
+
     /* Standard tier: Regular E2E tests (180s timeout) - default */
     {
       name: 'chromium',
