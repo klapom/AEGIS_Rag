@@ -3,16 +3,17 @@
  * Sprint 28 Feature 28.1: Display follow-up questions below answers
  * Sprint 52 Feature 52.3: Async Follow-up Questions (TD-043)
  * Sprint 65 Feature 65.1: Increased poll timeout for async generation
- * Sprint 118 Fix: Increased poll timeout from 15s to 60s for LLM generation
+ * Sprint 118 Feature: SSE Push for Follow-up Questions
  *
  * Features:
- * - Fetch follow-up questions from backend API (async after answer completes)
+ * - Receive follow-up questions via SSE (Server-Sent Events)
+ * - Fallback to polling if SSE not available
  * - Display as clickable cards (Perplexity-inspired)
  * - Loading/error states
- * - Auto-fetch when answer completes (with polling for async generation)
+ * - Auto-fetch when answer completes
  *
  * CRITICAL: Questions are generated asynchronously AFTER answer completes.
- * This component polls the endpoint until questions are ready.
+ * This component uses SSE to receive push notifications when questions are ready.
  * LLM generation typically takes 20-60s on Nemotron3/DGX Spark.
  */
 
@@ -30,10 +31,10 @@ export function FollowUpQuestions({ sessionId, onQuestionClick, answerComplete =
   const [questions, setQuestions] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const eventSourceRef = useRef<EventSource | null>(null);
   const pollIntervalRef = useRef<number | null>(null);
   const pollCountRef = useRef(0);
-  // Sprint 118 Fix: Increased timeout from 15s to 60s for LLM generation
-  // Nemotron3 on DGX Spark typically takes 20-60s for follow-up generation
+  // Fallback polling configuration
   const maxPollAttempts = 60; // Poll for up to 60 seconds (60 * 1s)
 
   useEffect(() => {
@@ -42,34 +43,109 @@ export function FollowUpQuestions({ sessionId, onQuestionClick, answerComplete =
       return;
     }
 
-    console.log('[FollowUpQuestions] Answer complete, starting async fetch for session:', sessionId);
+    console.log('[FollowUpQuestions] Answer complete, starting SSE connection for session:', sessionId);
     setIsLoading(true);
     setError(null);
     pollCountRef.current = 0;
 
-    const fetchQuestions = async () => {
-      if (!sessionId) {
-        console.log('[FollowUpQuestions] No session ID provided');
-        return;
-      }
+    // Sprint 118 Feature: Try SSE first, fallback to polling
+    const useSSE = typeof EventSource !== 'undefined';
 
-      try {
-        const fetchedQuestions = await getFollowUpQuestions(sessionId);
-        console.log('[FollowUpQuestions] Received questions:', fetchedQuestions);
+    if (useSSE) {
+      // SSE Push Implementation
+      const baseUrl = import.meta.env.VITE_API_URL || '';
+      const sseUrl = `${baseUrl}/api/v1/chat/sessions/${sessionId}/followup-questions/stream`;
 
-        if (fetchedQuestions && fetchedQuestions.length > 0) {
-          setQuestions(Array.isArray(fetchedQuestions) ? fetchedQuestions : []);
-          setIsLoading(false);
-          // Clear polling interval on success
-          if (pollIntervalRef.current) {
-            clearInterval(pollIntervalRef.current);
-            pollIntervalRef.current = null;
+      console.log('[FollowUpQuestions] Connecting to SSE:', sseUrl);
+      const eventSource = new EventSource(sseUrl);
+      eventSourceRef.current = eventSource;
+
+      eventSource.addEventListener('waiting', () => {
+        console.log('[FollowUpQuestions] SSE: Still waiting for questions...');
+        // Keep loading state
+      });
+
+      eventSource.addEventListener('questions', (event: MessageEvent) => {
+        console.log('[FollowUpQuestions] SSE: Received questions');
+        try {
+          const data = JSON.parse(event.data);
+          if (data.questions && Array.isArray(data.questions) && data.questions.length > 0) {
+            setQuestions(data.questions);
           }
+        } catch (parseErr) {
+          console.error('[FollowUpQuestions] SSE: Failed to parse questions:', parseErr);
+        }
+        setIsLoading(false);
+        eventSource.close();
+        eventSourceRef.current = null;
+      });
+
+      eventSource.addEventListener('timeout', () => {
+        console.log('[FollowUpQuestions] SSE: Timeout reached');
+        setIsLoading(false);
+        setQuestions([]);
+        eventSource.close();
+        eventSourceRef.current = null;
+      });
+
+      eventSource.addEventListener('error', (event: Event) => {
+        // Check if it's a real error or just connection closing
+        if (eventSource.readyState === EventSource.CLOSED) {
+          console.log('[FollowUpQuestions] SSE: Connection closed');
         } else {
-          // Sprint 52.3: Questions not ready yet, continue polling
+          console.error('[FollowUpQuestions] SSE: Error occurred', event);
+          setError('Verbindungsfehler');
+          setIsLoading(false);
+        }
+        eventSource.close();
+        eventSourceRef.current = null;
+      });
+
+      // Cleanup for SSE
+      return () => {
+        if (eventSourceRef.current) {
+          eventSourceRef.current.close();
+          eventSourceRef.current = null;
+        }
+      };
+    } else {
+      // Fallback: Polling Implementation (for browsers without SSE support)
+      console.log('[FollowUpQuestions] SSE not available, using polling fallback');
+
+      const fetchQuestions = async () => {
+        if (!sessionId) {
+          console.log('[FollowUpQuestions] No session ID provided');
+          return;
+        }
+
+        try {
+          const fetchedQuestions = await getFollowUpQuestions(sessionId);
+          console.log('[FollowUpQuestions] Received questions:', fetchedQuestions);
+
+          if (fetchedQuestions && fetchedQuestions.length > 0) {
+            setQuestions(Array.isArray(fetchedQuestions) ? fetchedQuestions : []);
+            setIsLoading(false);
+            if (pollIntervalRef.current) {
+              clearInterval(pollIntervalRef.current);
+              pollIntervalRef.current = null;
+            }
+          } else {
+            pollCountRef.current += 1;
+            if (pollCountRef.current >= maxPollAttempts) {
+              console.log('[FollowUpQuestions] Max poll attempts reached, giving up');
+              setIsLoading(false);
+              setQuestions([]);
+              if (pollIntervalRef.current) {
+                clearInterval(pollIntervalRef.current);
+                pollIntervalRef.current = null;
+              }
+            }
+          }
+        } catch (err) {
+          console.error('[FollowUpQuestions] Failed to fetch follow-up questions:', err);
           pollCountRef.current += 1;
           if (pollCountRef.current >= maxPollAttempts) {
-            console.log('[FollowUpQuestions] Max poll attempts reached, giving up');
+            setError('Keine Fragen verfügbar');
             setIsLoading(false);
             setQuestions([]);
             if (pollIntervalRef.current) {
@@ -78,32 +154,19 @@ export function FollowUpQuestions({ sessionId, onQuestionClick, answerComplete =
             }
           }
         }
-      } catch (err) {
-        console.error('[FollowUpQuestions] Failed to fetch follow-up questions:', err);
-        pollCountRef.current += 1;
-        if (pollCountRef.current >= maxPollAttempts) {
-          setError('Keine Fragen verfugbar');
-          setIsLoading(false);
-          setQuestions([]);
-          if (pollIntervalRef.current) {
-            clearInterval(pollIntervalRef.current);
-            pollIntervalRef.current = null;
-          }
+      };
+
+      fetchQuestions();
+      pollIntervalRef.current = window.setInterval(fetchQuestions, 1000);
+
+      // Cleanup for polling
+      return () => {
+        if (pollIntervalRef.current) {
+          clearInterval(pollIntervalRef.current);
+          pollIntervalRef.current = null;
         }
-      }
-    };
-
-    // Sprint 52.3: Immediate fetch, then poll every 1 second
-    fetchQuestions();
-    pollIntervalRef.current = window.setInterval(fetchQuestions, 1000);
-
-    // Cleanup on unmount
-    return () => {
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
-        pollIntervalRef.current = null;
-      }
-    };
+      };
+    }
   }, [sessionId, answerComplete]);
 
   // Don't render if no questions and not loading

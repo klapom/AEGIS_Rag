@@ -1,6 +1,7 @@
 """Multi-Turn RAG Agent.
 
 Sprint 63 Feature 63.1: Multi-Turn RAG Template (13 SP)
+Sprint 118 Fix: Remove non-existent create_multi_turn_graph import
 
 This module implements a multi-turn conversational RAG system with:
 - Conversation history tracking
@@ -9,7 +10,7 @@ This module implements a multi-turn conversational RAG system with:
 - Memory summarization
 """
 
-from src.agents.multi_turn.agent import MultiTurnAgent, create_multi_turn_graph
+from src.agents.multi_turn.agent import MultiTurnAgent
 from src.agents.multi_turn.state import MultiTurnState
 
-__all__ = ["MultiTurnAgent", "MultiTurnState", "create_multi_turn_graph"]
+__all__ = ["MultiTurnAgent", "MultiTurnState"]

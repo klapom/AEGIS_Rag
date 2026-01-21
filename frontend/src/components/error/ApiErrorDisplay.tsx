@@ -107,7 +107,7 @@ export function ApiErrorDisplay({
           <p className="text-sm text-gray-600 text-center mb-6">{userMessage}</p>
 
           {/* Error Details (Development only) */}
-          {process.env.NODE_ENV === 'development' && (
+          {import.meta.env.DEV && (
             <details className="mb-6 text-xs">
               <summary className="cursor-pointer font-medium text-gray-700 hover:text-gray-900 mb-2">
                 Show error details
@@ -169,7 +169,7 @@ export function ApiErrorDisplay({
           <p className={`text-sm ${colors.text} mt-1`}>{userMessage}</p>
 
           {/* Error Details (Development only) */}
-          {process.env.NODE_ENV === 'development' && (
+          {import.meta.env.DEV && (
             <details className="mt-2">
               <summary className="cursor-pointer text-xs font-medium opacity-80 hover:opacity-100">
                 Show details

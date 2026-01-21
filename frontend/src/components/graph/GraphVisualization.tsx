@@ -148,8 +148,11 @@ export function GraphVisualization({
                 scaleFactor: 0.5,
               },
             },
+            // Sprint 118 Fix: Include required smooth properties for vis-network Edge type
             smooth: {
+              enabled: true,
               type: 'continuous',
+              roundness: 0.5,
             },
           };
         })
@@ -217,17 +220,20 @@ export function GraphVisualization({
       });
 
       networkRef.current.on('hoverEdge', (params) => {
-        const edge = edges.get(params.edge);
+        // Sprint 118 Fix: Handle DataSet.get() return type properly
+        const edgeResult = edges.get(params.edge);
+        // get() with a single ID returns the item directly, not an array
+        const edge = Array.isArray(edgeResult) ? edgeResult[0] : edgeResult;
         if (edge) {
           const canvasPos = networkRef.current?.canvasToDOM({
             x: params.pointer.canvas.x,
             y: params.pointer.canvas.y,
           });
           setHoveredEdge({
-            id: edge.id as string,
-            label: edge.label as string,
+            id: String(edge.id),
+            label: String(edge.label || ''),
             weight: typeof edge.width === 'number' ? (edge.width - 1) / 3 : undefined,
-            properties: edge.title ? { description: edge.title } : undefined,
+            properties: edge.title ? { description: String(edge.title) } : undefined,
             x: canvasPos?.x || 0,
             y: canvasPos?.y || 0,
           });

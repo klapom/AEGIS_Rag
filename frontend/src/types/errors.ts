@@ -1,51 +1,65 @@
 /**
  * Error Types
  * Sprint 116 Feature 116.2: API Error Handling
+ * Sprint 118 Fix: Convert enums to const objects for erasableSyntaxOnly compatibility
  *
  * Type definitions for error handling system
  */
 
 /**
  * HTTP Error Status Codes
+ * Using const object instead of enum for TypeScript erasableSyntaxOnly compatibility
  */
-export enum HttpStatus {
-  BAD_REQUEST = 400,
-  UNAUTHORIZED = 401,
-  FORBIDDEN = 403,
-  NOT_FOUND = 404,
-  PAYLOAD_TOO_LARGE = 413,
-  INTERNAL_SERVER_ERROR = 500,
-  BAD_GATEWAY = 502,
-  SERVICE_UNAVAILABLE = 503,
-  GATEWAY_TIMEOUT = 504,
-}
+export const HttpStatus = {
+  BAD_REQUEST: 400,
+  UNAUTHORIZED: 401,
+  FORBIDDEN: 403,
+  NOT_FOUND: 404,
+  PAYLOAD_TOO_LARGE: 413,
+  INTERNAL_SERVER_ERROR: 500,
+  BAD_GATEWAY: 502,
+  SERVICE_UNAVAILABLE: 503,
+  GATEWAY_TIMEOUT: 504,
+} as const;
+
+export type HttpStatus = (typeof HttpStatus)[keyof typeof HttpStatus];
 
 /**
  * Error severity levels
+ * Using const object instead of enum for TypeScript erasableSyntaxOnly compatibility
  */
-export enum ErrorSeverity {
+export const ErrorSeverity = {
   /** Critical errors requiring immediate attention */
-  CRITICAL = 'critical',
+  CRITICAL: 'critical',
   /** Errors that prevent normal operation */
-  ERROR = 'error',
+  ERROR: 'error',
   /** Warnings that don't prevent operation */
-  WARNING = 'warning',
+  WARNING: 'warning',
   /** Informational messages */
-  INFO = 'info',
-}
+  INFO: 'info',
+} as const;
+
+export type ErrorSeverity = (typeof ErrorSeverity)[keyof typeof ErrorSeverity];
 
 /**
  * Custom API Error class
  */
 export class ApiError extends Error {
+  status: number;
+  data?: unknown;
+  retryable: boolean;
+
   constructor(
     message: string,
-    public status: number,
-    public data?: unknown,
-    public retryable: boolean = false
+    status: number,
+    data?: unknown,
+    retryable: boolean = false
   ) {
     super(message);
     this.name = 'ApiError';
+    this.status = status;
+    this.data = data;
+    this.retryable = retryable;
   }
 
   /**

@@ -1998,6 +1998,117 @@ async def get_followup_questions(session_id: str) -> FollowUpQuestionsResponse:
         ) from e
 
 
+@router.get("/sessions/{session_id}/followup-questions/stream")
+async def stream_followup_questions(session_id: str) -> StreamingResponse:
+    """Stream follow-up questions as they become available using SSE.
+
+    Sprint 118 Feature: SSE Push for Follow-up Questions
+
+    Instead of polling, frontend can subscribe to this endpoint and receive
+    follow-up questions as soon as they're generated. This reduces latency
+    and eliminates unnecessary polling requests.
+
+    The endpoint polls internally (max 60s) and sends SSE events:
+    - "waiting": Questions still being generated
+    - "questions": Questions are ready (includes data)
+    - "timeout": Max wait time exceeded
+    - "error": Generation failed
+
+    Args:
+        session_id: Session ID to stream follow-up questions for
+
+    Returns:
+        StreamingResponse with SSE events
+
+    Example SSE Response:
+        event: waiting
+        data: {"status": "generating", "elapsed_seconds": 5}
+
+        event: questions
+        data: {"questions": ["How does...", "What is..."], "count": 3}
+    """
+    import asyncio
+    import json
+
+    logger.info("followup_questions_stream_started", session_id=session_id)
+
+    async def generate_sse_events():
+        """Generate SSE events for follow-up questions."""
+        max_wait_seconds = 60
+        poll_interval = 2  # Poll every 2 seconds
+        elapsed = 0
+
+        try:
+            from src.components.memory import get_redis_memory
+            from src.agents.followup_generator import generate_followup_questions_async
+
+            while elapsed < max_wait_seconds:
+                # Check if questions are ready
+                async_questions = await generate_followup_questions_async(session_id)
+
+                if async_questions and len(async_questions) > 0:
+                    # Questions ready - send and close
+                    event_data = {
+                        "questions": async_questions,
+                        "count": len(async_questions),
+                        "elapsed_seconds": elapsed,
+                    }
+                    yield f"event: questions\ndata: {json.dumps(event_data)}\n\n"
+                    logger.info(
+                        "followup_questions_stream_complete",
+                        session_id=session_id,
+                        count=len(async_questions),
+                        elapsed_seconds=elapsed,
+                    )
+                    return
+
+                # Not ready yet - send waiting event
+                waiting_data = {
+                    "status": "generating",
+                    "elapsed_seconds": elapsed,
+                    "max_seconds": max_wait_seconds,
+                }
+                yield f"event: waiting\ndata: {json.dumps(waiting_data)}\n\n"
+
+                await asyncio.sleep(poll_interval)
+                elapsed += poll_interval
+
+            # Timeout reached
+            timeout_data = {
+                "status": "timeout",
+                "elapsed_seconds": elapsed,
+                "message": "Follow-up generation timed out",
+            }
+            yield f"event: timeout\ndata: {json.dumps(timeout_data)}\n\n"
+            logger.warning(
+                "followup_questions_stream_timeout",
+                session_id=session_id,
+                elapsed_seconds=elapsed,
+            )
+
+        except Exception as e:
+            error_data = {
+                "status": "error",
+                "message": str(e),
+            }
+            yield f"event: error\ndata: {json.dumps(error_data)}\n\n"
+            logger.error(
+                "followup_questions_stream_error",
+                session_id=session_id,
+                error=str(e),
+            )
+
+    return StreamingResponse(
+        generate_sse_events(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",  # Disable nginx buffering
+        },
+    )
+
+
 # Sprint 17 Feature 17.4 Phase 1: Conversation Archiving Pipeline
 # PLANNED FOR SPRINT 38: Frontend UI integration for conversation archiving
 

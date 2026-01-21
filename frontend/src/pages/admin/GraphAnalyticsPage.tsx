@@ -61,16 +61,6 @@ export function GraphAnalyticsPage() {
   const { stats, loading: statsLoading, error: statsError, refetch: refetchStats } = useGraphStatistics();
   const { communities, loading: communitiesLoading } = useCommunities(20);
 
-  // Sprint 116 Feature 116.9: Fetch graph data for vis-network visualization
-  const graphFiltersForData: GraphFiltersType = {
-    maxNodes: filters.maxNodes,
-    entityTypes: filters.entityTypes,
-    highlightCommunities: selectedCommunity ? [selectedCommunity] : undefined,
-  };
-  const { data: graphData, loading: graphDataLoading, error: graphDataError } = useGraphData(
-    useVisNetwork ? graphFiltersForData : {}
-  );
-
   // Fetch enhanced graph stats
   const loadGraphStats = useCallback(async () => {
     setGraphStatsLoading(true);
@@ -108,6 +98,17 @@ export function GraphAnalyticsPage() {
   });
 
   const [selectedCommunity, setSelectedCommunity] = useState<string | null>(null);
+
+  // Sprint 116 Feature 116.9: Fetch graph data for vis-network visualization
+  // Sprint 118 Fix: Moved after filters/selectedCommunity declaration to fix "used before declaration" error
+  const graphFiltersForData: GraphFiltersType = {
+    maxNodes: filters.maxNodes,
+    entityTypes: filters.entityTypes,
+    highlightCommunities: selectedCommunity ? [selectedCommunity] : undefined,
+  };
+  const { data: graphData, loading: graphDataLoading, error: graphDataError } = useGraphData(
+    useVisNetwork ? graphFiltersForData : {}
+  );
 
   // Sprint 116 Feature 116.8: Parse edge filters from URL params
   const parseEdgeFiltersFromURL = useCallback((): EdgeFilters => {

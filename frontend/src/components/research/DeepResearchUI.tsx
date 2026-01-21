@@ -64,7 +64,8 @@ export function DeepResearchUI({
 
   // Progress tracking
   const [progressHistory, setProgressHistory] = useState<ResearchProgress[]>([]);
-  const [currentPhase, setCurrentPhase] = useState<ResearchPhase>('pending');
+  // Sprint 118 Fix: 'pending' is not a valid ResearchPhase, use 'start' as initial value
+  const [currentPhase, setCurrentPhase] = useState<ResearchPhase>('start');
 
   // Poll interval for status updates
   const [pollInterval, setPollInterval] = useState<number | null>(null);
@@ -81,7 +82,7 @@ export function DeepResearchUI({
     setIsResearching(true);
     setError(null);
     setProgressHistory([]);
-    setCurrentPhase('pending');
+    setCurrentPhase('start');
     setResult(null);
 
     try {
