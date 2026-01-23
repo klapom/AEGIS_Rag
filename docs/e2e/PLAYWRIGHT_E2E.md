@@ -1,10 +1,249 @@
 # AegisRAG Playwright E2E Testing Guide
 
-**Last Updated:** 2026-01-21 (Sprint 117/118 - Test Categories & Domain API)
+**Last Updated:** 2026-01-23 (Sprint 118 - Follow-up Questions Bugs Fixed)
 **Framework:** Playwright + TypeScript
 **Test Environment:** http://192.168.178.10 (Docker Container)
 **Auth Credentials:** admin / admin123
 **Documentation:** This file is the authoritative source for all E2E testing information
+
+---
+
+## 🆕 Sprint 118: Bug Fixes & Test Stabilization
+
+**Date:** 2026-01-21 | **Status:** In Progress
+
+### Bugs Fixed (Sprint 118)
+
+| Bug ID | Test File | Issue | Root Cause | Fix | Commit |
+|--------|-----------|-------|------------|-----|--------|
+| **BUG-118.1** | followup/*.spec.ts | Follow-up questions timeout (SSE polling 30x LLM calls) | SSE endpoint called `generate_followup_questions_async()` every 2s instead of checking Redis cache | Check `{session_id}:followup` cache FIRST before LLM fallback | `03b8d0e` |
+| **BUG-118.2** | edge-filters.spec.ts | data-testid mismatch: `edge-filter-relates_to` vs `edge-filter-relates-to` | Component generated underscore, tests expected hyphen | Added `.replace(/_/g, '-')` in GraphFilters.tsx | `2971987` |
+| **BUG-118.3** | memory-management.spec.ts | Mock URL mismatch: `/consolidate/status` vs `/consolidation/status` | E2E tests mocked wrong endpoint path | Updated mock URL to match frontend API call | `c0adc2b` |
+| **BUG-118.4** | followup/*.spec.ts | Test timeout too short (10s) for LLM generation (20-60s) | `RetryPresets.PATIENT` (5×2s=10s) was far too short for Nemotron3 follow-up generation | Added `RetryPresets.FOLLOWUP_QUESTIONS` (30×2s=60s) preset | ✅ FIXED |
+| **BUG-118.5** | followup/*.spec.ts | Follow-up generation **never triggered** in non-streaming API | `process_query()` (line 277) had NO code for follow-up generation - only existed in `_run_chain()` for streaming! | Added `_generate_followup_async()` call to `process_query()` | ✅ FIXED |
+| **BUG-118.6** | followup/*.spec.ts | SSE URL uses wrong env var → goes to port 80 | `FollowUpQuestions.tsx` used `VITE_API_URL` (doesn't exist) with fallback `''` → relative URL to port 80 | Changed to `VITE_API_BASE_URL` | ✅ FIXED |
+| **BUG-118.7** | followup/*.spec.ts | FollowUpQuestions NOT rendered in ConversationView/HomePage | Component only used in SearchResultsPage.tsx via StreamingAnswer - never in main chat UI! | Added FollowUpQuestions to ConversationView.tsx | ✅ FIXED |
+
+### Code Changes (Sprint 118)
+
+#### BUG-118.1: SSE Cache Fix (src/api/v1/chat.py)
+
+```python
+# Sprint 118 Fix: Check cache FIRST - coordinator stores questions here
+cached_questions = await redis_memory.retrieve(key=cache_key, namespace="cache")
+
+if cached_questions:
+    # Extract value from Redis wrapper
+    if isinstance(cached_questions, dict) and "value" in cached_questions:
+        cached_questions = cached_questions["value"]
+
+    questions = cached_questions.get("questions", [])
+    if questions and len(questions) > 0:
+        # Questions ready from cache - send and close
+        event_data = {
+            "questions": questions,
+            "count": len(questions),
+            "elapsed_seconds": elapsed,
+            "from_cache": True,
+        }
+        yield f"event: questions\ndata: {json.dumps(event_data)}\n\n"
+        return
+```
+
+**Impact:** Prevents 30x redundant LLM calls per follow-up question request.
+
+#### BUG-118.2: data-testid Fix (frontend/src/components/graph/GraphFilters.tsx)
+
+```typescript
+// Sprint 118: Convert underscores to hyphens for consistent test IDs
+data-testid={`edge-filter-${option.value.toLowerCase().replace(/_/g, '-')}`}
+```
+
+**Impact:** Edge filter tests now find correct elements.
+
+#### BUG-118.3: Memory Endpoint URL Fix (frontend/e2e/tests/admin/memory-management.spec.ts)
+
+```typescript
+// ❌ WRONG (old)
+await page.route('**/api/v1/memory/consolidate/status', ...)
+
+// ✅ CORRECT (new)
+await page.route('**/api/v1/memory/consolidation/status', ...)
+```
+
+**Impact:** Memory consolidation tests now mock the correct endpoint.
+
+#### BUG-118.4: Follow-up Test Timeout Fix (frontend/e2e/utils/retry.ts)
+
+**Root Cause Analysis:**
+- Follow-up generation on Nemotron3/DGX Spark takes **20-60 seconds**
+- SSE endpoint has 60s max wait time
+- Test used `RetryPresets.PATIENT` = 5 retries × 2s = **10 seconds** ❌
+- Tests failed immediately because LLM hadn't finished generating
+
+**Fix:** Added new retry preset for LLM-based features:
+
+```typescript
+// frontend/e2e/utils/retry.ts
+export const RetryPresets = {
+  // ...existing presets...
+
+  /**
+   * Sprint 118: Follow-up questions retries (30 retries, 2s delay = 60s total)
+   * Matches SSE endpoint max_wait_seconds of 60s.
+   * Nemotron3 Nano follow-up generation takes 20-60s on DGX Spark.
+   */
+  FOLLOWUP_QUESTIONS: { maxRetries: 30, retryDelay: 2000, logAttempts: false },
+};
+```
+
+**Updated Test Files:**
+- `frontend/e2e/followup/follow-up-context.spec.ts` - Uses `RetryPresets.FOLLOWUP_QUESTIONS`
+- `frontend/e2e/followup/followup.spec.ts` - Uses `FOLLOWUP_TIMEOUT = 60000`
+
+**Key Learning:** Always match test timeout to the slowest component in the chain (LLM generation).
+
+#### BUG-118.5: Missing Follow-up Generation in Non-Streaming API (src/agents/coordinator.py)
+
+**Root Cause Analysis:**
+- `process_query()` (non-streaming, line 277) had **NO follow-up generation code**
+- `_run_chain()` (streaming, line 831) had the follow-up code: `asyncio.create_task(self._generate_followup_async(...))`
+- The non-streaming chat endpoint `/api/v1/chat/` calls `process_query()` → no follow-ups ever generated!
+- Log analysis confirmed: `followup_generation_task_started` was NEVER logged for non-streaming requests
+
+**Fix:** Added follow-up generation to `process_query()`:
+
+```python
+# Sprint 118 BUG-118.5: Generate follow-up questions asynchronously
+# This was missing in the non-streaming path! (only existed in _run_chain)
+answer = final_state.get("answer", "")
+if not answer:
+    messages = final_state.get("messages", [])
+    for msg in reversed(messages):
+        if hasattr(msg, "content") and msg.content:
+            answer = msg.content
+            break
+
+if session_id and answer:
+    sources = [ctx for ctx in final_state.get("retrieved_contexts", []) if isinstance(ctx, dict)]
+    asyncio.create_task(
+        self._generate_followup_async(
+            session_id=session_id,
+            query=query,
+            answer=answer,
+            sources=sources,
+        )
+    )
+    logger.info("followup_generation_task_started", session_id=session_id, query_preview=query[:50])
+```
+
+**Impact:** Non-streaming API now generates follow-up questions like streaming API.
+
+#### BUG-118.7: FollowUpQuestions Not Integrated into Main Chat UI (frontend/src/components/chat/ConversationView.tsx)
+
+**Root Cause Analysis:**
+- `FollowUpQuestions` component was only used in `StreamingAnswer.tsx` (line 328)
+- `StreamingAnswer` was only used in `SearchResultsPage.tsx`
+- **Main chat interface** (`HomePage.tsx`) uses `ConversationView.tsx` which had NO FollowUpQuestions!
+- E2E tests run against HomePage → follow-up questions never rendered
+
+**Fix:** Added `FollowUpQuestions` to `ConversationView.tsx`:
+
+```typescript
+// ConversationView.tsx - Added import
+import { FollowUpQuestions } from './FollowUpQuestions';
+
+// ConversationView.tsx - Added props
+interface ConversationViewProps {
+  // ... existing props
+  /** Sprint 118: Session ID for follow-up questions */
+  sessionId?: string;
+  /** Sprint 118: Callback when a follow-up question is clicked */
+  onFollowUpQuestion?: (question: string) => void;
+}
+
+// ConversationView.tsx - Added render (after typing indicator, before scroll anchor)
+{sessionId && !isStreaming && messages.length > 0 && onFollowUpQuestion && (
+  <div className="px-6 py-4">
+    <FollowUpQuestions
+      sessionId={sessionId}
+      answerComplete={!isStreaming && messages.length > 0}
+      onQuestionClick={onFollowUpQuestion}
+    />
+  </div>
+)}
+```
+
+**HomePage.tsx** - Updated to pass new props:
+
+```typescript
+<ConversationView
+  // ... existing props
+  sessionId={activeSessionId}
+  onFollowUpQuestion={(question) => {
+    // Sprint 118: Handle follow-up question click by submitting as new query
+    const graphConfig = loadGraphExpansionConfig();
+    handleSearch(question, currentMode, currentNamespaces, graphConfig);
+  }}
+/>
+```
+
+**Impact:** Follow-up questions now appear in the main chat interface after each response.
+
+### Verified Fixes (Sprint 118 - Post Container Rebuild)
+
+| Bug | Test File | Result | Evidence |
+|-----|-----------|--------|----------|
+| **BUG-118.2** | edge-filters.spec.ts | ✅ VERIFIED | 13/33 tests pass (all Filter Visibility tests) |
+| **BUG-118.3** | memory-management.spec.ts | ⚠️ PARTIAL | Mock URL fixed, but auth timeout issues |
+| **BUG-118.4** | followup/*.spec.ts | ✅ VERIFIED | All 5 followup.spec.ts tests pass |
+| **BUG-118.5** | followup/*.spec.ts | ✅ VERIFIED | Redis shows 5 questions generated for each session |
+| **BUG-118.6** | followup/*.spec.ts | ✅ VERIFIED | SSE connects to correct port 8000 |
+| **BUG-118.7** | followup/*.spec.ts | ✅ VERIFIED | FollowUpQuestions now renders in main chat UI |
+
+### Test Results (Sprint 118 - Follow-up Questions)
+
+| Test File | Passed | Failed | Notes |
+|-----------|--------|--------|-------|
+| **followup.spec.ts** | 5/5 | 0 | ✅ **ALL PASS** |
+| **follow-up-context.spec.ts** | 8/14 | 6 | Context preservation tests (unrelated to rendering) |
+
+**Follow-up Questions Core Tests (100% pass rate):**
+- ✅ should generate 3-5 follow-up questions (7.1s)
+- ✅ should display follow-up questions as clickable chips (6.7s)
+- ✅ should send follow-up question on click (7.6s)
+- ✅ should generate contextual follow-ups (7.2s)
+- ✅ should show loading state while generating follow-ups (47.3s)
+
+### Remaining Issues (Sprint 118)
+
+| Issue | Test File | Status | Description |
+|-------|-----------|--------|-------------|
+| Context Preservation | follow-up-context.spec.ts | 🟡 PARTIAL | 6/14 fail - content/context logic, not rendering |
+| Graph Interactions | edge-filters.spec.ts (6-19) | 🟡 EXPECTED | Tests need graph data - not a bug |
+| Auth Timeout | memory-management.spec.ts | 🔴 FAILING | setupAuthMocking timeout (3min) |
+
+### Investigation Notes (Follow-up Questions)
+
+**Root Cause Identified (BUG-118.4):**
+- SSE endpoint has 60s max wait time ✅
+- **But tests only waited 10s** (5 retries × 2s) ❌
+- LLM generation takes 20-60s on Nemotron3/DGX Spark
+- Fix: Created `RetryPresets.FOLLOWUP_QUESTIONS` (30 retries × 2s = 60s)
+
+**Timeline of Fixes:**
+1. BUG-118.1: SSE now checks Redis cache first (avoids 30x LLM calls)
+2. BUG-118.4: Test timeout increased from 10s to 60s (matches SSE)
+
+**Next Steps:**
+- [x] Added `RetryPresets.FOLLOWUP_QUESTIONS` preset (60s)
+- [x] Updated follow-up-context.spec.ts to use new preset
+- [x] Updated followup.spec.ts to use 60s timeout
+- [x] Verify fix with E2E test run
+- [x] BUG-118.5: Added follow-up generation to non-streaming API
+- [x] BUG-118.6: Fixed env variable in FollowUpQuestions.tsx
+- [x] BUG-118.7: Integrated FollowUpQuestions into ConversationView
+- [x] **All 5 followup.spec.ts tests now pass!**
 
 ---
 

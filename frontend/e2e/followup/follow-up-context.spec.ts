@@ -1,6 +1,7 @@
 /**
  * E2E Tests for Follow-up Questions with Context Preservation
  * Sprint 69 Feature 69.1: E2E Test Stabilization
+ * Sprint 118 Fix: Use FOLLOWUP_QUESTIONS preset (60s timeout)
  *
  * Tests verify:
  * - Follow-up questions maintain conversational context
@@ -10,6 +11,9 @@
  *
  * Backend: Uses REAL LLM backend
  * Cost: FREE (local model for follow-up generation)
+ *
+ * CRITICAL: Follow-up generation on Nemotron3/DGX Spark takes 20-60s.
+ * Use RetryPresets.FOLLOWUP_QUESTIONS (60s) for getFollowupQuestionCount().
  */
 
 import { test, expect } from '../fixtures';
@@ -30,12 +34,13 @@ test.describe('Follow-up Questions with Context Preservation', () => {
     await chatPage.waitForResponse(TEST_TIMEOUTS.LLM_RESPONSE);
 
     // Wait for follow-up questions with retry logic
+    // Sprint 118 Fix: Use FOLLOWUP_QUESTIONS preset (60s) for LLM generation time
     await retryAssertion(
       async () => {
         const count = await chatPage.getFollowupQuestionCount();
         expect(count).toBeGreaterThanOrEqual(3);
       },
-      { ...RetryPresets.PATIENT, errorPrefix: 'Follow-up questions not generated' }
+      { ...RetryPresets.FOLLOWUP_QUESTIONS, errorPrefix: 'Follow-up questions not generated' }
     );
 
     // Get initial message count
@@ -80,12 +85,13 @@ test.describe('Follow-up Questions with Context Preservation', () => {
     await chatPage.waitForResponse(TEST_TIMEOUTS.LLM_RESPONSE);
 
     // Wait for follow-ups
+    // Sprint 118 Fix: Use FOLLOWUP_QUESTIONS preset (60s) for LLM generation time
     await retryAssertion(
       async () => {
         const count = await chatPage.getFollowupQuestionCount();
         expect(count).toBeGreaterThanOrEqual(3);
       },
-      RetryPresets.PATIENT
+      RetryPresets.FOLLOWUP_QUESTIONS
     );
 
     // Turn 2: Click first follow-up
@@ -102,12 +108,13 @@ test.describe('Follow-up Questions with Context Preservation', () => {
     expect(contextMaintained).toBeTruthy();
 
     // Wait for new follow-ups
+    // Sprint 118 Fix: Use FOLLOWUP_QUESTIONS preset (60s) for LLM generation time
     await retryAssertion(
       async () => {
         const count = await chatPage.getFollowupQuestionCount();
         expect(count).toBeGreaterThan(0);
       },
-      RetryPresets.PATIENT
+      RetryPresets.FOLLOWUP_QUESTIONS
     );
 
     // Turn 3: Click another follow-up
@@ -135,12 +142,13 @@ test.describe('Follow-up Questions with Context Preservation', () => {
     await chatPage.waitForResponse(TEST_TIMEOUTS.LLM_RESPONSE);
 
     // Wait for follow-ups
+    // Sprint 118 Fix: Use FOLLOWUP_QUESTIONS preset (60s) for LLM generation time
     await retryAssertion(
       async () => {
         const count = await chatPage.getFollowupQuestionCount();
         expect(count).toBeGreaterThanOrEqual(3);
       },
-      RetryPresets.PATIENT
+      RetryPresets.FOLLOWUP_QUESTIONS
     );
 
     // Click follow-up (likely about configuration details)
@@ -175,12 +183,13 @@ test.describe('Follow-up Questions with Context Preservation', () => {
     expect(EXPECTED_PATTERNS.OMNITRACKER.LOAD_BALANCING.test(initialResponse)).toBeTruthy();
 
     // Wait for follow-ups
+    // Sprint 118 Fix: Use FOLLOWUP_QUESTIONS preset (60s) for LLM generation time
     await retryAssertion(
       async () => {
         const count = await chatPage.getFollowupQuestionCount();
         expect(count).toBeGreaterThanOrEqual(3);
       },
-      RetryPresets.PATIENT
+      RetryPresets.FOLLOWUP_QUESTIONS
     );
 
     // Click any follow-up (should be contextual)
@@ -210,12 +219,13 @@ test.describe('Follow-up Questions with Context Preservation', () => {
     expect(hasApplicationServer).toBeTruthy();
 
     // Wait for follow-ups
+    // Sprint 118 Fix: Use FOLLOWUP_QUESTIONS preset (60s) for LLM generation time
     await retryAssertion(
       async () => {
         const count = await chatPage.getFollowupQuestionCount();
         expect(count).toBeGreaterThanOrEqual(3);
       },
-      RetryPresets.PATIENT
+      RetryPresets.FOLLOWUP_QUESTIONS
     );
 
     // Click follow-up
@@ -246,12 +256,13 @@ test.describe('Follow-up Questions with Context Preservation', () => {
     const initialSessionId = await chatPage.getSessionId();
 
     // Wait for follow-ups
+    // Sprint 118 Fix: Use FOLLOWUP_QUESTIONS preset (60s) for LLM generation time
     await retryAssertion(
       async () => {
         const count = await chatPage.getFollowupQuestionCount();
         expect(count).toBeGreaterThanOrEqual(3);
       },
-      RetryPresets.PATIENT
+      RetryPresets.FOLLOWUP_QUESTIONS
     );
 
     // Click follow-up
@@ -284,12 +295,13 @@ test.describe('Follow-up Questions with Context Preservation', () => {
     const initialCitationCount = await chatPage.getCitationCount();
 
     // Wait for follow-ups
+    // Sprint 118 Fix: Use FOLLOWUP_QUESTIONS preset (60s) for LLM generation time
     await retryAssertion(
       async () => {
         const count = await chatPage.getFollowupQuestionCount();
         expect(count).toBeGreaterThanOrEqual(3);
       },
-      RetryPresets.PATIENT
+      RetryPresets.FOLLOWUP_QUESTIONS
     );
 
     // Click follow-up
@@ -353,12 +365,13 @@ test.describe('Follow-up Questions with Context Preservation', () => {
     await chatPage.waitForResponse(TEST_TIMEOUTS.LLM_RESPONSE);
 
     // Wait for follow-ups
+    // Sprint 118 Fix: Use FOLLOWUP_QUESTIONS preset (60s) for LLM generation time
     await retryAssertion(
       async () => {
         const count = await chatPage.getFollowupQuestionCount();
         expect(count).toBeGreaterThanOrEqual(3);
       },
-      RetryPresets.PATIENT
+      RetryPresets.FOLLOWUP_QUESTIONS
     );
 
     // Click follow-up

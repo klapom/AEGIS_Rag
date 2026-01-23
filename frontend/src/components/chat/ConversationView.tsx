@@ -4,6 +4,7 @@
  * Sprint 48 Feature 48.6: Phase event display integration
  * Sprint 48 Feature 48.10: Request timeout and cancel integration
  * Sprint 63 Feature 63.8: Research Mode integration
+ * Sprint 118 Feature 118.7: Follow-up Questions integration
  *
  * Main container for the chat-style conversation UI.
  * Transforms the search interface into a ChatGPT/Claude-style conversation layout.
@@ -18,11 +19,13 @@
  * - Phase events display during thinking (Sprint 48)
  * - Timeout warning and cancel functionality (Sprint 48)
  * - Research Mode toggle in input area (Sprint 63)
+ * - Follow-up questions after assistant response (Sprint 118)
  */
 
 import { useRef, useEffect, useCallback, useState } from 'react';
 import { MessageBubble, type MessageData } from './MessageBubble';
 import { TypingIndicator } from './TypingIndicator';
+import { FollowUpQuestions } from './FollowUpQuestions';
 import { SearchInput, type SearchMode } from '../search';
 import type { PhaseEvent, PhaseType } from '../../types/reasoning';
 import type { GraphExpansionConfig } from '../../types/settings';
@@ -61,6 +64,10 @@ interface ConversationViewProps {
   onResearchModeToggle?: () => void;
   /** Sprint 63: Whether to show Research Mode toggle */
   showResearchToggle?: boolean;
+  /** Sprint 118: Session ID for follow-up questions */
+  sessionId?: string;
+  /** Sprint 118: Callback when a follow-up question is clicked */
+  onFollowUpQuestion?: (question: string) => void;
 }
 
 /**
@@ -92,6 +99,8 @@ export function ConversationView({
   isResearchMode = false,
   onResearchModeToggle,
   showResearchToggle = true,
+  sessionId,
+  onFollowUpQuestion,
 }: ConversationViewProps) {
   // Ref for the messages container to handle scrolling
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -253,6 +262,17 @@ export function ConversationView({
                   phaseEvents={phaseEvents}
                   showTimeoutWarning={showTimeoutWarning}
                   onCancel={onCancel}
+                />
+              </div>
+            )}
+
+            {/* Sprint 118: Follow-up Questions - shown after response completes */}
+            {sessionId && !isStreaming && messages.length > 0 && onFollowUpQuestion && (
+              <div className="px-6 py-4">
+                <FollowUpQuestions
+                  sessionId={sessionId}
+                  answerComplete={!isStreaming && messages.length > 0}
+                  onQuestionClick={onFollowUpQuestion}
                 />
               </div>
             )}

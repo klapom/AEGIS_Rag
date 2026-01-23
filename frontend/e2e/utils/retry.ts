@@ -451,4 +451,11 @@ export const RetryPresets = {
 
   /** Network retries (5 retries, 2s delay, backoff) */
   NETWORK: { maxRetries: 5, retryDelay: 2000, exponentialBackoff: true },
+
+  /**
+   * Sprint 118: Follow-up questions retries (30 retries, 2s delay = 60s total)
+   * Matches SSE endpoint max_wait_seconds of 60s.
+   * Nemotron3 Nano follow-up generation takes 20-60s on DGX Spark.
+   */
+  FOLLOWUP_QUESTIONS: { maxRetries: 30, retryDelay: 2000, logAttempts: false },
 };

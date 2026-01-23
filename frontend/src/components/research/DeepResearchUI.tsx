@@ -44,7 +44,8 @@ interface DeepResearchUIProps {
 /**
  * API base URL from environment
  */
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+// Sprint 118 Fix: Use VITE_API_BASE_URL for consistency with other components
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 /**
  * DeepResearchUI Component

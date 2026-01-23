@@ -377,6 +377,42 @@ class CoordinatorAgent:
                 result_count=len(final_state.get("retrieved_contexts", [])),
             )
 
+            # Sprint 118 BUG-118.5: Generate follow-up questions asynchronously
+            # This was missing in the non-streaming path! (only existed in _run_chain)
+            # CRITICAL: This runs AFTER the answer is complete and does NOT block
+            answer = final_state.get("answer", "")
+            if not answer:
+                # Try to extract answer from messages
+                messages = final_state.get("messages", [])
+                for msg in reversed(messages):
+                    if hasattr(msg, "content") and msg.content:
+                        answer = msg.content
+                        break
+
+            if session_id and answer:
+                # Extract sources from final state
+                sources = []
+                retrieved_contexts = final_state.get("retrieved_contexts", [])
+                for ctx in retrieved_contexts:
+                    if isinstance(ctx, dict):
+                        sources.append(ctx)
+
+                # Start async task to generate follow-up questions
+                asyncio.create_task(
+                    self._generate_followup_async(
+                        session_id=session_id,
+                        query=query,
+                        answer=answer,
+                        sources=sources,
+                    )
+                )
+
+                logger.info(
+                    "followup_generation_task_started",
+                    session_id=session_id,
+                    query_preview=query[:50],
+                )
+
             return final_state
 
         except Exception as e:

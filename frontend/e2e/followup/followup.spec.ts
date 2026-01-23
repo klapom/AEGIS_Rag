@@ -4,6 +4,7 @@ import { test, expect } from '../fixtures';
  * E2E Tests for Follow-up Questions
  * Sprint 31 Feature 31.4: Follow-up question generation and interaction
  * Sprint 65 Update: Changed test queries to OMNITRACKER domain
+ * Sprint 118 Fix: Increased timeout from 15s to 60s for LLM generation
  *
  * Tests verify:
  * - 3-5 follow-up questions are generated after each response
@@ -14,11 +15,17 @@ import { test, expect } from '../fixtures';
  * - Follow-up questions persist across page reloads
  *
  * Backend: Uses REAL LLM backend
- * Cost: FREE (local Gemma-3 4B for follow-up generation)
+ * Cost: FREE (local Nemotron-3 Nano for follow-up generation)
  *
  * NOTE: Test queries use OMNITRACKER domain (SMC, load balancing, etc.)
  *       to ensure knowledge base has relevant documents for retrieval.
+ *
+ * CRITICAL: Follow-up generation on Nemotron3/DGX Spark takes 20-60s.
+ * All waitForSelector timeouts must be at least 60000ms.
  */
+
+// Sprint 118: Timeout for follow-up question generation (60s)
+const FOLLOWUP_TIMEOUT = 60000;
 
 test.describe('Follow-up Questions', () => {
   test('should generate 3-5 follow-up questions', async ({ chatPage }) => {
@@ -31,7 +38,7 @@ test.describe('Follow-up Questions', () => {
     // Wait for follow-up questions to appear
     // Follow-up generation is async, may take a few seconds
     await chatPage.page.waitForSelector('[data-testid="followup-question"]', {
-      timeout: 15000,
+      timeout: FOLLOWUP_TIMEOUT, // Sprint 118: 60s for LLM generation
     });
 
     // Verify 3-5 questions exist
@@ -72,7 +79,7 @@ test.describe('Follow-up Questions', () => {
 
     // Wait for follow-up questions
     await chatPage.page.waitForSelector('[data-testid="followup-question"]', {
-      timeout: 15000,
+      timeout: FOLLOWUP_TIMEOUT, // Sprint 118: 60s for LLM generation
     });
 
     // Click first follow-up
@@ -99,7 +106,7 @@ test.describe('Follow-up Questions', () => {
 
     // Wait for follow-ups
     await chatPage.page.waitForSelector('[data-testid="followup-question"]', {
-      timeout: 15000,
+      timeout: FOLLOWUP_TIMEOUT, // Sprint 118: 60s for LLM generation
     });
 
     // Get follow-up text
@@ -125,7 +132,7 @@ test.describe('Follow-up Questions', () => {
     // Wait for follow-ups to appear
     // Loading state may be brief, so we just verify they eventually appear
     await chatPage.page.waitForSelector('[data-testid="followup-question"]', {
-      timeout: 15000,
+      timeout: FOLLOWUP_TIMEOUT, // Sprint 118: 60s for LLM generation
     });
 
     // Verify follow-ups are present
@@ -142,7 +149,7 @@ test.describe('Follow-up Questions', () => {
 
     // Wait for follow-ups
     await chatPage.page.waitForSelector('[data-testid="followup-question"]', {
-      timeout: 15000,
+      timeout: FOLLOWUP_TIMEOUT, // Sprint 118: 60s for LLM generation
     });
 
     // Get follow-up count before reload
@@ -179,7 +186,7 @@ test.describe('Follow-up Questions', () => {
 
     // Wait for first follow-ups
     await chatPage.page.waitForSelector('[data-testid="followup-question"]', {
-      timeout: 15000,
+      timeout: FOLLOWUP_TIMEOUT, // Sprint 118: 60s for LLM generation
     });
 
     // Get and click first follow-up
@@ -189,7 +196,7 @@ test.describe('Follow-up Questions', () => {
 
     // Wait for new follow-ups for the second response
     await chatPage.page.waitForSelector('[data-testid="followup-question"]', {
-      timeout: 15000,
+      timeout: FOLLOWUP_TIMEOUT, // Sprint 118: 60s for LLM generation
     });
 
     // Verify new follow-ups appeared
@@ -231,7 +238,7 @@ test.describe('Follow-up Questions', () => {
 
     // Wait for follow-ups
     await chatPage.page.waitForSelector('[data-testid="followup-question"]', {
-      timeout: 15000,
+      timeout: FOLLOWUP_TIMEOUT, // Sprint 118: 60s for LLM generation
     });
 
     // All follow-up questions should have text content

@@ -53,7 +53,8 @@ export function FollowUpQuestions({ sessionId, onQuestionClick, answerComplete =
 
     if (useSSE) {
       // SSE Push Implementation
-      const baseUrl = import.meta.env.VITE_API_URL || '';
+      // Sprint 118 BUG-118.6 Fix: Use VITE_API_BASE_URL (not VITE_API_URL) for consistency
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
       const sseUrl = `${baseUrl}/api/v1/chat/sessions/${sessionId}/followup-questions/stream`;
 
       console.log('[FollowUpQuestions] Connecting to SSE:', sseUrl);

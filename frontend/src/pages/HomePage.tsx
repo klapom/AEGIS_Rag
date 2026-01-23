@@ -370,6 +370,12 @@ export function HomePage() {
           isResearchMode={research.isResearchMode}
           onResearchModeToggle={research.toggleResearchMode}
           showResearchToggle={true}
+          sessionId={activeSessionId}
+          onFollowUpQuestion={(question) => {
+            // Sprint 118: Handle follow-up question click by submitting as new query
+            const graphConfig = loadGraphExpansionConfig();
+            handleSearch(question, currentMode, currentNamespaces, graphConfig);
+          }}
         />
 
         {/* Sprint 63: Research Mode Progress Panel */}
