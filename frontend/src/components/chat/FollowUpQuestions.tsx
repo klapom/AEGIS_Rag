@@ -37,6 +37,26 @@ export function FollowUpQuestions({ sessionId, onQuestionClick, answerComplete =
   // Fallback polling configuration
   const maxPollAttempts = 60; // Poll for up to 60 seconds (60 * 1s)
 
+  // Sprint 118 BUG-118.8 Fix: Reset questions when new query starts (answerComplete becomes false)
+  // This prevents showing OLD cached questions while NEW ones are being generated
+  useEffect(() => {
+    if (!answerComplete) {
+      console.log('[FollowUpQuestions] Query in progress, clearing old questions');
+      setQuestions([]);
+      setIsLoading(false);
+      setError(null);
+      // Close any existing SSE connection
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+      }
+    }
+  }, [answerComplete]);
+
   useEffect(() => {
     // Sprint 52.3: Only start fetching when answer completes
     if (!answerComplete || !sessionId) {

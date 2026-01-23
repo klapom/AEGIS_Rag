@@ -920,6 +920,25 @@ class CoordinatorAgent:
                 generate_followup_questions_async,
                 store_conversation_context,
             )
+            from src.components.memory import get_redis_memory
+
+            # Sprint 118 BUG-118.8 Fix: Clear old cached follow-up questions FIRST
+            # This prevents SSE endpoint from returning stale questions from previous query
+            redis_memory = get_redis_memory()
+            old_cache_key = f"{session_id}:followup"
+            try:
+                await redis_memory.delete(key=old_cache_key, namespace="cache")
+                logger.info(
+                    "followup_old_cache_cleared",
+                    session_id=session_id,
+                )
+            except Exception as del_error:
+                # Non-critical - continue even if delete fails
+                logger.debug(
+                    "followup_old_cache_clear_failed",
+                    session_id=session_id,
+                    error=str(del_error),
+                )
 
             # Store context in Redis for follow-up generation
             success = await store_conversation_context(
@@ -948,9 +967,6 @@ class CoordinatorAgent:
 
                         # Sprint 65 Fix: STORE the generated questions in Redis
                         # So frontend can retrieve them without regenerating
-                        from src.components.memory import get_redis_memory
-
-                        redis_memory = get_redis_memory()
                         cache_key = f"{session_id}:followup"
                         await redis_memory.store(
                             key=cache_key,

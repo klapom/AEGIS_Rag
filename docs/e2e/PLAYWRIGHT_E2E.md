@@ -23,6 +23,7 @@
 | **BUG-118.5** | followup/*.spec.ts | Follow-up generation **never triggered** in non-streaming API | `process_query()` (line 277) had NO code for follow-up generation - only existed in `_run_chain()` for streaming! | Added `_generate_followup_async()` call to `process_query()` | ✅ FIXED |
 | **BUG-118.6** | followup/*.spec.ts | SSE URL uses wrong env var → goes to port 80 | `FollowUpQuestions.tsx` used `VITE_API_URL` (doesn't exist) with fallback `''` → relative URL to port 80 | Changed to `VITE_API_BASE_URL` | ✅ FIXED |
 | **BUG-118.7** | followup/*.spec.ts | FollowUpQuestions NOT rendered in ConversationView/HomePage | Component only used in SearchResultsPage.tsx via StreamingAnswer - never in main chat UI! | Added FollowUpQuestions to ConversationView.tsx | ✅ FIXED |
+| **BUG-118.8** | follow-up-context.spec.ts | Multi-turn returns OLD follow-up questions | Redis cache `{session_id}:followup` not cleared between queries → SSE returns stale questions | Clear cache at start + reset frontend state | ✅ FIXED |
 
 ### Code Changes (Sprint 118)
 
@@ -190,6 +191,58 @@ interface ConversationViewProps {
 
 **Impact:** Follow-up questions now appear in the main chat interface after each response.
 
+#### BUG-118.8: Multi-turn Stale Cache Fix (Both frontend + backend)
+
+**Root Cause Analysis:**
+- Redis cache key is `{session_id}:followup` - same key for ALL queries in a session
+- When user clicks follow-up question, OLD cached questions returned before NEW ones generated
+- Frontend keeps displaying old questions until new ones arrive
+
+**Fix - Frontend (FollowUpQuestions.tsx):**
+```typescript
+// Sprint 118 BUG-118.8 Fix: Reset questions when new query starts
+useEffect(() => {
+  if (!answerComplete) {
+    console.log('[FollowUpQuestions] Query in progress, clearing old questions');
+    setQuestions([]);
+    setIsLoading(false);
+    setError(null);
+    // Close any existing SSE connection
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
+    }
+  }
+}, [answerComplete]);
+```
+
+**Fix - Backend (coordinator.py):**
+```python
+# Sprint 118 BUG-118.8 Fix: Clear old cached follow-up questions FIRST
+redis_memory = get_redis_memory()
+old_cache_key = f"{session_id}:followup"
+try:
+    await redis_memory.delete(key=old_cache_key, namespace="cache")
+    logger.info("followup_old_cache_cleared", session_id=session_id)
+except Exception:
+    # Non-critical - continue even if delete fails
+    pass
+```
+
+**Impact:** Multi-turn conversations now show fresh follow-up questions for each response.
+
+### Key Insights (Sprint 118)
+
+**Follow-up Questions Bug Categories:**
+
+| Category | Tests | Issue Type | Action |
+|----------|-------|------------|--------|
+| **Rendering** | followup.spec.ts | Technical bugs (BUG-118.4-8) | ✅ FIXED |
+| **Content Quality** | TC-69.1.4/5 | LLM response doesn't contain expected keywords | ❌ NOT A BUG |
+| **Long Context** | TC-69.1.8 | Context preservation over many turns | ⚠️ LLM limitation |
+
+**Lesson Learned:** Tests that assert specific content patterns (e.g., "response must contain 'load balancing'") are **LLM quality tests**, not feature tests. These should be in a separate test category.
+
 ### Verified Fixes (Sprint 118 - Post Container Rebuild)
 
 | Bug | Test File | Result | Evidence |
@@ -200,6 +253,7 @@ interface ConversationViewProps {
 | **BUG-118.5** | followup/*.spec.ts | ✅ VERIFIED | Redis shows 5 questions generated for each session |
 | **BUG-118.6** | followup/*.spec.ts | ✅ VERIFIED | SSE connects to correct port 8000 |
 | **BUG-118.7** | followup/*.spec.ts | ✅ VERIFIED | FollowUpQuestions now renders in main chat UI |
+| **BUG-118.8** | follow-up-context.spec.ts | ✅ VERIFIED | TC-69.1.2 multi-turn now passes |
 
 ### Test Results (Sprint 118 - Follow-up Questions)
 
