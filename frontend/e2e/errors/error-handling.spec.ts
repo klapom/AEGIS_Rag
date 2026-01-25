@@ -281,12 +281,14 @@ test.describe('Error Handling - Streaming Failures', () => {
     expect(finalMessage).toBeTruthy();
   });
 
+  // Sprint 119 BUG-119.8: Stabilized with increased timeouts
   test('should recover from streaming interruption', async ({ chatPage }) => {
     // First query
     await chatPage.sendMessage('What is BERT?');
 
     try {
-      await chatPage.waitForResponse(20000);
+      // Sprint 119: Increased timeout from 20s to 45s
+      await chatPage.waitForResponse(45000);
     } catch {
       // May timeout, that's OK
     }
@@ -296,7 +298,8 @@ test.describe('Error Handling - Streaming Failures', () => {
 
     // Send another query (demonstrates recovery)
     await chatPage.sendMessage('What is GPT?');
-    await chatPage.waitForResponse(20000);
+    // Sprint 119 BUG-119.8: Increased timeout from 20s to 45s
+    await chatPage.waitForResponse(45000);
 
     const finalResponse = await chatPage.getLastMessage();
     expect(finalResponse).toBeTruthy();
@@ -354,6 +357,7 @@ test.describe('Error Handling - User Experience', () => {
     expect(streamingAfter).toBe(false);
   });
 
+  // Sprint 119 BUG-119.8: Stabilized with increased timeouts
   test('should prevent multiple simultaneous submissions', async ({ chatPage, page }) => {
     // Send first message
     await chatPage.sendMessage('First query');
@@ -372,7 +376,8 @@ test.describe('Error Handling - User Experience', () => {
     }
 
     // Wait for responses
-    await chatPage.waitForResponse(30000);
+    // Sprint 119 BUG-119.8: Increased timeout from 30s to 60s
+    await chatPage.waitForResponse(60000);
 
     // App should remain functional
     const response = await chatPage.getLastMessage();

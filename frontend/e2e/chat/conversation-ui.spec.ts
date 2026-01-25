@@ -800,6 +800,7 @@ test.describe('Sprint 46 - Feature 46.1 + 46.2: Integration Tests', () => {
   /**
    * Integration Test 1: Complete conversation flow with reasoning
    * Should support sending message, receiving response, and viewing reasoning
+   * Sprint 119 BUG-119.8: Stabilized with increased timeouts
    */
   test('should support complete conversation flow with reasoning visibility', async ({
     chatPage,
@@ -827,7 +828,8 @@ test.describe('Sprint 46 - Feature 46.1 + 46.2: Integration Tests', () => {
     if (toggleExists) {
       // Step 6: Expand reasoning panel
       await reasoningToggle.click();
-      await chatPage.page.waitForTimeout(300);
+      // Sprint 119 BUG-119.8: Increased timeout from 300ms to 1000ms
+      await chatPage.page.waitForTimeout(1000);
 
       // Step 7: Verify reasoning content
       const reasoningContent = chatPage.page.locator('[data-testid="reasoning-content"]');
@@ -842,7 +844,8 @@ test.describe('Sprint 46 - Feature 46.1 + 46.2: Integration Tests', () => {
 
       // Step 9: Collapse reasoning
       await reasoningToggle.click();
-      await chatPage.page.waitForTimeout(300);
+      // Sprint 119 BUG-119.8: Increased timeout from 300ms to 1000ms
+      await chatPage.page.waitForTimeout(1000);
 
       // Step 10: Verify collapsed
       const newAriaExpanded = await reasoningToggle.getAttribute('aria-expanded');

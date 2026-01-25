@@ -48,6 +48,13 @@ if (fs.existsSync(LONG_CONTEXT_FILE)) {
 }
 
 test.describe('Group 9: Long Context Features', () => {
+  // Sprint 119 BUG-119.7: Skip test if long context file not available
+  test.beforeEach(async () => {
+    if (!fs.existsSync(LONG_CONTEXT_FILE)) {
+      test.skip(true, `Long context test data file not found at ${LONG_CONTEXT_FILE}`);
+    }
+  });
+
   test('should handle long query input (14000+ tokens)', async ({ chatPage }) => {
     // Setup: Intercept API calls BEFORE navigation
     await chatPage.page.route('**/api/v1/chat/**', async (route) => {

@@ -2,6 +2,7 @@
  * E2E Tests for Follow-up Questions with Context Preservation
  * Sprint 69 Feature 69.1: E2E Test Stabilization
  * Sprint 118 Fix: Use FOLLOWUP_QUESTIONS preset (60s timeout)
+ * Sprint 119 BUG-119.5: Tests TC-69.1.4, TC-69.1.5, TC-69.1.8 are @llm-quality tests
  *
  * Tests verify:
  * - Follow-up questions maintain conversational context
@@ -14,6 +15,11 @@
  *
  * CRITICAL: Follow-up generation on Nemotron3/DGX Spark takes 20-60s.
  * Use RetryPresets.FOLLOWUP_QUESTIONS (60s) for getFollowupQuestionCount().
+ *
+ * NOTE (@llm-quality tests):
+ * Tests marked with @llm-quality depend on LLM output content.
+ * These may fail due to LLM variability, NOT code bugs.
+ * Consider running separately: npx playwright test --grep @llm-quality
  */
 
 import { test, expect } from '../fixtures';
@@ -171,7 +177,7 @@ test.describe('Follow-up Questions with Context Preservation', () => {
    * Specific: "OMNITRACKER load balancing"
    * Generic follow-up: "How does it work?" -> should explain load balancing
    */
-  test('TC-69.1.4: generic follow-up inherits specific context', async ({ chatPage }) => {
+  test('TC-69.1.4: generic follow-up inherits specific context @llm-quality', async ({ chatPage }) => {
     await chatPage.goto();
 
     // Specific initial query
@@ -206,7 +212,7 @@ test.describe('Follow-up Questions with Context Preservation', () => {
    * TC-69.1.5: Context keywords extracted from initial query
    * Verify that key entities/concepts from Q1 appear in follow-up responses
    */
-  test('TC-69.1.5: key entities from initial query appear in follow-up', async ({ chatPage }) => {
+  test('TC-69.1.5: key entities from initial query appear in follow-up @llm-quality', async ({ chatPage }) => {
     await chatPage.goto();
 
     // Query with multiple key entities
@@ -323,7 +329,7 @@ test.describe('Follow-up Questions with Context Preservation', () => {
    * TC-69.1.8: Conversation context limit handling
    * Test that very long conversations still maintain recent context
    */
-  test('TC-69.1.8: long conversations maintain recent context', async ({ chatPage }) => {
+  test('TC-69.1.8: long conversations maintain recent context @llm-quality', async ({ chatPage }) => {
     await chatPage.goto();
 
     // Send initial query
