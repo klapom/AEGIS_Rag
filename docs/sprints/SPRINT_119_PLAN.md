@@ -443,6 +443,211 @@ test.beforeEach(async ({ page }) => {
 
 ---
 
+## Missing Features (Causing Test Skips)
+
+Based on the E2E test analysis, the following features are **not implemented** and cause tests to skip. These should be considered for future sprints.
+
+### Feature 119.1: Skills/Tools UI (9 tests skipped)
+
+**File:** `group06-skills-using-tools.spec.ts`
+
+**Current Status:** Tests skipped with `test.describe.skip()`
+
+**Missing Implementation:**
+- Bash tool invocation UI
+- Python tool invocation UI
+- Browser tool invocation UI
+- Tool execution progress indicators
+- Tool execution result display
+- Skill-to-tool mapping UI
+
+**Required Components:**
+```typescript
+// Required data-testids:
+[data-testid="tool-execution-panel"]
+[data-testid="tool-progress-indicator"]
+[data-testid="tool-result-output"]
+[data-testid="skill-tool-mapping"]
+```
+
+**Estimated SP:** 13
+
+---
+
+### Feature 119.2: Graph Versioning (28 tests skipped)
+
+**Files:**
+- `time-travel.spec.ts` (Feature 39.5)
+- `entity-changelog.spec.ts` (Feature 39.6)
+- `version-compare.spec.ts` (Feature 39.7)
+
+**Current Status:** Tests skipped with `test.describe.skip()`
+
+**Missing Implementation:**
+- Time-travel query API (`/api/v1/graph/time-travel`)
+- Entity changelog viewer
+- Version comparison UI
+- Graph state snapshots
+- Historical query execution
+
+**Required API Endpoints:**
+```
+POST /api/v1/graph/time-travel
+GET  /api/v1/graph/entity/{id}/changelog
+POST /api/v1/graph/version-compare
+GET  /api/v1/graph/snapshots
+```
+
+**Estimated SP:** 21
+
+---
+
+### Feature 119.3: Conversation History UI (7 tests conditional skip)
+
+**File:** `history.spec.ts`
+
+**Current Status:** Tests skip if history page/elements not available
+
+**Missing Implementation:**
+- `/history` route in frontend
+- Conversation persistence (localStorage or API)
+- Conversation list UI with `[data-testid="conversation-list"]`
+- Search functionality with `[data-testid="search-history"]`
+- Delete with confirmation `[data-testid="delete-conversation"]`
+- Empty state `[data-testid="empty-history"]`
+
+**Required Components:**
+```typescript
+// Required data-testids:
+[data-testid="conversation-list"]
+[data-testid="conversation-item"]
+[data-testid="conversation-title"]
+[data-testid="search-history"]
+[data-testid="delete-conversation"]
+[data-testid="confirm-delete"]
+[data-testid="empty-history"]
+```
+
+**Estimated SP:** 8
+
+---
+
+### Feature 119.4: Long Context Test Fixture (1 test conditional skip)
+
+**File:** `group09-long-context.spec.ts`
+
+**Current Status:** Test skips if `/tmp/long_context_test_input.md` not found
+
+**Missing Implementation:**
+- Create test fixture file with 14000+ tokens
+- Or modify test to generate content dynamically
+
+**Solution Options:**
+1. Create fixture: `scripts/create_long_context_fixture.sh`
+2. Generate dynamically in test setup
+3. Use existing document from corpus
+
+**Estimated SP:** 1
+
+---
+
+### Feature 119.5: Domain Training API (31 tests skipped)
+
+**File:** `test_domain_training_api.spec.ts`
+
+**Current Status:** Tests skipped - API endpoints not implemented
+
+**Missing Implementation:**
+- Basic domain CRUD operations
+- Domain classification endpoint
+- Domain auto-discovery
+- Training data augmentation
+- Batch ingestion for domains
+- Domain detail operations
+
+**Required API Endpoints:**
+```
+POST   /api/v1/domains
+GET    /api/v1/domains
+GET    /api/v1/domains/{id}
+PUT    /api/v1/domains/{id}
+DELETE /api/v1/domains/{id}
+POST   /api/v1/domains/classify
+POST   /api/v1/domains/discover
+POST   /api/v1/domains/{id}/augment
+POST   /api/v1/domains/{id}/batch-ingest
+```
+
+**Estimated SP:** 21
+
+---
+
+### Feature 119.6: Admin Indexing UI Improvements (12 tests conditional skip)
+
+**File:** `single-document-test.spec.ts`
+
+**Current Status:** Tests skip if admin UI elements not available
+
+**Missing/Incomplete Implementation:**
+- Upload button: `[data-testid="upload-files-button"]`
+- Index button: `[data-testid="index-button"]`
+- Upload status indicators
+- Indexing progress feedback
+
+**Estimated SP:** 5
+
+---
+
+### Feature 119.7: Graph Data Test Fixtures (24 tests conditional skip)
+
+**Files:** `edge-filters.spec.ts`, `graph-visualization.spec.ts`
+
+**Current Status:** Tests skip when `[data-testid="graph-stats-nodes"]` shows 0
+
+**Missing Implementation:**
+- Test namespace with pre-populated graph data
+- Or seed script to create test entities/relationships
+
+**Solution Options:**
+1. Create `scripts/seed_test_graph_data.py`
+2. Use E2E fixture in `test.beforeAll` to ingest test documents
+3. Mock graph data via API route interception
+
+**Estimated SP:** 3
+
+---
+
+## Feature Priority Matrix
+
+| Feature | SP | Tests Enabled | Priority | Sprint Target |
+|---------|---:|-------------:|----------|---------------|
+| 119.4: Long Context Fixture | 1 | 1 | P1 (Quick Win) | Sprint 119 |
+| 119.7: Graph Test Fixtures | 3 | 24 | P1 (Quick Win) | Sprint 119 |
+| 119.6: Admin Indexing UI | 5 | 12 | P2 | Sprint 120 |
+| 119.3: History UI | 8 | 7 | P2 | Sprint 120 |
+| 119.1: Skills/Tools UI | 13 | 9 | P3 | Sprint 121+ |
+| 119.2: Graph Versioning | 21 | 28 | P3 | Sprint 122+ |
+| 119.5: Domain Training API | 21 | 31 | P3 | Sprint 123+ |
+
+**Total Missing Feature SP:** 72
+**Total Tests That Could Be Enabled:** 112
+
+---
+
+## Next Steps (Sprint 120)
+
+1. **Implement Quick Wins (4 SP)**
+   - Feature 119.4: Create long context fixture
+   - Feature 119.7: Seed test graph data
+
+2. **Frontend Improvements (13 SP)**
+   - Feature 119.6: Admin Indexing UI
+   - Feature 119.3: History UI basics
+
+3. **Run Full E2E Suite** to verify improvements
+
+---
+
 ## References
 
 - [Sprint 118 Plan](SPRINT_118_PLAN.md)
