@@ -59,7 +59,7 @@ class ToolsConfig(BaseModel):
 
     # Sprint 70 Feature 70.11: Tool Detection Strategy
     tool_detection_strategy: str = Field(
-        default="markers", description="Detection strategy: 'markers', 'llm', or 'hybrid'"
+        default="hybrid", description="Detection strategy: 'markers', 'llm', or 'hybrid'"
     )
     explicit_tool_markers: list[str] = Field(
         default_factory=lambda: ["[TOOL:", "[SEARCH:", "[FETCH:"],

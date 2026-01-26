@@ -19,7 +19,7 @@ servers:
     command: /usr/bin/bash
     args: []
     description: "Bash command execution tools for system operations"
-    auto_connect: false  # Set to true to enable on startup
+    auto_connect: true  # Set to true to enable on startup
     enabled: true
     timeout: 30
     retry_attempts: 3
@@ -31,7 +31,7 @@ servers:
     command: /usr/bin/python3
     args: ["-m", "mcp_server"]
     description: "Python code execution and evaluation tools"
-    auto_connect: false  # Set to true to enable on startup
+    auto_connect: true  # Set to true to enable on startup
     enabled: true
     timeout: 30
     retry_attempts: 3
@@ -42,7 +42,7 @@ servers:
     transport: http
     url: "http://localhost:9222"
     description: "Browser automation via Chrome DevTools Protocol"
-    auto_connect: false  # Set to true to enable on startup
+    auto_connect: true  # Set to true to enable on startup
     enabled: true
     timeout: 60
     retry_attempts: 3

@@ -146,11 +146,20 @@ export function MessageBubble({ message, onCitationClick }: MessageBubbleProps) 
   // Sprint 51 Fix: Filter sources to only show those actually cited in the answer
   // This prevents showing irrelevant sources with high "search relevance" but no actual usage
   // Sprint 92 Fix: If no citations exist, show all sources instead of filtering to 0
+  // Sprint 120 Bug 120.3: Handle case where citations exceed available sources
   const filteredSources = useMemo((): CitedSource[] => {
     if (!message.sources || message.sources.length === 0) {
       return [];
     }
     const cited = filterCitedSources(message.sources, message.content);
+    const citedNumbers = extractCitedNumbers(message.content);
+
+    // Sprint 120 Bug 120.3: Log if citation numbers exceed source count
+    if (citedNumbers.size > 0 && cited.length < citedNumbers.size) {
+      console.warn(
+        `[MessageBubble] Citation mismatch: ${citedNumbers.size} citations found [${Array.from(citedNumbers).sort((a, b) => a - b).join(', ')}] but only ${message.sources.length} sources available. Missing ${citedNumbers.size - cited.length} sources.`
+      );
+    }
 
     // Sprint 92 Fix: If no citations found but sources exist, show all sources
     // This handles cases where LLM doesn't generate citation markers
@@ -265,8 +274,18 @@ export function MessageBubble({ message, onCitationClick }: MessageBubbleProps) 
 
         {/* Source cards for assistant messages - Sprint 51: Only show cited sources */}
         {!isUser && hasSources && !message.isStreaming && (
-          <div className="mt-4">
+          <div className="mt-4 space-y-2">
             <SourceCardsScroll ref={sourceCardsRef} sources={filteredSources} />
+            {/* Sprint 120 Bug 120.3: Show warning if citations exceed available sources */}
+            {extractCitedNumbers(message.content).size > filteredSources.length && (
+              <div
+                className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-3 py-2"
+                data-testid="source-count-warning"
+              >
+                ⚠️ {extractCitedNumbers(message.content).size} Quellen zitiert, aber nur {filteredSources.length} verfügbar.
+                Einige Quellenangaben fehlen.
+              </div>
+            )}
           </div>
         )}
 

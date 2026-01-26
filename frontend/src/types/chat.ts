@@ -81,6 +81,7 @@ export interface ChatResponse {
  * Sprint 48: Added phase_event for real-time thinking display
  * Sprint 51: Added answer_chunk and reasoning_complete for structured responses
  * Sprint 52: Added citation_map for real-time citation streaming
+ * Sprint 93+: Added tool/skill event types for multi-agent framework
  */
 export type ChatChunkType =
   | 'metadata'
@@ -91,7 +92,14 @@ export type ChatChunkType =
   | 'phase_event'      // Sprint 48: Real-time phase progress
   | 'answer_chunk'     // Sprint 51: Structured answer with citations
   | 'reasoning_complete' // Sprint 51: Final reasoning summary with all phases
-  | 'citation_map';    // Sprint 52: Citation metadata streamed before answer tokens
+  | 'citation_map'     // Sprint 52: Citation metadata streamed before answer tokens
+  | 'skill_activated'  // Sprint 93+: Skill activation event
+  | 'skill_activation_failed' // Sprint 93+: Skill activation failure
+  | 'tool_use'         // Sprint 93+: Tool execution started
+  | 'tool_progress'    // Sprint 93+: Tool execution progress
+  | 'tool_result'      // Sprint 93+: Tool execution result
+  | 'tool_error'       // Sprint 93+: Tool execution error
+  | 'tool_timeout';    // Sprint 93+: Tool execution timeout
 
 /**
  * Citation metadata for a single source

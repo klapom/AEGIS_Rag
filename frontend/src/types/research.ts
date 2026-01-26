@@ -174,6 +174,8 @@ export interface ResearchProgressTrackerProps {
   error: string | null;
   /** Optional callback when a phase is clicked (for expansion) */
   onPhaseClick?: (phase: ResearchPhase) => void;
+  /** Sprint 120 Bug 120.2: Optional callback when dismiss button is clicked */
+  onDismiss?: () => void;
 }
 
 /**

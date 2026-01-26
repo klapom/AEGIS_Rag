@@ -25,6 +25,7 @@ import {
   ChevronRight,
   Clock,
   Loader2,
+  X,
 } from 'lucide-react';
 import type {
   ResearchProgressTrackerProps,
@@ -301,6 +302,7 @@ export function ResearchProgressTracker({
   isResearching,
   error,
   onPhaseClick,
+  onDismiss,
 }: ResearchProgressTrackerProps) {
   const [expandedPhases, setExpandedPhases] = useState<Set<ResearchPhase>>(new Set());
 
@@ -390,9 +392,22 @@ export function ResearchProgressTracker({
       <div className="mb-4">
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-sm font-semibold text-gray-700">Recherche-Fortschritt</h3>
-          <span className="text-xs text-gray-500">
-            {isResearching ? `${progressPercentage}%` : 'Abgeschlossen'}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-500">
+              {isResearching ? `${progressPercentage}%` : 'Abgeschlossen'}
+            </span>
+            {/* Sprint 120 Bug 120.2: Dismiss button */}
+            {onDismiss && (
+              <button
+                onClick={onDismiss}
+                className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                aria-label="Schließen"
+                data-testid="research-progress-dismiss"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Progress bar */}

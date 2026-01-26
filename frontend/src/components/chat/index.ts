@@ -24,3 +24,4 @@ export { ReasoningPanel } from './ReasoningPanel';  // Sprint 46 Feature 46.2
 export { RetrievalStep } from './RetrievalStep';  // Sprint 46 Feature 46.2
 export { PhaseIndicator } from './PhaseIndicator';  // Sprint 48 Feature 48.6
 export type { PhaseIndicatorProps } from './PhaseIndicator';  // Sprint 48 Feature 48.6
+export { BashExecutionPanel } from './BashExecutionPanel';  // Sprint 120 Feature 120.8

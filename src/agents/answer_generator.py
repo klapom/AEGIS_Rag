@@ -34,6 +34,7 @@ from src.prompts.answer_prompts import (
     MULTI_HOP_REASONING_PROMPT,
     NO_HEDGING_FAITHFULNESS_PROMPT,
     NO_HEDGING_FAITHFULNESS_PROMPT_EN,
+    TOOL_AWARENESS_INSTRUCTION,
 )
 
 logger = structlog.get_logger(__name__)
@@ -810,6 +811,7 @@ class AnswerGenerator:
         intent: str | None = None,
         strict_faithfulness: bool | None = None,
         no_hedging: bool = False,
+        tools_enabled: bool = False,
     ):
         """Stream LLM response token-by-token with citation support.
 
@@ -817,6 +819,7 @@ class AnswerGenerator:
         Sprint 69 Feature 69.3: Added intent parameter for model selection
         Sprint 80 Feature 80.1: Strict faithfulness mode for RAGAS optimization
         Sprint 81 Feature 81.8: No-hedging mode to eliminate meta-commentary
+        Sprint 120 Feature 120.11: Tool-aware prompts for tool marker generation
         TD-097: Load strict_faithfulness from Redis config if not explicitly passed
 
         This method combines citation generation with real-time token streaming.
@@ -833,6 +836,9 @@ class AnswerGenerator:
             no_hedging: When True, uses no-hedging prompt that forbids meta-commentary
                 like "This information is not available". Eliminates LLM hedging behavior
                 that causes Faithfulness penalties. Default: False. (Sprint 81 Feature 81.8)
+            tools_enabled: When True, injects tool-awareness instruction to teach LLM
+                about tool markers ([TOOL:action], [SEARCH:query], [FETCH:url]).
+                Default: False. (Sprint 120 Feature 120.11)
 
         Yields:
             dict: Token events with format:
@@ -911,6 +917,15 @@ class AnswerGenerator:
             )
             prompt_mode = "standard_citations"
 
+        # Sprint 120 Feature 120.11: Inject tool-awareness instruction when tools enabled
+        # This teaches the LLM to use tool markers ([TOOL:...], [SEARCH:...], [FETCH:...])
+        # when the provided sources are insufficient to answer the query.
+        if tools_enabled:
+            # Insert tool instruction before "**Antwort:**" section
+            # The instruction is in German to match the existing prompt language
+            prompt = prompt.replace("**Antwort:**", f"{TOOL_AWARENESS_INSTRUCTION}\n**Antwort:**")
+            prompt_mode = f"{prompt_mode}_with_tools"
+
         logger.debug(
             "generating_answer_with_citations_streaming",
             query=query[:100],
@@ -918,6 +933,7 @@ class AnswerGenerator:
             prompt_mode=prompt_mode,
             strict_faithfulness=strict_faithfulness,
             no_hedging=no_hedging,
+            tools_enabled=tools_enabled,
         )
 
         try:

@@ -63,6 +63,8 @@ async def llm_answer_node(state: dict[str, Any]) -> dict[str, Any]:
     strict_faithfulness = state.get("strict_faithfulness", settings.strict_faithfulness_enabled)
     # Sprint 81 Feature 81.8: Get no_hedging from state or global config
     no_hedging = state.get("no_hedging", settings.no_hedging_enabled)
+    # Sprint 120 Feature 120.11: Get tools_enabled from state (set during graph compilation)
+    tools_enabled = state.get("tools_enabled", False)
 
     logger.info(
         "llm_answer_node_start",
@@ -71,6 +73,7 @@ async def llm_answer_node(state: dict[str, Any]) -> dict[str, Any]:
         intent=intent,
         strict_faithfulness=strict_faithfulness,
         no_hedging=no_hedging,
+        tools_enabled=tools_enabled,
     )
 
     # Initialize phase_events list if not present
@@ -101,12 +104,14 @@ async def llm_answer_node(state: dict[str, Any]) -> dict[str, Any]:
         citation_map = {}
 
         # Sprint 81 Feature 81.8: Pass no_hedging to eliminate meta-commentary
+        # Sprint 120 Feature 120.11: Pass tools_enabled for tool-aware prompts
         async for token_event in generator.generate_with_citations_streaming(
             query,
             contexts,
             intent=intent,
             strict_faithfulness=strict_faithfulness,
             no_hedging=no_hedging,
+            tools_enabled=tools_enabled,
         ):
             event_type = token_event.get("event")
 
@@ -439,10 +444,13 @@ def create_base_graph(enable_tools: bool = False) -> StateGraph:
     - Memory node (Sprint 7 Feature 7.4)
     - Conditional edges for routing
     - Tool use support (Sprint 70 Feature 70.5)
+    - Tool-aware prompts (Sprint 120 Feature 120.11)
     - END node
 
     Args:
         enable_tools: Enable tool use with ReAct pattern (default: False)
+                     When True, also enables tool-aware prompts that teach the LLM
+                     to use tool markers ([TOOL:...], [SEARCH:...], [FETCH:...])
 
     Returns:
         Compiled StateGraph ready for execution

@@ -68,6 +68,8 @@ interface ConversationViewProps {
   sessionId?: string;
   /** Sprint 118: Callback when a follow-up question is clicked */
   onFollowUpQuestion?: (question: string) => void;
+  /** Sprint 120 Bug 120.4: Error message to display */
+  error?: string | null;
 }
 
 /**
@@ -101,6 +103,7 @@ export function ConversationView({
   showResearchToggle = true,
   sessionId,
   onFollowUpQuestion,
+  error,
 }: ConversationViewProps) {
   // Ref for the messages container to handle scrolling
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -263,6 +266,35 @@ export function ConversationView({
                   showTimeoutWarning={showTimeoutWarning}
                   onCancel={onCancel}
                 />
+              </div>
+            )}
+
+            {/* Sprint 120 Bug 120.4: Error message display */}
+            {error && !isStreaming && (
+              <div className="px-6 py-4 bg-white border-t border-gray-100">
+                <div
+                  className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-lg text-red-800"
+                  role="alert"
+                  data-testid="stream-error-message"
+                >
+                  <svg
+                    className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <div className="flex-1">
+                    <p className="font-medium text-sm">Fehler bei der Anfrage</p>
+                    <p className="text-sm mt-1">{error}</p>
+                  </div>
+                </div>
               </div>
             )}
 

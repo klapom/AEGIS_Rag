@@ -5,10 +5,33 @@ Sprint 15 Feature 15.1: SSE Streaming Endpoint
 Sprint 17 Feature 17.2: Conversation History Persistence
 Sprint 48 Feature 48.4: Chat Stream API Enhancement (8 SP)
 Sprint 48 Feature 48.5: Phase Events Redis Persistence (5 SP)
+Sprint 120 Feature 120.14: SSE Tool Events in Chat Stream
 
 This module provides RESTful chat endpoints for the Gradio UI and React frontend.
-It integrates the CoordinatorAgent for query processing and UnifiedMemoryAPI for session management.
-Includes Server-Sent Events (SSE) streaming for real-time token-by-token responses with phase events.
+It integrates the CoordinatorAgent for query processing and UnifiedMemoryAPI for
+session management. Includes Server-Sent Events (SSE) streaming for real-time
+token-by-token responses with phase events.
+
+Sprint 120 Feature 120.14: Tool Event Streaming
+When tool execution occurs (via LangGraph tools_node), the SSE stream emits granular
+tool-specific events in addition to the standard phase_event. This enables the
+frontend to display tool execution progress in real-time.
+
+Tool Event Types:
+    - tool_use: Emitted when a tool starts executing (IN_PROGRESS status)
+    - tool_result: Emitted when a tool completes successfully (COMPLETED status)
+    - tool_error: Emitted when a tool execution fails (FAILED status)
+
+Event Flow:
+    1. tools_node emits PhaseEvent(TOOL_EXECUTION, IN_PROGRESS) → tool_use event
+    2. tools_node executes tool via MCP
+    3. tools_node emits PhaseEvent(TOOL_EXECUTION, COMPLETED/FAILED) → tool_result/
+       tool_error event
+
+Frontend Integration:
+    The frontend's useStreamChat hook receives these events and updates the tool
+    execution state, displaying progress bars, results, and errors in real-time
+    during chat conversations.
 """
 
 import asyncio
@@ -602,6 +625,104 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
                                     "data": event.model_dump(mode="json"),
                                 }
                             )
+
+                            # Sprint 120 Feature 120.14: Emit tool events
+                            from src.models.phase_event import PhaseType, PhaseStatus
+
+                            if event.phase_type == PhaseType.TOOL_EXECUTION:
+                                try:
+                                    tool_name = event.metadata.get(
+                                        "tool_name"
+                                    ) or event.metadata.get("tool_action", "unknown")
+                                    execution_id = f"{tool_name}_{event.start_time.isoformat()}"
+                                    timestamp = event.start_time.isoformat()
+
+                                    if event.status == PhaseStatus.IN_PROGRESS:
+                                        # Emit tool_use event
+                                        yield _format_sse_message(
+                                            {
+                                                "type": "tool_use",
+                                                "data": {
+                                                    "tool": tool_name,
+                                                    "server": "mcp",
+                                                    "parameters": event.metadata.get(
+                                                        "parameters", {}
+                                                    ),
+                                                    "execution_id": execution_id,
+                                                    "timestamp": timestamp,
+                                                },
+                                            }
+                                        )
+                                        logger.debug(
+                                            "tool_use_event_emitted",
+                                            tool=tool_name,
+                                            execution_id=execution_id,
+                                        )
+
+                                    elif event.status == PhaseStatus.COMPLETED:
+                                        # Emit tool_result event
+                                        yield _format_sse_message(
+                                            {
+                                                "type": "tool_result",
+                                                "data": {
+                                                    "tool": tool_name,
+                                                    "server": "mcp",
+                                                    "result": event.metadata.get(
+                                                        "result_preview", ""
+                                                    ),
+                                                    "success": True,
+                                                    "duration_ms": event.duration_ms,
+                                                    "execution_id": execution_id,
+                                                    "timestamp": (
+                                                        event.end_time.isoformat()
+                                                        if event.end_time
+                                                        else timestamp
+                                                    ),
+                                                },
+                                            }
+                                        )
+                                        logger.debug(
+                                            "tool_result_event_emitted",
+                                            tool=tool_name,
+                                            execution_id=execution_id,
+                                            duration_ms=event.duration_ms,
+                                        )
+
+                                    elif event.status == PhaseStatus.FAILED:
+                                        # Emit tool_error event
+                                        yield _format_sse_message(
+                                            {
+                                                "type": "tool_error",
+                                                "data": {
+                                                    "tool": tool_name,
+                                                    "error": event.error or "Tool execution failed",
+                                                    "details": event.metadata.get(
+                                                        "error_details", ""
+                                                    ),
+                                                    "execution_id": execution_id,
+                                                    "timestamp": (
+                                                        event.end_time.isoformat()
+                                                        if event.end_time
+                                                        else timestamp
+                                                    ),
+                                                },
+                                            }
+                                        )
+                                        logger.debug(
+                                            "tool_error_event_emitted",
+                                            tool=tool_name,
+                                            execution_id=execution_id,
+                                            error=event.error,
+                                        )
+
+                                except Exception as e:
+                                    logger.warning(
+                                        "tool_event_emission_failed",
+                                        error=str(e),
+                                        event_type=event.status.value,
+                                    )
+                                    # Continue with normal phase_event emission
+
                         continue
 
                     # Handle dict events (backward compatibility)
@@ -616,6 +737,107 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
                                 emitted_phases.add(event_key)
                                 reasoning_data.add_phase_event(phase_event)
                                 yield _format_sse_message(event)
+
+                                # Sprint 120 Feature 120.14: Emit tool events
+                                from src.models.phase_event import PhaseType, PhaseStatus
+
+                                if phase_event.phase_type == PhaseType.TOOL_EXECUTION:
+                                    try:
+                                        tool_name = phase_event.metadata.get(
+                                            "tool_name"
+                                        ) or phase_event.metadata.get("tool_action", "unknown")
+                                        execution_id = (
+                                            f"{tool_name}_{phase_event.start_time.isoformat()}"
+                                        )
+                                        timestamp = phase_event.start_time.isoformat()
+
+                                        if phase_event.status == PhaseStatus.IN_PROGRESS:
+                                            # Emit tool_use event
+                                            yield _format_sse_message(
+                                                {
+                                                    "type": "tool_use",
+                                                    "data": {
+                                                        "tool": tool_name,
+                                                        "server": "mcp",
+                                                        "parameters": phase_event.metadata.get(
+                                                            "parameters", {}
+                                                        ),
+                                                        "execution_id": execution_id,
+                                                        "timestamp": timestamp,
+                                                    },
+                                                }
+                                            )
+                                            logger.debug(
+                                                "tool_use_event_emitted_dict",
+                                                tool=tool_name,
+                                                execution_id=execution_id,
+                                            )
+
+                                        elif phase_event.status == PhaseStatus.COMPLETED:
+                                            # Emit tool_result event
+                                            yield _format_sse_message(
+                                                {
+                                                    "type": "tool_result",
+                                                    "data": {
+                                                        "tool": tool_name,
+                                                        "server": "mcp",
+                                                        "result": phase_event.metadata.get(
+                                                            "result_preview", ""
+                                                        ),
+                                                        "success": True,
+                                                        "duration_ms": phase_event.duration_ms,
+                                                        "execution_id": execution_id,
+                                                        "timestamp": (
+                                                            phase_event.end_time.isoformat()
+                                                            if phase_event.end_time
+                                                            else timestamp
+                                                        ),
+                                                    },
+                                                }
+                                            )
+                                            logger.debug(
+                                                "tool_result_event_emitted_dict",
+                                                tool=tool_name,
+                                                execution_id=execution_id,
+                                                duration_ms=phase_event.duration_ms,
+                                            )
+
+                                        elif phase_event.status == PhaseStatus.FAILED:
+                                            # Emit tool_error event
+                                            yield _format_sse_message(
+                                                {
+                                                    "type": "tool_error",
+                                                    "data": {
+                                                        "tool": tool_name,
+                                                        "error": phase_event.error
+                                                        or "Tool execution failed",
+                                                        "details": phase_event.metadata.get(
+                                                            "error_details", ""
+                                                        ),
+                                                        "execution_id": execution_id,
+                                                        "timestamp": (
+                                                            phase_event.end_time.isoformat()
+                                                            if phase_event.end_time
+                                                            else timestamp
+                                                        ),
+                                                    },
+                                                }
+                                            )
+                                            logger.debug(
+                                                "tool_error_event_emitted_dict",
+                                                tool=tool_name,
+                                                execution_id=execution_id,
+                                                error=phase_event.error,
+                                            )
+
+                                    except Exception as e:
+                                        logger.warning(
+                                            "tool_event_emission_failed_dict",
+                                            error=str(e),
+                                            event_type=phase_event.status.value,
+                                        )
+                                        # Continue with normal phase_event emission
+
                             continue
 
                         # Sprint 52: Stream tokens to UI in real-time

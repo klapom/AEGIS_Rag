@@ -115,6 +115,10 @@ class AgentState(MessagesState):
         ge=0,
         description="Number of tool executions in this conversation (Sprint 70 Feature 70.5)",
     )
+    tools_enabled: bool = Field(
+        default=False,
+        description="Whether tools are enabled for this conversation (Sprint 120 Feature 120.11)",
+    )
 
 
 class QueryMetadata(BaseModel):
@@ -157,6 +161,7 @@ def create_initial_state(
     intent: str = "hybrid",
     namespaces: list[str] | None = None,
     session_id: str | None = None,
+    tools_enabled: bool = False,
 ) -> dict[str, Any]:
     """Create initial agent state from user query.
 
@@ -165,6 +170,7 @@ def create_initial_state(
         intent: Detected intent (default: "hybrid")
         namespaces: Namespaces to search in (default: None, will use ["default", "general"])
         session_id: Session identifier for real-time phase event streaming (Sprint 52)
+        tools_enabled: Whether tools are enabled for this conversation (Sprint 120 Feature 120.11)
 
     Returns:
         Dictionary representing the initial AgentState
@@ -177,6 +183,7 @@ def create_initial_state(
         "search_mode": intent if intent in ["vector", "graph", "hybrid"] else "hybrid",
         "namespaces": namespaces,
         "session_id": session_id,  # Sprint 52: For real-time phase events
+        "tools_enabled": tools_enabled,  # Sprint 120: For tool-aware prompts
         "metadata": {
             "timestamp": datetime.now(UTC).isoformat(),
             "agent_path": [],

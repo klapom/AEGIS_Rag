@@ -191,3 +191,18 @@ Sources only say: "X was founded in 2020."
 **Question:** {query}
 
 **Answer:**"""
+
+# Sprint 120 Feature 120.11: Tool-Aware Prompt Instruction
+# This instruction teaches the LLM to use tool markers when sources are insufficient.
+# The tool detection system expects markers like [TOOL:action], [SEARCH:query], [FETCH:url].
+# IMPORTANT: Only injected when tools are enabled to avoid unnecessary tool calls.
+TOOL_AWARENESS_INSTRUCTION = """
+**Verfügbare Werkzeuge:**
+Falls die bereitgestellten Quellen NICHT ausreichen, um die Frage zu beantworten, kannst du folgende Werkzeuge nutzen:
+- Web-Suche: Schreibe [SEARCH:suchbegriff] um im Internet zu suchen
+- URL abrufen: Schreibe [FETCH:https://url] um eine Webseite abzurufen
+- Tool ausführen: Schreibe [TOOL:aktion beschreibung] für andere Werkzeuge
+
+**WICHTIG:** Nutze Tools NUR wenn die bereitgestellten Quellen die Frage definitiv NICHT beantworten können.
+Bei normalen Wissensfragen nutze IMMER die Quellen, KEINE Tools.
+"""

@@ -15,17 +15,19 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Wrench, Server, Activity, Shield } from 'lucide-react';
+import { ArrowLeft, Wrench, Server, Activity, Shield, Terminal } from 'lucide-react';
 import { MCPHealthMonitor } from '../../components/admin/MCPHealthMonitor';
 import { MCPServerList } from '../../components/admin/MCPServerList';
 import { MCPToolExecutionPanel } from '../../components/admin/MCPToolExecutionPanel';
 import { ToolPermissionsManager } from '../../components/admin/ToolPermissionsManager';
+import { BashExecutionPanel } from '../../components/chat/BashExecutionPanel';
 
 /**
  * Tab view options
  * Sprint 116 Feature 116.5: Added permissions tab
+ * Sprint 120 Feature 120.8: Added bash tab
  */
-type TabView = 'servers' | 'tools' | 'permissions';
+type TabView = 'servers' | 'tools' | 'permissions' | 'bash';
 
 /**
  * MCPToolsPage - Main page for MCP tool management
@@ -108,6 +110,18 @@ export function MCPToolsPage() {
               <Shield className="w-4 h-4" />
               Permissions
             </button>
+            <button
+              onClick={() => setActiveTab('bash')}
+              className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                activeTab === 'bash'
+                  ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
+                  : 'text-gray-600 dark:text-gray-400'
+              }`}
+              data-testid="tab-bash"
+            >
+              <Terminal className="w-4 h-4" />
+              Bash
+            </button>
           </div>
 
           {/* Desktop Tab Navigation */}
@@ -148,6 +162,18 @@ export function MCPToolsPage() {
               <Shield className="w-4 h-4" />
               Permissions
             </button>
+            <button
+              onClick={() => setActiveTab('bash')}
+              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                activeTab === 'bash'
+                  ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
+                  : 'text-gray-600 dark:text-gray-400'
+              }`}
+              data-testid="tab-bash-desktop"
+            >
+              <Terminal className="w-4 h-4" />
+              Bash Execution
+            </button>
           </div>
         </header>
 
@@ -178,8 +204,21 @@ export function MCPToolsPage() {
           </div>
         )}
 
+        {/* Bash Tab Content (Full Width) - Sprint 120 Feature 120.8 */}
+        {activeTab === 'bash' && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 mb-4">
+              <Terminal className="w-5 h-5 text-gray-500" />
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                Bash Command Execution
+              </h2>
+            </div>
+            <BashExecutionPanel />
+          </div>
+        )}
+
         {/* Main Content - Two Column Layout (Servers & Tools) */}
-        {activeTab !== 'permissions' && (
+        {activeTab !== 'permissions' && activeTab !== 'bash' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Server List Column */}
             <div

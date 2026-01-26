@@ -73,6 +73,9 @@ export function HomePage() {
   const [activeSessionId, setActiveSessionId] = useState<string | undefined>();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // Sprint 120 Bug 120.2: Track research progress panel visibility
+  const [showResearchProgress, setShowResearchProgress] = useState(true);
+
   // Current query state for streaming
   const [currentQuery, setCurrentQuery] = useState<string | null>(null);
   const [currentMode, setCurrentMode] = useState<SearchMode>('hybrid');
@@ -141,6 +144,36 @@ export function HomePage() {
     toolExecutionsRef.current = Array.from(streamingState.toolExecutions.values());
   }, [streamingState.skillActivations, streamingState.toolExecutions]);
 
+  // Sprint 120 Bug 120.1: Add research synthesis to conversation history when complete
+  useEffect(() => {
+    if (research.synthesis && !research.isResearching) {
+      // Check if this synthesis is already in history
+      const lastMessage = conversationHistory[conversationHistory.length - 1];
+      const isAlreadyAdded = lastMessage?.role === 'assistant' && lastMessage?.content === research.synthesis;
+
+      if (!isAlreadyAdded) {
+        // Add research synthesis as assistant message
+        setConversationHistory((prev) => [
+          ...prev,
+          {
+            id: generateMessageId(),
+            role: 'assistant',
+            content: research.synthesis,
+            sources: research.sources.map((rs, idx) => ({
+              id: rs.metadata?.id as string || `source-${idx}`,
+              text: rs.text,
+              score: rs.score,
+              metadata: rs.metadata || {},
+            })),
+            timestamp: new Date().toISOString(),
+          },
+        ]);
+        // Clear research state after adding to history
+        research.resetResearch();
+      }
+    }
+  }, [research.synthesis, research.isResearching]);
+
   /**
    * Handle new message submission
    * Sprint 63: Routes to Research Mode or standard chat based on toggle
@@ -163,6 +196,7 @@ export function HomePage() {
 
     // Sprint 63: Route to Research Mode if enabled
     if (research.isResearchMode) {
+      setShowResearchProgress(true); // Sprint 120: Show progress panel when starting research
       research.startResearch(query, namespaces[0] || 'default');
     } else {
       // Trigger standard streaming response
@@ -410,10 +444,12 @@ export function HomePage() {
             const graphConfig = loadGraphExpansionConfig();
             handleSearch(question, currentMode, currentNamespaces, graphConfig);
           }}
+          error={research.isResearchMode ? research.error : streamingState.error}
         />
 
         {/* Sprint 63: Research Mode Progress Panel */}
-        {research.isResearchMode && (research.isResearching || research.synthesis) && (
+        {/* Sprint 120 Bug 120.2: Add dismiss functionality */}
+        {research.isResearchMode && (research.isResearching || research.synthesis) && showResearchProgress && (
           <div className="fixed right-4 top-20 w-80 z-50 space-y-4">
             {/* Progress Tracker */}
             {research.progress.length > 0 && (
@@ -422,6 +458,7 @@ export function HomePage() {
                 currentPhase={research.currentPhase}
                 isResearching={research.isResearching}
                 error={research.error}
+                onDismiss={() => setShowResearchProgress(false)}
               />
             )}
 

@@ -221,7 +221,7 @@ export function ConsolidationControl({ sessionId }: ConsolidationControlProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           {/* Current Status */}
           <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
-            <div className="flex items-center gap-3 mb-3">
+            <div className="flex items-center gap-3 mb-3" data-testid="memory-consolidation-status">
               {status?.is_running ? (
                 <>
                   <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse" />

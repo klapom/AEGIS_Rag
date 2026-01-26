@@ -327,11 +327,18 @@ class CoordinatorAgent:
                 namespaces=namespaces,
             )
 
+            # Sprint 120 Feature 120.11: Load tools config to pass to state
+            from src.components.tools_config import get_tools_config_service
+
+            tools_config = await get_tools_config_service().get_config()
+            tools_enabled = tools_config.enable_chat_tools
+
             # Create initial state
             initial_state = create_initial_state(
                 query=query,
                 intent=intent or "hybrid",
                 namespaces=namespaces,
+                tools_enabled=tools_enabled,  # Sprint 120: Pass tools status for tool-aware prompts
             )
 
             # Create session config
@@ -664,12 +671,19 @@ class CoordinatorAgent:
             intent=intent,
         )
 
+        # Sprint 120 Feature 120.11: Load tools config to pass to state
+        from src.components.tools_config import get_tools_config_service
+
+        tools_config = await get_tools_config_service().get_config()
+        tools_enabled = tools_config.enable_chat_tools
+
         # Create initial state with session_id for real-time phase events
         initial_state = create_initial_state(
             query=query,
             intent=intent or "hybrid",
             namespaces=namespaces,
             session_id=session_id,  # Sprint 52: Pass session_id for real-time phase events
+            tools_enabled=tools_enabled,  # Sprint 120: Pass tools status for tool-aware prompts
         )
 
         # Create session config
