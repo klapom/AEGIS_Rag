@@ -1,4 +1,4 @@
-import { test, expect } from '../fixtures';
+import { test, expect, setupAuthMocking } from '../fixtures';
 
 /**
  * E2E Tests for Conversation History - Feature 31.5
@@ -21,7 +21,11 @@ import { test, expect } from '../fixtures';
 
 test.describe('Conversation History - Feature 31.5', () => {
   // Sprint 119 BUG-119.4: Skip tests if history feature is not available
+  // Sprint 119 Feature 119.3: Added auth to beforeEach (page is unauthenticated before fixtures)
   test.beforeEach(async ({ page }) => {
+    // Authenticate first (beforeEach runs before fixture setup)
+    await setupAuthMocking(page);
+
     // Navigate to history page to check if it exists
     const response = await page.goto('/history');
     const status = response?.status() ?? 0;
@@ -140,9 +144,10 @@ test.describe('Conversation History - Feature 31.5', () => {
       expect(historyPage.page.url()).toContain('/');
 
       // Verify messages are restored
+      // Sprint 119: Fixed assertion - query is about OMNITRACKER, not geography
       const messages = await chatPage.getAllMessages();
       expect(messages.length).toBeGreaterThanOrEqual(1);
-      expect(messages.some((msg) => msg.toLowerCase().includes('capital'))).toBeTruthy();
+      expect(messages.some((msg) => msg.toLowerCase().includes('omnitracker'))).toBeTruthy();
     }
   });
 

@@ -96,7 +96,7 @@ export function ToolExecutionPanel({ execution }: ToolExecutionPanelProps) {
   return (
     <div
       className="my-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden"
-      data-testid="tool-execution-panel"
+      data-testid={`tool-${execution.tool}`}
       data-tool={execution.tool}
       data-status={execution.status}
     >
@@ -211,7 +211,7 @@ export function ToolExecutionPanel({ execution }: ToolExecutionPanelProps) {
 
       {/* Timeout Message */}
       {execution.status === 'timeout' && (
-        <div className="px-4 py-3" data-testid="tool-status-timeout">
+        <div className="px-4 py-3" data-testid="tool-timeout-message">
           <div className="flex items-start gap-2 text-sm text-amber-700 dark:text-amber-400">
             <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
             <div>

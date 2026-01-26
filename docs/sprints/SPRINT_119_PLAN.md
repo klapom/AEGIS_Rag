@@ -1,8 +1,8 @@
 # Sprint 119 Plan: Skipped E2E Test Analysis & Stabilization
 
-**Date:** 2026-01-25 (Phase 1), 2026-01-26 (Phase 2)
-**Status:** ✅ Phase 1 Complete (25 SP Bug Fixes), ✅ Phase 2 Complete (12 SP Feature Fixes)
-**Total Story Points:** 37 SP delivered (25 SP bug fixes + 12 SP feature fixes)
+**Date:** 2026-01-25 (Phase 1), 2026-01-26 (Phase 2 + Phase 3)
+**Status:** ✅ Phase 1 Complete (25 SP), ✅ Phase 2 Complete (12 SP), ✅ Phase 3 Complete (34 SP)
+**Total Story Points:** 71 SP delivered (25 SP bug fixes + 12 SP feature fixes + 34 SP feature implementation)
 **Predecessor:** Sprint 118 (Testing Infrastructure & Bug Fixes)
 **Successor:** Sprint 120 (Visual Regression / Performance Tests)
 
@@ -498,6 +498,42 @@ test.beforeEach(async ({ page }) => {
 
 ---
 
+## Phase 3 Implementation Notes (2026-01-26)
+
+### Feature 119.1: Skills/Tools Chat Integration (20 SP) ✅
+- **New Files:**
+  - `frontend/src/types/skills-events.ts` — SSE event types (SkillActivationEvent, ToolExecutionState, etc.)
+  - `frontend/src/components/chat/SkillActivationIndicator.tsx` — Inline skill activation display
+  - `frontend/src/components/chat/ToolExecutionPanel.tsx` — Tool execution with progress/status/output
+- **Modified Files:**
+  - `frontend/src/hooks/useStreamChat.ts` — 6 new SSE event handlers (skill_activated, tool_use, tool_progress, tool_result, tool_error, tool_timeout)
+  - `frontend/src/components/chat/MessageBubble.tsx` — Render skill/tool panels before message content
+  - `frontend/src/pages/HomePage.tsx` — Pass skill/tool data through message pipeline via refs
+- **Data-testids:** skill-activated-{name}, tool-execution-panel, tool-progress-bar, tool-status-{status}, tool-result-output
+- **Architecture:** Map<string, ToolExecutionState> for O(1) concurrent tool tracking by execution_id
+
+### Feature 119.2: Graph Test Seed Data Script (3 SP) ✅
+- **New File:** `scripts/seed_test_graph_data.py` (570 LOC)
+- **Data Created:** 10 entities (AegisRAG architecture theme) + 13 relationships (RELATES_TO + MENTIONED_IN) + 2 chunks
+- **Entity Types:** TECHNOLOGY (8), CONCEPT (1), ORGANIZATION (1)
+- **Weight Range:** 0.4–0.95 for threshold slider testing
+- **Features:** Idempotent (MERGE), namespace-isolated (`--namespace`), cleanup (`--clean`)
+- **Documentation:** `scripts/README.md` updated with usage instructions
+
+### Feature 119.3: Conversation History Page (11 SP) ✅
+- **New File:** `frontend/src/pages/HistoryPage.tsx` (382 LOC)
+- **Modified Files:**
+  - `frontend/src/App.tsx` — Added `/history` route
+  - `frontend/src/components/chat/SessionSidebar.tsx` — Added "View All History" button
+  - `frontend/src/pages/HomePage.tsx` — Load session from location.state navigation
+- **Features:** Conversation list with date grouping, search, delete with confirmation, export as JSON, empty states
+- **Data-testids:** conversation-list, conversation-item, conversation-title, conversation-created, conversation-message-count, delete-conversation, export-conversation, empty-history, search-history, confirm-delete
+- **Architecture:** Reuses existing useSessions hook and getConversationHistory API; location.state for navigation
+
+### Phase 3 Commit: `97076ae` (11 files, 1,739 LOC)
+
+---
+
 ## Missing Features (Causing Test Skips)
 
 Based on the E2E test analysis, the following features are **not implemented** and cause tests to skip. These should be considered for future sprints.
@@ -674,18 +710,18 @@ POST   /api/v1/domains/{id}/batch-ingest
 
 ## Feature Priority Matrix
 
-| Feature | SP | Tests Enabled | Priority | Sprint Target |
-|---------|---:|-------------:|----------|---------------|
-| 119.4: Long Context Fixture | 1 | 1 | P1 (Quick Win) | Sprint 119 |
-| 119.7: Graph Test Fixtures | 3 | 24 | P1 (Quick Win) | Sprint 119 |
+| Feature | SP | Tests Enabled | Priority | Status |
+|---------|---:|-------------:|----------|--------|
+| 119.4: Long Context Fixture | 1 | 1 | P1 (Quick Win) | ✅ Complete (Phase 2) |
+| 119.7: Graph Test Fixtures | 3 | 24 | P1 (Quick Win) | ✅ Complete (Phase 3) |
 | 119.6: Admin Indexing UI | 5 | 12 | P2 | Sprint 120 |
-| 119.3: History UI | 8 | 7 | P2 | Sprint 120 |
-| 119.1: Skills/Tools UI | 13 | 9 | P3 | Sprint 121+ |
+| 119.3: History UI | 11 | 7 | P2 | ✅ Complete (Phase 3) |
+| 119.1: Skills/Tools UI | 20 | 9 | P3 | ✅ Complete (Phase 3) |
 | 119.2: Graph Versioning | 21 | 28 | P3 | Sprint 122+ |
-| 119.5: Domain Training API | 21 | 31 | P3 | Sprint 123+ |
+| 119.5: Domain Training API | 21 | 31 | P3 | ✅ Fixed (Phase 2, prefix bug) |
 
-**Total Missing Feature SP:** 72
-**Total Tests That Could Be Enabled:** 112
+**Features Implemented in Sprint 119:** 119.1, 119.3, 119.4, 119.5, 119.7 (56 SP)
+**Remaining Missing Features:** 119.2 (Graph Versioning, 21 SP), 119.6 (Admin Indexing UI, 5 SP)
 
 ---
 

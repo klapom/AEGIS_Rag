@@ -54,8 +54,16 @@ async function setupAuthMocking(page: Page): Promise<void> {
   await page.goto('/');
   await page.waitForLoadState('networkidle');
 
-  // Wait for login form to be visible (React might need time to render)
+  // Sprint 119: Idempotent auth - check if already authenticated
+  // If login form is not visible, we're already logged in
   const usernameInput = page.getByPlaceholder('Enter your username');
+  const isLoginPage = await usernameInput.isVisible({ timeout: 3000 }).catch(() => false);
+  if (!isLoginPage) {
+    // Already authenticated, skip login
+    return;
+  }
+
+  // Wait for login form to be visible (React might need time to render)
   const passwordInput = page.getByPlaceholder('Enter your password');
   const signInButton = page.getByRole('button', { name: 'Sign In' });
 
