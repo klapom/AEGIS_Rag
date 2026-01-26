@@ -184,12 +184,18 @@ async def get_current_user(
     """
     # Sprint 105 Feature 105.5: Test Auth Bypass
     # Bypass authentication for localhost/test environments
+    # Sprint 120: Extended to cover entire Docker network (container IPs are dynamic)
     client_host = request.client.host if request.client else None
 
     # List of allowed localhost IPs (IPv4, IPv6, Docker bridge network)
-    localhost_ips = ["127.0.0.1", "localhost", "::1", "172.26.0.10", "172.26.0.1"]
+    localhost_ips = ["127.0.0.1", "localhost", "::1"]
 
-    if client_host in localhost_ips:
+    # Check exact match or Docker network subnet (172.26.x.x)
+    is_local = client_host in localhost_ips or (
+        client_host and client_host.startswith("172.26.")
+    )
+
+    if is_local:
         # Return test user for localhost requests (E2E testing)
         test_user = User(
             user_id="test-user-id",

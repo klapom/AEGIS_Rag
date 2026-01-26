@@ -135,6 +135,7 @@ class MCPConfigLoader:
     """Loader for MCP server configuration from YAML files.
 
     Sprint 107 Feature 107.1: Configuration loader with validation.
+    Sprint 120: Merges config/mcp_servers.yaml + data/mcp_servers_installed.yaml
     """
 
     def __init__(self, config_path: str | Path | None = None):
@@ -149,10 +150,29 @@ class MCPConfigLoader:
         else:
             self.config_path = Path(config_path)
 
+        # Sprint 120: Path for user-installed servers (writable in Docker)
+        self._installed_path = Path(__file__).parents[3] / "data" / "mcp_servers_installed.yaml"
+
         self._config: MCPConfiguration | None = None
 
+    def _load_yaml(self, path: Path) -> list[dict]:
+        """Load servers list from a YAML file."""
+        if not path.exists():
+            return []
+        try:
+            with open(path, encoding="utf-8") as f:
+                raw = yaml.safe_load(f)
+            if raw and isinstance(raw, dict):
+                servers = raw.get("servers")
+                return servers if isinstance(servers, list) else []
+        except Exception as e:
+            logger.warning(f"Failed to load {path}: {e}")
+        return []
+
     def load(self, validate: bool = True) -> MCPConfiguration:
-        """Load configuration from YAML file.
+        """Load configuration from YAML files.
+
+        Sprint 120: Merges main config with user-installed servers.
 
         Args:
             validate: Whether to validate using Pydantic
@@ -164,16 +184,27 @@ class MCPConfigLoader:
             FileNotFoundError: If config file doesn't exist
             ValueError: If config is invalid
         """
-        if not self.config_path.exists():
-            logger.warning(f"Config file not found: {self.config_path}, using empty config")
-            return MCPConfiguration(servers=[])
-
         try:
-            with open(self.config_path, encoding="utf-8") as f:
-                raw_config = yaml.safe_load(f)
+            # Load main config
+            main_servers = self._load_yaml(self.config_path)
+
+            # Sprint 120: Load user-installed servers and merge
+            installed_servers = self._load_yaml(self._installed_path)
+            if installed_servers:
+                # Deduplicate by name (main config takes priority)
+                main_names = {s.get("name") for s in main_servers}
+                for srv in installed_servers:
+                    if srv.get("name") not in main_names:
+                        main_servers.append(srv)
+                logger.info(
+                    f"Merged {len(installed_servers)} installed servers",
+                    extra={"new": len(main_servers) - len(main_names)},
+                )
+
+            raw_config = {"servers": main_servers} if main_servers else {}
 
             if not raw_config:
-                logger.warning("Empty config file, using empty config")
+                logger.warning("Empty config, using empty config")
                 return MCPConfiguration(servers=[])
 
             if validate:
@@ -183,7 +214,7 @@ class MCPConfigLoader:
 
             self._config = config
             logger.info(
-                f"Loaded {len(config.servers)} MCP servers from {self.config_path}",
+                f"Loaded {len(config.servers)} MCP servers from config",
                 extra={
                     "enabled": sum(1 for s in config.servers if s.enabled),
                     "auto_connect": sum(1 for s in config.servers if s.enabled and s.auto_connect),

@@ -684,7 +684,9 @@ export async function getMCPServers(): Promise<MCPServer[]> {
     throw new Error(`HTTP ${response.status}: ${errorText}`);
   }
 
-  return response.json();
+  const data = await response.json();
+  // API returns tool_count but not tools array — ensure tools is always initialized
+  return (data as MCPServer[]).map((s) => ({ ...s, tools: s.tools ?? [] }));
 }
 
 /**

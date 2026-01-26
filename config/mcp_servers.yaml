@@ -12,40 +12,45 @@
 # Example servers are provided below. Uncomment and configure as needed.
 
 servers:
+  # NOTE: These are example/placeholder servers. They are NOT real MCP servers
+  # and will fail to connect. Set auto_connect: true only for actual MCP servers
+  # installed via the MCP Marketplace or manually configured.
+
+  # ──────────────────────────────────────────────────────────────────
+  # PLACEHOLDER SERVERS (disabled)
+  # These are examples showing the config format. They are NOT real
+  # MCP servers and will fail to connect. To add real servers, use
+  # the MCP Marketplace at /admin/mcp-marketplace.
+  # ──────────────────────────────────────────────────────────────────
+
   # Example: Bash Command Execution Tools
-  # Provides shell command execution via bash
-  - name: bash-tools
-    transport: stdio
-    command: /usr/bin/bash
-    args: []
-    description: "Bash command execution tools for system operations"
-    auto_connect: true  # Set to true to enable on startup
-    enabled: true
-    timeout: 30
-    retry_attempts: 3
+  # /usr/bin/bash does NOT speak MCP protocol (JSON-RPC over stdio).
+  # - name: bash-tools
+  #   transport: stdio
+  #   command: /usr/bin/bash
+  #   args: []
+  #   description: "Bash command execution tools"
+  #   auto_connect: false
+  #   enabled: false
 
   # Example: Python Code Execution Tools
-  # Provides Python code execution and evaluation
-  - name: python-tools
-    transport: stdio
-    command: /usr/bin/python3
-    args: ["-m", "mcp_server"]
-    description: "Python code execution and evaluation tools"
-    auto_connect: true  # Set to true to enable on startup
-    enabled: true
-    timeout: 30
-    retry_attempts: 3
+  # Requires an actual mcp_server Python package to be installed.
+  # - name: python-tools
+  #   transport: stdio
+  #   command: /usr/bin/python3
+  #   args: ["-m", "mcp_server"]
+  #   description: "Python code execution tools"
+  #   auto_connect: false
+  #   enabled: false
 
   # Example: Browser Automation Tools
-  # Provides browser automation via Chrome DevTools Protocol
-  - name: browser-tools
-    transport: http
-    url: "http://localhost:9222"
-    description: "Browser automation via Chrome DevTools Protocol"
-    auto_connect: true  # Set to true to enable on startup
-    enabled: true
-    timeout: 60
-    retry_attempts: 3
+  # Requires Chrome/Chromium with --remote-debugging-port=9222.
+  # - name: browser-tools
+  #   transport: http
+  #   url: "http://localhost:9222"
+  #   description: "Browser automation via Chrome DevTools Protocol"
+  #   auto_connect: false
+  #   enabled: false
 
   # Example: Filesystem Tools (with npm dependencies)
   # Provides file read/write operations

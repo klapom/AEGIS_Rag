@@ -220,7 +220,7 @@ export function MCPServerCard({
           >
             <Wrench className="w-4 h-4" />
             <span data-testid={`tools-count-${server.name}`}>
-              {server.tools.length} Tools
+              {(server.tools?.length ?? 0)} Tools
             </span>
             {expanded ? (
               <ChevronDown className="w-4 h-4" />
@@ -238,12 +238,12 @@ export function MCPServerCard({
           className="p-4 bg-gray-50 space-y-2"
           data-testid={`tools-list-${server.name}`}
         >
-          {server.tools.length === 0 ? (
+          {(server.tools?.length ?? 0) === 0 ? (
             <p className="text-sm text-gray-500 text-center py-2">
               No tools available
             </p>
           ) : (
-            server.tools.map((tool) => (
+            (server.tools ?? []).map((tool) => (
               <div
                 key={tool.name}
                 className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-300 transition-colors cursor-pointer"

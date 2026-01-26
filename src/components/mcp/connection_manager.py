@@ -280,6 +280,8 @@ class ConnectionManager:
         """Connect to servers from configuration file.
 
         Sprint 107 Feature 107.1: Auto-connect configured servers.
+        Sprint 120: Register ALL enabled servers so they appear in the API,
+        then only auto-connect the ones marked for it.
 
         Args:
             auto_connect_only: If True, only connect servers with auto_connect=true
@@ -291,6 +293,17 @@ class ConnectionManager:
         if self._config is None:
             self._config = self.config_loader.load()
 
+        # Sprint 120: Register ALL enabled servers as DISCONNECTED first
+        # so they appear in the /api/v1/mcp/servers endpoint
+        all_enabled = self._config.get_all_enabled_servers()
+        for server in all_enabled:
+            if server.name not in self.client.connections:
+                self.client.connections[server.name] = MCPServerConnection(
+                    server=server,
+                    status=ServerStatus.DISCONNECTED,
+                )
+        logger.info(f"Registered {len(all_enabled)} enabled MCP servers")
+
         # Get servers to connect
         if auto_connect_only:
             servers = self._config.get_auto_connect_servers()
@@ -300,7 +313,7 @@ class ConnectionManager:
             logger.info(f"Connecting to {len(servers)} enabled MCP servers")
 
         if not servers:
-            logger.warning("No MCP servers configured for connection")
+            logger.warning("No MCP servers configured for auto-connection")
             return {}
 
         # Connect to all servers

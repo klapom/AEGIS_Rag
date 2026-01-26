@@ -285,11 +285,13 @@ export const MCPServerBrowser: React.FC<MCPServerBrowserProps> = ({
         <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
       </div>
 
-      {/* Server Count */}
-      <div className="text-sm text-gray-600" data-testid="server-count">
-        {filteredServers.length} {filteredServers.length === 1 ? 'server' : 'servers'} found
-        {currentRegistry.name && ` in ${currentRegistry.name}`}
-      </div>
+      {/* Server Count — hidden for browse-only registries */}
+      {!browseUrl && (
+        <div className="text-sm text-gray-600" data-testid="server-count">
+          {filteredServers.length} {filteredServers.length === 1 ? 'server' : 'servers'} found
+          {currentRegistry.name && ` in ${currentRegistry.name}`}
+        </div>
+      )}
 
       {/* Sprint 112: Browse-only registry message */}
       {browseUrl && (

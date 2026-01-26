@@ -316,6 +316,29 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             note="Default domain may need manual creation",
         )
 
+    # Sprint 120: MCP auto-connect on startup
+    try:
+        from src.api.v1.mcp import get_connection_manager
+
+        logger.info("mcp_auto_connect_starting")
+        manager = get_connection_manager()
+        results = await manager.connect_from_config(auto_connect_only=True)
+
+        connected = sum(1 for success in results.values() if success)
+        failed = sum(1 for success in results.values() if not success)
+        logger.info(
+            "mcp_auto_connect_completed",
+            connected=connected,
+            failed=failed,
+            total=len(results),
+        )
+    except Exception as e:
+        logger.warning(
+            "mcp_auto_connect_failed",
+            error=str(e),
+            note="MCP servers will be available for manual connection",
+        )
+
     yield
 
     # Shutdown

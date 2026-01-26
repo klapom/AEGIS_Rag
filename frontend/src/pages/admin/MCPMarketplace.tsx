@@ -10,6 +10,7 @@ import { Store, RefreshCw, ArrowLeft } from 'lucide-react';
 import { AdminNavigationBar } from '../../components/admin/AdminNavigationBar';
 import { MCPServerBrowser } from '../../components/admin/MCPServerBrowser';
 import { MCPServerInstaller } from '../../components/admin/MCPServerInstaller';
+import { MCPCustomServerForm } from '../../components/admin/MCPCustomServerForm';
 import type { MCPServerDefinition } from '../../types/mcp';
 
 export const MCPMarketplace: React.FC = () => {
@@ -124,6 +125,15 @@ export const MCPMarketplace: React.FC = () => {
             </li>
           </ol>
         </div>
+      </div>
+
+      {/* Custom Server Form */}
+      <div className="max-w-7xl mx-auto mb-6">
+        <MCPCustomServerForm
+          onServerAdded={() => {
+            setRefreshKey((prev) => prev + 1);
+          }}
+        />
       </div>
 
       {/* Browser */}

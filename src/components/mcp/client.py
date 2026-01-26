@@ -149,7 +149,20 @@ class MCPClient:
             }
 
             await self._send_stdio_request(server.name, init_request)
-            response = await self._read_stdio_response(server.name)
+
+            # Sprint 120: Add timeout to prevent hanging on non-MCP processes
+            try:
+                response = await asyncio.wait_for(
+                    self._read_stdio_response(server.name),
+                    timeout=server.timeout,
+                )
+            except TimeoutError:
+                # Kill the hung process
+                process.kill()
+                raise MCPConnectionError(
+                    f"Timeout waiting for MCP init response from {server.name} "
+                    f"after {server.timeout}s — is '{cmd_parts[0]}' a valid MCP server?"
+                )
 
             if "error" in response:
                 raise MCPConnectionError(f"Initialization failed: {response['error']}")
