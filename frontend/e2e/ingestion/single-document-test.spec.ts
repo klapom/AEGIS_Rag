@@ -3,7 +3,8 @@
  *
  * Test Document: D3_CDays2025-OMNITRACKER-13.0.0-GenericAPI.pdf
  * Purpose: Verify complete ingestion pipeline and retrieval quality
- * Coverage: Vector Search (BGE-M3) + BM25 Search + Graph Reasoning
+ * Coverage: Vector Search (BGE-M3 Dense) + Sparse Search (BGE-M3 Lexical) + Graph Reasoning
+ * Sprint 119: Updated BM25 references to SPARSE (BGE-M3 learned lexical weights, Sprint 87)
  *
  * Sprint 66 Feature 66.4: Single Document Upload User Journey
  * Sprint 119 BUG-119.3: Added health check and conditional skipping
@@ -68,10 +69,10 @@ test.describe('Single Document Upload & Verification - GenericAPI 13.0.0', () =>
     {
       id: 'Q2',
       question: 'Welche HTTP-Methoden werden von der GenericAPI unterstützt?',
-      retrieval: 'BM25', // List/enumeration question
+      retrieval: 'SPARSE', // List/enumeration question (BGE-M3 learned lexical weights)
       expectedKeywords: ['get', 'post', 'put', 'delete', 'patch'],
       minKeywords: 3,
-      description: 'Enumeration - should use BM25 keyword search'
+      description: 'Enumeration - should use Sparse Search (BGE-M3 lexical matching)'
     },
     {
       id: 'Q3',
@@ -79,7 +80,7 @@ test.describe('Single Document Upload & Verification - GenericAPI 13.0.0', () =>
       retrieval: 'HYBRID', // Technical how-to question
       expectedKeywords: ['authentifizierung', 'token', 'oauth', 'bearer', 'api key', 'login'],
       minKeywords: 2,
-      description: 'How-to question - should use Hybrid Search (Vector + BM25)'
+      description: 'How-to question - should use Hybrid Search (Dense + Sparse RRF)'
     },
     {
       id: 'Q4',
@@ -100,18 +101,18 @@ test.describe('Single Document Upload & Verification - GenericAPI 13.0.0', () =>
     {
       id: 'Q6',
       question: 'Welche Endpoints stellt die GenericAPI zur Verfügung?',
-      retrieval: 'BM25', // List of endpoints
+      retrieval: 'SPARSE', // List of endpoints (BGE-M3 learned lexical weights)
       expectedKeywords: ['endpoint', 'url', 'pfad', 'route', '/api/'],
       minKeywords: 2,
-      description: 'Endpoint list - BM25 keyword matching'
+      description: 'Endpoint list - Sparse lexical matching'
     },
     {
       id: 'Q7',
       question: 'Welche Datenformate werden von der GenericAPI akzeptiert?',
-      retrieval: 'BM25', // Technical specification
+      retrieval: 'SPARSE', // Technical specification (BGE-M3 learned lexical weights)
       expectedKeywords: ['json', 'xml', 'csv', 'format', 'content-type'],
       minKeywords: 1,
-      description: 'Data format specification - BM25 search'
+      description: 'Data format specification - Sparse lexical search'
     },
     {
       id: 'Q8',
@@ -273,9 +274,9 @@ test.describe('Single Document Upload & Verification - GenericAPI 13.0.0', () =>
         } else if (testCase.retrieval === 'GRAPH') {
           // Graph search for relationship questions
           expect(intentText?.toLowerCase()).toMatch(/graph|beziehung|relationship/i);
-        } else if (testCase.retrieval === 'BM25') {
-          // BM25 for keyword/list queries (though may be classified as VECTOR)
-          // Looser assertion here as BM25 is often combined with Vector
+        } else if (testCase.retrieval === 'SPARSE') {
+          // Sparse (BGE-M3 lexical) for keyword/list queries
+          // Loose check: sparse often combined with vector in hybrid mode
         } else if (testCase.retrieval === 'HYBRID') {
           // Hybrid can be any combination
         }

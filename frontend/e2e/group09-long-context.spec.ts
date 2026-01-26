@@ -29,31 +29,24 @@ import * as fs from 'fs';
  * - Loaded from external file: /tmp/long_context_test_input.md
  */
 
-// Load long context test data from external file (10,981 words)
-// File location: /tmp/long_context_test_input.md
-// This avoids embedding large content inline and prevents syntax errors with Markdown special characters
-const LONG_CONTEXT_FILE = '/tmp/long_context_test_input.md';
-const LONG_CONTEXT_INPUT = fs.existsSync(LONG_CONTEXT_FILE)
-  ? fs.readFileSync(LONG_CONTEXT_FILE, 'utf-8')
-  : 'Sprint 90-94 content (test data file not found at /tmp/long_context_test_input.md)';
+// Load long context test data from fixture file (11,107 tokens)
+// File location: frontend/e2e/fixtures/long_context_test_input.md
+// This fixture contains real technical documentation compiled from Sprint plans and architecture docs
+// Contents: Sprints 90-92 features, testing infrastructure, performance optimization, monitoring
+import * as path from 'path';
+
+const FIXTURE_DIR = path.join(__dirname, 'fixtures');
+const LONG_CONTEXT_FILE = path.join(FIXTURE_DIR, 'long_context_test_input.md');
+const LONG_CONTEXT_INPUT = fs.readFileSync(LONG_CONTEXT_FILE, 'utf-8');
 
 // Log file loading status
-console.log(`[Group 9 Long Context Tests] Loading test data from: ${LONG_CONTEXT_FILE}`);
-if (fs.existsSync(LONG_CONTEXT_FILE)) {
-  const wordCount = LONG_CONTEXT_INPUT.split(/\s+/).length;
-  console.log(`[Group 9 Long Context Tests] Loaded successfully: ${wordCount} words (~${Math.ceil(wordCount * 1.3)} tokens)`);
-} else {
-  console.warn(`[Group 9 Long Context Tests] WARNING: Test data file not found at ${LONG_CONTEXT_FILE}`);
-  console.warn(`[Group 9 Long Context Tests] Tests will use fallback content`);
-}
+const wordCount = LONG_CONTEXT_INPUT.split(/\s+/).length;
+console.log(`[Group 9 Long Context Tests] Loaded fixture: ${LONG_CONTEXT_FILE}`);
+console.log(`[Group 9 Long Context Tests] Content: ${wordCount} words (~${Math.ceil(wordCount * 1.3)} tokens)`);
 
 test.describe('Group 9: Long Context Features', () => {
-  // Sprint 119 BUG-119.7: Skip test if long context file not available
-  test.beforeEach(async () => {
-    if (!fs.existsSync(LONG_CONTEXT_FILE)) {
-      test.skip(true, `Long context test data file not found at ${LONG_CONTEXT_FILE}`);
-    }
-  });
+  // Fixture is now bundled with test suite, no conditional skip needed
+  // Sprint 119 BUG-119.7: Fixed with permanent fixture file
 
   test('should handle long query input (14000+ tokens)', async ({ chatPage }) => {
     // Setup: Intercept API calls BEFORE navigation

@@ -13,7 +13,7 @@ Dieser E2E Test prüft den **kompletten Dokumenten-Ingestion und Retrieval-Flow*
 - ✅ BGE-M3 Embeddings (GPU)
 - ✅ Qdrant Indexing
 - ✅ Vector Search (BGE-M3)
-- ✅ BM25 Keyword Search
+- ✅ Sparse Search (BGE-M3 Learned Lexical Weights)
 - ✅ Graph Reasoning (LightRAG)
 - ✅ Hybrid Retrieval (RRF Fusion)
 
@@ -35,7 +35,7 @@ Dieser E2E Test prüft den **kompletten Dokumenten-Ingestion und Retrieval-Flow*
 - Jede Frage testet einen spezifischen Retrieval-Aspekt
 - Keyword-Matching zur Validierung der Antwort-Qualität
 - Source-Attribution (richtige Dokument-Referenz)
-- Intent-Classification (VECTOR/BM25/GRAPH/HYBRID)
+- Intent-Classification (VECTOR/SPARSE/GRAPH/HYBRID)
 
 ### Test 12: Comprehensive Quality Check
 **Dauer:** ~20 Minuten (alle 10 Fragen sequenziell)
@@ -51,19 +51,19 @@ Dieser E2E Test prüft den **kompletten Dokumenten-Ingestion und Retrieval-Flow*
 | ID | Frage | Retrieval | Keywords (min 2/5) | Zweck |
 |----|-------|-----------|-------------------|-------|
 | **Q1** | Was ist die OMNITRACKER GenericAPI? | VECTOR | genericapi, api, schnittstelle, rest, omnitracker | Definition |
-| **Q2** | Welche HTTP-Methoden werden unterstützt? | BM25 | get, post, put, delete, patch (min 3/5) | Enumeration |
+| **Q2** | Welche HTTP-Methoden werden unterstützt? | SPARSE | get, post, put, delete, patch (min 3/5) | Enumeration |
 | **Q3** | Wie erfolgt die Authentifizierung? | HYBRID | authentifizierung, token, oauth, bearer, api key | How-to |
 | **Q4** | Beziehung zu Application Server? | GRAPH | application server, schnittstelle, verbindung | Relationship |
 | **Q5** | Neue Features in Version 13.0.0? | VECTOR | 13.0.0, version, neu, feature | Version-specific |
-| **Q6** | Welche Endpoints gibt es? | BM25 | endpoint, url, pfad, route, /api/ | List |
-| **Q7** | Welche Datenformate werden akzeptiert? | BM25 | json, xml, csv, format | Specification |
+| **Q6** | Welche Endpoints gibt es? | SPARSE | endpoint, url, pfad, route, /api/ | List |
+| **Q7** | Welche Datenformate werden akzeptiert? | SPARSE | json, xml, csv, format | Specification |
 | **Q8** | Unterschied zu anderen APIs? | GRAPH | unterschied, vergleich, andere, api | Comparison |
 | **Q9** | Welche Use Cases? | HYBRID | use case, anwendungsfall, beispiel | Use case |
 | **Q10** | Welche Fehlerbehandlung? | VECTOR | fehler, error, exception, status code | Implementation |
 
 ### Retrieval-Methoden Coverage
 - **VECTOR (BGE-M3):** Q1, Q5, Q10 (3 Fragen)
-- **BM25 Keyword:** Q2, Q6, Q7 (3 Fragen)
+- **SPARSE (BGE-M3 Lexical):** Q2, Q6, Q7 (3 Fragen)
 - **GRAPH (LightRAG):** Q4, Q8 (2 Fragen)
 - **HYBRID (RRF Fusion):** Q3, Q9 (2 Fragen)
 
@@ -305,7 +305,7 @@ print(f'Device: {model.device}')
 
 **Retrieval (pro Frage):**
 - Vector Search: 50-200ms (GPU)
-- BM25 Search: 20-100ms
+- Sparse Search (BGE-M3 Lexical): 20-100ms
 - Graph Reasoning: 500-1500ms (LightRAG)
 - LLM Generation: 2-5s (qwen3:32b)
 - **Total: 3-7s pro Frage**
@@ -374,7 +374,7 @@ Dieser Test bietet **1:1 Inhaltsprüfung** für einzelne Dokumente durch:
 1. ✅ **Isolierte Ingestion:** Nur 1 Dokument, keine anderen Daten
 2. ✅ **Spezifische Fragen:** 10 gezielte Fragen zum Dokument-Content
 3. ✅ **Keyword-Validierung:** Automatische Qualitätsprüfung
-4. ✅ **Multi-Method Coverage:** Vector, BM25, Graph, Hybrid
+4. ✅ **Multi-Method Coverage:** Vector, Sparse (BGE-M3), Graph, Hybrid
 5. ✅ **Reproduzierbar:** Jeder Lauf sollte identische Ergebnisse liefern
 
 **Sprint 66 Ziel:** Dieser Test muss **10/10 Fragen korrekt beantworten** (100% Success Rate)

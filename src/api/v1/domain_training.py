@@ -7,16 +7,19 @@ and training configurations. It enables creating domains, training them with DSP
 and classifying documents to domains.
 
 Key Endpoints:
-- POST /admin/domains - Create new domain configuration
-- GET /admin/domains - List all domains
-- GET /admin/domains/{name} - Get domain details
-- POST /admin/domains/{name}/train - Start DSPy training
-- GET /admin/domains/{name}/training-status - Monitor training progress
-- DELETE /admin/domains/{name} - Delete domain and all associated data (51.4)
-- GET /admin/domains/available-models - List Ollama models
-- POST /admin/domains/classify - Classify document to domain
-- POST /admin/domains/ingest-batch - Batch ingestion grouped by LLM model (45.10)
-- POST /admin/domains/{name}/validate - Validate domain quality (117.7)
+- POST /api/v1/admin/domains - Create new domain configuration
+- GET /api/v1/admin/domains - List all domains
+- GET /api/v1/admin/domains/{name} - Get domain details
+- POST /api/v1/admin/domains/{name}/train - Start DSPy training
+- GET /api/v1/admin/domains/{name}/training-status - Monitor training progress
+- DELETE /api/v1/admin/domains/{name} - Delete domain and all associated data (51.4)
+- GET /api/v1/admin/domains/available-models - List Ollama models
+- POST /api/v1/admin/domains/classify - Classify document to domain
+- POST /api/v1/admin/domains/ingest-batch - Batch ingestion grouped by LLM model (45.10)
+- POST /api/v1/admin/domains/{name}/validate - Validate domain quality (117.7)
+
+Sprint 119: Fixed router prefix from /admin/domains to /api/v1/admin/domains
+to match E2E test expectations and API conventions.
 
 Security:
 - All endpoints require authentication (future Sprint)
@@ -30,7 +33,7 @@ Performance:
 
 Example:
     >>> # Create domain
-    >>> response = client.post("/admin/domains/", json={
+    >>> response = client.post("/api/v1/admin/domains/", json={
     ...     "name": "tech_docs",
     ...     "description": "Technical documentation for software projects",
     ...     "llm_model": "qwen3:32b"
@@ -62,7 +65,7 @@ from src.core.response_utils import error_response_from_request, success_respons
 logger = structlog.get_logger(__name__)
 settings = get_settings()
 
-router = APIRouter(prefix="/admin/domains", tags=["Domain Training"])
+router = APIRouter(prefix="/api/v1/admin/domains", tags=["Domain Training"])
 
 
 # --- Request/Response Models ---
@@ -1965,11 +1968,13 @@ async def classify_document(request: ClassificationRequest) -> ClassificationRes
         ) from e
 
 
-@router.post("/discover", response_model=AutoDiscoveryResponse)
+@router.post("/auto-discover", response_model=AutoDiscoveryResponse)
 async def discover_domain(request: AutoDiscoveryRequest) -> AutoDiscoveryResponse:
     """Auto-discover domains from sample documents using clustering.
 
     Sprint 117.3: Enhanced domain discovery with BGE-M3 clustering and LLM analysis.
+    Sprint 119: Renamed from /discover to /auto-discover to avoid route collision
+    with domain_discovery.py's file-upload-based POST /discover endpoint.
 
     Upload 3-10 representative documents and let the system analyze them using:
     1. BGE-M3 embeddings to cluster similar documents
