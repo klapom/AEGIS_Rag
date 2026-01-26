@@ -28,6 +28,16 @@ import { streamChat, type ChatChunk } from '../api/chat';
 import type { Source } from '../types/chat';
 import type { GraphExpansionConfig } from '../types/settings';
 import type { ReasoningData, IntentType, RetrievalStep as RetrievalStepType, PhaseEvent, PhaseType, FourWayResults, IntentWeights, ChannelSamples } from '../types/reasoning';
+import type {
+  SkillActivationEvent,
+  ToolUseEvent,
+  ToolProgressEvent,
+  ToolResultEvent,
+  ToolErrorEvent,
+  ToolTimeoutEvent,
+  SkillActivationFailedEvent,
+  ToolExecutionState,
+} from '../types/skills-events';
 
 /**
  * Sprint 48 Feature 48.10: Timeout configuration
@@ -42,6 +52,7 @@ export const TIMEOUT_CONFIG = {
 /**
  * Streaming state returned by the hook
  * Sprint 51 Feature 51.1 + 51.2: Added totalPhases and isGeneratingAnswer
+ * Sprint 119 Feature 119.1: Added skill activation and tool execution tracking
  */
 export interface StreamingState {
   /** Accumulated answer text */
@@ -80,6 +91,15 @@ export interface StreamingState {
    * True when receiving token events, used for streaming cursor display.
    */
   isGeneratingAnswer: boolean;
+  /**
+   * Sprint 119 Feature 119.1: Skill activation events (e.g., bash_executor activated)
+   */
+  skillActivations: SkillActivationEvent[];
+  /**
+   * Sprint 119 Feature 119.1: Tool execution states (running, completed, failed, etc.)
+   * Map of execution_id to ToolExecutionState for tracking concurrent executions
+   */
+  toolExecutions: Map<string, ToolExecutionState>;
 }
 
 interface UseStreamChatOptions {
@@ -138,6 +158,10 @@ export function useStreamChat({
 
   // Sprint 51 Feature 51.2: Track when tokens are being actively generated
   const [isGeneratingAnswer, setIsGeneratingAnswer] = useState(false);
+
+  // Sprint 119 Feature 119.1: Skill/Tool execution state
+  const [skillActivations, setSkillActivations] = useState<SkillActivationEvent[]>([]);
+  const [toolExecutions, setToolExecutions] = useState<Map<string, ToolExecutionState>>(new Map());
 
   const hasCalledOnComplete = useRef(false);
   const currentReasoningData = useRef<ReasoningData | null>(null);
@@ -232,6 +256,10 @@ export function useStreamChat({
       // Sprint 51 Feature 51.1 + 51.2: Reset new state
       setTotalPhases(undefined);
       setIsGeneratingAnswer(false);
+
+      // Sprint 119 Feature 119.1: Reset skill/tool state
+      setSkillActivations([]);
+      setToolExecutions(new Map());
 
       // Sprint 48 Feature 48.10: Set up timeout timers
       warningTimerRef.current = setTimeout(() => {
@@ -533,6 +561,175 @@ export function useStreamChat({
           // Sprint 48: Clear timers on error
           clearTimers();
           break;
+
+        // Sprint 119 Feature 119.1: Skill activation event
+        case 'skill_activated': {
+          const skillData = chunk.data as SkillActivationEvent;
+          if (skillData) {
+            setSkillActivations((prev) => [...prev, {
+              ...skillData,
+              timestamp: skillData.timestamp || new Date().toISOString(),
+            }]);
+          }
+          break;
+        }
+
+        // Sprint 119 Feature 119.1: Skill activation failed event
+        case 'skill_activation_failed': {
+          const failData = chunk.data as SkillActivationFailedEvent;
+          if (failData) {
+            setError(`Skill activation failed: ${failData.reason}`);
+          }
+          break;
+        }
+
+        // Sprint 119 Feature 119.1: Tool use event (tool starts executing)
+        case 'tool_use': {
+          const toolData = chunk.data as ToolUseEvent;
+          if (toolData) {
+            const execId = toolData.execution_id || toolData.tool;
+            setToolExecutions((prev) => {
+              const next = new Map(prev);
+              next.set(execId, {
+                tool: toolData.tool,
+                server: toolData.server || 'unknown',
+                status: 'running',
+                input: toolData.parameters,
+                startTime: toolData.timestamp || new Date().toISOString(),
+                execution_id: execId,
+              });
+              return next;
+            });
+          }
+          break;
+        }
+
+        // Sprint 119 Feature 119.1: Tool progress event
+        case 'tool_progress': {
+          const progressData = chunk.data as ToolProgressEvent;
+          if (progressData) {
+            const execId = progressData.execution_id || progressData.tool;
+            setToolExecutions((prev) => {
+              const next = new Map(prev);
+              const existing = next.get(execId);
+              if (existing) {
+                next.set(execId, {
+                  ...existing,
+                  progress: progressData.progress,
+                  progressMessage: progressData.message,
+                });
+              }
+              return next;
+            });
+          }
+          break;
+        }
+
+        // Sprint 119 Feature 119.1: Tool result event (tool completed)
+        case 'tool_result': {
+          const resultData = chunk.data as ToolResultEvent;
+          if (resultData) {
+            const execId = resultData.execution_id || resultData.tool;
+            setToolExecutions((prev) => {
+              const next = new Map(prev);
+              const existing = next.get(execId);
+              if (existing) {
+                next.set(execId, {
+                  ...existing,
+                  status: resultData.success ? 'success' : 'error',
+                  output: resultData.result,
+                  error: resultData.error,
+                  duration_ms: resultData.duration_ms,
+                  endTime: resultData.timestamp || new Date().toISOString(),
+                });
+              } else {
+                // Create new entry if tool_use wasn't received
+                next.set(execId, {
+                  tool: resultData.tool,
+                  server: resultData.server || 'unknown',
+                  status: resultData.success ? 'success' : 'error',
+                  input: {},
+                  output: resultData.result,
+                  error: resultData.error,
+                  duration_ms: resultData.duration_ms,
+                  startTime: resultData.timestamp || new Date().toISOString(),
+                  endTime: resultData.timestamp || new Date().toISOString(),
+                  execution_id: execId,
+                });
+              }
+              return next;
+            });
+          }
+          break;
+        }
+
+        // Sprint 119 Feature 119.1: Tool error event
+        case 'tool_error': {
+          const errorData = chunk.data as ToolErrorEvent;
+          if (errorData) {
+            const execId = errorData.execution_id || errorData.tool;
+            setToolExecutions((prev) => {
+              const next = new Map(prev);
+              const existing = next.get(execId);
+              if (existing) {
+                next.set(execId, {
+                  ...existing,
+                  status: 'error',
+                  error: errorData.error,
+                  endTime: errorData.timestamp || new Date().toISOString(),
+                });
+              } else {
+                // Create new entry if tool_use wasn't received
+                next.set(execId, {
+                  tool: errorData.tool,
+                  server: 'unknown',
+                  status: 'error',
+                  input: {},
+                  error: errorData.error,
+                  startTime: errorData.timestamp || new Date().toISOString(),
+                  endTime: errorData.timestamp || new Date().toISOString(),
+                  execution_id: execId,
+                });
+              }
+              return next;
+            });
+          }
+          break;
+        }
+
+        // Sprint 119 Feature 119.1: Tool timeout event
+        case 'tool_timeout': {
+          const timeoutData = chunk.data as ToolTimeoutEvent;
+          if (timeoutData) {
+            const execId = timeoutData.execution_id || timeoutData.tool;
+            setToolExecutions((prev) => {
+              const next = new Map(prev);
+              const existing = next.get(execId);
+              if (existing) {
+                next.set(execId, {
+                  ...existing,
+                  status: 'timeout',
+                  error: `Tool execution timed out after ${timeoutData.timeout} seconds`,
+                  endTime: timeoutData.timestamp || new Date().toISOString(),
+                });
+              } else {
+                // Create new entry if tool_use wasn't received
+                next.set(execId, {
+                  tool: timeoutData.tool,
+                  server: 'unknown',
+                  status: 'timeout',
+                  input: {},
+                  error: `Tool execution timed out after ${timeoutData.timeout} seconds`,
+                  startTime: timeoutData.timestamp || new Date().toISOString(),
+                  endTime: timeoutData.timestamp || new Date().toISOString(),
+                  execution_id: execId,
+                });
+              }
+              return next;
+            });
+          }
+          break;
+        }
       }
     };
 
@@ -666,6 +863,9 @@ export function useStreamChat({
     totalPhases,
     // Sprint 51 Feature 51.2: Token generation state for streaming cursor
     isGeneratingAnswer,
+    // Sprint 119 Feature 119.1: Skill/Tool execution state
+    skillActivations,
+    toolExecutions,
   };
 }
 

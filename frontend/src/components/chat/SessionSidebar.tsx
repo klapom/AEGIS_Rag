@@ -14,7 +14,8 @@
  */
 
 import { useState } from 'react';
-import { Plus, Trash2, MessageSquare, Menu, X, Share2 } from 'lucide-react';
+import { Plus, Trash2, MessageSquare, Menu, X, Share2, History } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { ShareModal } from './ShareModal';
 import { useSessions } from '../../hooks/useSessions';
 import { ConversationSearch } from './ConversationSearch';
@@ -132,6 +133,7 @@ export function SessionSidebar({
   isOpen,
   onToggle,
 }: SessionSidebarProps) {
+  const navigate = useNavigate();
   const { groupedSessions, isLoading, removeSession } = useSessions();
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [shareSessionId, setShareSessionId] = useState<string | null>(null);
@@ -252,6 +254,21 @@ export function SessionSidebar({
                 />
               </>
             )}
+          </div>
+
+          {/* View All History Button */}
+          <div className="p-4 border-t border-gray-700">
+            <button
+              onClick={() => {
+                navigate('/history');
+                onToggle();
+              }}
+              className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors text-sm"
+              data-testid="view-all-history"
+            >
+              <History className="w-4 h-4" />
+              <span>View All History</span>
+            </button>
           </div>
 
           {/* Settings (optional) */}

@@ -21,8 +21,11 @@ import { BotAvatar } from './BotAvatar';
 import { MarkdownWithCitations } from './MarkdownWithCitations';
 import { SourceCardsScroll, type SourceCardsScrollRef } from './SourceCardsScroll';
 import { ReasoningPanel } from './ReasoningPanel';
+import { SkillActivationIndicator } from './SkillActivationIndicator';
+import { ToolExecutionPanel } from './ToolExecutionPanel';
 import type { Source } from '../../types/chat';
 import type { ReasoningData } from '../../types/reasoning';
+import type { SkillActivationEvent, ToolExecutionState } from '../../types/skills-events';
 
 /**
  * Extract citation numbers from answer text.
@@ -87,6 +90,7 @@ function filterCitedSources(sources: Source[], content: string): CitedSource[] {
 /**
  * Message data structure for MessageBubble
  * Sprint 51 Feature 51.2: Added isGeneratingAnswer for streaming cursor control
+ * Sprint 119 Feature 119.1: Added skillActivations and toolExecutions
  */
 export interface MessageData {
   /** Unique identifier for the message */
@@ -109,6 +113,14 @@ export interface MessageData {
    * indicates the overall request is in progress (including thinking phase).
    */
   isGeneratingAnswer?: boolean;
+  /**
+   * Sprint 119 Feature 119.1: Skill activation events for this message
+   */
+  skillActivations?: SkillActivationEvent[];
+  /**
+   * Sprint 119 Feature 119.1: Tool execution states for this message
+   */
+  toolExecutions?: ToolExecutionState[];
 }
 
 interface MessageBubbleProps {
@@ -194,6 +206,30 @@ export function MessageBubble({ message, onCitationClick }: MessageBubbleProps) 
         <div className="text-sm font-semibold text-gray-700">
           {isUser ? 'Sie' : 'AegisRAG'}
         </div>
+
+        {/* Sprint 119 Feature 119.1: Skill Activations (shown before message content) */}
+        {!isUser && message.skillActivations && message.skillActivations.length > 0 && (
+          <div className="space-y-2">
+            {message.skillActivations.map((activation, idx) => (
+              <SkillActivationIndicator
+                key={`${activation.skill}-${activation.timestamp}-${idx}`}
+                event={activation}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Sprint 119 Feature 119.1: Tool Executions (shown before message content) */}
+        {!isUser && message.toolExecutions && message.toolExecutions.length > 0 && (
+          <div className="space-y-2">
+            {message.toolExecutions.map((execution) => (
+              <ToolExecutionPanel
+                key={execution.execution_id || `${execution.tool}-${execution.startTime}`}
+                execution={execution}
+              />
+            ))}
+          </div>
+        )}
 
         {/* Message content */}
         <div className="prose prose-sm max-w-none text-gray-800">

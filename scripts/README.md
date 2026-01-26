@@ -2,12 +2,12 @@
 
 Production and utility scripts for AegisRAG.
 
-**Last Updated**: Sprint 87 (2026-01-13)
+**Last Updated**: Sprint 119 (2026-01-26)
 **Platform**: DGX Spark (Linux ARM64, CUDA 13.0)
 
 ---
 
-## Active Scripts (Sprint 82-87)
+## Active Scripts (Sprint 82-119)
 
 ### RAGAS Benchmark (Sprint 82+)
 
@@ -34,6 +34,12 @@ Production and utility scripts for AegisRAG.
 | `upload_ragas_phase1_resume.sh` | Resume interrupted upload | Continue from last uploaded |
 | `upload_ragas_frontend.sh` | Upload via frontend API | Uses `/api/v1/retrieval/upload` |
 
+### Testing & E2E (Sprint 119+)
+
+| Script | Purpose | Usage |
+|--------|---------|-------|
+| `seed_test_graph_data.py` | Seed minimal graph data for E2E tests | `docker exec aegis-api python scripts/seed_test_graph_data.py` |
+
 ---
 
 ## Quick Commands
@@ -50,6 +56,12 @@ poetry run python scripts/run_ragas_evaluation.py
 
 # Upload documents
 ./scripts/upload_ragas_frontend.sh
+
+# Seed test graph data for E2E tests (Sprint 119)
+docker exec aegis-api python scripts/seed_test_graph_data.py
+
+# Clean test graph data
+docker exec aegis-api python scripts/seed_test_graph_data.py --clean
 ```
 
 ---
@@ -110,6 +122,6 @@ Old documentation moved to `archive/docs-sprint30/`:
 
 ---
 
-**Total Active Scripts**: 15
+**Total Active Scripts**: 16
 **Archived**: 70+ scripts
-**Last Cleanup**: Sprint 87 (2026-01-13)
+**Last Cleanup**: Sprint 119 (2026-01-26)

@@ -56,6 +56,7 @@ import { DomainDiscoveryPage } from './pages/admin/DomainDiscoveryPage';
 import { MCPMarketplace } from './pages/admin/MCPMarketplace';
 import { LongContextPage } from './pages/admin/LongContextPage';
 import { BashToolPage } from './pages/admin/BashToolPage';
+import { HistoryPage } from './pages/HistoryPage';
 
 function App() {
   // Sprint 46: Sidebar state moved to individual pages (HomePage, etc.)
@@ -80,6 +81,7 @@ function App() {
                       <AppLayout>
                         <Routes>
                       <Route path="/" element={<HomePage />} />
+                      <Route path="/history" element={<HistoryPage />} />
                       <Route path="/search" element={<SearchResultsPage />} />
                       <Route path="/admin" element={<AdminDashboard />} />
                       <Route path="/admin/health" element={<HealthDashboard />} />

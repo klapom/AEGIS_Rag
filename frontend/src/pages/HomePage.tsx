@@ -23,7 +23,8 @@
  * - Research Mode with multi-step research workflow (Sprint 63)
  */
 
-import { useState, useCallback, useMemo, useRef } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { type SearchMode } from '../components/search';
 import { ConversationView, SessionSidebar, type MessageData } from '../components/chat';
 import {
@@ -34,12 +35,14 @@ import { getConversation } from '../api/chat';
 import type { Source } from '../types/chat';
 import type { GraphExpansionConfig } from '../types/settings';
 import type { ReasoningData } from '../types/reasoning';
+import type { SkillActivationEvent, ToolExecutionState } from '../types/skills-events';
 import { useStreamChat, buildReasoningData } from '../hooks/useStreamChat';
 import { useResearchSSE } from '../hooks/useResearchSSE';
 import { loadGraphExpansionConfig } from '../components/settings';
 
 /**
  * Internal message format for conversation history
+ * Sprint 119 Feature 119.1: Added skill/tool execution fields
  */
 interface Message {
   id: string;
@@ -51,6 +54,8 @@ interface Message {
   sources?: Source[];
   reasoningData?: ReasoningData | null;
   timestamp?: string;
+  skillActivations?: SkillActivationEvent[];
+  toolExecutions?: ToolExecutionState[];
 }
 
 /**
@@ -61,6 +66,8 @@ function generateMessageId(): string {
 }
 
 export function HomePage() {
+  const location = useLocation();
+
   // Conversation state
   const [conversationHistory, setConversationHistory] = useState<Message[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | undefined>();
@@ -82,6 +89,10 @@ export function HomePage() {
   const activeSessionIdRef = useRef(activeSessionId);
   activeSessionIdRef.current = activeSessionId;
 
+  // Sprint 119 Feature 119.1: Refs to capture skill/tool data for completed messages
+  const skillActivationsRef = useRef<SkillActivationEvent[]>([]);
+  const toolExecutionsRef = useRef<ToolExecutionState[]>([]);
+
   // Sprint 47 Fix: Stable callbacks using useCallback with minimal dependencies
   // These callbacks use refs internally to access current state without
   // needing to include that state in dependency arrays
@@ -94,6 +105,7 @@ export function HomePage() {
 
   const handleStreamComplete = useCallback((answer: string, sources: Source[], reasoningData: ReasoningData | null) => {
     // Add completed assistant message to history
+    // Sprint 119 Feature 119.1: Include skill/tool data from refs
     setConversationHistory((prev) => [
       ...prev,
       {
@@ -103,6 +115,8 @@ export function HomePage() {
         sources,
         reasoningData,
         timestamp: new Date().toISOString(),
+        skillActivations: skillActivationsRef.current,
+        toolExecutions: toolExecutionsRef.current,
       },
     ]);
     // Clear current query after completion (keep answer visible in history)
@@ -120,6 +134,12 @@ export function HomePage() {
     onComplete: handleStreamComplete,
     graphExpansionConfig: currentGraphExpansionConfig,
   });
+
+  // Sprint 119 Feature 119.1: Update refs when streaming state changes
+  useEffect(() => {
+    skillActivationsRef.current = streamingState.skillActivations;
+    toolExecutionsRef.current = Array.from(streamingState.toolExecutions.values());
+  }, [streamingState.skillActivations, streamingState.toolExecutions]);
 
   /**
    * Handle new message submission
@@ -198,6 +218,14 @@ export function HomePage() {
     }
   }, []);
 
+  // Sprint 119 Feature 119.3: Load session from location state when navigating from HistoryPage
+  useEffect(() => {
+    const state = location.state as { sessionId?: string } | null;
+    if (state?.sessionId && state.sessionId !== activeSessionId) {
+      handleSelectSession(state.sessionId);
+    }
+  }, [location.state, activeSessionId, handleSelectSession]);
+
   // Sprint 47 Fix: Use a stable ID for the streaming message to prevent
   // unnecessary re-renders and potential infinite loops
   const streamingMessageIdRef = useRef<string>('streaming-0');
@@ -205,6 +233,7 @@ export function HomePage() {
   /**
    * Build messages array for ConversationView
    * Combines history with current streaming message
+   * Sprint 119 Feature 119.1: Include skill/tool execution data
    */
   const messages = useMemo((): MessageData[] => {
     // Convert history to MessageData format
@@ -216,6 +245,8 @@ export function HomePage() {
       timestamp: msg.timestamp,
       isStreaming: false,
       reasoningData: msg.reasoningData,
+      skillActivations: msg.skillActivations,
+      toolExecutions: msg.toolExecutions,
     }));
 
     // If streaming, add current streaming message (but only if we have content)
@@ -247,6 +278,7 @@ export function HomePage() {
 
         // Sprint 47 Fix: Use stable streaming ID from ref instead of Date.now()
         // This prevents unnecessary re-renders caused by new IDs on each render
+        // Sprint 119 Feature 119.1: Add skill/tool execution data
         historyMessages.push({
           id: streamingMessageIdRef.current,
           role: 'assistant',
@@ -254,6 +286,8 @@ export function HomePage() {
           sources,
           isStreaming: streamingState.isStreaming,
           reasoningData,
+          skillActivations: streamingState.skillActivations,
+          toolExecutions: Array.from(streamingState.toolExecutions.values()),
         });
       }
     }
