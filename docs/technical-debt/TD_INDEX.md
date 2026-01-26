@@ -1,8 +1,8 @@
 # Technical Debt Index
 
-**Last Updated:** 2026-01-20 (Sprint 114 - TD-120 created, deferred indefinite)
-**Total Open Items:** 7
-**Total Story Points:** ~153 SP (including TD-120 deferred: 31 SP optional)
+**Last Updated:** 2026-01-26 (Sprint 119 - TD-121 created, Graph Versioning UI deferred)
+**Total Open Items:** 8
+**Total Story Points:** ~174 SP (including TD-120 deferred: 31 SP, TD-121 deferred: 21 SP)
 **Archived Items:** [29 items](archive/ARCHIVE_INDEX.md) (TD-080 resolved Sprint 92.11)
 **Sprint 51 Review:** [Analysis & Archival Decisions](SPRINT_51_REVIEW_ANALYSIS.md)
 **Sprint 52:** Community Summaries, Async Follow-ups, Admin Dashboard, CI/CD
@@ -119,8 +119,11 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 | [TD-056](TD-056_PROJECT_COLLABORATION_SYSTEM.md) | Project Collaboration System | PLANNED | 34 | Sprint 90+ |
 | [TD-064](TD-064_TEMPORAL_COMMUNITY_SUMMARIES.md) | Temporal Community Summaries | BACKLOG | 13 | Sprint 90+ (Optional) |
 | [TD-120](TD-120_GRAPHITI_TIMETRAVEL_VERSIONING.md) | **Graphiti Time-Travel & Entity Versioning** | 🔴 **DEFERRED INDEFINITE** | 31 (Full) / 10 (Minimal) | **Customer Trigger** |
+| [TD-121](TD-121_GRAPH_VERSIONING_UI.md) | **Neo4j Graph Versioning UI (39.5-39.7)** | 🔴 **DEFERRED** | 21 | **Sprint 122+** |
 
 **TD-120 Discovery (Sprint 114):** Graphiti temporal infrastructure supports time-travel queries, entity versioning, and change history. Deferred indefinitely - low user demand, high complexity (31 SP), uncertain ROI. Decision rule: Implement only if customer contract includes "temporal query SLA" requirement. Implementation roadmap fully documented with 8 TODO markers for future development.
+
+**TD-121 Discovery (Sprint 119):** E2E test analysis found 28 skipped tests for Neo4j Graph Versioning (Features 39.5-39.7: time-travel queries, entity changelog, version comparison). Deferred to Sprint 122+ — no immediate user demand, 21 SP investment. Tests already written and ready for implementation.
 
 ### PARTIAL (Refactoring)
 

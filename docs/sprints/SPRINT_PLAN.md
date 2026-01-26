@@ -1831,29 +1831,56 @@ Sprint 117.1 (Domain CRUD) - Foundation
 
 ---
 
-## Sprint 119 📝 **In Progress** (2026-01-25)
+## Sprint 119 ✅ **Complete** (2026-01-25 to 2026-01-26)
 
-**Status:** 📝 In Progress
-**Focus:** Skipped E2E Test Analysis & Stabilization
-**Story Points:** 35 SP estimated
+**Status:** ✅ Complete
+**Focus:** Skipped E2E Test Analysis & Stabilization + Feature Implementation
+**Story Points:** 71 SP delivered (25 SP bug fixes + 12 SP feature fixes + 34 SP features)
 **Predecessor:** Sprint 118
 
-**Objectives:**
-1. **Skipped Test Analysis** (5 SP) - Categorize ~93 skipped tests
-2. **Performance Regression Enablement** (8 SP) - Enable viable tests
-3. **Citations Test Fix** (5 SP) - 4/9 already passing
-4. **MCP Tools Test Fix** (3 SP) - Selector updates
+**Achievements:**
+- **Phase 1 (25 SP):** 8 E2E bug categories analyzed and fixed (BUG-119.1 to BUG-119.8)
+- **Phase 2 (12 SP):** Domain Training API router prefix fix (31 tests un-skipped), BM25→SPARSE migration, long context fixture, follow-up tags
+- **Phase 3 (34 SP):** Skills/Tools Chat Integration (20 SP), Graph Seed Data Script (3 SP), Conversation History Page (11 SP)
 
-**Carry-Over from Sprint 118:**
+**Features Implemented:**
+- **119.1:** Skills/Tools SSE handlers + ToolExecutionPanel + SkillActivationIndicator (18/18 E2E tests)
+- **119.2:** `scripts/seed_test_graph_data.py` (10 entities, 13 relationships)
+- **119.3:** `/history` page (382 LOC) with search, delete, export, date grouping (12/14 E2E tests)
+- **119.5:** Domain Training API prefix fix (31 tests un-skipped)
+
+**Carry-Over to Sprint 120:**
 - Visual Regression Framework (5 SP)
 - Performance Regression Tests (13 SP)
-- Graph Communities UI (5 SP)
-
-**Analysis Complete:**
-- 28 tests: Graph Versioning (Features 39.5-39.7 not implemented)
-- 31 tests: Domain Training API (API not exposed)
-- 4 tests: Citations (pass, 5 conditionally skip)
-- 6 tests: Bash Execution (security sandbox)
-- 15 tests: Performance (metrics endpoints missing)
+- Admin Indexing UI (5 SP)
 
 **See:** `docs/sprints/SPRINT_119_PLAN.md`
+
+---
+
+## Sprint 120 📝 **Planned** (2026-01-27)
+
+**Status:** 📝 Planned
+**Focus:** UI Polish, Test Stabilization & Infrastructure
+**Story Points:** ~64 SP estimated
+**Predecessor:** Sprint 119
+
+**Objectives:**
+1. **P0: Skills/Tools Activation (12 SP)** — Tool-aware prompts, hybrid detection, MCP auto-connect, SSE tool events
+2. **P1: UI Bug Fixes (14 SP)** — Deep research results display, progress dismissable, source count fix, error display
+3. **P2: Test Infrastructure (23 SP)** — Visual regression framework, performance tests, admin indexing UI
+4. **P3: Feature Gaps (15 SP)** — Bash execution UI, memory management data-testids, E2E verification
+
+**Key Deliverables:**
+- Skills/Tools end-to-end: Prompt markers → Hybrid detection → MCP execution → SSE events → UI
+- Deep research results in normal chat window
+- Research progress panel closeable after completion
+- Source count mismatch fix (20 referenced, 10 shown)
+- Error display in chat UI
+- Bash execution security sandbox UI (6 tests)
+- Memory management data-testids (11 tests)
+
+**TD Created:**
+- TD-121: Graph Versioning UI (21 SP) — Deferred to Sprint 122+
+
+**See:** `docs/sprints/SPRINT_120_PLAN.md`
