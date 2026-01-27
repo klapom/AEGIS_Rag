@@ -681,40 +681,67 @@ async def add_custom_server(
             transport=request.transport,
         )
 
-        # Discover tools if auto_connect is enabled
+        # Sprint 120: Register server in ConnectionManager so it appears
+        # on /admin/tools immediately (no restart needed)
         discovered_tools: list[dict[str, Any]] = []
-        if request.auto_connect:
-            try:
-                # Import MCP manager to discover tools
-                from src.components.mcp.mcp_manager import get_mcp_manager
+        try:
+            from src.api.v1.mcp import get_connection_manager
+            from src.components.mcp.models import MCPServer, MCPServerConnection, ServerStatus, TransportType
 
-                manager = get_mcp_manager()
-                await manager.reload_config()
+            manager = get_connection_manager()
 
-                # Get tools from the newly added server
-                tools = await manager.list_tools(server_name=request.name)
-                discovered_tools = [
-                    {
-                        "name": tool.name,
-                        "description": tool.description or "",
-                        "input_schema": tool.inputSchema if hasattr(tool, "inputSchema") else {},
-                    }
-                    for tool in tools
-                ]
+            # Build MCPServer model from the config
+            transport_enum = TransportType(request.transport)
+            mcp_server = MCPServer(
+                name=request.name,
+                transport=transport_enum,
+                endpoint=(
+                    f"{request.command} {' '.join(request.args or [])}"
+                    if request.transport == "stdio"
+                    else (request.url or "")
+                ),
+                description=request.description,
+                timeout=30,
+            )
 
-                logger.info(
-                    "custom_server_tools_discovered",
-                    server_name=request.name,
-                    tool_count=len(discovered_tools),
-                )
-            except Exception as e:
-                logger.warning(
-                    "custom_server_tool_discovery_failed",
-                    server_name=request.name,
-                    error=str(e),
-                )
-                # Don't fail the request, just return empty tools
-                discovered_tools = []
+            # Register as DISCONNECTED so it shows up immediately
+            manager.client.connections[request.name] = MCPServerConnection(
+                server=mcp_server,
+                status=ServerStatus.DISCONNECTED,
+            )
+
+            # Auto-connect if requested
+            if request.auto_connect:
+                try:
+                    results = await manager.connect_all([mcp_server])
+                    if results.get(request.name):
+                        conn = manager.client.connections.get(request.name)
+                        if conn and conn.tools:
+                            discovered_tools = [
+                                {
+                                    "name": t.name,
+                                    "description": t.description or "",
+                                    "input_schema": getattr(t, "input_schema", {}),
+                                }
+                                for t in conn.tools
+                            ]
+                        logger.info(
+                            "custom_server_connected",
+                            server_name=request.name,
+                            tool_count=len(discovered_tools),
+                        )
+                except Exception as conn_err:
+                    logger.warning(
+                        "custom_server_auto_connect_failed",
+                        server_name=request.name,
+                        error=str(conn_err),
+                    )
+        except Exception as e:
+            logger.warning(
+                "custom_server_registration_failed",
+                server_name=request.name,
+                error=str(e),
+            )
 
         return CustomServerResponse(
             status="added",
