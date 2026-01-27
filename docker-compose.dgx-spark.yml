@@ -390,6 +390,7 @@ services:
       - ./config:/app/config:ro
       - ./data:/app/data:rw  # Documents for indexing
       - ./skills:/app/skills:rw  # Sprint 99: Skills directory for Skill Management
+      - ./bin:/app/bin:ro  # Sprint 120: MCP server binaries
     environment:
       - ENVIRONMENT=development
       - DEBUG=false
