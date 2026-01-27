@@ -68,10 +68,9 @@ export function MCPServerList({ onSelectTool }: MCPServerListProps) {
     );
 
     try {
-      const updatedServer = await connectMCPServer(serverName);
-      setServers((prev) =>
-        prev.map((s) => (s.name === serverName ? updatedServer : s))
-      );
+      await connectMCPServer(serverName);
+      // Sprint 120: Refresh full server list to get updated tools and status
+      await fetchServers();
     } catch {
       // Revert on error
       setServers((prev) =>
@@ -87,9 +86,14 @@ export function MCPServerList({ onSelectTool }: MCPServerListProps) {
 
   const handleDisconnect = async (serverName: string) => {
     try {
-      const updatedServer = await disconnectMCPServer(serverName);
+      await disconnectMCPServer(serverName);
+      // Sprint 120: Update status locally (API returns {status, message}, not MCPServer)
       setServers((prev) =>
-        prev.map((s) => (s.name === serverName ? updatedServer : s))
+        prev.map((s) =>
+          s.name === serverName
+            ? { ...s, status: 'disconnected' as MCPServerStatus, tools: [], tool_count: 0 }
+            : s
+        )
       );
     } catch {
       throw new Error('Disconnection failed');

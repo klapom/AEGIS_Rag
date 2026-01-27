@@ -826,7 +826,7 @@ export async function executeMCPTool(
   const response = await fetch(`${API_BASE_URL}/api/v1/mcp/tools/${encodeURIComponent(toolName)}/execute`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ parameters }),
+    body: JSON.stringify({ arguments: parameters }),
   });
 
   if (!response.ok) {
@@ -834,7 +834,17 @@ export async function executeMCPTool(
     throw new Error(`HTTP ${response.status}: ${errorText}`);
   }
 
-  return response.json();
+  const data = await response.json();
+
+  // Sprint 120: Map API field names to frontend interface
+  return {
+    success: data.success,
+    tool_name: data.tool_name,
+    result: data.result,
+    error: data.error,
+    execution_time_ms: Math.round((data.execution_time ?? 0) * 1000),
+    timestamp: new Date().toISOString(),
+  };
 }
 
 // ============================================================================

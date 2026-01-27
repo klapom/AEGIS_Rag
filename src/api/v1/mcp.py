@@ -265,57 +265,86 @@ async def list_mcp_servers() -> list[MCPServerInfo]:
 @router.post("/servers/{server_name}/connect", response_model=ServerConnectResponse)
 async def connect_server(
     server_name: str,
-    request: ServerConnectRequest,
+    request: ServerConnectRequest | None = None,
     current_user: User = Depends(get_current_user),
 ) -> ServerConnectResponse:
     """Connect to an MCP server.
 
+    Sprint 120: Request body is optional for reconnecting already-registered servers.
+    If the server is already in ConnectionManager, just reconnect it.
+    If not, a request body with transport and endpoint is required.
+
     Args:
         server_name: Unique name for the server
-        request: Connection configuration
+        request: Connection configuration (optional for reconnect)
 
     Returns:
         Connection result with tool count
 
     Raises:
         HTTPException: 400 if invalid transport type
+        HTTPException: 404 if server not found and no request body
         HTTPException: 500 if connection fails
 
     Example:
         ```bash
+        # Reconnect an already-registered server (no body needed)
+        curl -X POST -H "Authorization: Bearer $TOKEN" \\
+             "http://localhost:8000/api/v1/mcp/servers/filesystem-server/connect"
+
+        # Connect a new server (body required)
         curl -X POST -H "Authorization: Bearer $TOKEN" \\
              -H "Content-Type: application/json" \\
              -d '{"transport": "stdio", "endpoint": "npx @modelcontextprotocol/server-filesystem /data"}' \\
              "http://localhost:8000/api/v1/mcp/servers/filesystem/connect"
         ```
     """
-    logger.info(
-        "mcp_server_connect_requested",
-        user_id=current_user.user_id,
-        server_name=server_name,
-        transport=request.transport,
-    )
+    manager = get_connection_manager()
 
-    # Validate transport type
-    try:
-        transport = TransportType(request.transport.lower())
-    except ValueError as e:
+    # Sprint 120: Check if server is already registered (reconnect case)
+    existing_conn = manager.client.connections.get(server_name)
+
+    if existing_conn:
+        # Reconnect existing server using stored configuration
+        server = existing_conn.server
+        logger.info(
+            "mcp_server_reconnect_requested",
+            user_id=current_user.user_id,
+            server_name=server_name,
+            transport=server.transport.value,
+        )
+    elif request:
+        # New server — create from request body
+        logger.info(
+            "mcp_server_connect_requested",
+            user_id=current_user.user_id,
+            server_name=server_name,
+            transport=request.transport,
+        )
+
+        # Validate transport type
+        try:
+            transport = TransportType(request.transport.lower())
+        except ValueError as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid transport type: {request.transport}. Must be 'stdio' or 'http'",
+            ) from e
+
+        server = MCPServer(
+            name=server_name,
+            transport=transport,
+            endpoint=request.endpoint,
+            description=request.description,
+            timeout=request.timeout,
+        )
+    else:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid transport type: {request.transport}. Must be 'stdio' or 'http'",
-        ) from e
-
-    # Create server configuration
-    server = MCPServer(
-        name=server_name,
-        transport=transport,
-        endpoint=request.endpoint,
-        description=request.description,
-        timeout=request.timeout,
-    )
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Server '{server_name}' not found. Provide transport and endpoint to create it.",
+        )
 
     # Connect to server
-    manager = get_connection_manager()
     try:
         results = await manager.connect_all([server])
         success = results.get(server_name, False)
@@ -386,8 +415,8 @@ async def disconnect_server(
     """
     manager = get_connection_manager()
 
-    # Check if server exists
-    if server_name not in manager.client.servers:
+    # Sprint 120: Check connections (not servers — servers only has connected ones)
+    if server_name not in manager.client.connections:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Server not found: {server_name}",
