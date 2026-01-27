@@ -208,18 +208,12 @@ class HybridSearch:
 
         self.qdrant_client = qdrant_client or QdrantClientWrapper()
         self.embedding_service = embedding_service or get_embedding_service()
-        self.bm25_search = bm25_search or BM25Search()
+        # Sprint 120: BM25 is now lazy-loaded (deprecated since Sprint 87).
+        # Production uses BGE-M3 sparse vectors via MultiVectorHybridSearch.
+        self._bm25_search = bm25_search  # None = lazy-load only when accessed
         self._reranker = reranker  # Lazy-loaded on first use
         self.collection_name = collection_name or settings.qdrant_collection
         self.filter_engine = MetadataFilterEngine()
-
-        # Sprint 10: Try to load BM25 from disk on initialization
-        try:
-            loaded = self.bm25_search.load_from_disk()
-            if loaded:
-                logger.info("BM25 index loaded from cache on initialization")
-        except Exception as e:
-            logger.warning("Failed to load BM25 from cache", error=str(e))
 
         # Sprint 75 Fix: Clarify lazy-loading behavior in logs
         logger.info(
@@ -227,7 +221,29 @@ class HybridSearch:
             collection=self.collection_name,
             reranker_lazy_load=True,  # Always available via @property
             reranker_preloaded=reranker is not None,  # Was it passed at init?
+            bm25_deprecated=True,  # Sprint 120: BM25 no longer initialized eagerly
         )
+
+    @property
+    def bm25_search(self) -> BM25Search:
+        """Lazy-load BM25 search instance (deprecated since Sprint 87).
+
+        Sprint 120: BM25 is no longer initialized eagerly. It is only created
+        when explicitly accessed (e.g., via /api/v1/retrieval/prepare-bm25).
+        Production search uses BGE-M3 sparse vectors in Qdrant instead.
+
+        Returns:
+            BM25Search instance
+        """
+        if self._bm25_search is None:
+            self._bm25_search = BM25Search()
+            try:
+                loaded = self._bm25_search.load_from_disk()
+                if loaded:
+                    logger.info("BM25 index loaded from cache (lazy)")
+            except Exception as e:
+                logger.warning("Failed to load BM25 from cache", error=str(e))
+        return self._bm25_search
 
     @property
     def reranker(self) -> CrossEncoderReranker:

@@ -135,7 +135,10 @@ def get_embedding_service() -> EmbeddingServiceProtocol:
 
     if backend == "flag-embedding":
         # Sprint 87: Multi-vector backend (dense + sparse)
-        from src.components.shared.flag_embedding_service import FlagEmbeddingService
+        # Sprint 120: Delegate to get_flag_embedding_service() singleton
+        # to avoid creating two separate FlagEmbeddingService instances
+        # (one from factory, one from MultiVectorHybridSearch).
+        from src.components.shared.flag_embedding_service import get_flag_embedding_service
 
         # Get config values with defaults
         model_name = getattr(settings, "st_model_name", "BAAI/bge-m3")
@@ -156,7 +159,7 @@ def get_embedding_service() -> EmbeddingServiceProtocol:
             sparse_top_k=sparse_top_k,
         )
 
-        _embedding_service = FlagEmbeddingService(
+        _embedding_service = get_flag_embedding_service(
             model_name=model_name,
             device=device,
             use_fp16=use_fp16,

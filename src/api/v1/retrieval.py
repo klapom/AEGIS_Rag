@@ -406,9 +406,8 @@ async def ingest(
             required_exts=ingest_params.file_extensions,
         )
 
-        # Prepare BM25 index in background
-        hybrid_search = get_hybrid_search()
-        background_tasks.add_task(hybrid_search.prepare_bm25_index)
+        # Sprint 120: BM25 background task REMOVED.
+        # Lexical search now uses BGE-M3 sparse vectors (Sprint 87).
 
         return IngestionResponse(
             status="success",

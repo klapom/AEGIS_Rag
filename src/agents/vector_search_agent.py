@@ -19,7 +19,10 @@ from tenacity import (
 
 from src.agents.base_agent import BaseAgent
 from src.agents.state import RetrievedContext
-from src.components.retrieval.four_way_hybrid_search import FourWayHybridSearch
+from src.components.retrieval.four_way_hybrid_search import (
+    FourWayHybridSearch,
+    get_four_way_hybrid_search,
+)
 from src.core.config import settings
 from src.core.exceptions import VectorSearchError
 from src.core.logging import get_logger
@@ -51,7 +54,9 @@ class VectorSearchAgent(BaseAgent):
             max_retries: Maximum retry attempts on failure (default: 3)
         """
         super().__init__(name="VectorSearchAgent")
-        self.four_way_search = four_way_search or FourWayHybridSearch()
+        # Sprint 120: Use singleton to avoid per-request re-initialization
+        # (model loading, GPU allocation, Qdrant/Neo4j client creation)
+        self.four_way_search = four_way_search or get_four_way_hybrid_search()
         self.top_k = top_k or settings.retrieval_top_k
         # Sprint 76: Use config default (Ollama reranker available since Sprint 48)
         self.use_reranking = (

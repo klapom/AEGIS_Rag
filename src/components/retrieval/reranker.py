@@ -287,13 +287,22 @@ class CrossEncoderReranker:
                     "Install with: poetry install --with reranking"
                 ) from e
 
-            logger.info("loading_cross_encoder_model", model=self.model_name)
+            # Sprint 120: Use CUDA for cross-encoder inference.
+            # On DGX Spark (128GB unified memory), GPU inference is ~100x faster
+            # than CPU for bge-reranker-v2-m3 (17.8s CPU → ~200ms GPU).
+            # The cross-encoder (~560MB) coexists with BGE-M3 (~1.5GB) easily.
+            import torch
+
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+            logger.info(
+                "loading_cross_encoder_model", model=self.model_name, device=device
+            )
             # Note: sentence-transformers 3.4+ uses cache_dir instead of cache_folder
             try:
                 self._model = CrossEncoder(
                     self.model_name,
                     max_length=512,  # Max sequence length for BERT-based models
-                    device="cpu",  # Use CPU (sufficient for inference)
+                    device=device,
                     cache_dir=str(self.cache_dir),
                 )
             except TypeError:
@@ -301,7 +310,7 @@ class CrossEncoderReranker:
                 self._model = CrossEncoder(  # type: ignore[call-arg]
                     self.model_name,
                     max_length=512,
-                    device="cpu",
+                    device=device,
                     cache_folder=str(self.cache_dir),
                 )
             logger.info("cross_encoder_model_loaded", model=self.model_name)

@@ -131,33 +131,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         project=settings.langsmith_project if tracing_enabled else None,
     )
 
-    # Sprint 10: Initialize BM25 model on startup
-    # The HybridSearch will automatically load BM25 from disk cache if available.
-    # If not, it will need to be trained via /api/v1/retrieval/prepare-bm25
-    try:
-        from src.api.v1.retrieval import get_hybrid_search
-
-        hybrid_search = get_hybrid_search()
-
-        # Check if BM25 is already loaded from cache
-        if not hybrid_search.bm25_search.is_fitted():
-            # No cache found, try to initialize from Qdrant
-            logger.info("No BM25 cache found, initializing from Qdrant...")
-            await hybrid_search.prepare_bm25_index()
-            logger.info("bm25_initialized_on_startup", status="success")
-        else:
-            logger.info(
-                "bm25_loaded_from_cache",
-                status="success",
-                corpus_size=hybrid_search.bm25_search.get_corpus_size(),
-            )
-    except Exception as e:
-        # Non-fatal: BM25 can be initialized later via API
-        logger.warning(
-            "bm25_initialization_failed",
-            error=str(e),
-            note="Can be initialized via /api/v1/retrieval/prepare-bm25",
-        )
+    # Sprint 120: BM25 startup initialization REMOVED.
+    # Since Sprint 87, lexical search uses BGE-M3 sparse vectors in Qdrant
+    # with server-side RRF fusion. BM25 (rank_bm25 + pickle) is deprecated.
+    # See: ADR-024 (BGE-M3), four_way_hybrid_search.py (_multivector_search)
 
     # Sprint 65 Feature 65.1 + Sprint 92 Fix: Pre-load embedding model via factory
     # This now respects EMBEDDING_BACKEND setting (flag-embedding, sentence-transformers, ollama)

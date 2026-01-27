@@ -71,6 +71,9 @@ services:
       # Force ALL model layers to GPU (DGX Spark unified memory)
       # -1 = use all available GPU layers, prevents CPU fallback
       - OLLAMA_NUM_GPU=-1
+      # Sprint 120: Enable new engine for better GPU offloading of hybrid architectures
+      # Nemotron3 (nemotron_h_moe: Transformer+Mamba SSM) was CPU_Mapped in old engine
+      - OLLAMA_NEW_ENGINE=true
     # GPU Support for DGX Spark (Blackwell GPU)
     deploy:
       resources:
