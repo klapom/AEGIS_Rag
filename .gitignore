@@ -1,3 +1,6 @@
+# MCP server binaries
+bin/
+
 # Python
 __pycache__/
 *.py[cod]
