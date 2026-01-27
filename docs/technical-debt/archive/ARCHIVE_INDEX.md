@@ -124,6 +124,13 @@ This archive contains resolved, completed, or obsolete Technical Debt items that
 
 11. **Sprint 83 Archival:** TD-044 (DoclingParsedDocument interface - obsolete, section extraction now working), TD-046 (RELATES_TO extraction - ADR-040), TD-052 (user upload - Feature 83.4) archived during Sprint 83 technical debt cleanup (January 10, 2026).
 
+12. **Sprint 121 Archival (2026-01-27):** 5 TDs resolved (44 SP total):
+    - **TD-054** (6 SP): Unified Chunking Service — `ChunkingService` (775 lines) deleted, production uses `adaptive_chunking.py`. -1,727 lines removed.
+    - **TD-055** (10 SP): MCP Client Implementation — Tool detection default changed from `hybrid` to `llm`. Enhanced bilingual prompts, 9 skill triggers configured.
+    - **TD-070** (3 SP): Ingestion Performance Tuning — Verified: 170s→38.5s (77% faster). Graph extraction 162s→31.2s (81% faster). Ollama GPU fix confirmed.
+    - **TD-078** (11 SP): Section Extraction Performance Phase 2 — Tokenizer singleton cache (thread-safe double-check locking) + ThreadPoolExecutor batch tokenization (4 workers).
+    - **TD-104** (14 SP): LightRAG CRUD Feature Gap — 5 REST endpoints, 9 Pydantic models, GDPR Article 17 compliance. EntityManagementPage frontend.
+
 ---
 
 ## Retrieval
@@ -138,4 +145,4 @@ Items in this archive may be referenced for:
 
 **Document maintained by:** Documentation Agent
 **Archive created:** 2025-12-16
-**Last updated:** 2026-01-10 (Sprint 83 Technical Debt Cleanup)
+**Last updated:** 2026-01-27 (Sprint 121 Technical Debt Consolidation — 5 TDs, 44 SP)

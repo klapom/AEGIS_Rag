@@ -325,76 +325,42 @@ async def test_docling_parse_node_parsing_error(sample_state):
 # =============================================================================
 
 
+@pytest.mark.skip(reason="ChunkingService removed in Sprint 121 (TD-054)")
 @pytest.mark.asyncio
 async def test_chunking_node_success(sample_state, sample_chunks):
-    """Test chunking_node successfully chunks document."""
-    # Add parsed content to state
-    sample_state["parsed_content"] = "This is a long document content. " * 500
-    sample_state["parsed_metadata"] = {"pages": 10}
+    """DEPRECATED: ChunkingService removed in Sprint 121 Feature 121.1 (TD-054).
 
-    with patch(
-        "src.components.ingestion.nodes.adaptive_chunking.get_chunking_service"
-    ) as mock_get_service:
-        # Mock chunking service (async method requires AsyncMock)
-        mock_service = Mock()
-        mock_service.chunk_document = AsyncMock(return_value=sample_chunks)
-        mock_get_service.return_value = mock_service
+    This test validated the legacy ChunkingService fallback.
+    Chunking now requires Docling-parsed DoclingDocument objects.
 
-        # Run node
-        updated_state = await chunking_node(sample_state)
-
-        # Verify chunking success
-        assert updated_state["chunking_status"] == "completed"
-        assert len(updated_state["chunks"]) == 3
-        # Sprint 21 Feature 21.6: chunks now have structure {"chunk": Chunk, "image_bboxes": []}
-        assert all(
-            isinstance(c, dict) and "chunk" in c and "image_bboxes" in c
-            for c in updated_state["chunks"]
-        )
-        # Verify chunk objects match
-        chunk_objects = [c["chunk"] for c in updated_state["chunks"]]
-        assert chunk_objects == sample_chunks
-        assert updated_state["overall_progress"] > 0.0
-
-        # Verify chunking service called with correct parameters
-        mock_service.chunk_document.assert_called_once()
-        call_args = mock_service.chunk_document.call_args[1]
-        assert call_args["document_id"] == "test_doc_001"
-        assert call_args["text"] == sample_state["parsed_content"]
+    See: src/components/ingestion/nodes/adaptive_chunking.py
+    """
+    pass
 
 
 @pytest.mark.asyncio
 async def test_chunking_node_empty_content(sample_state):
-    """Test chunking_node fails if parsed_content is empty."""
-    # Set empty parsed content
+    """Test chunking_node requires Docling-parsed content (Sprint 121 TD-054)."""
+    # No enriched_doc in state (simulates missing Docling parsing)
+    sample_state["document"] = None
     sample_state["parsed_content"] = ""
 
-    # Run node (should raise IngestionError)
-    with pytest.raises(IngestionError, match="No content to chunk"):
+    # Run node (should raise IngestionError with new message)
+    with pytest.raises(IngestionError, match="Docling parsing required"):
         await chunking_node(sample_state)
 
 
+@pytest.mark.skip(reason="ChunkingService removed in Sprint 121 (TD-054)")
 @pytest.mark.asyncio
 async def test_chunking_node_uses_1800_token_chunks(sample_state):
-    """Test chunking_node uses 1800-token chunks (Feature 21.4)."""
-    sample_state["parsed_content"] = "Test content for chunking."
+    """DEPRECATED: ChunkingService removed in Sprint 121 Feature 121.1 (TD-054).
 
-    with patch(
-        "src.components.ingestion.nodes.adaptive_chunking.get_chunking_service"
-    ) as mock_get_service:
-        mock_service = Mock()
-        mock_service.chunk_document = AsyncMock(return_value=[])
-        mock_get_service.return_value = mock_service
+    This test validated ChunkingService config parameters.
+    Chunking config is now managed by ChunkingConfigService in Redis.
 
-        # Run node
-        await chunking_node(sample_state)
-
-        # Verify ChunkingConfig parameters (800-1800 tokens, 300 overlap)
-        call_args = mock_get_service.call_args
-        chunk_config = call_args[1]["config"]
-        assert chunk_config.max_tokens == 1800  # Feature 21.4: 3x increase
-        assert chunk_config.overlap_tokens == 300  # 1/6 ratio
-        assert chunk_config.strategy == "adaptive" or chunk_config.strategy.value == "adaptive"
+    See: src/components/chunking_config/chunking_config_service.py
+    """
+    pass
 
 
 # =============================================================================

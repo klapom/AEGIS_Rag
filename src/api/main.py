@@ -28,6 +28,9 @@ from src.api.v1.admin import router as admin_router
 from src.api.v1.admin_costs import router as admin_costs_router
 from src.api.v1.admin_discovery import domain_discovery_router  # Sprint 46 Feature 46.4
 from src.api.v1.admin_graph import router as admin_graph_router
+from src.api.v1.graph_entities import (
+    router as graph_entities_router,
+)  # Sprint 121 Feature 121.5a-d: Entity/Relation Management
 from src.api.v1.admin_indexing import router as admin_indexing_router
 from src.api.v1.admin_llm import router as admin_llm_router
 from src.api.v1.admin_tools import router as admin_tools_router  # Sprint 70 Feature 70.7
@@ -492,6 +495,7 @@ app.include_router(admin_costs_router, prefix="/api/v1")
 app.include_router(admin_llm_router, prefix="/api/v1")
 app.include_router(admin_tools_router, prefix="/api/v1")  # Sprint 70 Feature 70.7
 app.include_router(admin_graph_router, prefix="/api/v1")
+app.include_router(graph_entities_router, prefix="/api/v1")  # Sprint 121 Feature 121.5a-d
 app.include_router(admin_indexing_router, prefix="/api/v1")
 app.include_router(admin_chunking_router, prefix="/api/v1")  # TD-096: Chunking Parameters UI
 app.include_router(admin_generation_router, prefix="/api/v1")  # TD-097: Generation Config UI
@@ -501,11 +505,12 @@ logger.info(
         "admin_costs",
         "admin_llm",
         "admin_graph",
+        "graph_entities",
         "admin_indexing",
         "admin_chunking",
         "admin_generation",
     ],
-    note="Sprint 53: Admin module split for maintainability + TD-096/TD-097",
+    note="Sprint 53: Admin module split for maintainability + TD-096/TD-097 + Sprint 121 Entity/Relation Management",
 )
 
 # Sprint 63 Feature 63.5: Graph Communities API

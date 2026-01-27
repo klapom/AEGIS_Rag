@@ -58,8 +58,11 @@ class ToolsConfig(BaseModel):
     enable_research_tools: bool = Field(default=False, description="Enable tools in research")
 
     # Sprint 70 Feature 70.11: Tool Detection Strategy
+    # Sprint 121 Feature 121.4: LLM mode default (Ollama is now fast: 74 tok/s)
     tool_detection_strategy: str = Field(
-        default="hybrid", description="Detection strategy: 'markers', 'llm', or 'hybrid'"
+        default="llm",
+        description="Detection strategy: 'markers', 'llm', or 'hybrid'. "
+        "LLM mode provides intelligent tool selection (+50-200ms, recommended with fast LLM)",
     )
     explicit_tool_markers: list[str] = Field(
         default_factory=lambda: ["[TOOL:", "[SEARCH:", "[FETCH:"],

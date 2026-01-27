@@ -811,3 +811,107 @@ export interface CertificationOverview {
   expiring_soon_count: number;
   expired_count: number;
 }
+
+// ============================================================================
+// Sprint 121 Feature 121.5e: Entity Management UI Types
+// ============================================================================
+
+/**
+ * Graph entity information
+ */
+export interface GraphEntity {
+  entity_id: string;
+  entity_name: string;
+  entity_type: string;
+  description?: string | null;
+  source_id?: string | null;
+  file_path?: string | null;
+  namespace_id?: string | null;
+  created_at?: string | null;
+  relation_count: number;
+}
+
+/**
+ * Graph entity with full relationship details
+ */
+export interface GraphEntityDetail {
+  entity: GraphEntity;
+  relationships: GraphRelationship[];
+}
+
+/**
+ * Graph relationship information
+ */
+export interface GraphRelationship {
+  source_id: string;
+  source_name: string;
+  target_id: string;
+  target_name: string;
+  relation_type: string;
+  description?: string | null;
+  weight?: number;
+}
+
+/**
+ * Entity list request parameters
+ */
+export interface EntitySearchRequest {
+  search?: string;
+  entity_type?: string;
+  namespace_id?: string;
+  page: number;
+  page_size: number;
+}
+
+/**
+ * Entity list response
+ */
+export interface EntityListResponse {
+  entities: GraphEntity[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
+/**
+ * Relation list request parameters
+ */
+export interface RelationSearchRequest {
+  entity_id?: string;
+  relation_type?: string;
+  namespace_id?: string;
+  page: number;
+  page_size: number;
+}
+
+/**
+ * Relation list response
+ */
+export interface RelationListResponse {
+  relations: GraphRelationship[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
+/**
+ * Entity/Relation delete response
+ */
+export interface EntityDeleteResponse {
+  status: string;
+  message: string;
+  deleted_entity_id?: string | null;
+  affected_relations: number;
+  audit_logged: boolean;
+}
+
+/**
+ * Relation delete request
+ */
+export interface RelationDeleteRequest {
+  source_entity_id: string;
+  target_entity_id: string;
+  relation_type?: string | null;
+}

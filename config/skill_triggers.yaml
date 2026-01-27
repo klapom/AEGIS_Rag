@@ -50,58 +50,93 @@ intent_triggers:
 
 # Pattern-based triggers (regex patterns → skills)
 # Patterns are case-insensitive ((?i) flag)
+# Sprint 121 Feature 121.4: Added German-language patterns for bilingual support
 pattern_triggers:
-  # Search/find patterns → retrieval
-  - pattern: "(?i)(search|find|look up|locate)"
+  # Search/find patterns → retrieval (DE/EN)
+  - pattern: "(?i)(search|find|look up|locate|suche|finde|suchen|finden)"
     skills: [retrieval]
     priority: high
 
-  # Comparison patterns → reflection + graph reasoning
-  - pattern: "(?i)(compare|contrast|difference|versus|vs)"
+  # Comparison patterns → reflection + graph reasoning (DE/EN)
+  - pattern: "(?i)(compare|contrast|difference|versus|vs|vergleich|unterschied|gegenüber)"
     skills: [reflection, graph_reasoning]
     priority: medium
 
-  # Recency patterns → web search
-  - pattern: "(?i)(latest|current|recent|today|this week|this month|2026)"
+  # Recency patterns → web search (DE/EN)
+  - pattern: "(?i)(latest|current|recent|today|this week|this month|2026|aktuell|neueste|jetzt|heute|diese woche|dieser monat)"
     skills: [web_search]
     priority: high
 
-  # Planning patterns → planner
-  - pattern: "(?i)(plan|steps|how to|guide|tutorial|walkthrough)"
+  # Planning patterns → planner (DE/EN)
+  - pattern: "(?i)(plan|steps|how to|guide|tutorial|walkthrough|schritte|anleitung|wie macht man)"
     skills: [planner]
     priority: medium
 
-  # Validation patterns → reflection
-  - pattern: "(?i)(check|verify|validate|correct|accurate)"
+  # Validation patterns → reflection (DE/EN)
+  - pattern: "(?i)(check|verify|validate|correct|accurate|prüfe|prüfen|validiere|überprüfe|korrekt)"
     skills: [reflection]
     priority: medium
 
-  # Summarization patterns → synthesis
-  - pattern: "(?i)(summarize|summary|overview|brief|in short)"
+  # Summarization patterns → synthesis (DE/EN)
+  - pattern: "(?i)(summarize|summary|overview|brief|in short|zusammenfassung|überblick|kurz|zusammenfasse)"
     skills: [synthesis]
     priority: high
 
-  # Entity patterns → graph reasoning
-  - pattern: "(?i)(related to|connected to|associated with|relationship)"
+  # Entity patterns → graph reasoning (DE/EN)
+  - pattern: "(?i)(related to|connected to|associated with|relationship|verbunden mit|zusammenhang|beziehung|verknüpft)"
     skills: [graph_reasoning]
     priority: medium
 
-  # Memory patterns → memory
-  - pattern: "(?i)(remember|recall|previous|earlier|last time|you said)"
+  # Memory patterns → memory (DE/EN)
+  - pattern: "(?i)(remember|recall|previous|earlier|last time|you said|erinner|früher|vorher|letzte mal|du sagtest)"
     skills: [memory]
+    priority: high
+
+  # Web search patterns → web_search (DE/EN)
+  - pattern: "(?i)(google|search web|internet|browse|web suche|im internet|durchsuche)"
+    skills: [web_search]
     priority: high
 
 # Keyword triggers (simple substring matching → skills)
 # Case-insensitive substring matching
+# Sprint 121 Feature 121.4: Added German keywords for bilingual support
 keyword_triggers:
+  # Analysis (DE/EN)
   "analyze": [reflection]
+  "analysiere": [reflection]
+  "analyse": [reflection]
+
+  # Summarization (DE/EN)
   "summarize": [synthesis]
+  "zusammenfassung": [synthesis]
+  "zusammenfasse": [synthesis]
+
+  # Memory (DE/EN)
   "remember": [memory]
+  "erinnere": [memory]
+  "erinnerung": [memory]
+
+  # Calculation (DE/EN)
   "calculate": [calculator]
+  "berechne": [calculator]
+  "rechne": [calculator]
+
+  # Graph reasoning (DE/EN)
   "graph": [graph_reasoning]
   "entities": [graph_reasoning]
   "relationships": [graph_reasoning]
+  "entitäten": [graph_reasoning]
+  "beziehungen": [graph_reasoning]
+
+  # Planning (DE/EN)
   "plan": [planner]
   "steps": [planner]
+  "schritte": [planner]
+  "planung": [planner]
+
+  # Web search (DE/EN)
   "recent": [web_search]
   "latest": [web_search]
+  "aktuell": [web_search]
+  "neueste": [web_search]
+  "internet": [web_search]

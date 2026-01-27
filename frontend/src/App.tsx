@@ -57,6 +57,7 @@ import { MCPMarketplace } from './pages/admin/MCPMarketplace';
 import { LongContextPage } from './pages/admin/LongContextPage';
 import { BashToolPage } from './pages/admin/BashToolPage';
 import { HistoryPage } from './pages/HistoryPage';
+import { EntityManagementPage } from './pages/admin/EntityManagementPage';
 
 function App() {
   // Sprint 46: Sidebar state moved to individual pages (HomePage, etc.)
@@ -97,6 +98,7 @@ function App() {
                       <Route path="/admin/tools" element={<MCPToolsPage />} />
                       <Route path="/admin/memory" element={<MemoryManagementPage />} />
                       <Route path="/admin/graph-operations" element={<AdminGraphOperationsPage />} />
+                      <Route path="/admin/entities" element={<EntityManagementPage />} />
                       <Route path="/admin/explainability" element={<ExplainabilityPage />} />
                       <Route path="/admin/certification" element={<SkillCertificationPage />} />
                       <Route path="/admin/skills/registry" element={<SkillRegistry />} />

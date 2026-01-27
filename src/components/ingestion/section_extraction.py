@@ -75,7 +75,9 @@ References:
 """
 
 import re
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from functools import lru_cache
 from typing import Any
 
@@ -106,6 +108,38 @@ _PROFILING_STATS = {
     "total_sections_extracted": 0,
     "extraction_calls": 0,
 }
+
+# =============================================================================
+# Tokenizer Singleton Cache (Sprint 121 Feature 121.2a - TD-078 Phase 2)
+# =============================================================================
+# Module-level tokenizer cache (loaded once, ~200-500ms saved per call)
+# Thread-safe singleton pattern for parallel tokenization
+# =============================================================================
+_TOKENIZER = None
+_TOKENIZER_LOCK = threading.Lock()
+
+
+def _get_cached_tokenizer():
+    """Get or create cached BGE-M3 tokenizer (thread-safe singleton).
+
+    Returns:
+        AutoTokenizer: Cached BGE-M3 tokenizer instance, or None if unavailable
+    """
+    global _TOKENIZER
+    if _TOKENIZER is None:
+        with _TOKENIZER_LOCK:
+            if _TOKENIZER is None:  # Double-check locking
+                try:
+                    from transformers import AutoTokenizer
+                    _TOKENIZER = AutoTokenizer.from_pretrained("BAAI/bge-m3")
+                    logger.info("section_extraction_tokenizer_cached", tokenizer="BAAI/bge-m3")
+                except Exception as e:
+                    logger.warning(
+                        "section_extraction_tokenizer_fallback",
+                        reason="transformers not available",
+                        error=str(e)
+                    )
+    return _TOKENIZER
 
 
 def get_profiling_stats() -> dict[str, float]:
@@ -245,6 +279,45 @@ def _is_likely_heading_by_formatting_cached(text: str, label: str, is_bold: bool
             return True
 
     return False
+
+
+def _batch_tokenize_parallel(
+    texts: list[str],
+    max_workers: int = 4,
+) -> dict[int, int]:
+    """Tokenize all text blocks in parallel using thread pool (Sprint 121.2b).
+
+    Uses ThreadPoolExecutor to tokenize multiple text blocks concurrently.
+    Expected speedup: 2-4x on multi-core systems for large documents.
+
+    Args:
+        texts: List of text strings to tokenize
+        max_workers: Maximum number of parallel workers (default: 4)
+
+    Returns:
+        dict[int, int]: Mapping of text index to token count
+    """
+    tokenizer = _get_cached_tokenizer()
+    token_counts = {}
+
+    if tokenizer is None:
+        # Fallback: approximate token counting
+        for idx, text in enumerate(texts):
+            token_counts[idx] = len(text) // 4
+        return token_counts
+
+    def _count_tokens(args):
+        idx, text = args
+        tokens = tokenizer.encode(text, add_special_tokens=False)
+        return idx, len(tokens)
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = [executor.submit(_count_tokens, (idx, text)) for idx, text in enumerate(texts)]
+        for future in as_completed(futures):
+            idx, count = future.result()
+            token_counts[idx] = count
+
+    return token_counts
 
 
 def _is_likely_heading_by_formatting(text_item: dict[str, Any]) -> bool:
@@ -410,15 +483,15 @@ def _extract_from_texts_array(
     texts_processed = 0
 
     # ==========================================================================
-    # Performance Optimization: Batch Tokenization (Sprint 67.14)
+    # Performance Optimization: Parallel Batch Tokenization (Sprint 121.2b - TD-078 Phase 2)
     # ==========================================================================
     # Pre-compute all text content that will need tokenization
-    # This allows batch tokenization (30-50% faster than sequential)
+    # Parallel tokenization using ThreadPoolExecutor (2-4x faster on multi-core)
+    # Uses cached tokenizer singleton (~200-500ms saved per call)
     # We'll store token counts and use them later when building sections
     # ==========================================================================
     tokenization_start = time.perf_counter()
     text_content_map: dict[int, str] = {}
-    token_count_map: dict[int, int] = {}
 
     # Extract all text content first
     for idx, text_item in enumerate(texts):
@@ -426,18 +499,26 @@ def _extract_from_texts_array(
         if text_content:
             text_content_map[idx] = text_content
 
-    # Batch tokenize all content (if available)
-    # Note: count_tokens_func is currently per-text, but we prepare for batch support
-    for idx, text_content in text_content_map.items():
-        token_count_map[idx] = count_tokens_func(text_content)
+    # Parallel batch tokenization (Sprint 121.2b)
+    text_contents = list(text_content_map.values())
+    text_indices = list(text_content_map.keys())
+
+    if text_contents:
+        # Tokenize in parallel using thread pool
+        parallel_token_counts = _batch_tokenize_parallel(text_contents, max_workers=4)
+        # Map back to original indices
+        token_count_map = {text_indices[i]: count for i, count in parallel_token_counts.items()}
+    else:
+        token_count_map = {}
 
     tokenization_elapsed = (time.perf_counter() - tokenization_start) * 1000
     _PROFILING_STATS["total_tokenization_time_ms"] += tokenization_elapsed
 
-    logger.debug(
-        "batch_tokenization_complete",
+    logger.info(
+        "section_extraction_batch_tokenize",
         texts_count=len(text_content_map),
-        tokenization_ms=round(tokenization_elapsed, 2),
+        duration_ms=round(tokenization_elapsed, 2),
+        method="parallel_threadpool",
     )
 
     # Detect which heading strategy to use
@@ -781,13 +862,15 @@ def extract_section_hierarchy(
     if docling_document is None:
         raise ValueError("docling_document is None - cannot extract sections")
 
-    # Token counting helper
+    # Token counting helper (Sprint 121.2a - uses cached tokenizer)
     def count_tokens(text: str) -> int:
-        """Count tokens using BGE-M3 tokenizer."""
-        try:
-            from transformers import AutoTokenizer
+        """Count tokens using BGE-M3 tokenizer (with cached tokenizer singleton)."""
+        tokenizer = _get_cached_tokenizer()
+        if tokenizer is None:
+            # Fallback: approximate token count (avg 4 chars/token)
+            return max(1, len(text) // 4)
 
-            tokenizer = AutoTokenizer.from_pretrained("BAAI/bge-m3")
+        try:
             tokens = tokenizer.encode(text, add_special_tokens=False)
             return len(tokens)
         except Exception:

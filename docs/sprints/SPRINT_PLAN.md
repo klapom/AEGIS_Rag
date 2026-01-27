@@ -1858,29 +1858,46 @@ Sprint 117.1 (Domain CRUD) - Foundation
 
 ---
 
-## Sprint 120 📝 **Planned** (2026-01-27)
+## Sprint 120 ✅ **Complete** (2026-01-27)
 
-**Status:** 📝 Planned
-**Focus:** UI Polish, Test Stabilization & Infrastructure
-**Story Points:** ~64 SP estimated
+**Status:** ✅ Complete
+**Focus:** UI Polish, Tools Activation, Performance Fixes
+**Story Points:** ~64 SP
 **Predecessor:** Sprint 119
 
-**Objectives:**
-1. **P0: Skills/Tools Activation (12 SP)** — Tool-aware prompts, hybrid detection, MCP auto-connect, SSE tool events
-2. **P1: UI Bug Fixes (14 SP)** — Deep research results display, progress dismissable, source count fix, error display
-3. **P2: Test Infrastructure (23 SP)** — Visual regression framework, performance tests, admin indexing UI
-4. **P3: Feature Gaps (15 SP)** — Bash execution UI, memory management data-testids, E2E verification
-
-**Key Deliverables:**
-- Skills/Tools end-to-end: Prompt markers → Hybrid detection → MCP execution → SSE events → UI
-- Deep research results in normal chat window
-- Research progress panel closeable after completion
-- Source count mismatch fix (20 referenced, 10 shown)
-- Error display in chat UI
-- Bash execution security sandbox UI (6 tests)
-- Memory management data-testids (11 tests)
-
-**TD Created:**
-- TD-121: Graph Versioning UI (21 SP) — Deferred to Sprint 122+
+**Key Achievements:**
+- Ollama GPU offload fix: 3.1→74 tok/s (+2,287%)
+- MCP tool execution, disconnect crash fix, reconnect support
+- Auth bypass for LAN IPs + Docker network
+- MCP stdio buffer 16MB, default /app/data path
+- Reranker CUDA singleton fixes
 
 **See:** `docs/sprints/SPRINT_120_PLAN.md`
+
+---
+
+## Sprint 121 ✅ **Complete** (2026-01-27)
+
+**Status:** ✅ Complete
+**Focus:** Technical Debt Consolidation & Entity Management
+**Story Points:** 44 SP
+**Predecessor:** Sprint 120
+
+**Features:**
+
+| # | Feature | SP | Status |
+|---|---------|-----|--------|
+| 121.1 | TD-054: Remove Duplicate Chunking Code | 6 | ✅ -1,727 lines removed |
+| 121.2 | TD-078: Parallel Section Extraction | 11 | ✅ Tokenizer singleton + ThreadPoolExecutor |
+| 121.3 | TD-070: Ingestion Performance Verification | 3 | ✅ 170s→38.5s (77% faster) |
+| 121.4 | TD-055: MCP LLM Mode + Skills Review | 10 | ✅ Default→LLM, bilingual triggers |
+| 121.5 | TD-104: Entity/Relation Delete API + Frontend | 14 | ✅ 5 endpoints, GDPR Article 17, EntityManagementPage |
+
+**Key Achievements:**
+- **Code cleanup:** -1,727 lines (ChunkingService removed, 65 obsolete tests removed)
+- **Performance:** Ingestion 77% faster (170s→38.5s), graph extraction 81% faster (162s→31.2s)
+- **GDPR:** Entity/Relation Delete API with GDPR Article 17 compliance, audit logging
+- **Frontend:** EntityManagementPage with entity table, search, delete dialogs
+- **MCP:** LLM tool detection default, enhanced bilingual prompts, 9 skill triggers
+
+**See:** `docs/sprints/SPRINT_121_PLAN.md`

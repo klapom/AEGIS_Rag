@@ -25,7 +25,6 @@ from src.components.ingestion.ingestion_state import (
 )
 from src.components.ingestion.logging_utils import log_phase_summary
 from src.components.ingestion.nodes.models import AdaptiveChunk, SectionMetadata
-from src.core.chunking_service import get_chunking_service
 from src.core.exceptions import IngestionError
 
 logger = structlog.get_logger(__name__)
@@ -649,42 +648,17 @@ async def chunking_node(state: IngestionState) -> IngestionState:
         # Feature 21.6: Use enriched DoclingDocument
         enriched_doc = state.get("document")
 
-        # Fallback to parsed_content for backward compatibility
+        # Sprint 121 Feature 121.1 (TD-054): Require Docling-parsed content
+        # Legacy ChunkingService fallback removed - Docling is mandatory
         if enriched_doc is None:
-            logger.warning(
-                "chunking_fallback_to_text",
-                document_id=state["document_id"],
-                reason="no_docling_document",
+            raise IngestionError(
+                document_id=state.get("document_id", "unknown"),
+                reason=(
+                    "Docling parsing required: enriched_doc is None. "
+                    "Cannot process document without Docling-parsed content. "
+                    "Ensure Docling container is running and document was successfully parsed."
+                ),
             )
-            content = state.get("parsed_content", "")
-            if not content or not content.strip():
-                raise IngestionError(
-                    document_id=state.get("document_id", "unknown"),
-                    reason="No content to chunk (both document and parsed_content empty)",
-                )
-
-            # Use legacy ChunkingService as fallback
-            from src.core.chunking_service import ChunkingConfig, ChunkStrategyEnum
-
-            chunk_config = ChunkingConfig(
-                strategy=ChunkStrategyEnum.ADAPTIVE,
-                min_tokens=800,
-                max_tokens=1800,
-                overlap_tokens=300,
-            )
-            chunking_service = get_chunking_service(config=chunk_config)
-            legacy_chunks = await chunking_service.chunk_document(
-                text=content,
-                document_id=state["document_id"],
-                metadata=state.get("parsed_metadata", {}),
-            )
-            # Convert to enhanced format (no image annotations)
-            state["chunks"] = [{"chunk": c, "image_bboxes": []} for c in legacy_chunks]
-            state["chunking_status"] = "completed"
-            state["chunking_end_time"] = time.time()
-            state["overall_progress"] = calculate_progress(state)
-            logger.info("node_chunking_complete_legacy", chunks_created=len(legacy_chunks))
-            return state
 
         # Sprint 32 Feature 32.1 & 32.2: Adaptive Section-Aware Chunking (ADR-039)
         # Sprint 84 Feature 84.8: Skip section extraction for .txt files (42s → <1s speedup)

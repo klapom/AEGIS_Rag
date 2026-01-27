@@ -142,67 +142,34 @@ def test_embedding_service_config__custom_cache_size__applied_correctly():
 
 
 # =============================================================================
-# Test 3.3: Chunking Config Propagation
+# Test 3.3: Chunking Config Propagation (REMOVED - Sprint 121 Feature 121.1)
 # =============================================================================
+# ChunkingService was removed in TD-054. These tests are no longer relevant.
+# Chunking is now handled by adaptive_chunking.py in the LangGraph pipeline.
 
 
+@pytest.mark.skip(reason="ChunkingService removed in Sprint 121 (TD-054)")
 def test_chunking_config_propagation__token_limits__correct_tokenizer():
-    """Verify ChunkingService receives correct token limits.
+    """DEPRECATED: ChunkingService removed in Sprint 121 Feature 121.1 (TD-054).
 
-    Validates:
-    - max_tokens from config (800-1800)
-    - overlap_tokens from config (0-500)
-    - Strategy method (adaptive/fixed/sentence/paragraph)
+    This test validated ChunkingService config injection.
+    Chunking is now handled by adaptive_section_chunking in the LangGraph pipeline.
+
+    See: src/components/ingestion/nodes/adaptive_chunking.py
     """
-    from src.core.chunking_service import ChunkingConfig, ChunkingService, ChunkStrategyEnum
-
-    # Setup: Config with token limits
-    max_tokens = 1024
-    overlap_tokens = 128
-
-    # Action: Initialize chunking service with config
-    config = ChunkingConfig(
-        strategy=ChunkStrategyEnum.ADAPTIVE,
-        max_tokens=max_tokens,
-        overlap_tokens=overlap_tokens,
-    )
-    chunker = ChunkingService(config=config)
-
-    # Assert: Config injected
-    assert chunker.config.max_tokens == max_tokens, "max_tokens not set"
-    assert chunker.config.overlap_tokens == overlap_tokens, "overlap_tokens not set"
-    assert chunker.config.strategy == ChunkStrategyEnum.ADAPTIVE, "strategy not set"
+    pass
 
 
+@pytest.mark.skip(reason="ChunkingService removed in Sprint 121 (TD-054)")
 def test_chunking_config_validation__invalid_overlap__raises_error():
-    """Verify invalid chunking config is rejected.
+    """DEPRECATED: ChunkingService removed in Sprint 121 Feature 121.1 (TD-054).
 
-    Validates:
-    - Overlap must be less than max_tokens
-    - Negative values rejected
-    - Config validation happens at initialization (Pydantic validation)
+    This test validated ChunkingService config validation.
+    Chunking config validation is now handled by ChunkingConfigService in Redis.
+
+    See: src/components/chunking_config/chunking_config_service.py
     """
-    from src.core.chunking_service import ChunkingConfig, ChunkStrategyEnum
-
-    # Setup: Invalid config (overlap_tokens > max_tokens)
-    # Pydantic should reject this since overlap_tokens has max constraint of 500
-    # and max_tokens defaults to 1800, this is a valid combination.
-    # Let's test a negative overlap which should be invalid
-    max_tokens = 1024
-
-    # Action & Assert: Should raise validation error for negative overlap
-    with pytest.raises((ValueError, AssertionError, TypeError)) as exc_info:
-        ChunkingConfig(
-            strategy=ChunkStrategyEnum.ADAPTIVE,
-            max_tokens=max_tokens,
-            overlap_tokens=-1,  # Negative is invalid (ge=0 constraint)
-        )
-
-    # Assert: Validation error raised
-    error_msg = str(exc_info.value).lower()
-    assert (
-        "overlap" in error_msg or "greater" in error_msg or "validation" in error_msg
-    ), f"Error message should mention overlap validation: {error_msg}"
+    pass
 
 
 # =============================================================================

@@ -1,9 +1,9 @@
 # Technical Debt Index
 
-**Last Updated:** 2026-01-26 (Sprint 119 - TD-121 created, Graph Versioning UI deferred)
-**Total Open Items:** 8
-**Total Story Points:** ~174 SP (including TD-120 deferred: 31 SP, TD-121 deferred: 21 SP)
-**Archived Items:** [29 items](archive/ARCHIVE_INDEX.md) (TD-080 resolved Sprint 92.11)
+**Last Updated:** 2026-01-27 (Sprint 121 Complete — TD-054/055/070/078/104 RESOLVED, 44 SP cleared)
+**Total Open Items:** 3 (Active) + 3 (Deferred)
+**Total Story Points:** ~86 SP (Active: ~52 SP, Deferred: ~34 SP)
+**Archived Items:** [34 items](archive/ARCHIVE_INDEX.md) (TD-054/055/070/078/104 resolved Sprint 121)
 **Sprint 51 Review:** [Analysis & Archival Decisions](SPRINT_51_REVIEW_ANALYSIS.md)
 **Sprint 52:** Community Summaries, Async Follow-ups, Admin Dashboard, CI/CD
 **Sprint 53-58:** Refactoring Initiative (ADR-046)
@@ -18,15 +18,14 @@
 
 ## Summary by Priority
 
-| Priority | Count | Story Points |
-|----------|-------|--------------|
-| CRITICAL | 1     | 21 SP        |
-| HIGH     | 1     | ~18 SP       |
-| MEDIUM   | 2     | ~19 SP       |
-| LOW      | 3     | ~86 SP       |
-| PARTIAL  | 1     | ~6 SP        |
+| Priority | Count | Story Points | Sprint 121 Status |
+|----------|-------|--------------|-------------------|
+| CRITICAL | 1     | 6 SP         | TD-101: DEFERRED |
+| HIGH     | 1     | ~18 SP       | TD-102: Sprint 122 |
+| MEDIUM   | 1     | ~8 SP        | TD-098: DEFERRED |
+| LOW      | 3     | ~68 SP       | TD-056, TD-064 DEFERRED, TD-120/121 DEFERRED |
 
-**Note:** TD-120 (31 SP) is deferred indefinitely unless customer trigger
+**Note:** TD-120 (31 SP), TD-121 (21 SP) deferred indefinitely unless customer trigger
 
 **Sprint 81:** TD-096, TD-097 RESOLVED (8 SP) - Settings UI Integration complete
 **Sprint 83:** TD-044, TD-046, TD-052, TD-079, TD-099 RESOLVED (27 SP) - Logging improvements, namespace fixes, user upload, intent classifier
@@ -34,6 +33,7 @@
 **Sprint 85:** 🔴 **TD-101 DISCOVERED** (21 SP) - Community Summarization Bottleneck (Full Graph Re-Summarization)
 **Sprint 87:** ✅ **TD-074, TD-103 RESOLVED** (26 SP) - BGE-M3 Native Hybrid eliminates BM25 pickle (sync guaranteed)
 **Sprint 89:** 🔴 **TD-104 PLANNED** (11 SP) - LightRAG CRUD Feature Gap (Entity/Relation CRUD, Data Export, Doc Deletion)
+**Sprint 121:** ✅ **TD-054, TD-055, TD-070, TD-078, TD-104 RESOLVED** (44 SP) — Chunking cleanup (-1,727 lines), parallel section extraction, ingestion 77% faster, LLM tool detection default, Entity CRUD API + GDPR compliance
 
 ---
 
@@ -76,6 +76,11 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 | **TD-074** | **BM25 Cache Discrepancy** | **Sprint 87** (BGE-M3 Native Hybrid) | **5** |
 | **TD-103** | **BM25 Index Desync** | **Sprint 87** (BGE-M3 Native Hybrid) | **21** |
 | **TD-080** | **Context Relevance Guard (Anti-Hallucination)** | **Sprint 92.11** | **5** |
+| **TD-054** | **Unified Chunking Service (Code Cleanup)** | **Sprint 121.1** | **6** |
+| **TD-055** | **MCP Client Implementation (LLM Detection Default)** | **Sprint 121.4** | **10** |
+| **TD-070** | **Ingestion Performance Tuning (77% faster)** | **Sprint 121.3** | **3** |
+| **TD-078** | **Section Extraction Performance (Phase 2 Parallel)** | **Sprint 121.2** | **11** |
+| **TD-104** | **LightRAG CRUD Feature Gap (Entity Delete API)** | **Sprint 121.5** | **14** |
 
 ---
 
@@ -85,7 +90,7 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 
 | TD# | Title | Status | SP | Target Sprint | Notes |
 |-----|-------|--------|-----|---------------|-------|
-| [TD-101](TD-101_RISE_REASONING_CONTROL.md) | **RISE Reasoning Control** | 🔴 OPEN | 6 | **Sprint 95+** | Deferred from Sprint 94.4 |
+| [TD-101](TD-101_RISE_REASONING_CONTROL.md) | **RISE Reasoning Control** | 🟡 **DEFERRED** | 6 | **Sprint 130+** | Research risk, prompt engineering covers 70-80% |
 
 **TD-101 Discovery (Sprint 94):** Feature 94.4 (RISE Reasoning Control) deferred to technical debt. Integrating RISE sparse autoencoders for per-skill reasoning behavior control requires additional research and architecture planning. See ADR-055 (LangGraph 1.0 patterns) for implementation foundation.
 
@@ -93,10 +98,7 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 
 | TD# | Title | Status | SP | Target Sprint |
 |-----|-------|--------|-----|---------------|
-| [TD-102](TD-102_RELATION_EXTRACTION_IMPROVEMENT.md) | **Relation Extraction Improvement** | 🔴 OPEN | 18 | **Sprint 86-88** |
-| [TD-078](TD-078_SECTION_EXTRACTION_PERFORMANCE.md) | Section Extraction Performance | ✅ O(n²) FIX DONE | 18 | **Sprint 67-68** |
-
-**TD-080 RESOLVED (Sprint 92.11):** Context Relevance Guard fully implemented with `MIN_CONTEXT_RELEVANCE_THRESHOLD = 0.3` and standardized "not found" response.
+| [TD-102](TD-102_RELATION_EXTRACTION_IMPROVEMENT.md) | **Relation Extraction Improvement** | 🔴 OPEN | 18 | **Sprint 122** |
 
 **TD-102 Discovery (Sprint 85):** Multi-format ingestion testing revealed Relation Ratio of only 0.27-0.61 (target: ≥1.0). Root causes: SpaCy only as fallback, generic RELATES_TO prompts, no Gleaning. 5 iterations planned: SpaCy-first → Typed Relations → Gleaning → DSPy → KG Hygiene.
 
@@ -104,32 +106,24 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 
 | TD# | Title | Status | SP | Target Sprint |
 |-----|-------|--------|-----|---------------|
-| [TD-104](TD-104_LIGHTRAG_CRUD_FEATURE_GAP.md) | **LightRAG CRUD Feature Gap** | 🔴 OPEN | 11 | **Sprint 89** |
-| [TD-098](TD-098_CROSS_ENCODER_FINE_TUNING.md) | Cross-Encoder Fine-tuning | OPEN | 8 | **Sprint 85+** |
-| [TD-070](TD-070_INGESTION_PERFORMANCE_TUNING.md) | Ingestion Performance Tuning | **PHASE 1 COMPLETE (Sprint 83.1)** | 13 | **Sprint 85** |
-| [TD-074](TD-074_BM25_CACHE_DISCREPANCY.md) | BM25 Cache Discrepancy | ✅ **RESOLVED Sprint 87** | 5 | **Sprint 87** |
+| [TD-098](TD-098_CROSS_ENCODER_FINE_TUNING.md) | Cross-Encoder Fine-tuning | 🟡 **DEFERRED** | 8 | **Post-RAGAS Phase 2** |
 
-**TD-104 Discovery (Sprint 87):** LightRAG vs AegisRAG comparison revealed 18+ LightRAG methods not exposed by our wrapper, including Entity/Relation CRUD, Data Export (CSV/Excel/MD), and Document Deletion. Planned for Sprint 89.
+**TD-098 Update (Sprint 121):** Deferred until RAGAS Phase 2 baseline establishes whether reranking is the bottleneck. Cross-encoder fine-tuning is for reranking quality improvement (+10-18% Context Precision), not domain classification.
 
 ### LOW Priority
 
 | TD# | Title | Status | SP | Target Sprint |
 |-----|-------|--------|-----|---------------|
-| [TD-055](TD-055_MCP_CLIENT_IMPLEMENTATION.md) | MCP Client Implementation | OPEN | 21 | Sprint 90+ |
-| [TD-056](TD-056_PROJECT_COLLABORATION_SYSTEM.md) | Project Collaboration System | PLANNED | 34 | Sprint 90+ |
-| [TD-064](TD-064_TEMPORAL_COMMUNITY_SUMMARIES.md) | Temporal Community Summaries | BACKLOG | 13 | Sprint 90+ (Optional) |
+| [TD-056](TD-056_PROJECT_COLLABORATION_SYSTEM.md) | Project Collaboration System | PLANNED | 34 | Sprint 130+ |
+| [TD-064](TD-064_TEMPORAL_COMMUNITY_SUMMARIES.md) | Temporal Community Summaries | 🟡 **DEFERRED** | 13 | **Indefinite** |
 | [TD-120](TD-120_GRAPHITI_TIMETRAVEL_VERSIONING.md) | **Graphiti Time-Travel & Entity Versioning** | 🔴 **DEFERRED INDEFINITE** | 31 (Full) / 10 (Minimal) | **Customer Trigger** |
 | [TD-121](TD-121_GRAPH_VERSIONING_UI.md) | **Neo4j Graph Versioning UI (39.5-39.7)** | 🔴 **DEFERRED** | 21 | **Sprint 122+** |
 
-**TD-120 Discovery (Sprint 114):** Graphiti temporal infrastructure supports time-travel queries, entity versioning, and change history. Deferred indefinitely - low user demand, high complexity (31 SP), uncertain ROI. Decision rule: Implement only if customer contract includes "temporal query SLA" requirement. Implementation roadmap fully documented with 8 TODO markers for future development.
+**TD-064 Update (Sprint 121):** Marked DEFERRED per user decision. No immediate business need.
 
-**TD-121 Discovery (Sprint 119):** E2E test analysis found 28 skipped tests for Neo4j Graph Versioning (Features 39.5-39.7: time-travel queries, entity changelog, version comparison). Deferred to Sprint 122+ — no immediate user demand, 21 SP investment. Tests already written and ready for implementation.
+**TD-120 Discovery (Sprint 114):** Graphiti temporal infrastructure supports time-travel queries, entity versioning, and change history. Deferred indefinitely - low user demand, high complexity (31 SP), uncertain ROI.
 
-### PARTIAL (Refactoring)
-
-| TD# | Title | Status | SP | Target Sprint |
-|-----|-------|--------|-----|---------------|
-| [TD-054](TD-054_UNIFIED_CHUNKING_SERVICE.md) | Unified Chunking Service | Section-Aware ✅, Unified Service ❌ | 6 | Sprint 85+ |
+**TD-121 Discovery (Sprint 119):** E2E test analysis found 28 skipped tests for Neo4j Graph Versioning. Deferred to Sprint 122+.
 
 ---
 

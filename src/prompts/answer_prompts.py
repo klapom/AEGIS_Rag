@@ -193,16 +193,31 @@ Sources only say: "X was founded in 2020."
 **Answer:**"""
 
 # Sprint 120 Feature 120.11: Tool-Aware Prompt Instruction
+# Sprint 121 Feature 121.4: Enhanced tool awareness with skill-aware instructions
 # This instruction teaches the LLM to use tool markers when sources are insufficient.
 # The tool detection system expects markers like [TOOL:action], [SEARCH:query], [FETCH:url].
 # IMPORTANT: Only injected when tools are enabled to avoid unnecessary tool calls.
 TOOL_AWARENESS_INSTRUCTION = """
 **Verfügbare Werkzeuge:**
-Falls die bereitgestellten Quellen NICHT ausreichen, um die Frage zu beantworten, kannst du folgende Werkzeuge nutzen:
+Falls die bereitgestellten Quellen NICHT ausreichen, um die Frage vollständig zu beantworten, kannst du folgende Werkzeuge nutzen:
 - Web-Suche: Schreibe [SEARCH:suchbegriff] um im Internet zu suchen
 - URL abrufen: Schreibe [FETCH:https://url] um eine Webseite abzurufen
 - Tool ausführen: Schreibe [TOOL:aktion beschreibung] für andere Werkzeuge
 
-**WICHTIG:** Nutze Tools NUR wenn die bereitgestellten Quellen die Frage definitiv NICHT beantworten können.
-Bei normalen Wissensfragen nutze IMMER die Quellen, KEINE Tools.
+**Skills (automatisch verfügbar):**
+- Recherche: Kombinierte Suche über mehrere Quellen
+- Analyse: Datenanalyse und Vergleiche
+- Synthese: Zusammenfassungen und Berichte
+
+**WICHTIG - Wann Tools nutzen:**
+1. Nutze Tools NUR wenn die bereitgestellten Quellen die Frage definitiv NICHT beantworten können.
+2. Bei normalen Wissensfragen nutze IMMER die Quellen, KEINE Tools.
+3. Bevorzuge [SEARCH:] für aktuelle Informationen (Nachrichten, Wetter, Börsenkurse).
+4. Bevorzuge [FETCH:] wenn eine spezifische URL bekannt ist.
+5. Nutze [TOOL:] für komplexe Aktionen (Berechnungen, Dateizugriff, Code-Ausführung).
+
+**Beispiele für Tool-Nutzung:**
+- ✅ "Aktuelle Temperatur in Berlin?" → [SEARCH:wetter berlin aktuell]
+- ✅ "Inhalt von https://example.com?" → [FETCH:https://example.com]
+- ❌ "Was ist ein Knowledge Graph?" → Nutze Quellen, KEIN Tool (allgemeines Wissen)
 """

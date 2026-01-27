@@ -10,6 +10,7 @@ REASON: LlamaIndex lacks OCR, table extraction, and GPU acceleration.
 REPLACEMENT: src.components.ingestion.docling_client.DoclingContainerClient
 
 Sprint 24 Feature 24.15: Lazy imports for optional llama_index dependency
+Sprint 121 Feature 121.1 (TD-054): ChunkingService removed, module is fully deprecated
 ============================================================================
 
 This module handles document loading, chunking, and indexing into Qdrant.
@@ -28,7 +29,6 @@ if TYPE_CHECKING:
 
 from src.components.shared.embedding_service import UnifiedEmbeddingService
 from src.components.vector_search.qdrant_client import QdrantClientWrapper
-from src.core.chunking_service import get_chunking_service
 from src.core.config import settings
 from src.core.exceptions import VectorSearchError
 
@@ -74,24 +74,12 @@ class DocumentIngestionPipeline:
         else:
             self.allowed_base_path = Path(settings.documents_base_path).resolve()
 
-        # Sprint 16.7: Unified chunking strategy (600 tokens, adaptive, 150 overlap)
-        # Aligned with Neo4j/LightRAG for maximum synergie
-        from src.core.chunking_service import ChunkingConfig, ChunkStrategyEnum
-
-        chunk_config = ChunkingConfig(
-            strategy=ChunkStrategyEnum.ADAPTIVE,  # Sentence-aware chunking
-            min_tokens=400,  # Minimum chunk size
-            max_tokens=600,  # Optimized for entity extraction (was: 512)
-            overlap_tokens=150,  # 25% overlap for context bridges (was: 128)
-        )
-        self.chunking_service = get_chunking_service(config=chunk_config)
-
-        logger.info(
-            "Document ingestion pipeline initialized",
+        # Sprint 121 Feature 121.1 (TD-054): ChunkingService removed
+        # This entire class is deprecated (ADR-028) - use DoclingContainerClient instead
+        logger.warning(
+            "DocumentIngestionPipeline is DEPRECATED (ADR-028)",
+            recommendation="Use DoclingContainerClient + LangGraph pipeline",
             collection=self.collection_name,
-            chunk_size=self.chunk_size,
-            chunk_overlap=self.chunk_overlap,
-            use_adaptive_chunking=self.use_adaptive_chunking,
             allowed_base_path=str(self.allowed_base_path),
         )
 
@@ -234,8 +222,17 @@ class DocumentIngestionPipeline:
     ) -> list[dict]:
         """Split documents into chunks using unified ChunkingService.
 
-        Sprint 16: Now uses ChunkingService for consistent chunking across all pipelines.
-        Sprint 24 Feature 24.15: Lazy imports for optional llama_index dependency.
+        ============================================================================
+        ⚠️ DEPRECATED: Sprint 121 Feature 121.1 (TD-054)
+        ============================================================================
+        This method was removed because ChunkingService was deprecated.
+
+        REPLACEMENT: Use DoclingContainerClient + LangGraph pipeline
+          from src.components.ingestion.docling_client import DoclingContainerClient
+          from src.components.ingestion.langgraph_pipeline import create_ingestion_graph
+
+          # See docs/sprints/SPRINT_21_PLAN_v2.md for full migration guide
+        ============================================================================
 
         Args:
             documents: list of LlamaIndex documents
@@ -244,58 +241,14 @@ class DocumentIngestionPipeline:
             list of Chunk objects from ChunkingService
 
         Raises:
-            VectorSearchError: If chunking fails
-            ImportError: If llama_index not installed (deprecated method)
+            NotImplementedError: This method was removed in Sprint 121
         """
-        # Note: No lazy import needed here - documents are already loaded by load_documents()
-        # which has its own lazy import. If documents are provided externally, they must
-        # come from llama_index which would already be installed.
-        try:
-            all_chunks = []
-            skipped_empty = 0
-
-            for doc in documents:
-                # Extract document metadata
-                doc_id = doc.doc_id or doc.metadata.get("file_name", "unknown")
-                content = doc.get_content()
-                metadata = doc.metadata
-
-                # Skip documents with empty content
-                if not content or not content.strip():
-                    logger.debug("Skipping document with empty content", document_id=doc_id)
-                    skipped_empty += 1
-                    continue
-
-                # Clean metadata to reduce size (especially for PPTX files)
-                cleaned_metadata = self._clean_metadata(metadata)
-
-                # Use ChunkingService for unified chunking (async method)
-                import asyncio
-
-                chunks = asyncio.get_event_loop().run_until_complete(
-                    self.chunking_service.chunk_document(
-                        text=content,
-                        document_id=doc_id,
-                        metadata=cleaned_metadata,
-                    )
-                )
-
-                all_chunks.extend(chunks)
-
-            logger.info(
-                "Documents chunked",
-                documents_count=len(documents),
-                skipped_empty=skipped_empty,
-                chunks_count=len(all_chunks),
-                avg_chunks_per_doc=len(all_chunks) / len(documents) if documents else 0,
-                strategy=self.chunking_service.strategy.method,
-            )
-
-            return all_chunks
-
-        except Exception as e:
-            logger.error("Failed to chunk documents", error=str(e))
-            raise VectorSearchError(query="", reason=f"Failed to chunk documents: {e}") from e
+        raise NotImplementedError(
+            "chunk_documents() was deprecated in Sprint 121 (Feature 121.1 - TD-054). "
+            "ChunkingService was removed. Use DoclingContainerClient + LangGraph pipeline instead. "
+            "See src.components.ingestion.docling_client and "
+            "src.components.ingestion.langgraph_pipeline for replacements."
+        )
 
     async def generate_embeddings(
         self,

@@ -55,6 +55,12 @@ const navItems: NavItem[] = [
     testId: 'admin-nav-graph-ops',
   },
   {
+    href: '/admin/entities',
+    label: 'Entities',
+    icon: <Database className="w-4 h-4" />,
+    testId: 'admin-nav-entities',
+  },
+  {
     href: '/admin/costs',
     label: 'Costs',
     icon: <DollarSign className="w-4 h-4" />,
