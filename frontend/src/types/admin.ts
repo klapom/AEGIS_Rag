@@ -336,6 +336,7 @@ export interface MCPServer {
   url?: string;
   description?: string;
   tools: MCPTool[];
+  tool_count?: number;  // Sprint 120: Server-reported tool count (from API)
   last_connected?: string;
   error_message?: string;
 }

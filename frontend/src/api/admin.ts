@@ -18,6 +18,7 @@ import type {
   BatchProgress,
   MCPServer,
   MCPTool,
+  MCPToolParameter,
   MCPExecutionResult,
   MCPHealthStatus,
   MCPToolPermission,
@@ -685,8 +686,20 @@ export async function getMCPServers(): Promise<MCPServer[]> {
   }
 
   const data = await response.json();
-  // API returns tool_count but not tools array — ensure tools is always initialized
-  return (data as MCPServer[]).map((s) => ({ ...s, tools: s.tools ?? [] }));
+  // Sprint 120: Map API field names to frontend MCPServer interface
+  // API: {name, transport, endpoint, status, tool_count, connection_time, error}
+  // Frontend: {name, status, url, description, tools, last_connected, error_message}
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (data as any[]).map((s) => ({
+    name: s.name,
+    status: s.status ?? 'disconnected',
+    url: s.endpoint,
+    description: s.description ?? '',
+    tools: s.tools ?? [],
+    tool_count: s.tool_count ?? 0,
+    last_connected: s.connection_time,
+    error_message: s.error,
+  }));
 }
 
 /**
@@ -728,6 +741,29 @@ export async function disconnectMCPServer(serverName: string): Promise<MCPServer
 }
 
 /**
+ * Convert JSON Schema parameters to MCPToolParameter array.
+ * API returns: { properties: { name: { type, description } }, required: [...] }
+ * Frontend needs: [{ name, type, description, required }]
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function jsonSchemaToParams(schema: any): MCPToolParameter[] {
+  if (!schema || typeof schema !== 'object') return [];
+  // Already an array (pre-mapped) — return as-is
+  if (Array.isArray(schema)) return schema;
+
+  const props = schema.properties || {};
+  const required: string[] = schema.required || [];
+  return Object.entries(props).map(([name, prop]: [string, any]) => ({
+    name,
+    type: prop.type || 'string',
+    description: prop.description || '',
+    required: required.includes(name),
+    default: prop.default,
+    enum: prop.enum,
+  }));
+}
+
+/**
  * Get list of all available MCP tools
  * @returns Array of MCPTool objects
  */
@@ -742,7 +778,14 @@ export async function getMCPTools(): Promise<MCPTool[]> {
     throw new Error(`HTTP ${response.status}: ${errorText}`);
   }
 
-  return response.json();
+  const data = await response.json();
+  // Sprint 120: Convert JSON Schema parameters to MCPToolParameter array
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (data as any[]).map((tool) => ({
+    ...tool,
+    server_name: tool.server_name || tool.server || '',
+    parameters: jsonSchemaToParams(tool.parameters),
+  }));
 }
 
 /**
@@ -761,7 +804,13 @@ export async function getMCPTool(toolName: string): Promise<MCPTool> {
     throw new Error(`HTTP ${response.status}: ${errorText}`);
   }
 
-  return response.json();
+  const data = await response.json();
+  // Sprint 120: Convert JSON Schema parameters to MCPToolParameter array
+  return {
+    ...data,
+    server_name: data.server_name || data.server || '',
+    parameters: jsonSchemaToParams(data.parameters),
+  };
 }
 
 /**

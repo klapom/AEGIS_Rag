@@ -220,7 +220,7 @@ export function MCPServerCard({
           >
             <Wrench className="w-4 h-4" />
             <span data-testid={`tools-count-${server.name}`}>
-              {(server.tools?.length ?? 0)} Tools
+              {server.tool_count ?? server.tools?.length ?? 0} Tools
             </span>
             {expanded ? (
               <ChevronDown className="w-4 h-4" />
