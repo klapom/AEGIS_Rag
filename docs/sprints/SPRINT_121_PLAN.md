@@ -215,7 +215,7 @@ DELETE /entities/{entity_id}
 |--------|--------|--------|--------|
 | Story Points | 44 SP | 44 SP | ✅ |
 | Lines Removed (TD-054) | ~1,727 | ~1,727 | ✅ |
-| Section Extraction Speedup (TD-078) | ≥10× | Singleton cache + parallel (awaiting benchmark) | ⏳ |
+| Section Extraction Speedup (TD-078) | ≥10× | **Tokenizer: ~1735×, Parallel: 1.74×, Combined: ~295×** | ✅ |
 | Ingestion Speedup (TD-070) | ≥8× end-to-end | **4.4× (170s→38.5s)** | ✅ |
 | Graph Extraction Speedup | — | **5.2× (162s→31.2s)** | ✅ |
 | New API Endpoints | 5 | 5 | ✅ |
@@ -223,7 +223,9 @@ DELETE /entities/{entity_id}
 | Frontend Files Created | — | 3 (page + API + types) | ✅ |
 | Pydantic Models | — | 9 | ✅ |
 | New E2E Tests | ~10-15 | Deferred (Sprint 122) | ⏳ |
-| New Unit Tests | ~20-30 | Deferred (Sprint 122) | ⏳ |
+| New Unit Tests | ~20-30 | **116 tests (3 files, 2,255 LOC)** | ✅ |
+| Test Execution Time | — | **0.36s (3.1ms/test)** | ✅ |
+| Benchmark Script | — | **1 (section extraction)** | ✅ |
 
 ---
 
@@ -264,6 +266,141 @@ DELETE /entities/{entity_id}
 | Total Pipeline | ~170s | 38.5s | **-77%** |
 
 **Conclusion:** Sprint 120 Ollama GPU fix **CONFIRMED**. Remaining bottleneck is architectural (3-stage sequential LLM cascade from Sprint 83), not GPU-related.
+
+---
+
+## TD-078 Section Extraction Benchmark Results
+
+**Test Date:** 2026-01-27 18:57 UTC
+**Method:** Synthetic text blocks (50-200 items) in Docker container
+**Hardware:** DGX Spark (NVIDIA GB10, ARM64)
+**Script:** `scripts/benchmark_section_extraction_sprint121.py`
+
+### Feature 121.2a: Tokenizer Singleton Cache
+
+| Metric | First Call (Load) | Cached Call (Singleton) | Speedup |
+|--------|-------------------|-------------------------|---------|
+| Duration | 1735.25 ms | ~0.00 ms | **~1,735,000×** |
+| Time Saved | — | 1735.25 ms per call | — |
+| Object Identity | Same instance (verified) | — | — |
+
+**Impact:** The tokenizer is loaded from disk only once per process. All subsequent calls use the cached singleton (~0.00ms). This eliminates the 1.7s overhead on every document processing call.
+
+### Feature 121.2b: Parallel Batch Tokenization (ThreadPoolExecutor)
+
+| Text Count | Sequential | Parallel (4 workers) | Speedup | Time Saved |
+|-----------|-----------|----------------------|---------|-----------|
+| 50 texts | 6.66 ms | 3.53 ms | **1.89×** | 3.13 ms |
+| 100 texts | 8.86 ms | 5.91 ms | **1.50×** | 2.95 ms |
+| 150 texts | 13.24 ms | 7.70 ms | **1.72×** | 5.54 ms |
+| 200 texts | 17.59 ms | 9.49 ms | **1.85×** | 8.10 ms |
+| **Average** | — | — | **1.74×** | — |
+
+**Impact:** Parallel tokenization achieves a consistent 1.5-1.9× speedup across different document sizes. The speedup is I/O-bound (tokenizer calls), not CPU-bound, so ThreadPoolExecutor performs well despite GIL.
+
+### Combined Impact (100-text document example)
+
+| Component | Time (ms) | Notes |
+|-----------|-----------|-------|
+| Tokenizer load (first call, sequential) | 1735.25 | One-time overhead |
+| Sequential tokenization | 8.86 | Baseline |
+| **Total Sequential** | **1744.11** | — |
+| Tokenizer load (cached) | ~0.00 | Singleton |
+| Parallel tokenization | 5.91 | 4 workers |
+| **Total Parallel** | **5.91** | — |
+| **Overall Speedup** | — | **295.2×** |
+
+**Conclusion:** Sprint 121 TD-078 Phase 2 delivers **~295× speedup** for typical documents (100 texts). The majority of the gain (~99.7%) comes from tokenizer caching (1735ms saved), with parallel tokenization providing an additional 1.74× boost on the remaining work.
+
+**Note:** The extreme tokenizer cache speedup (1,735,000×) is due to measuring from ~0.00ms cached time. The practical speedup is the combined 295× when comparing full sequential vs full parallel workflows.
+
+---
+
+## TD-055 Skills Review Results (Feature 121.4c)
+
+**Review Date:** 2026-01-27
+**Config File:** `config/skill_triggers.yaml`
+**Test File:** `tests/unit/config/test_skill_triggers.py` (52 tests)
+
+### Configuration Summary
+
+| Category | Count | Details |
+|----------|-------|---------|
+| Pattern Triggers | 9 | Bilingual regex (EN + DE) |
+| Keyword Triggers | 25 | 15 EN + 10 DE keywords |
+| Intent Triggers | 5 | VECTOR, GRAPH, HYBRID, MEMORY, RESEARCH |
+| Skills Referenced | 8 | retrieval, synthesis, reflection, graph_reasoning, memory, web_search, planner, calculator |
+| Always Active | 1 | hallucination_monitor |
+
+### Bilingual Pattern Coverage (EN/DE)
+
+| Pattern | English | German | Skills |
+|---------|---------|--------|--------|
+| Search/Find | search, find, look up, locate | suche, finde, suchen, finden | retrieval |
+| Comparison | compare, contrast, versus | vergleich, unterschied, gegenüber | reflection, graph_reasoning |
+| Recency | latest, current, recent, today | aktuell, neueste, jetzt, heute | web_search |
+| Planning | plan, steps, how to, guide | schritte, anleitung, wie macht man | planner |
+| Validation | check, verify, validate | prüfe, validiere, überprüfe | reflection |
+| Summarization | summarize, summary, overview | zusammenfassung, überblick, kurz | synthesis |
+| Entity | related to, connected to | verbunden mit, zusammenhang | graph_reasoning |
+| Memory | remember, recall, previous | erinner, früher, vorher | memory |
+| Web Search | google, search web, internet | web suche, im internet, durchsuche | web_search |
+
+### Intent → Skill Mapping (Budget Hierarchy)
+
+| Intent | Required Skills | Optional | Budget |
+|--------|----------------|----------|--------|
+| VECTOR | retrieval | synthesis | 2,000 |
+| GRAPH | retrieval, graph_reasoning | reflection | 3,000 |
+| HYBRID | retrieval, graph_reasoning | reflection, synthesis | 4,000 |
+| MEMORY | memory, retrieval | — | 2,000 |
+| RESEARCH | retrieval, reflection, planner | web_search, synthesis | 5,000 |
+
+**Conclusion:** Skills configuration is properly structured with bilingual support (DE/EN), 5-class intent mapping, and consistent skill references. 52 unit tests validate structure, regex compilation, bilingual coverage, and configuration consistency.
+
+---
+
+## Sprint 121 Unit Tests
+
+**Created:** 2026-01-27 19:00 UTC
+**Total:** 116 tests across 3 files (2,255 LOC)
+**Execution:** 0.36s (3.1ms average per test)
+**Result:** ✅ ALL PASS
+
+### Test Files
+
+| File | Lines | Tests | Coverage |
+|------|-------|-------|----------|
+| `tests/unit/api/v1/test_graph_entities.py` | 1,015 | 42 | 5 API endpoints, 9 Pydantic models |
+| `tests/unit/components/ingestion/test_section_extraction_parallel.py` | 545 | 22 | Tokenizer cache, parallel batch, edge cases |
+| `tests/unit/config/test_skill_triggers.py` | 695 | 52 | YAML structure, patterns, keywords, bilingual |
+
+### Entity/Relation API Tests (42)
+
+- **Entity List/Search**: 8 tests (pagination, search, type/namespace filters, error handling)
+- **Entity Detail**: 5 tests (retrieval, 404, null fields, relationships)
+- **Entity Delete**: 7 tests (cascade, namespace isolation, GDPR Art. 17)
+- **Relation List**: 7 tests (entity/type filters, pagination)
+- **Relation Delete**: 6 tests (specific/all types, 404, error handling)
+- **Pydantic Models**: 9 tests (request/response validation)
+
+### Section Extraction Parallel Tests (22)
+
+- **Tokenizer Singleton**: 5 tests (first call, caching, thread-safety with 5 threads, error handling)
+- **Batch Tokenize**: 8 tests (success, empty, unicode, fallback, max_workers, long text)
+- **Parallel vs Sequential**: 3 tests (result consistency, multiple runs, mixed content)
+- **Profiling Stats**: 2 tests (reset, average calculations)
+- **Edge Cases**: 4 tests (special chars, whitespace, exceptions, single text)
+
+### Skill Triggers Config Tests (52)
+
+- **Structure**: 4 tests (YAML loading, top-level keys, defaults)
+- **Intents**: 7 tests (5 intents validated, required/optional/budget)
+- **Patterns**: 15 tests (regex compile, EN/DE matching, case insensitivity)
+- **Keywords**: 10 tests (EN/DE keyword mapping, skill activation)
+- **Bilingual**: 5 tests (search/summarize/analyze coverage)
+- **Consistency**: 6 tests (skill references, duplicates, priorities, budgets)
+- **YAML Format**: 2 tests (comments, readability)
 
 ---
 

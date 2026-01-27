@@ -2,7 +2,7 @@
 
 Production and utility scripts for AegisRAG.
 
-**Last Updated**: Sprint 119 (2026-01-26)
+**Last Updated**: Sprint 121 (2026-01-27)
 **Platform**: DGX Spark (Linux ARM64, CUDA 13.0)
 
 ---
@@ -40,6 +40,12 @@ Production and utility scripts for AegisRAG.
 |--------|---------|-------|
 | `seed_test_graph_data.py` | Seed minimal graph data for E2E tests | `docker exec aegis-api python scripts/seed_test_graph_data.py` |
 
+### Performance Benchmarks (Sprint 121+)
+
+| Script | Purpose | Usage |
+|--------|---------|-------|
+| `benchmark_section_extraction_sprint121.py` | Benchmark TD-078 Phase 2 parallel features | `docker exec aegis-api python3 /app/benchmark_sprint121.py` |
+
 ---
 
 ## Quick Commands
@@ -62,6 +68,10 @@ docker exec aegis-api python scripts/seed_test_graph_data.py
 
 # Clean test graph data
 docker exec aegis-api python scripts/seed_test_graph_data.py --clean
+
+# Benchmark section extraction parallel features (Sprint 121)
+docker cp scripts/benchmark_section_extraction_sprint121.py aegis-api:/app/benchmark_sprint121.py
+docker exec aegis-api python3 /app/benchmark_sprint121.py
 ```
 
 ---
