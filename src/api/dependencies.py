@@ -190,9 +190,13 @@ async def get_current_user(
     # List of allowed localhost IPs (IPv4, IPv6, Docker bridge network)
     localhost_ips = ["127.0.0.1", "localhost", "::1"]
 
-    # Check exact match or Docker network subnet (172.26.x.x)
+    # Check exact match, Docker network (172.26.x.x), or LAN (192.168.178.x)
     is_local = client_host in localhost_ips or (
-        client_host and client_host.startswith("172.26.")
+        client_host
+        and (
+            client_host.startswith("172.26.")       # Docker bridge network
+            or client_host.startswith("192.168.")   # Local network (DGX Spark)
+        )
     )
 
     if is_local:

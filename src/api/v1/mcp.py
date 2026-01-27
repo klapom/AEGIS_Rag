@@ -95,6 +95,20 @@ def get_connection_manager() -> ConnectionManager:
 # Pydantic models for API requests/responses
 
 
+class MCPToolSummary(BaseModel):
+    """Lightweight tool info embedded in server responses.
+
+    Attributes:
+        name: Tool name
+        description: Tool description
+        parameters: JSON Schema for tool parameters
+    """
+
+    name: str
+    description: str
+    parameters: dict[str, Any] = Field(default_factory=dict)
+
+
 class MCPServerInfo(BaseModel):
     """MCP server information for API responses.
 
@@ -105,6 +119,7 @@ class MCPServerInfo(BaseModel):
         description: Server description
         status: Connection status
         tool_count: Number of available tools
+        tools: List of tool summaries (Sprint 120)
         connection_time: When connected (ISO format)
         error: Last error message if any
     """
@@ -115,6 +130,7 @@ class MCPServerInfo(BaseModel):
     description: str
     status: str
     tool_count: int = 0
+    tools: list[MCPToolSummary] = Field(default_factory=list)
     connection_time: str | None = None
     error: str | None = None
 
@@ -231,6 +247,14 @@ async def list_mcp_servers() -> list[MCPServerInfo]:
             description=conn.server.description,
             status=conn.status.value,
             tool_count=len(conn.tools),
+            tools=[
+                MCPToolSummary(
+                    name=tool.name,
+                    description=tool.description,
+                    parameters=tool.parameters,
+                )
+                for tool in conn.tools
+            ],
             connection_time=conn.connection_time,
             error=conn.error,
         )
