@@ -232,14 +232,14 @@ async def create_lightrag_instance(config: LightRAGConfig) -> Any:
         embedding_func = UnifiedEmbeddingFunc(embedding_dim=1024)
 
         # Initialize LightRAG with Neo4j backend
-        # Sprint 16 Feature 16.6: Disable internal chunking (use ChunkingService instead)
+        # Sprint 16 Feature 16.6: Disable internal chunking (external chunking via adaptive_chunking.py)
         rag = LightRAG(
             working_dir=str(working_dir),
             llm_model_func=llm_func,
             embedding_func=embedding_func,
             graph_storage="Neo4JStorage",
             llm_model_max_async=2,  # Reduce from 4 to 2 workers
-            # Sprint 16: Internal chunking disabled - we use ChunkingService
+            # Sprint 16: Internal chunking disabled - we use adaptive_chunking.py
             chunk_token_size=99999,  # Effectively disable
             chunk_overlap_token_size=0,
             top_k=15,

@@ -326,16 +326,15 @@ async def vlm_enrichment_node(state: IngestionState) -> IngestionState:
 
 ```python
 async def chunking_node(state: IngestionState) -> IngestionState:
-    """Chunk document with unified chunking service."""
-    from src.core.chunking_service import ChunkingService
+    """Chunk document with Docling HybridChunker (adaptive_chunking.py).
 
-    chunking_service = ChunkingService()
+    Sprint 121 TD-054: ChunkingService removed, production uses adaptive_chunking.py.
+    """
+    from src.components.ingestion.nodes.adaptive_chunking import chunk_with_docling
 
-    chunks = await chunking_service.chunk_document(
-        text=state["parsed_content"],
-        strategy="adaptive",
-        chunk_size=1800,  # ADR-026: Pure LLM Extraction
-        overlap=200
+    chunks = await chunk_with_docling(
+        document=state["document"],
+        document_id=state["document_id"],
     )
 
     return {

@@ -25,8 +25,8 @@ def chunk_text_with_metadata(
 ) -> list[dict[str, Any]]:
     """Chunk text using tiktoken-based chunking.
 
-    Sprint 16 Feature 16.1: Uses unified ChunkingService with "fixed" strategy
-    for consistency across all pipelines.
+    Sprint 16 Feature 16.1: Uses tiktoken-based chunking for LightRAG compatibility.
+    Note: Production ingestion uses adaptive_chunking.py (Sprint 121 TD-054).
 
     Args:
         text: Document text to chunk

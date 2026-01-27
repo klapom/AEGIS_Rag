@@ -193,8 +193,14 @@ def mock_lightrag_wrapper():
 
 @pytest.fixture
 def mock_chunking_service():
-    """Mock ChunkingService for testing."""
-    with patch("src.components.ingestion.langgraph_nodes.get_chunking_service") as mock_get_service:
+    """DEPRECATED: ChunkingService removed in Sprint 121 (TD-054).
+
+    This fixture mocked get_chunking_service from langgraph_nodes, which no longer exists.
+    Production now uses adaptive_chunking.py exclusively via Docling HybridChunker.
+    Tests using this fixture should be skipped or rewritten for adaptive_chunking.
+    """
+    # Sprint 121 TD-054: patch with create=True to avoid AttributeError on deleted function
+    with patch("src.components.ingestion.langgraph_nodes.get_chunking_service", create=True) as mock_get_service:
         from src.core.chunk import Chunk
 
         mock_service = Mock()

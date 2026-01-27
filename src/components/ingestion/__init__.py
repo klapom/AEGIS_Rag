@@ -27,7 +27,7 @@ Architecture:
                                               ↓
                                       FormatRouter (NEW Sprint 22.3)
                                               ↓
-                                      ChunkingService (1800 tokens)
+                                      AdaptiveChunking (800-1800 tokens)
                                               ↓
                                       EmbeddingService (BGE-M3)
                                               ↓

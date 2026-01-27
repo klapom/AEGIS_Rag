@@ -120,7 +120,7 @@ async def embedding_node(state: IngestionState) -> IngestionState:
                     # Possible sources:
                     # - src/components/ingestion/nodes/adaptive_chunking.py (Docling path)
                     # - src/components/ingestion/nodes/document_parsers.py (legacy path)
-                    # - src/core/chunking_service.py (ChunkingService)
+                    # - (ChunkingService removed in Sprint 121, TD-054)
                     # FIX: Ensure all chunking code paths create Pydantic Chunk objects
                     logger.error(
                         "chunk_missing_content_and_text_embedding",
@@ -132,7 +132,7 @@ async def embedding_node(state: IngestionState) -> IngestionState:
                         f"Chunk has neither 'content' nor 'text' attribute. "
                         f"Type: {type(chunk).__name__}. "
                         f"This indicates a bug in the chunking pipeline. "
-                        f"Check: adaptive_chunking.py, document_parsers.py, or chunking_service.py"
+                        f"Check: adaptive_chunking.py or document_parsers.py"
                     )
 
         # Generate embeddings (Sprint 87: Dense + sparse if FlagEmbedding backend)
@@ -253,7 +253,7 @@ async def embedding_node(state: IngestionState) -> IngestionState:
                     f"Chunk has neither 'content' nor 'text' attribute for ID generation. "
                     f"Type: {type(chunk).__name__}. "
                     f"This indicates a bug in the chunking pipeline. "
-                    f"Check: adaptive_chunking.py, document_parsers.py, or chunking_service.py"
+                    f"Check: adaptive_chunking.py or document_parsers.py"
                 )
 
             chunk_name = f"{state['document_id']}_chunk_{hashlib.sha256(chunk_text.encode()).hexdigest()[:8]}"
