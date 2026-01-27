@@ -92,8 +92,69 @@ sudo apt remove nvidia-cuda-toolkit
 export CUDACXX=/usr/local/cuda-13.0/bin/nvcc
 ```
 
+## Ollama auf DGX Spark (Sprint 120 Erkenntnisse)
+
+### Ollama Version & New Engine
+
+**Kritisch:** Ollama muss mindestens **v0.15.2** sein UND `OLLAMA_NEW_ENGINE=true` gesetzt haben, damit hybride Modellarchitekturen (Transformer+Mamba SSM, MoE) auf der GPU laufen.
+
+```yaml
+# docker-compose.dgx-spark.yml → ollama service
+environment:
+  - OLLAMA_NEW_ENGINE=true    # PFLICHT für Nemotron3, Jamba, etc.
+  - OLLAMA_NUM_GPU=-1         # Alle Layers auf GPU
+  - OLLAMA_FLASH_ATTENTION=false  # DGX Spark Blackwell Kompatibilität
+```
+
+**Problem mit Ollama ≤0.13.4:** Modelle mit `nemotron_h_moe`-Architektur wurden komplett als `CPU_Mapped` geladen — alle Tensors, KV-Cache, Recurrent State und Compute-Buffers auf CPU. Ergebnis: 3.1 tok/s statt 74 tok/s.
+
+**Diagnose-Befehle:**
+```bash
+# Prüfe ob Modell auf GPU oder CPU läuft:
+docker logs aegis-ollama 2>&1 | grep -E "load_tensors|CPU_Mapped|CUDA0"
+
+# SCHLECHT (alles CPU):
+# load_tensors:   CPU_Mapped model buffer size = 23139.98 MiB
+
+# GUT (GPU):
+# load_tensors: offloaded 53/53 layers to GPU
+# load_tensors:        CUDA0 model buffer size = 22909.02 MiB
+
+# Ollama Version prüfen:
+docker exec aegis-ollama ollama --version
+```
+
+### Nemotron3 Nano — Hybrid MoE-Architektur
+
+Nemotron3 Nano 30B/3B (`nemotron_h_moe`) ist KEIN normaler Transformer:
+
+| Komponente | Layers | Beschreibung |
+|-----------|--------|-------------|
+| **Transformer Attention** | 6 | Standard Multi-Head Attention |
+| **Mamba SSM** | 46 | State Space Model (rekurrent, kein Attention) |
+| **Mixture-of-Experts** | alle | 128 Experten, 6 aktiv pro Token |
+| **Total Parameter** | — | 31.6B (aber nur ~3B aktiv pro Token) |
+
+**Konsequenzen:**
+1. **Ollama New Engine PFLICHT** — Die alte llama.cpp Engine hatte keine CUDA-Kernels für Mamba SSM und MoE-Routing
+2. **nvidia-smi zeigt 0% GPU** — Das ist ein Reporting-Bug auf DGX Spark (Unified Memory), nicht wirklich 0%
+3. **`ollama ps` zeigt "100% GPU"** — Verlässlicherer Indikator als nvidia-smi
+4. **Q4_K_M Quantisierung** — ~24GB VRAM, passt komfortabel in 128GB Unified Memory
+5. **Kein Flash Attention** — `OLLAMA_FLASH_ATTENTION=false` wegen Blackwell-Kompatibilität
+
+### Performance-Referenzwerte (Sprint 120, Januar 2026)
+
+| Modell | Architektur | Größe | tok/s | Ollama Version |
+|--------|------------|-------|-------|----------------|
+| `nemotron-3-nano:latest` | nemotron_h_moe | 24GB | **74 tok/s** | ≥0.15.2 + NEW_ENGINE |
+| `nemotron-no-think:latest` | nemotron_h_moe | 24GB | **74 tok/s** | ≥0.15.2 + NEW_ENGINE |
+| `gpt-oss:20b` | Transformer | 13GB | **77 tok/s** | ≥0.13.4 (jede Version) |
+| `nemotron-3-nano:latest` | nemotron_h_moe | 24GB | 3.1 tok/s ❌ | ≤0.13.4 (CPU_Mapped!) |
+
+**Merke:** `gpt-oss:20b` lief auch mit altem Ollama schnell (Standard-Transformer). Nur hybride Architekturen (Mamba/MoE) waren betroffen.
+
 ## Referenz-Dateien
-- `docker-compose.dgx-spark.yml` - Aktuelle CPU-Mode Konfiguration
+- `docker-compose.dgx-spark.yml` - Docker Konfiguration inkl. Ollama
 - `docker/Dockerfile.docling-spark` - Production Dockerfile
 - `DGX_SPARK_SM121_REFERENCE.md` - Vollständige technische Referenz
 

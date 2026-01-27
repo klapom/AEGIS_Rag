@@ -362,6 +362,60 @@ Tool execution events (`tool_use`, `tool_result`, `tool_progress`) are never sen
 
 ---
 
+## Post-Sprint Performance Fixes (Sprint 120.15–120.19)
+
+**Date:** 2026-01-27
+**Commit:** `9ba63ce fix(sprint120): LLM & search performance — Ollama GPU offload, reranker CUDA, singleton fixes`
+
+Nach Abschluss der UI/Tools-Features wurden **kritische Performance-Bottlenecks** identifiziert und behoben:
+
+### Befunde & Fixes
+
+| # | Fix | Datei(en) | Vorher | Nachher | Speedup |
+|---|-----|-----------|--------|---------|---------|
+| **120.15** | Ollama v0.13.4→v0.15.2 + `OLLAMA_NEW_ENGINE=true` | `docker-compose.dgx-spark.yml` | 3.1 tok/s (CPU_Mapped) | **74 tok/s** (CUDA0) | **24×** |
+| **120.16** | Cross-encoder Reranker CPU→CUDA | `src/components/retrieval/reranker.py` | 17.8s (CPU) | **335ms** (GPU) | **53×** |
+| **120.17** | VectorSearchAgent Singleton | `src/agents/vector_search_agent.py` | Neues FourWayHybridSearch pro Request | Singleton via `get_four_way_hybrid_search()` | ∞ |
+| **120.18** | EmbeddingFactory Singleton Bridge | `src/components/shared/embedding_factory.py` | Doppeltes BGE-M3 (2×1.5GB) | Delegiert an `get_flag_embedding_service()` | 2× VRAM |
+| **120.19** | BM25 Lazy + Startup entfernt | `src/api/main.py`, `hybrid_search.py`, `retrieval.py` | Eager Init + Background Task | Lazy `@property`, deprecated | Schnellerer Start |
+
+### Root Cause: Nemotron3 Nano CPU-Inferenz
+
+**Architektur:** `nemotron_h_moe` — Hybrid aus Transformer-Attention (6 Layers) + Mamba SSM (46 Layers) + Mixture-of-Experts (128 Experten, 6 aktiv/Token). 31.6B Total, ~3B aktiv.
+
+**Problem:** Ollama 0.13.4 hatte keine CUDA-Kernels für Mamba-SSM und MoE-Routing. Trotz `OLLAMA_NUM_GPU=-1` wurde das gesamte Modell als `CPU_Mapped` geladen (23.1 GiB auf CPU). GPU-Utilization war 0%.
+
+**Lösung:** Ollama v0.15.2 mit `OLLAMA_NEW_ENGINE=true` bringt native CUDA-Unterstützung:
+- **53/53 Layers auf GPU** (vorher: 0/53)
+- **22.9 GiB auf CUDA0**, nur 231 MiB auf CPU (vorher: 23.1 GiB CPU)
+- KV-Cache, Recurrent State (Mamba), Compute Buffers alle auf GPU
+
+**Klarstellung Sprint 92:** Die damaligen 77 tok/s waren mit `gpt-oss:20b` (Standard-Transformer, 13GB), NICHT mit Nemotron3.
+
+### Gesamt-Performance nach allen Fixes
+
+| Phase | Vorher | Nachher |
+|-------|--------|---------|
+| Embedding | 19.424ms | ~1ms (Singleton) |
+| Vector Search (Qdrant) | 253ms | ~18ms |
+| Cross-Encoder Reranking | 17.843ms | ~335ms (GPU) |
+| LLM Generation (warm) | 40–120s | ~0.6s |
+| **E2E warm (Search + LLM)** | **2+ Minuten** | **~1s** |
+
+### Geänderte Dateien (7)
+
+| Datei | Änderung |
+|-------|----------|
+| `docker-compose.dgx-spark.yml` | `OLLAMA_NEW_ENGINE=true` hinzugefügt |
+| `src/components/retrieval/reranker.py` | `device="cpu"` → auto-detect CUDA |
+| `src/agents/vector_search_agent.py` | `FourWayHybridSearch()` → `get_four_way_hybrid_search()` |
+| `src/components/shared/embedding_factory.py` | `FlagEmbeddingService()` → `get_flag_embedding_service()` |
+| `src/api/main.py` | BM25 startup init entfernt (26 Zeilen) |
+| `src/components/vector_search/hybrid_search.py` | BM25 lazy `@property` statt eager init |
+| `src/api/v1/retrieval.py` | BM25 upload background task entfernt |
+
+---
+
 ## References
 
 - [Sprint 119 Plan](SPRINT_119_PLAN.md) — Predecessor
