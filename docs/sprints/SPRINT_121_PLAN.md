@@ -36,8 +36,21 @@ Sprint 121 addresses **5 Technical Debt items** identified in the Sprint 120 Pos
 | **MODIFY** | `src/core/__init__.py` | Remove ChunkingService exports |
 | **MODIFY** | `src/components/ingestion/nodes/adaptive_chunking.py` | Remove fallback import (line ~667) |
 | **MODIFY** | `src/components/vector_search/ingestion.py` | Remove ChunkingService usage |
+| **MODIFY** | `src/components/ingestion/nodes/vector_embedding.py` | Remove stale error messages referencing `chunking_service.py` |
+| **MODIFY** | `src/components/ingestion/nodes/graph_extraction.py` | Remove stale error messages referencing `chunking_service.py` |
+| **MODIFY** | `tests/integration/components/ingestion/test_langgraph_pipeline.py` | Fix mock fixture (`create=True` for deleted `get_chunking_service`) |
+| **MODIFY** | `src/components/ingestion/README.md` | Update code example to use `adaptive_chunking.py` |
+| **MODIFY** | `src/components/graph_rag/lightrag/initialization.py` | Update comments to reference `adaptive_chunking.py` |
+| **MODIFY** | `src/components/graph_rag/lightrag/converters.py` | Update docstring to reference `adaptive_chunking.py` |
+| **MODIFY** | `src/components/ingestion/__init__.py` | Update architecture diagram comment |
 
-**Impact:** -1,727 lines removed. 65 obsolete tests removed, critical tests migrated.
+**Impact:** -1,727 lines removed. 65 obsolete tests removed, critical tests migrated. 7 additional files cleaned of stale references.
+
+**Stale Reference Audit (Post-Delete Verification):**
+- **236 total references** found via `grep -r "chunking_service\|ChunkingService"`
+- **~200 in docs/archive** — Historical (ADRs, sprint plans, archived TDs) → intentionally preserved
+- **7 in active code** — Fixed (error messages, comments, test mocks, README)
+- **4 in protocols** — `ChunkingService` Protocol in `domains/document_processing/protocols.py` retained (interface, not deleted implementation)
 
 ---
 
