@@ -316,6 +316,24 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             note="Default domain may need manual creation",
         )
 
+    # Sprint 120: Ensure writable MCP installed-servers file exists
+    try:
+        from pathlib import Path as _Path
+
+        _installed = _Path(__file__).parents[2] / "data" / "mcp_servers_installed.yaml"
+        if not _installed.exists():
+            _installed.parent.mkdir(parents=True, exist_ok=True)
+            _installed.write_text("servers: []\n", encoding="utf-8")
+            logger.info("mcp_installed_file_created", path=str(_installed))
+        elif not os.access(_installed, os.W_OK):
+            # Bind-mount from host may have wrong ownership; fix permissions
+            import stat
+
+            _installed.chmod(stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IWGRP | stat.S_IROTH | stat.S_IWOTH)
+            logger.info("mcp_installed_file_permissions_fixed", path=str(_installed))
+    except Exception as e:
+        logger.warning("mcp_installed_file_setup_failed", error=str(e))
+
     # Sprint 120: MCP auto-connect on startup
     try:
         from src.api.v1.mcp import get_connection_manager

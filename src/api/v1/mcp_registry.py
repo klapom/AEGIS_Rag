@@ -642,9 +642,16 @@ async def add_custom_server(
         # /app/config is read-only, but /app/data is read-write
         config_path = Path(__file__).parents[3] / "data" / "mcp_servers_installed.yaml"
 
+        # Sprint 120: Ensure parent directory exists
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+
         if config_path.exists():
-            with open(config_path, encoding="utf-8") as f:
-                config = yaml.safe_load(f) or {}
+            try:
+                with open(config_path, encoding="utf-8") as f:
+                    config = yaml.safe_load(f) or {}
+            except PermissionError:
+                # Bind-mount may have wrong ownership; try atomic recreate
+                config = {}
         else:
             config = {}
 
