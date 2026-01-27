@@ -316,7 +316,7 @@ async def list_entities(request: EntityListRequest) -> EntityListResponse:
                 source_id=record["source_id"],
                 file_path=record["file_path"],
                 namespace_id=record["namespace_id"],
-                created_at=record["created_at"],
+                created_at=str(record["created_at"]) if record["created_at"] else None,
                 relation_count=record["relation_count"] or 0,
             )
             for record in entity_results
@@ -447,7 +447,7 @@ async def get_entity_detail(entity_id: str) -> EntityDetailResponse:
             source_id=entity_record["source_id"],
             file_path=entity_record["file_path"],
             namespace_id=entity_record["namespace_id"],
-            created_at=entity_record["created_at"],
+            created_at=str(entity_record["created_at"]) if entity_record["created_at"] else None,
             relation_count=entity_record["relation_count"] or 0,
         )
 
