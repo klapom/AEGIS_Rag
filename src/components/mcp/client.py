@@ -131,11 +131,14 @@ class MCPClient:
             cmd_parts = server.endpoint.split()
 
             # Start subprocess with server command
+            # Sprint 120: Increase buffer limit from 64KB to 16MB for large MCP responses
+            # (e.g. tree command output, large file reads)
             process = await asyncio.create_subprocess_exec(
                 *cmd_parts,
                 stdin=asyncio.subprocess.PIPE,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
+                limit=16 * 1024 * 1024,  # 16MB buffer
             )
 
             self._processes[server.name] = process

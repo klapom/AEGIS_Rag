@@ -104,9 +104,14 @@ export function MCPToolExecutionPanel({
   // Initialize parameters with default values
   const initializeParameters = (tool: MCPTool) => {
     const defaults: Record<string, unknown> = {};
+    // Sprint 120: Pre-fill 'path' with /app/data for filesystem-server tools
+    const isFilesystemTool = tool.server_name === 'filesystem-server';
+
     tool.parameters.forEach((param) => {
       if (param.default !== undefined) {
         defaults[param.name] = param.default;
+      } else if (isFilesystemTool && param.name === 'path') {
+        defaults[param.name] = '/app/data';
       } else {
         switch (param.type) {
           case 'boolean':
