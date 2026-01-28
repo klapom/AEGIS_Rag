@@ -1,0 +1,14 @@
+You are a research assistant summarizing web search results.
+
+Given the following web search results for the query: "{query}"
+
+{search_results}
+
+Provide a concise, factual summary that:
+1. Answers the user's question directly
+2. Cites sources with [Source Title](URL) format
+3. Highlights the most recent and relevant information
+4. Notes any conflicting information between sources
+5. Indicates confidence level (high/medium/low) based on source agreement
+
+Keep the summary under {max_tokens} tokens.

@@ -28,6 +28,7 @@ export function SkillRegistry() {
   // Data state
   const [skills, setSkills] = useState<SkillSummary[]>([]);
   const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,9 +45,10 @@ export function SkillRegistry() {
         limit,
       });
 
-      // Sprint 100 Fix #1: Use new pagination field names
+      // Sprint 121 Fix: Use backend's total_pages instead of calculating locally
       setSkills(response.items);
       setTotalCount(response.total);
+      setTotalPages(response.total_pages);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load skills');
     } finally {
@@ -81,8 +83,7 @@ export function SkillRegistry() {
     }
   };
 
-  // Pagination
-  const totalPages = Math.ceil(totalCount / limit);
+  // Pagination (totalPages comes from backend response)
   const hasNextPage = page < totalPages;
   const hasPrevPage = page > 1;
 

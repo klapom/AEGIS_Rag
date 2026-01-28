@@ -1,0 +1,47 @@
+# Fact Check Skill Configuration
+
+# Verification Settings
+verification:
+  max_sub_claims: 5  # Max decomposed sub-claims per query
+  confidence_threshold: 0.7  # Min confidence to assert support/refute
+  require_multiple_sources: true  # Need 2+ sources for "supported"
+  min_sources: 2
+
+# Verdict Categories
+verdicts:
+  supported: "SUPPORTED"
+  refuted: "REFUTED"
+  insufficient: "INSUFFICIENT_EVIDENCE"
+  partially_supported: "PARTIALLY_SUPPORTED"
+
+# Evidence Retrieval
+retrieval:
+  top_k: 15  # Retrieve more docs for thorough verification
+  modes: [vector, graph]  # Use both search modes
+  rerank: true
+  min_relevance_score: 0.6
+
+# Knowledge Graph Verification
+graph:
+  enabled: true
+  check_entity_existence: true
+  check_relationships: true
+  max_hops: 2
+
+# Bilingual Support (Sprint 121)
+language:
+  supported: [en, de]
+  claim_extraction_language: auto  # Detect claim language
+
+# Caching
+cache:
+  enabled: true
+  ttl_seconds: 600  # 10 minutes
+  key_prefix: "fact_check"
+
+# Logging
+logging:
+  log_claims: true
+  log_verdicts: true
+  log_evidence: true
+  verbose: false

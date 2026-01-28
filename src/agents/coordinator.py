@@ -333,12 +333,73 @@ class CoordinatorAgent:
             tools_config = await get_tools_config_service().get_config()
             tools_enabled = tools_config.enable_chat_tools
 
+            # Sprint 121: Skill activation based on query intent
+            skill_instructions = ""
+            activated_skills: list[str] = []
+            try:
+                from src.agents.skills.registry import get_skill_registry
+
+                registry = get_skill_registry()
+
+                # Discover available skills
+                available = registry.discover()
+
+                if available:
+                    # Use intent to determine which skills to activate
+                    # Map common intents to skill names
+                    intent_skill_map = {
+                        "hybrid": ["retrieval"],
+                        "vector": ["retrieval"],
+                        "graph": ["retrieval", "graph_reasoning"],
+                        "memory": ["memory", "retrieval"],
+                        "research": ["retrieval", "reflection", "planner"],
+                    }
+
+                    target_skills = intent_skill_map.get(intent or "hybrid", ["retrieval"])
+
+                    # Collect instructions from available skills
+                    for skill_name in target_skills:
+                        if skill_name in available:
+                            skill_meta = available[skill_name]
+                            # Read SKILL.md instructions
+                            skill_md_path = registry.skills_dir / skill_name / "SKILL.md"
+                            if skill_md_path.exists():
+                                content = skill_md_path.read_text()
+                                # Strip frontmatter, keep instructions
+                                import re
+
+                                fm_match = re.match(
+                                    r"^---\n.*?\n---\n?(.*)", content, re.DOTALL
+                                )
+                                instructions = (
+                                    fm_match.group(1).strip() if fm_match else content.strip()
+                                )
+                                if instructions:
+                                    activated_skills.append(skill_name)
+                                    skill_instructions += (
+                                        f"\n\n## Skill: {skill_name}\n{instructions}"
+                                    )
+
+                    if activated_skills:
+                        skill_instructions = skill_instructions.strip()
+                        logger.info(
+                            "skills_activated_for_chat",
+                            skills=activated_skills,
+                            instruction_length=len(skill_instructions),
+                            intent=intent,
+                        )
+            except Exception as e:
+                logger.warning("skill_activation_failed", error=str(e))
+                skill_instructions = ""
+                activated_skills = []
+
             # Create initial state
             initial_state = create_initial_state(
                 query=query,
                 intent=intent or "hybrid",
                 namespaces=namespaces,
                 tools_enabled=tools_enabled,  # Sprint 120: Pass tools status for tool-aware prompts
+                skill_instructions=skill_instructions,  # Sprint 121: Pass skill instructions
             )
 
             # Create session config
@@ -677,6 +738,81 @@ class CoordinatorAgent:
         tools_config = await get_tools_config_service().get_config()
         tools_enabled = tools_config.enable_chat_tools
 
+        # Sprint 121: Skill activation based on query intent
+        skill_instructions = ""
+        activated_skills: list[str] = []
+        try:
+            from src.agents.skills.registry import get_skill_registry
+
+            registry = get_skill_registry()
+
+            # Discover available skills
+            available = registry.discover()
+
+            if available:
+                # Use intent to determine which skills to activate
+                # Map common intents to skill names
+                intent_skill_map = {
+                    "hybrid": ["retrieval"],
+                    "vector": ["retrieval"],
+                    "graph": ["retrieval", "graph_reasoning"],
+                    "memory": ["memory", "retrieval"],
+                    "research": ["retrieval", "reflection", "planner"],
+                }
+
+                target_skills = intent_skill_map.get(intent or "hybrid", ["retrieval"])
+
+                # Collect instructions from available skills
+                for skill_name in target_skills:
+                    if skill_name in available:
+                        skill_meta = available[skill_name]
+                        # Read SKILL.md instructions
+                        skill_md_path = registry.skills_dir / skill_name / "SKILL.md"
+                        if skill_md_path.exists():
+                            content = skill_md_path.read_text()
+                            # Strip frontmatter, keep instructions
+                            import re
+
+                            fm_match = re.match(r"^---\n.*?\n---\n?(.*)", content, re.DOTALL)
+                            instructions = (
+                                fm_match.group(1).strip() if fm_match else content.strip()
+                            )
+                            if instructions:
+                                activated_skills.append(skill_name)
+                                skill_instructions += f"\n\n## Skill: {skill_name}\n{instructions}"
+
+                if activated_skills:
+                    skill_instructions = skill_instructions.strip()
+                    logger.info(
+                        "skills_activated_for_chat",
+                        skills=activated_skills,
+                        instruction_length=len(skill_instructions),
+                        intent=intent,
+                    )
+        except Exception as e:
+            logger.warning("skill_activation_failed", error=str(e))
+            skill_instructions = ""
+            activated_skills = []
+
+        # Sprint 121: Emit skill activation phase event
+        if activated_skills:
+            from datetime import datetime
+
+            skill_event = PhaseEvent(
+                phase_type=PhaseType.SKILL_ACTIVATION,
+                status=PhaseStatus.COMPLETED,
+                start_time=datetime.utcnow(),
+                end_time=datetime.utcnow(),
+                duration_ms=0,
+                metadata={
+                    "activated_skills": activated_skills,
+                    "skill_count": len(activated_skills),
+                    "instruction_tokens": len(skill_instructions.split()),
+                    "intent": intent or "hybrid",
+                },
+            )
+            yield skill_event
+
         # Create initial state with session_id for real-time phase events
         initial_state = create_initial_state(
             query=query,
@@ -684,6 +820,7 @@ class CoordinatorAgent:
             namespaces=namespaces,
             session_id=session_id,  # Sprint 52: Pass session_id for real-time phase events
             tools_enabled=tools_enabled,  # Sprint 120: Pass tools status for tool-aware prompts
+            skill_instructions=skill_instructions,  # Sprint 121: Pass skill instructions
         )
 
         # Create session config

@@ -1,0 +1,56 @@
+# Academic Skill Configuration
+
+# Search APIs
+search:
+  providers:
+    - semantic_scholar
+    - arxiv
+    - crossref
+  max_results: 20
+  timeout_seconds: 10
+  rate_limit_per_minute: 60
+
+# Semantic Scholar
+semantic_scholar:
+  base_url: "https://api.semanticscholar.org/graph/v1"
+  fields: [title, abstract, authors, year, citationCount, url, doi]
+  max_results: 10
+
+# arXiv
+arxiv:
+  base_url: "http://export.arxiv.org/api/query"
+  max_results: 10
+  sort_by: relevance
+
+# Citation Analysis
+citations:
+  max_depth: 2  # Citation chain depth
+  min_citation_count: 5  # Filter low-impact papers
+  include_references: true
+  include_citations: true
+
+# Result Processing
+processing:
+  summarize_abstracts: true
+  max_summary_length: 200  # words
+  include_bibtex: false
+  language_detection: true
+
+# Bilingual Support (Sprint 121)
+language:
+  supported: [en, de]
+  translate_titles: false
+  query_expansion: true  # Expand DE queries with EN equivalents
+
+# Caching
+cache:
+  enabled: true
+  ttl_seconds: 3600  # 1 hour
+  key_prefix: "academic"
+
+# Logging
+logging:
+  log_queries: true
+  log_results: true
+  log_latency: true
+  verbose: false

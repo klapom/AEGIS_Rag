@@ -1,0 +1,102 @@
+# Tool Capabilities Map
+# Sprint 121 Feature: Skill Tool Auto-Resolve (ADR-058)
+#
+# This file defines capability categories for MCP tool classification.
+# Used as:
+#   1. Static fallback map when LLM classification is unavailable
+#   2. Seed categories for LLM-based classification
+#   3. Reference for admin review of auto-resolved mappings
+#
+# Structure:
+#   capabilities:
+#     <category_name>:
+#       description: Human-readable description
+#       keywords: Terms the LLM uses for classification
+#       static_tools: Known tool names that always match this category
+#
+# Skills reference these categories in their SKILL.md permissions field:
+#   permissions:
+#     - web_search
+#     - filesystem_read
+
+capabilities:
+  web_search:
+    description: "Search the web for information"
+    keywords: ["search", "google", "bing", "query", "lookup", "find online"]
+    static_tools: ["web_search", "search_engine", "google_search", "brave_search"]
+
+  web_read:
+    description: "Read and browse web pages"
+    keywords: ["browse", "fetch", "scrape", "navigate", "url", "http"]
+    static_tools: ["browser", "fetch_url", "scrape_page", "playwright"]
+
+  filesystem_read:
+    description: "Read files and directories from the filesystem"
+    keywords: ["read", "file", "directory", "list", "glob", "path"]
+    static_tools: ["read_file", "list_directory", "glob", "file_search"]
+
+  filesystem_write:
+    description: "Write, create, or modify files on the filesystem"
+    keywords: ["write", "create", "save", "modify", "delete", "file"]
+    static_tools: ["write_file", "create_directory", "delete_file", "move_file"]
+
+  code_execute:
+    description: "Execute code (Python, Bash, etc.)"
+    keywords: ["execute", "run", "python", "bash", "shell", "script", "eval"]
+    static_tools: ["python_execute", "bash_execute", "run_code", "jupyter"]
+
+  database_read:
+    description: "Query databases for information"
+    keywords: ["query", "select", "read", "database", "sql", "graph", "vector"]
+    static_tools: ["sql_query", "neo4j_query", "qdrant_search", "redis_get"]
+
+  database_write:
+    description: "Write data to databases"
+    keywords: ["insert", "update", "delete", "write", "database", "store"]
+    static_tools: ["sql_insert", "neo4j_write", "qdrant_upsert", "redis_set"]
+
+  api_call:
+    description: "Make HTTP/REST/GraphQL API calls"
+    keywords: ["api", "http", "rest", "graphql", "request", "endpoint"]
+    static_tools: ["http_request", "rest_api", "graphql_query", "curl"]
+
+  memory_access:
+    description: "Access agent memory systems (Redis, Graphiti, Qdrant)"
+    keywords: ["memory", "remember", "recall", "context", "history"]
+    static_tools: ["memory_search", "memory_store", "graphiti_query"]
+
+  document_processing:
+    description: "Process, parse, or transform documents"
+    keywords: ["document", "pdf", "parse", "extract", "ocr", "convert"]
+    static_tools: ["pdf_reader", "docling_parse", "text_extract"]
+
+  communication:
+    description: "Send messages or notifications"
+    keywords: ["send", "email", "notify", "message", "slack", "chat"]
+    static_tools: ["send_email", "slack_message", "notify"]
+
+  calculation:
+    description: "Perform mathematical calculations or data analysis"
+    keywords: ["calculate", "math", "compute", "analyze", "statistics"]
+    static_tools: ["calculator", "numpy_compute", "pandas_analyze"]
+
+# LLM Classification Prompt Template
+# Used when a new MCP tool is installed and needs classification
+classification_prompt: |
+  Given the following MCP tool metadata, classify it into one or more
+  capability categories from this list:
+  {categories}
+
+  Tool metadata:
+  - Name: {tool_name}
+  - Description: {tool_description}
+  - Parameters: {tool_parameters}
+
+  Return a JSON array of matching category names.
+  Example: ["web_search", "api_call"]
+
+# Cache settings
+cache:
+  redis_prefix: "tool:capabilities"
+  ttl_seconds: 86400  # 24 hours, re-classify daily
+  fallback: "static"  # Use static_tools map if cache miss

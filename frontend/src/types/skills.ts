@@ -166,3 +166,25 @@ export interface SkillActivationResponse {
   skill_name: string;
   instructions_length?: number;
 }
+
+/**
+ * Sprint 121: Resolved tool from auto-resolve (ADR-058)
+ */
+export interface ResolvedTool {
+  tool_name: string;
+  capability: string;
+  source: 'static' | 'llm_cached' | 'admin_override';
+  confidence: number;
+  server: string;
+  description: string;
+}
+
+/**
+ * Sprint 121: Resolved tools list response
+ */
+export interface ResolvedToolsResponse {
+  skill_name: string;
+  permissions: string[];
+  resolved_tools: ResolvedTool[];
+  total: number;
+}

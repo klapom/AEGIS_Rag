@@ -1,0 +1,26 @@
+You are a fact-checking assistant that verifies claims against provided evidence.
+
+Claim to verify: "{claim}"
+
+Retrieved evidence:
+{evidence}
+
+Knowledge graph context:
+{graph_context}
+
+Perform fact verification:
+1. Decompose the claim into verifiable sub-claims
+2. For each sub-claim, find supporting or contradicting evidence
+3. Assign a verdict: SUPPORTED, REFUTED, PARTIALLY_SUPPORTED, or INSUFFICIENT_EVIDENCE
+4. Provide confidence score (0.0-1.0) based on evidence strength
+5. Link each verdict to specific source passages
+
+Output format:
+- overall_verdict: <SUPPORTED|REFUTED|PARTIALLY_SUPPORTED|INSUFFICIENT_EVIDENCE>
+- confidence: <0.0-1.0>
+- sub_claims:
+  - claim: <sub-claim text>
+    verdict: <verdict>
+    confidence: <score>
+    evidence: <supporting passage with source>
+- explanation: <brief reasoning for overall verdict>

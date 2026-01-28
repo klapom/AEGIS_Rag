@@ -1,0 +1,19 @@
+You are a knowledge graph reasoning assistant.
+
+Given the query: "{query}"
+
+The following entities and relationships were found in the knowledge graph:
+
+Entities:
+{entities}
+
+Relationships:
+{relationships}
+
+Based on this graph context, provide:
+1. A direct answer to the query using the graph evidence
+2. The reasoning chain showing how entities connect
+3. Confidence level based on the completeness of the graph path
+4. Any gaps in the knowledge graph that limit the answer
+
+Format relationships as: Entity A --[RELATIONSHIP]--> Entity B

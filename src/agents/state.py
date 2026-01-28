@@ -119,6 +119,10 @@ class AgentState(MessagesState):
         default=False,
         description="Whether tools are enabled for this conversation (Sprint 120 Feature 120.11)",
     )
+    skill_instructions: str = Field(
+        default="",
+        description="Concatenated skill instructions from activated skills (Sprint 121)",
+    )
 
 
 class QueryMetadata(BaseModel):
@@ -162,6 +166,7 @@ def create_initial_state(
     namespaces: list[str] | None = None,
     session_id: str | None = None,
     tools_enabled: bool = False,
+    skill_instructions: str = "",
 ) -> dict[str, Any]:
     """Create initial agent state from user query.
 
@@ -171,6 +176,7 @@ def create_initial_state(
         namespaces: Namespaces to search in (default: None, will use ["default", "general"])
         session_id: Session identifier for real-time phase event streaming (Sprint 52)
         tools_enabled: Whether tools are enabled for this conversation (Sprint 120 Feature 120.11)
+        skill_instructions: Concatenated skill instructions from activated skills (Sprint 121)
 
     Returns:
         Dictionary representing the initial AgentState
@@ -184,6 +190,7 @@ def create_initial_state(
         "namespaces": namespaces,
         "session_id": session_id,  # Sprint 52: For real-time phase events
         "tools_enabled": tools_enabled,  # Sprint 120: For tool-aware prompts
+        "skill_instructions": skill_instructions,  # Sprint 121: For skill-aware prompts
         "metadata": {
             "timestamp": datetime.now(UTC).isoformat(),
             "agent_path": [],

@@ -1,0 +1,57 @@
+# Graph Reasoning Skill Configuration
+
+# Neo4j Connection (uses global settings)
+neo4j:
+  max_hops: 2  # Default traversal depth (1-3)
+  min_entity_confidence: 0.7
+  max_entities_per_query: 20
+  community_enabled: true
+
+# Entity Types
+entity_types:
+  - PERSON
+  - ORGANIZATION
+  - CONCEPT
+  - TECHNOLOGY
+  - LOCATION
+  - DATE
+  - EVENT
+  - PRODUCT
+
+# Relationship Types
+relationship_types:
+  - RELATES_TO
+  - PART_OF
+  - USES
+  - MENTIONS
+  - CITES
+  - WORKS_WITH
+  - LOCATED_IN
+  - CREATED_BY
+
+# Reasoning Parameters
+reasoning:
+  enable_multi_hop: true
+  max_reasoning_depth: 3
+  similarity_threshold: 0.75
+  max_expansion_nodes: 50
+  smart_entity_expander: false  # ADR-057: disabled for performance
+
+# Community Detection (Sprint 92)
+communities:
+  enabled: true
+  algorithm: gds  # Neo4j Graph Data Science
+  min_community_size: 3
+
+# Performance
+cache:
+  enabled: true
+  ttl_seconds: 300
+  key_prefix: "graph_reasoning"
+
+# Logging
+logging:
+  log_queries: true
+  log_cypher: false  # Enable for debugging
+  log_latency: true
+  verbose: false

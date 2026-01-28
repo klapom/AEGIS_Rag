@@ -1,0 +1,47 @@
+# Memory Skill Configuration
+
+# Short-Term Memory (Redis)
+short_term:
+  max_messages: 20
+  ttl_seconds: 3600  # 1 hour
+  key_prefix: "memory:short_term"
+
+# Episodic Memory (Graphiti)
+episodic:
+  enabled: true
+  max_episodes: 100
+  episode_ttl_days: 30
+  summarize_after: 10  # Summarize after N messages
+
+# Semantic Memory (Graphiti)
+semantic:
+  enabled: true
+  max_facts: 500
+  confidence_threshold: 0.8
+  update_on_contradiction: true
+
+# Context Window
+context:
+  max_tokens: 2000  # Budget for memory context in prompt
+  include_short_term: true
+  include_episodic: true
+  include_semantic: true
+  recency_weight: 0.7  # Weight recent memories higher
+
+# Bilingual Support (Sprint 121)
+language:
+  store_original_language: true
+  supported: [en, de]
+
+# Performance
+cache:
+  enabled: true
+  ttl_seconds: 60
+  key_prefix: "memory"
+
+# Logging
+logging:
+  log_retrievals: true
+  log_writes: true
+  log_latency: true
+  verbose: false

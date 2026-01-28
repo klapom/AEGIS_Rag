@@ -1,0 +1,57 @@
+# Statistics Skill Configuration
+
+# Computation Settings
+computation:
+  engine: numpy_pandas  # NumPy + Pandas for statistical operations
+  max_dataset_rows: 10000
+  max_columns: 100
+  timeout_seconds: 30
+  precision: 6  # Decimal places
+
+# Descriptive Statistics
+descriptive:
+  include_count: true
+  include_mean: true
+  include_median: true
+  include_mode: true
+  include_std: true
+  include_quartiles: true
+  include_min_max: true
+  include_skewness: true
+  include_kurtosis: true
+
+# Correlation Analysis
+correlation:
+  methods: [pearson, spearman, kendall]
+  significance_level: 0.05
+  min_sample_size: 10
+
+# Distribution Testing
+distribution:
+  normality_tests: [shapiro, kolmogorov_smirnov]
+  significance_level: 0.05
+
+# Trend Analysis
+trend:
+  moving_average_windows: [3, 5, 10]
+  growth_rate_method: compound  # compound|simple
+
+# Bilingual Support (Sprint 121)
+language:
+  supported: [en, de]
+  decimal_separator:
+    en: "."
+    de: ","
+
+# Caching
+cache:
+  enabled: true
+  ttl_seconds: 300
+  key_prefix: "statistics"
+
+# Logging
+logging:
+  log_computations: true
+  log_results: true
+  log_errors: true
+  verbose: false

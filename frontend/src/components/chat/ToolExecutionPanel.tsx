@@ -7,7 +7,7 @@
  * Supports concurrent tool executions.
  */
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import {
   Terminal,
   Loader2,
@@ -17,6 +17,12 @@ import {
   AlertTriangle,
   ChevronDown,
   ChevronRight,
+  Code,
+  Search,
+  Globe,
+  Wrench,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
@@ -70,28 +76,71 @@ function formatDuration(ms?: number): string {
 }
 
 /**
- * Format tool output for display
+ * Format tool input/output for display
  */
-function formatOutput(output: unknown): string {
-  if (typeof output === 'string') return output;
-  if (output === null || output === undefined) return '';
+function formatData(data: unknown): string {
+  if (typeof data === 'string') return data;
+  if (data === null || data === undefined) return '';
   try {
-    return JSON.stringify(output, null, 2);
+    return JSON.stringify(data, null, 2);
   } catch {
-    return String(output);
+    return String(data);
   }
+}
+
+/**
+ * Get syntax highlighting language based on tool name
+ */
+function getOutputLanguage(toolName: string): string {
+  const name = toolName.toLowerCase();
+  if (name === 'bash') return 'bash';
+  if (name === 'python') return 'python';
+  if (name.includes('search') || name.includes('fetch') || name.includes('api')) return 'json';
+  return 'text';
+}
+
+/**
+ * Get tool icon based on tool type
+ */
+function getToolIcon(toolName: string) {
+  const name = toolName.toLowerCase();
+  if (name === 'bash') return <Terminal className="w-4 h-4 text-gray-700 dark:text-gray-300" />;
+  if (name === 'python') return <Code className="w-4 h-4 text-blue-600 dark:text-blue-400" />;
+  if (name.includes('search')) return <Search className="w-4 h-4 text-green-600 dark:text-green-400" />;
+  if (name.includes('browser') || name.includes('fetch')) return <Globe className="w-4 h-4 text-purple-600 dark:text-purple-400" />;
+  return <Wrench className="w-4 h-4 text-gray-700 dark:text-gray-300" />;
 }
 
 /**
  * ToolExecutionPanel displays a single tool execution
  */
 export function ToolExecutionPanel({ execution }: ToolExecutionPanelProps) {
+  const [isInputExpanded, setIsInputExpanded] = useState(false);
   const [isOutputExpanded, setIsOutputExpanded] = useState(true);
+  const [copied, setCopied] = useState(false);
 
   const statusIcon = getStatusIcon(execution.status);
   const statusBadgeClass = getStatusBadgeClass(execution.status);
-  const outputText = formatOutput(execution.output);
+  const toolIcon = getToolIcon(execution.tool);
+  const outputLanguage = getOutputLanguage(execution.tool);
+
+  const inputText = formatData(execution.input);
+  const outputText = formatData(execution.output);
+  const hasInput = inputText.trim().length > 0 && Object.keys(execution.input).length > 0;
   const hasOutput = outputText.trim().length > 0;
+
+  /**
+   * Copy text to clipboard
+   */
+  const handleCopy = useCallback(async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      console.error('Failed to copy to clipboard');
+    }
+  }, []);
 
   return (
     <div
@@ -104,7 +153,7 @@ export function ToolExecutionPanel({ execution }: ToolExecutionPanelProps) {
       <div className="flex items-center justify-between px-4 py-3 bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center gap-3">
           <div className="flex items-center justify-center w-8 h-8 rounded bg-gray-200 dark:bg-gray-700">
-            <Terminal className="w-4 h-4 text-gray-700 dark:text-gray-300" />
+            {toolIcon}
           </div>
           <div>
             <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
@@ -137,6 +186,42 @@ export function ToolExecutionPanel({ execution }: ToolExecutionPanelProps) {
           </span>
         </div>
       </div>
+
+      {/* Input Section (collapsible) */}
+      {hasInput && (
+        <div className="border-b border-gray-200 dark:border-gray-700">
+          <button
+            onClick={() => setIsInputExpanded(!isInputExpanded)}
+            className="w-full flex items-center justify-between px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
+            aria-expanded={isInputExpanded}
+          >
+            <span className="flex items-center gap-2 text-xs font-medium text-gray-600 dark:text-gray-400">
+              {isInputExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+              Input
+            </span>
+          </button>
+
+          {isInputExpanded && (
+            <div className="px-4 pb-3" data-testid="tool-input">
+              <div className="max-h-[200px] overflow-y-auto rounded">
+                <SyntaxHighlighter
+                  language={outputLanguage}
+                  style={oneDark}
+                  customStyle={{
+                    margin: 0,
+                    padding: '12px',
+                    fontSize: '12px',
+                    borderRadius: '6px',
+                  }}
+                  wrapLongLines
+                >
+                  {inputText}
+                </SyntaxHighlighter>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Progress Bar (for running state) */}
       {execution.status === 'running' && execution.progress !== undefined && (
@@ -175,6 +260,29 @@ export function ToolExecutionPanel({ execution }: ToolExecutionPanelProps) {
               {isOutputExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
               {execution.status === 'error' ? 'Error Details' : 'Output'}
             </span>
+            {/* Copy button (only shown for successful outputs) */}
+            {execution.status === 'success' && hasOutput && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleCopy(outputText);
+                }}
+                className="flex items-center gap-1.5 px-2 py-1 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
+                title="Copy output"
+              >
+                {copied ? (
+                  <>
+                    <Check className="w-3 h-3" />
+                    <span>Copied</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3 h-3" />
+                    <span>Copy</span>
+                  </>
+                )}
+              </button>
+            )}
           </button>
 
           {isOutputExpanded && (
@@ -186,7 +294,7 @@ export function ToolExecutionPanel({ execution }: ToolExecutionPanelProps) {
               ) : hasOutput ? (
                 <div className="max-h-[200px] overflow-y-auto rounded">
                   <SyntaxHighlighter
-                    language="text"
+                    language={outputLanguage}
                     style={oneDark}
                     customStyle={{
                       margin: 0,

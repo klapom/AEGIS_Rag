@@ -188,7 +188,7 @@ export function MCPToolsPage() {
                 MCP Tools
               </h1>
               <p className="text-gray-600 dark:text-gray-400">
-                Manage MCP servers and test tool execution
+                Extend your RAG system with external tools via MCP servers. Connect servers, test tool execution, and monitor health.
               </p>
             </div>
           </div>
@@ -255,79 +255,6 @@ export function MCPToolsPage() {
           </div>
         )}
 
-        {/* Info Section */}
-        <div className="bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-800 rounded-xl p-6">
-          <div className="flex gap-3">
-            <div className="flex-shrink-0">
-              <svg
-                className="w-6 h-6 text-blue-600 dark:text-blue-400"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </div>
-            <div>
-              <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-1">
-                About MCP Tools
-              </h4>
-              <p className="text-sm text-blue-800 dark:text-blue-200">
-                The Model Context Protocol (MCP) allows you to extend the capabilities of your RAG system
-                with external tools and services. Connect to MCP servers to access their tools, then
-                test them using the execution panel. Tools can perform actions like web searches,
-                file operations, API calls, and more.
-              </p>
-              <ul className="mt-3 space-y-1 text-sm text-blue-800 dark:text-blue-200">
-                <li className="flex items-start gap-2">
-                  <svg
-                    className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                  <span>Connect/disconnect servers to manage tool availability</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <svg
-                    className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                  <span>Test tool execution with custom parameters</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <svg
-                    className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                  <span>Monitor health status with auto-refresh every 30 seconds</span>
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );

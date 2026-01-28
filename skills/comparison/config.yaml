@@ -1,0 +1,59 @@
+# Comparison Skill Configuration
+
+# Comparison Settings
+comparison:
+  max_entities: 5  # Max items to compare simultaneously
+  max_dimensions: 10  # Max comparison dimensions
+  include_scoring: true
+  scoring_scale: [1, 5]  # Rating scale min/max
+  default_format: matrix  # matrix|prose|pros_cons
+
+# Output Formats
+formats:
+  matrix:
+    enabled: true
+    include_ratings: true
+    include_summary: true
+  prose:
+    enabled: true
+    max_length: 500  # words
+  pros_cons:
+    enabled: true
+    max_items_per_side: 5
+
+# Evidence Retrieval
+retrieval:
+  top_k: 10  # Documents per entity
+  modes: [vector, graph]
+  require_evidence: true  # Back claims with sources
+
+# Knowledge Graph
+graph:
+  enabled: true
+  compare_relationships: true
+  compare_properties: true
+  max_hops: 1
+
+# Similarity Scoring
+similarity:
+  method: cosine  # cosine|jaccard|semantic
+  threshold: 0.7  # Min similarity to report
+  embedding_based: true
+
+# Bilingual Support (Sprint 121)
+language:
+  supported: [en, de]
+  output_language: auto  # Match query language
+
+# Caching
+cache:
+  enabled: true
+  ttl_seconds: 600  # 10 minutes
+  key_prefix: "comparison"
+
+# Logging
+logging:
+  log_comparisons: true
+  log_entities: true
+  log_results: true
+  verbose: false

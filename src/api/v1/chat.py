@@ -627,9 +627,37 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
                             )
 
                             # Sprint 120 Feature 120.14: Emit tool events
+                            # Sprint 121: Emit skill activation events
                             from src.models.phase_event import PhaseType, PhaseStatus
 
-                            if event.phase_type == PhaseType.TOOL_EXECUTION:
+                            if event.phase_type == PhaseType.SKILL_ACTIVATION:
+                                try:
+                                    yield _format_sse_message(
+                                        {
+                                            "type": "skill_activation",
+                                            "data": {
+                                                "skills": event.metadata.get("activated_skills", []),
+                                                "skill_count": event.metadata.get("skill_count", 0),
+                                                "instruction_tokens": event.metadata.get(
+                                                    "instruction_tokens", 0
+                                                ),
+                                                "intent": event.metadata.get("intent", ""),
+                                                "timestamp": (
+                                                    event.start_time.isoformat()
+                                                    if event.start_time
+                                                    else ""
+                                                ),
+                                            },
+                                        }
+                                    )
+                                    logger.debug(
+                                        "skill_activation_event_emitted",
+                                        skills=event.metadata.get("activated_skills", []),
+                                    )
+                                except Exception as e:
+                                    logger.warning("skill_activation_event_error", error=str(e))
+
+                            elif event.phase_type == PhaseType.TOOL_EXECUTION:
                                 try:
                                     tool_name = event.metadata.get(
                                         "tool_name"

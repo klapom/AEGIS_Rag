@@ -15,6 +15,7 @@ import type {
   ToolAuthorizationListResponse,
   LifecycleDashboardMetrics,
   SkillMdDocument,
+  ResolvedToolsResponse,
 } from '../types/skills';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
@@ -65,7 +66,7 @@ export async function listSkills(params?: {
  * @returns SkillDetail with complete metadata
  */
 export async function getSkill(skillName: string): Promise<SkillDetail> {
-  const url = `${API_BASE_URL}/api/v1/skills/registry/${encodeURIComponent(skillName)}`;
+  const url = `${API_BASE_URL}/api/v1/skills/${encodeURIComponent(skillName)}`;
   const response = await fetch(url, {
     method: 'GET',
     headers: { 'Content-Type': 'application/json' },
@@ -76,7 +77,44 @@ export async function getSkill(skillName: string): Promise<SkillDetail> {
     throw new Error(`HTTP ${response.status}: ${errorText}`);
   }
 
-  return response.json();
+  // Sprint 121 Fix: Map backend SkillDetailResponse → frontend SkillDetail
+  // Backend uses: tags, lifecycle, skill_md, config_yaml
+  // Frontend expects: triggers, is_active, instructions, permissions, etc.
+  const raw = await response.json();
+
+  // Extract permissions and dependencies from SKILL.md frontmatter if available
+  let permissions: string[] = [];
+  let dependencies: string[] = [];
+  if (raw.skill_md) {
+    const frontmatterMatch = raw.skill_md.match(/^---\n([\s\S]*?)\n---/);
+    if (frontmatterMatch) {
+      const fm = frontmatterMatch[1];
+      const permMatch = fm.match(/permissions:\n((?:\s+-\s+.*\n?)*)/);
+      if (permMatch) {
+        permissions = permMatch[1].match(/-\s+(\S+)/g)?.map((s: string) => s.replace(/^-\s+/, '')) ?? [];
+      }
+      const depMatch = fm.match(/dependencies:\n((?:\s+-\s+.*\n?)*)/);
+      if (depMatch) {
+        dependencies = depMatch[1].match(/-\s+(\S+)/g)?.map((s: string) => s.replace(/^-\s+/, '')) ?? [];
+      }
+    }
+  }
+
+  return {
+    name: raw.name,
+    version: raw.version,
+    description: raw.description,
+    author: raw.author,
+    triggers: raw.tags ?? [],
+    tools: (raw.tools ?? []).map((t: { tool_name?: string }) => t.tool_name ?? String(t)),
+    dependencies,
+    permissions,
+    config: raw.config_yaml ? {} : {},
+    instructions: raw.skill_md ?? '',
+    is_active: raw.status === 'active' || raw.lifecycle?.state === 'active',
+    activation_count: raw.lifecycle?.invocation_count ?? 0,
+    last_activated: raw.lifecycle?.activated_at ?? null,
+  };
 }
 
 /**
@@ -358,6 +396,58 @@ export async function updateSkillMd(
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(document),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`HTTP ${response.status}: ${errorText}`);
+  }
+
+  return response.json();
+}
+
+// ============================================================================
+// Sprint 121: Skill Tool Auto-Resolve API (ADR-058)
+// ============================================================================
+
+/**
+ * Get auto-resolved tools for a skill based on its permissions
+ * @param skillName Name of the skill
+ * @returns ResolvedToolsResponse with matched tools
+ */
+export async function getResolvedTools(
+  skillName: string
+): Promise<ResolvedToolsResponse> {
+  const url = `${API_BASE_URL}/api/v1/skills/${encodeURIComponent(skillName)}/resolved-tools`;
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`HTTP ${response.status}: ${errorText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Set an admin override for a tool-skill binding
+ * @param skillName Name of the skill
+ * @param toolName Name of the tool
+ * @param allowed Whether to allow or deny the tool
+ */
+export async function setToolOverride(
+  skillName: string,
+  toolName: string,
+  allowed: boolean
+): Promise<{ status: string; message: string }> {
+  const url = `${API_BASE_URL}/api/v1/skills/${encodeURIComponent(skillName)}/resolved-tools/override`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tool_name: toolName, allowed }),
   });
 
   if (!response.ok) {

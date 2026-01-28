@@ -1,0 +1,47 @@
+# Web Search Skill Configuration
+
+# Search Provider
+provider:
+  primary: tavily  # tavily, brave, searxng
+  fallback: brave
+  api_timeout_seconds: 10
+
+# Search Parameters
+search:
+  max_results: 5
+  include_answer: true
+  include_raw_content: false
+  search_depth: basic  # basic or advanced
+  topic: general  # general, news, finance
+
+# Result Processing
+processing:
+  summarize_results: true
+  max_summary_tokens: 500
+  include_urls: true
+  deduplicate: true
+  min_relevance_score: 0.5
+
+# Bilingual Support (Sprint 121)
+language:
+  detect_query_language: true
+  supported: [en, de]
+  translate_results: false  # Keep results in original language
+
+# Rate Limiting
+rate_limit:
+  max_requests_per_minute: 30
+  max_requests_per_day: 1000
+
+# Caching
+cache:
+  enabled: true
+  ttl_seconds: 600  # 10 minutes
+  key_prefix: "web_search"
+
+# Logging
+logging:
+  log_queries: true
+  log_latency: true
+  log_provider: true
+  verbose: false

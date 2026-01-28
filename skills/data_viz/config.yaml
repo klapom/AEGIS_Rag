@@ -1,0 +1,62 @@
+# Data Visualization Skill Configuration
+
+# Chart Settings
+charts:
+  default_type: auto  # auto-detect based on data
+  supported_types:
+    - bar
+    - line
+    - scatter
+    - pie
+    - histogram
+    - box
+    - heatmap
+    - area
+  max_series: 10
+  max_data_points: 1000
+
+# Rendering
+rendering:
+  engine: matplotlib  # matplotlib + seaborn
+  dpi: 150
+  default_size: [10, 6]  # inches [width, height]
+  format: png  # png|svg|pdf
+  output_dir: "/tmp/aegis_charts"
+
+# Styling
+style:
+  theme: seaborn-v0_8-whitegrid
+  color_palette: viridis
+  font_size: 12
+  title_size: 14
+  grid: true
+  legend: true
+
+# Auto-Detection Rules
+auto_detect:
+  single_categorical: bar
+  single_numeric: histogram
+  two_numeric: scatter
+  time_series: line
+  proportions: pie
+  distribution: box
+  correlation_matrix: heatmap
+
+# Bilingual Support (Sprint 121)
+language:
+  supported: [en, de]
+  axis_labels:
+    en: {x: "X Axis", y: "Y Axis"}
+    de: {x: "X-Achse", y: "Y-Achse"}
+
+# Caching
+cache:
+  enabled: false  # Charts are unique per request
+  key_prefix: "data_viz"
+
+# Logging
+logging:
+  log_chart_type: true
+  log_data_size: true
+  log_render_time: true
+  verbose: false

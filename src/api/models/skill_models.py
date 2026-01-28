@@ -674,3 +674,114 @@ class SkillExecuteResponse(BaseModel):
     error: Optional[str] = Field(None, description="Error message if failed")
     executed_at: datetime
     execution_time: float = Field(..., description="Execution duration in seconds")
+
+
+# ============================================================================
+# Sprint 121: Skill-MD, Lifecycle Metrics, and Tool Auto-Resolve Models
+# ============================================================================
+
+
+class SkillMdResponse(BaseModel):
+    """Response model for SKILL.md content.
+
+    GET /api/v1/skills/:name/skill-md
+
+    Attributes:
+        skill_name: Skill name
+        content: Raw SKILL.md content
+        frontmatter: Parsed frontmatter as dict
+        instructions: Instructions body (without frontmatter)
+    """
+
+    skill_name: str
+    content: str = Field(..., description="Full SKILL.md content")
+    frontmatter: Dict[str, Any] = Field(default_factory=dict, description="Parsed YAML frontmatter")
+    instructions: str = Field("", description="Instructions body without frontmatter")
+
+
+class SkillMdUpdateRequest(BaseModel):
+    """Request model for updating SKILL.md content.
+
+    PUT /api/v1/skills/:name/skill-md
+
+    Attributes:
+        content: Updated SKILL.md content (full document with frontmatter)
+    """
+
+    content: str = Field(..., min_length=10, description="Updated SKILL.md content")
+
+
+class LifecycleMetricsResponse(BaseModel):
+    """Aggregated lifecycle metrics for all skills.
+
+    GET /api/v1/skills/lifecycle/metrics
+
+    Attributes:
+        total_skills: Total number of discovered skills
+        active_skills: Number of currently active skills
+        inactive_skills: Number of inactive skills
+        error_skills: Number of skills in error state
+        total_activations: Sum of all skill activations
+        categories: Skill count by category
+        resolver_metrics: Tool resolver statistics
+    """
+
+    total_skills: int = 0
+    active_skills: int = 0
+    inactive_skills: int = 0
+    error_skills: int = 0
+    total_activations: int = 0
+    categories: Dict[str, int] = Field(default_factory=dict)
+    resolver_metrics: Dict[str, Any] = Field(default_factory=dict)
+
+
+class ResolvedToolResponse(BaseModel):
+    """A single resolved tool for a skill.
+
+    Attributes:
+        tool_name: MCP tool name
+        capability: Matched capability category
+        source: Resolution source (static, llm_cached, admin_override)
+        confidence: Classification confidence (0.0-1.0)
+        server: MCP server providing the tool
+        description: Tool description
+    """
+
+    tool_name: str
+    capability: str
+    source: str = "static"
+    confidence: float = 1.0
+    server: str = ""
+    description: str = ""
+
+
+class ResolvedToolsListResponse(BaseModel):
+    """List of resolved tools for a skill.
+
+    GET /api/v1/skills/:name/resolved-tools
+
+    Attributes:
+        skill_name: Skill name
+        permissions: Skill's declared permissions
+        resolved_tools: List of resolved tools
+        total: Total number of resolved tools
+    """
+
+    skill_name: str
+    permissions: List[str] = Field(default_factory=list)
+    resolved_tools: List[ResolvedToolResponse] = Field(default_factory=list)
+    total: int = 0
+
+
+class ToolOverrideRequest(BaseModel):
+    """Request model for setting a tool override.
+
+    POST /api/v1/skills/:name/resolved-tools/override
+
+    Attributes:
+        tool_name: Name of the tool
+        allowed: Whether to allow (True) or deny (False) the tool
+    """
+
+    tool_name: str = Field(..., min_length=1, description="Tool name to override")
+    allowed: bool = Field(..., description="Allow (true) or deny (false) the tool")

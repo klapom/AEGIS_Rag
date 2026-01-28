@@ -812,6 +812,7 @@ class AnswerGenerator:
         strict_faithfulness: bool | None = None,
         no_hedging: bool = False,
         tools_enabled: bool = False,
+        skill_instructions: str = "",
     ):
         """Stream LLM response token-by-token with citation support.
 
@@ -820,6 +821,7 @@ class AnswerGenerator:
         Sprint 80 Feature 80.1: Strict faithfulness mode for RAGAS optimization
         Sprint 81 Feature 81.8: No-hedging mode to eliminate meta-commentary
         Sprint 120 Feature 120.11: Tool-aware prompts for tool marker generation
+        Sprint 121: Skill-aware prompts for skill instruction injection
         TD-097: Load strict_faithfulness from Redis config if not explicitly passed
 
         This method combines citation generation with real-time token streaming.
@@ -839,6 +841,9 @@ class AnswerGenerator:
             tools_enabled: When True, injects tool-awareness instruction to teach LLM
                 about tool markers ([TOOL:action], [SEARCH:query], [FETCH:url]).
                 Default: False. (Sprint 120 Feature 120.11)
+            skill_instructions: Concatenated skill instructions from activated skills.
+                When provided, injects into prompt to guide LLM behavior.
+                Default: "". (Sprint 121)
 
         Yields:
             dict: Token events with format:
@@ -926,6 +931,17 @@ class AnswerGenerator:
             prompt = prompt.replace("**Antwort:**", f"{TOOL_AWARENESS_INSTRUCTION}\n**Antwort:**")
             prompt_mode = f"{prompt_mode}_with_tools"
 
+        # Sprint 121: Inject skill instructions into prompt
+        if skill_instructions:
+            skill_section = f"\n\n## Active Skills\n{skill_instructions}\n"
+            # Insert before "**Antwort:**" section
+            if "**Antwort:**" in prompt:
+                prompt = prompt.replace("**Antwort:**", f"{skill_section}\n**Antwort:**")
+            else:
+                # Fallback: prepend to prompt
+                prompt = f"{skill_section}\n{prompt}"
+            prompt_mode = f"{prompt_mode}_with_skills"
+
         logger.debug(
             "generating_answer_with_citations_streaming",
             query=query[:100],
@@ -934,6 +950,7 @@ class AnswerGenerator:
             strict_faithfulness=strict_faithfulness,
             no_hedging=no_hedging,
             tools_enabled=tools_enabled,
+            has_skill_instructions=bool(skill_instructions),
         )
 
         try:

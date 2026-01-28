@@ -1,0 +1,42 @@
+# Calculator Skill Configuration
+
+# Evaluation Settings
+evaluation:
+  engine: python_safe  # Safe subset of Python math
+  max_expression_length: 500
+  timeout_seconds: 5
+  max_precision: 10  # Decimal places
+
+# Allowed Operations
+allowed_operations:
+  arithmetic: true
+  trigonometry: true
+  logarithms: true
+  statistics: true
+  unit_conversion: true
+  currency_conversion: false  # Requires external API
+
+# Unit Conversion
+units:
+  length: [mm, cm, m, km, in, ft, yd, mi]
+  weight: [mg, g, kg, lb, oz]
+  temperature: [C, F, K]
+  time: [s, min, h, day, week, month, year]
+  data: [B, KB, MB, GB, TB]
+
+# Bilingual Support (Sprint 121)
+language:
+  supported: [en, de]
+  decimal_separator:
+    en: "."
+    de: ","
+  thousands_separator:
+    en: ","
+    de: "."
+
+# Logging
+logging:
+  log_expressions: true
+  log_results: true
+  log_errors: true
+  verbose: false

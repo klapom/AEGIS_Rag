@@ -63,6 +63,9 @@ from src.api.models.skill_models import (
     ErrorResponse,
     ConfigValidationRequest,
     ConfigValidationResponse,
+    LifecycleMetricsResponse,
+    ResolvedToolResponse,
+    ResolvedToolsListResponse,
     SkillActivateResponse,
     SkillCategory,
     SkillConfigResponse,
@@ -76,6 +79,8 @@ from src.api.models.skill_models import (
     SkillExecuteResponse,
     SkillLifecycleInfo,
     SkillListResponse,
+    SkillMdResponse,
+    SkillMdUpdateRequest,
     SkillStatus,
     SkillSummary,
     SkillToolsResponse,
@@ -83,6 +88,7 @@ from src.api.models.skill_models import (
     SkillUpdateResponse,
     ToolAuthorization,
     ToolAuthorizationRequest,
+    ToolOverrideRequest,
 )
 from src.core.config import settings
 
@@ -336,42 +342,67 @@ async def get_skill_registry_info(
 
     try:
         registry = get_registry()
-        all_skills = registry.list_skills()
+        lifecycle = get_lifecycle()
 
-        # Filter by status if needed
-        if not include_inactive:
-            all_skills = [s for s in all_skills if s.get("status") != "inactive"]
+        # Sprint 121 Fix: Use discover() instead of non-existent list_skills()
+        available_skills = registry.discover()
 
-        # Build category summary
-        categories_summary = {}
-        for skill in all_skills:
-            cat = skill.get("category", "unknown")
-            if cat not in categories_summary:
-                categories_summary[cat] = 0
-            categories_summary[cat] += 1
-
-        # Convert to response format
+        # Build skill summaries (mirrors list_skills endpoint logic)
         items = []
-        for skill in all_skills[:100]:  # Limit to first 100
+        categories_summary: dict = {}
+
+        for skill_name, metadata in available_skills.items():
+            # Get lifecycle state
+            skill_state = lifecycle.get_state(skill_name)
+            api_status = _map_lifecycle_state_to_status(skill_state)
+            is_active = api_status == SkillStatus.ACTIVE
+
+            # Filter inactive if not requested
+            if not include_inactive and api_status == SkillStatus.INACTIVE:
+                continue
+
+            # Extract category and track summary
+            skill_category = _extract_category(metadata.description)
+            cat_name = skill_category.value
+            categories_summary[cat_name] = categories_summary.get(cat_name, 0) + 1
+
+            # Count tools and triggers
+            tools_count = len(metadata.tools) if hasattr(metadata, "tools") else 0
+            triggers_count = len(metadata.triggers)
+
+            # Map category to emoji icon
+            category_icons = {
+                SkillCategory.RETRIEVAL: "🔍",
+                SkillCategory.REASONING: "🧠",
+                SkillCategory.SYNTHESIS: "✨",
+                SkillCategory.VALIDATION: "✅",
+                SkillCategory.RESEARCH: "📚",
+                SkillCategory.TOOLS: "🔧",
+                SkillCategory.OTHER: "⚙️",
+            }
+            icon = category_icons.get(skill_category, "⚙️")
+
             items.append(
                 SkillSummary(
-                    name=skill.get("name", "unknown"),
-                    category=SkillCategory(skill.get("category", "tools")),
-                    description=skill.get("description", ""),
-                    version=skill.get("version", "1.0.0"),
-                    status=SkillStatus(skill.get("status", "discovered")),
-                    tags=skill.get("tags", []),
-                    author=skill.get("author", "AegisRAG"),
-                    created_at=skill.get("created_at", datetime.now().isoformat()),
-                    updated_at=skill.get("updated_at", datetime.now().isoformat()),
+                    name=skill_name,
+                    version=metadata.version,
+                    description=metadata.description,
+                    author=metadata.author,
+                    is_active=is_active,
+                    tools_count=tools_count,
+                    triggers_count=triggers_count,
+                    icon=icon,
                 )
             )
+
+        # Sort by name
+        items.sort(key=lambda s: s.name)
 
         return SkillRegistryResponse(
             items=items,
             page=1,
             page_size=len(items),
-            total=len(all_skills),
+            total=len(items),
             total_pages=1,
             registry_version="1.0.0",
             total_categories=len(categories_summary),
@@ -390,6 +421,109 @@ async def get_skill_registry_info(
             registry_version="1.0.0",
             total_categories=0,
             categories_summary={},
+        )
+
+
+# ============================================================================
+# Endpoint: GET /api/v1/skills/lifecycle/metrics - Lifecycle Metrics Dashboard
+# Sprint 121: Fix 404 + ADR-058 Tool Auto-Resolve integration
+# MUST be defined BEFORE /{skill_name} catch-all route
+# ============================================================================
+
+
+@router.get("/lifecycle/metrics", response_model=LifecycleMetricsResponse)
+async def get_lifecycle_metrics() -> LifecycleMetricsResponse:
+    """Get aggregated lifecycle metrics for all skills.
+
+    Sprint 121: Fix 404 for /api/v1/skills/lifecycle/metrics
+    Endpoint: GET /api/v1/skills/lifecycle/metrics
+
+    Returns metrics dashboard data including active/inactive counts,
+    category breakdowns, and tool resolver statistics.
+
+    Returns:
+        LifecycleMetricsResponse with aggregated metrics
+
+    Example:
+        >>> GET /api/v1/skills/lifecycle/metrics
+        >>> {
+        ...     "total_skills": 14,
+        ...     "active_skills": 5,
+        ...     "inactive_skills": 9,
+        ...     "error_skills": 0,
+        ...     "total_activations": 42,
+        ...     "categories": {"retrieval": 3, "reasoning": 2, ...},
+        ...     "resolver_metrics": {"capability_categories": 12, ...}
+        ... }
+    """
+    logger.info("get_lifecycle_metrics_endpoint_called")
+
+    try:
+        registry = get_registry()
+        lifecycle = get_lifecycle()
+
+        available_skills = registry.discover()
+
+        total = 0
+        active = 0
+        inactive = 0
+        error_count = 0
+        categories: dict = {}
+
+        for skill_name, metadata in available_skills.items():
+            total += 1
+            skill_state = lifecycle.get_state(skill_name)
+            api_status = _map_lifecycle_state_to_status(skill_state)
+
+            if api_status == SkillStatus.ACTIVE:
+                active += 1
+            elif api_status == SkillStatus.ERROR:
+                error_count += 1
+            else:
+                inactive += 1
+
+            skill_category = _extract_category(metadata.description)
+            cat_name = skill_category.value
+            categories[cat_name] = categories.get(cat_name, 0) + 1
+
+        # Get tool resolver metrics if available
+        resolver_metrics: dict = {}
+        try:
+            from src.agents.skills.tool_resolver import get_tool_resolver
+
+            resolver = get_tool_resolver()
+            if not resolver._loaded:
+                await resolver.load_capabilities()
+            resolver_metrics = resolver.get_metrics()
+        except Exception:
+            resolver_metrics = {"status": "not_initialized"}
+
+        logger.info(
+            "get_lifecycle_metrics_success",
+            total=total,
+            active=active,
+            inactive=inactive,
+        )
+
+        return LifecycleMetricsResponse(
+            total_skills=total,
+            active_skills=active,
+            inactive_skills=inactive,
+            error_skills=error_count,
+            total_activations=0,  # TODO: Track real activation counts
+            categories=categories,
+            resolver_metrics=resolver_metrics,
+        )
+
+    except Exception as e:
+        logger.error("get_lifecycle_metrics_failed", error=str(e), exc_info=True)
+        return LifecycleMetricsResponse(
+            total_skills=0,
+            active_skills=0,
+            inactive_skills=0,
+            error_skills=0,
+            categories={},
+            resolver_metrics={"error": str(e)},
         )
 
 
@@ -1596,6 +1730,359 @@ async def execute_skill_endpoint(
             error=f"Execution failed: {str(e)}",
             executed_at=executed_at,
             execution_time=execution_time,
+        )
+
+
+# ============================================================================
+# Endpoint: GET/PUT /api/v1/skills/:name/skill-md - SKILL.md Editor
+# Sprint 121: Fix 404 for skill-md endpoint
+# ============================================================================
+
+
+@router.get("/{skill_name}/skill-md", response_model=SkillMdResponse)
+async def get_skill_md(skill_name: str) -> SkillMdResponse:
+    """Get SKILL.md content for a specific skill.
+
+    Sprint 121: Fix 404 for /api/v1/skills/:name/skill-md
+    Endpoint: GET /api/v1/skills/:name/skill-md
+
+    Returns the full SKILL.md content along with parsed frontmatter
+    and the instructions body.
+
+    Args:
+        skill_name: Name of skill
+
+    Returns:
+        SkillMdResponse with content, frontmatter, and instructions
+
+    Example:
+        >>> GET /api/v1/skills/retrieval/skill-md
+        >>> {
+        ...     "skill_name": "retrieval",
+        ...     "content": "---\\nname: retrieval\\n...\\n---\\n\\n# Retrieval Skill",
+        ...     "frontmatter": {"name": "retrieval", "version": "1.0.0", ...},
+        ...     "instructions": "# Retrieval Skill\\n\\n..."
+        ... }
+
+    Raises:
+        HTTPException 404: If skill not found
+        HTTPException 500: If retrieval fails
+    """
+    logger.info("get_skill_md_endpoint_called", skill_name=skill_name)
+
+    try:
+        registry = get_registry()
+
+        metadata = registry.get_metadata(skill_name)
+        if not metadata:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Skill not found: {skill_name}",
+            )
+
+        loaded_skill = registry.load(skill_name)
+        skill_md_path = loaded_skill.path / "SKILL.md"
+
+        if not skill_md_path.exists():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"SKILL.md not found for skill: {skill_name}",
+            )
+
+        content = skill_md_path.read_text()
+
+        # Parse frontmatter
+        frontmatter: dict = {}
+        instructions = content
+        if content.startswith("---"):
+            parts = content.split("---", 2)
+            if len(parts) >= 3:
+                try:
+                    frontmatter = yaml.safe_load(parts[1]) or {}
+                except yaml.YAMLError:
+                    frontmatter = {}
+                instructions = parts[2].strip()
+
+        logger.info("get_skill_md_success", skill_name=skill_name)
+
+        return SkillMdResponse(
+            skill_name=skill_name,
+            content=content,
+            frontmatter=frontmatter,
+            instructions=instructions,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("get_skill_md_failed", skill_name=skill_name, error=str(e), exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve SKILL.md: {str(e)}",
+        )
+
+
+@router.put("/{skill_name}/skill-md", response_model=SkillUpdateResponse)
+async def update_skill_md(
+    skill_name: str, request: SkillMdUpdateRequest
+) -> SkillUpdateResponse:
+    """Update SKILL.md content for a specific skill.
+
+    Sprint 121: SKILL.md Editor write support
+    Endpoint: PUT /api/v1/skills/:name/skill-md
+
+    Args:
+        skill_name: Name of skill
+        request: Updated SKILL.md content
+
+    Returns:
+        SkillUpdateResponse with update status
+
+    Raises:
+        HTTPException 404: If skill not found
+        HTTPException 500: If update fails
+    """
+    logger.info("update_skill_md_endpoint_called", skill_name=skill_name)
+
+    try:
+        registry = get_registry()
+
+        metadata = registry.get_metadata(skill_name)
+        if not metadata:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Skill not found: {skill_name}",
+            )
+
+        loaded_skill = registry.load(skill_name)
+        skill_md_path = loaded_skill.path / "SKILL.md"
+
+        # Validate YAML frontmatter if present
+        if request.content.startswith("---"):
+            parts = request.content.split("---", 2)
+            if len(parts) >= 3:
+                try:
+                    yaml.safe_load(parts[1])
+                except yaml.YAMLError as e:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Invalid YAML frontmatter: {str(e)}",
+                    )
+
+        skill_md_path.write_text(request.content)
+
+        # Re-discover to reload metadata
+        registry.discover()
+
+        logger.info("update_skill_md_success", skill_name=skill_name)
+
+        return SkillUpdateResponse(
+            skill_name=skill_name,
+            status="updated",
+            message="SKILL.md updated successfully",
+            updated_at=datetime.now(),
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("update_skill_md_failed", skill_name=skill_name, error=str(e), exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update SKILL.md: {str(e)}",
+        )
+
+
+# ============================================================================
+# Sprint 121: Skill Tool Auto-Resolve Endpoints (ADR-058)
+# ============================================================================
+
+
+@router.get("/{skill_name}/resolved-tools", response_model=ResolvedToolsListResponse)
+async def get_resolved_tools(skill_name: str) -> ResolvedToolsListResponse:
+    """Get auto-resolved tools for a skill based on its permissions.
+
+    Sprint 121 Feature: Skill Tool Auto-Resolve (ADR-058)
+    Endpoint: GET /api/v1/skills/:name/resolved-tools
+
+    Resolves which MCP tools a skill can use by matching the skill's
+    declared permissions against the tool capability map.
+
+    Args:
+        skill_name: Name of the skill
+
+    Returns:
+        ResolvedToolsListResponse with list of resolved tools
+
+    Example:
+        >>> GET /api/v1/skills/research/resolved-tools
+        >>> {
+        ...     "skill_name": "research",
+        ...     "permissions": ["web_search", "web_read"],
+        ...     "resolved_tools": [
+        ...         {"tool_name": "web_search", "capability": "web_search", "source": "static"},
+        ...         {"tool_name": "browser", "capability": "web_read", "source": "static"}
+        ...     ],
+        ...     "total": 2
+        ... }
+
+    Raises:
+        HTTPException 404: If skill not found
+        HTTPException 500: If resolution fails
+    """
+    logger.info("get_resolved_tools_endpoint_called", skill_name=skill_name)
+
+    try:
+        registry = get_registry()
+
+        metadata = registry.get_metadata(skill_name)
+        if not metadata:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Skill not found: {skill_name}",
+            )
+
+        # Get permissions from SKILL.md frontmatter
+        loaded_skill = registry.load(skill_name)
+        skill_md_path = loaded_skill.path / "SKILL.md"
+        permissions: list[str] = []
+
+        if skill_md_path.exists():
+            content = skill_md_path.read_text()
+            if content.startswith("---"):
+                parts = content.split("---", 2)
+                if len(parts) >= 3:
+                    try:
+                        fm = yaml.safe_load(parts[1]) or {}
+                        permissions = fm.get("permissions", [])
+                    except yaml.YAMLError:
+                        pass
+
+        # Resolve tools using the SkillToolResolver
+        from src.agents.skills.tool_resolver import get_tool_resolver
+
+        resolver = get_tool_resolver()
+        if not resolver._loaded:
+            await resolver.load_capabilities()
+
+        resolved = await resolver.resolve_tools_for_skill(skill_name, permissions)
+
+        resolved_response = [
+            ResolvedToolResponse(
+                tool_name=t.tool_name,
+                capability=t.capability,
+                source=t.source,
+                confidence=t.confidence,
+                server=t.server,
+                description=t.description,
+            )
+            for t in resolved
+        ]
+
+        logger.info(
+            "get_resolved_tools_success",
+            skill_name=skill_name,
+            permissions=permissions,
+            resolved_count=len(resolved_response),
+        )
+
+        return ResolvedToolsListResponse(
+            skill_name=skill_name,
+            permissions=permissions,
+            resolved_tools=resolved_response,
+            total=len(resolved_response),
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(
+            "get_resolved_tools_failed",
+            skill_name=skill_name,
+            error=str(e),
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to resolve tools: {str(e)}",
+        )
+
+
+@router.post("/{skill_name}/resolved-tools/override")
+async def set_tool_override(skill_name: str, request: ToolOverrideRequest) -> dict:
+    """Set an admin override for a tool-skill binding.
+
+    Sprint 121 Feature: Skill Tool Auto-Resolve (ADR-058)
+    Endpoint: POST /api/v1/skills/:name/resolved-tools/override
+
+    Allows admins to explicitly allow or deny a tool for a skill,
+    overriding the auto-resolve result.
+
+    Args:
+        skill_name: Name of the skill
+        request: Tool override request (tool_name + allowed)
+
+    Returns:
+        Success response with override details
+
+    Example:
+        >>> POST /api/v1/skills/research/resolved-tools/override
+        >>> {"tool_name": "dangerous_tool", "allowed": false}
+        >>> Response: {"status": "override_set", "skill_name": "research", ...}
+
+    Raises:
+        HTTPException 404: If skill not found
+        HTTPException 500: If override fails
+    """
+    logger.info(
+        "set_tool_override_endpoint_called",
+        skill_name=skill_name,
+        tool_name=request.tool_name,
+        allowed=request.allowed,
+    )
+
+    try:
+        registry = get_registry()
+
+        metadata = registry.get_metadata(skill_name)
+        if not metadata:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Skill not found: {skill_name}",
+            )
+
+        from src.agents.skills.tool_resolver import get_tool_resolver
+
+        resolver = get_tool_resolver()
+        resolver.set_override(skill_name, request.tool_name, request.allowed)
+
+        logger.info(
+            "set_tool_override_success",
+            skill_name=skill_name,
+            tool_name=request.tool_name,
+            allowed=request.allowed,
+        )
+
+        return {
+            "status": "override_set",
+            "skill_name": skill_name,
+            "tool_name": request.tool_name,
+            "allowed": request.allowed,
+            "message": f"Tool '{request.tool_name}' {'allowed' if request.allowed else 'denied'} for skill '{skill_name}'",
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(
+            "set_tool_override_failed",
+            skill_name=skill_name,
+            error=str(e),
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to set override: {str(e)}",
         )
 
 

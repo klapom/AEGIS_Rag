@@ -47,6 +47,7 @@ import { SkillConfigEditor } from './pages/admin/SkillConfigEditor';
 import { ToolAuthorizationPage } from './pages/admin/ToolAuthorization';
 import { SkillLifecycleDashboard } from './pages/admin/SkillLifecycle';
 import { SkillMdEditor } from './pages/admin/SkillMdEditor';
+import { SkillLogs } from './pages/admin/SkillLogs';
 import { AgentCommunicationPage } from './pages/admin/AgentCommunicationPage';
 import { AgentHierarchyPage } from './pages/admin/AgentHierarchyPage';
 import { GDPRConsentPage } from './pages/admin/GDPRConsent';
@@ -106,6 +107,7 @@ function App() {
                       <Route path="/admin/skills/:skillName/tools" element={<ToolAuthorizationPage />} />
                       <Route path="/admin/skills/lifecycle" element={<SkillLifecycleDashboard />} />
                       <Route path="/admin/skills/:skillName/skill-md" element={<SkillMdEditor />} />
+                      <Route path="/admin/skills/:skillName/logs" element={<SkillLogs />} />
                       <Route path="/admin/agent-communication" element={<AgentCommunicationPage />} />
                       <Route path="/admin/agent-hierarchy" element={<AgentHierarchyPage />} />
                       <Route path="/admin/gdpr" element={<GDPRConsentPage />} />

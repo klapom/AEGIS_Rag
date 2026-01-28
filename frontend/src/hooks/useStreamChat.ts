@@ -562,7 +562,7 @@ export function useStreamChat({
           clearTimers();
           break;
 
-        // Sprint 119 Feature 119.1: Skill activation event
+        // Sprint 119 Feature 119.1: Skill activation event (single skill)
         case 'skill_activated': {
           const skillData = chunk.data as SkillActivationEvent;
           if (skillData) {
@@ -570,6 +570,28 @@ export function useStreamChat({
               ...skillData,
               timestamp: skillData.timestamp || new Date().toISOString(),
             }]);
+          }
+          break;
+        }
+
+        // Sprint 120: Skill activation event (multiple skills array)
+        case 'skill_activation': {
+          const activationData = chunk.data as {
+            skills?: string[];
+            skill_count?: number;
+            instruction_tokens?: number;
+            intent?: string;
+            timestamp?: string;
+          };
+          if (activationData?.skills && Array.isArray(activationData.skills)) {
+            // Convert array format to individual SkillActivationEvents
+            const timestamp = activationData.timestamp || new Date().toISOString();
+            const newActivations = activationData.skills.map((skill) => ({
+              skill,
+              timestamp,
+              reason: `Activated for ${activationData.intent || 'query'} (${activationData.skill_count || activationData.skills?.length || 1} skills, ${activationData.instruction_tokens || 0} tokens)`,
+            }));
+            setSkillActivations((prev) => [...prev, ...newActivations]);
           }
           break;
         }

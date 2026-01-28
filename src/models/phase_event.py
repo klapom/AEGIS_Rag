@@ -88,6 +88,7 @@ class PhaseType(str, Enum):
     GRAPH_QUERY = "graph_query"
     MEMORY_RETRIEVAL = "memory_retrieval"
     TOOL_EXECUTION = "tool_execution"  # Sprint 70 Feature 70.9
+    SKILL_ACTIVATION = "skill_activation"  # Sprint 121: Skill activation for chat
     LLM_GENERATION = "llm_generation"
     FOLLOW_UP_QUESTIONS = "follow_up_questions"
 

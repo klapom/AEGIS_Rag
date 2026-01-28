@@ -65,6 +65,8 @@ async def llm_answer_node(state: dict[str, Any]) -> dict[str, Any]:
     no_hedging = state.get("no_hedging", settings.no_hedging_enabled)
     # Sprint 120 Feature 120.11: Get tools_enabled from state (set during graph compilation)
     tools_enabled = state.get("tools_enabled", False)
+    # Sprint 121: Get skill instructions from state
+    skill_instructions = state.get("skill_instructions", "")
 
     logger.info(
         "llm_answer_node_start",
@@ -74,6 +76,7 @@ async def llm_answer_node(state: dict[str, Any]) -> dict[str, Any]:
         strict_faithfulness=strict_faithfulness,
         no_hedging=no_hedging,
         tools_enabled=tools_enabled,
+        has_skill_instructions=bool(skill_instructions),
     )
 
     # Initialize phase_events list if not present
@@ -105,6 +108,7 @@ async def llm_answer_node(state: dict[str, Any]) -> dict[str, Any]:
 
         # Sprint 81 Feature 81.8: Pass no_hedging to eliminate meta-commentary
         # Sprint 120 Feature 120.11: Pass tools_enabled for tool-aware prompts
+        # Sprint 121: Pass skill_instructions for skill-aware prompts
         async for token_event in generator.generate_with_citations_streaming(
             query,
             contexts,
@@ -112,6 +116,7 @@ async def llm_answer_node(state: dict[str, Any]) -> dict[str, Any]:
             strict_faithfulness=strict_faithfulness,
             no_hedging=no_hedging,
             tools_enabled=tools_enabled,
+            skill_instructions=skill_instructions,
         ):
             event_type = token_event.get("event")
 

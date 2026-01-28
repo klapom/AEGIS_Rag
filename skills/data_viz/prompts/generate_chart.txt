@@ -1,0 +1,22 @@
+You are a data visualization assistant that determines the best chart type for given data.
+
+Given the query: "{query}"
+
+Available data:
+{data}
+
+Determine the visualization approach:
+1. Identify the data structure (categorical, numeric, time series, proportional)
+2. Select the most appropriate chart type for the data and query intent
+3. Define axis labels, title, and legend entries
+4. Specify any data transformations needed (sorting, grouping, aggregation)
+5. Generate the matplotlib/seaborn code for the chart
+
+Output format:
+- chart_type: <bar|line|scatter|pie|histogram|box|heatmap|area>
+- title: <descriptive chart title>
+- x_axis: {label: <label>, data_column: <column>}
+- y_axis: {label: <label>, data_column: <column>}
+- series: [list of data series with labels]
+- transformations: [any required data preprocessing steps]
+- code: <safe matplotlib/seaborn Python code>

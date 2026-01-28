@@ -2,7 +2,7 @@
 
 **Date:** 2026-01-27
 **Status:** ✅ Complete
-**Total Story Points:** 44 SP
+**Total Story Points:** 68 SP
 **Predecessor:** Sprint 120 (UI Polish, Tools Activation, Performance Fixes)
 **Successor:** Sprint 122
 
@@ -213,7 +213,7 @@ DELETE /entities/{entity_id}
 
 | Metric | Target | Actual | Status |
 |--------|--------|--------|--------|
-| Story Points | 44 SP | 44 SP | ✅ |
+| Story Points | 44 SP | 56 SP (+12 SP feature 121.6) | ✅ |
 | Lines Removed (TD-054) | ~1,727 | ~1,727 | ✅ |
 | Section Extraction Speedup (TD-078) | ≥10× | **Tokenizer: ~1735×, Parallel: 1.74×, Combined: ~295×** | ✅ |
 | Ingestion Speedup (TD-070) | ≥8× end-to-end | **4.4× (170s→38.5s)** | ✅ |
@@ -401,6 +401,142 @@ DELETE /entities/{entity_id}
 - **Bilingual**: 5 tests (search/summarize/analyze coverage)
 - **Consistency**: 6 tests (skill references, duplicates, priorities, budgets)
 - **YAML Format**: 2 tests (comments, readability)
+
+---
+
+## Feature 121.6: Skill Tool Auto-Resolve + 404 Fixes (12 SP)
+
+**Date Added:** 2026-01-28
+**ADR:** [ADR-058](../adr/ADR-058_SKILL_TOOL_AUTO_RESOLVE.md) — Hybrid Install-Time Classification
+
+### Problem
+1. Two Skill Management API endpoints return HTTP 404: `GET /skills/:name/skill-md` and `GET /skills/lifecycle/metrics`
+2. Skills define static tool bindings in SKILL.md, but no auto-discovery of matching MCP tools exists
+3. When new MCP tools are installed, skills don't automatically gain access even if permissions match
+
+### Solution: Hybrid Install-Time Classification + Runtime Cache Lookup (ADR-058)
+- **Install-time:** Classify new MCP tools via LLM → cache capabilities
+- **Activation-time:** Match skill permissions → cached tool capabilities (~0ms)
+- **Admin governance:** Override auto-resolved bindings via UI
+
+### Sub-Features
+
+| # | Feature | SP | Description |
+|---|---------|-----|-------------|
+| 121.6a | Fix 404: skill-md endpoint | 2 | `GET/PUT /api/v1/skills/:name/skill-md` — Read/update SKILL.md with frontmatter parsing |
+| 121.6b | Fix 404: lifecycle/metrics endpoint | 2 | `GET /api/v1/skills/lifecycle/metrics` — Aggregated active/inactive/error counts + resolver metrics |
+| 121.6c | Tool Capabilities YAML | 1 | `config/tool_capabilities.yaml` — 12 capability categories with keywords + static tools |
+| 121.6d | SkillToolResolver backend | 3 | `src/agents/skills/tool_resolver.py` — Static + LLM classification, cache, admin overrides (~290 LOC) |
+| 121.6e | Resolved Tools API | 2 | `GET /skills/:name/resolved-tools` + `POST /skills/:name/resolved-tools/override` |
+| 121.6f | Frontend Auto-Resolved Panel | 2 | SkillConfigEditor shows resolved tools with source badges (Static/LLM/Override) |
+
+### Files Created/Modified
+
+| Action | File | Description |
+|--------|------|-------------|
+| **CREATE** | `docs/adr/ADR-058_SKILL_TOOL_AUTO_RESOLVE.md` | Architecture Decision Record |
+| **CREATE** | `config/tool_capabilities.yaml` | 12 capability categories (web_search, filesystem, code_execute, etc.) |
+| **CREATE** | `src/agents/skills/tool_resolver.py` | SkillToolResolver class (~290 LOC) |
+| **MODIFY** | `src/api/models/skill_models.py` | +7 Pydantic models (SkillMdResponse, LifecycleMetricsResponse, ResolvedTool*, ToolOverride*) |
+| **MODIFY** | `src/api/v1/skills.py` | +5 endpoints (lifecycle/metrics, skill-md GET/PUT, resolved-tools GET, override POST) |
+| **MODIFY** | `frontend/src/types/skills.ts` | +2 types (ResolvedTool, ResolvedToolsResponse) |
+| **MODIFY** | `frontend/src/api/skills.ts` | +2 API functions (getResolvedTools, setToolOverride) |
+| **MODIFY** | `frontend/src/pages/admin/SkillConfigEditor.tsx` | Auto-Resolved Tools panel with Zap/Shield icons |
+| **MODIFY** | `docs/adr/ADR_INDEX.md` | ADR-058 entry |
+| **MODIFY** | `docs/sprints/SPRINT_121_PLAN.md` | Feature 121.6 documentation |
+
+### API Endpoints (New)
+
+```
+GET    /api/v1/skills/lifecycle/metrics              # Aggregated lifecycle dashboard
+GET    /api/v1/skills/:name/skill-md                 # Get SKILL.md (content + frontmatter)
+PUT    /api/v1/skills/:name/skill-md                 # Update SKILL.md content
+GET    /api/v1/skills/:name/resolved-tools           # Auto-resolved tools list
+POST   /api/v1/skills/:name/resolved-tools/override  # Admin override for tool binding
+```
+
+### Capability Categories (config/tool_capabilities.yaml)
+
+| Category | Static Tools | Description |
+|----------|-------------|-------------|
+| web_search | web_search, google_search, brave_search | Search the web |
+| web_read | browser, fetch_url, playwright | Browse web pages |
+| filesystem_read | read_file, list_directory, glob | Read files |
+| filesystem_write | write_file, create_directory | Write files |
+| code_execute | python_execute, bash_execute | Execute code |
+| database_read | sql_query, neo4j_query, qdrant_search | Query databases |
+| database_write | sql_insert, neo4j_write | Write to databases |
+| api_call | http_request, rest_api, graphql_query | HTTP API calls |
+| memory_access | memory_search, memory_store | Agent memory |
+| document_processing | pdf_reader, docling_parse | Process documents |
+| communication | send_email, slack_message | Notifications |
+| calculation | calculator, numpy_compute | Math/analysis |
+
+---
+
+### 121.7: Skill Chat Integration (8 SP)
+
+**Problem:** Skills are not connected to the chat flow. The SkillRouter exists (Sprint 95) but is never invoked during query processing — skills cannot influence LLM behavior or tool selection.
+
+**Architecture Decision:** Option C (Coordinator pre-processing) + System Prompt injection
+
+| Sub-Feature | Description | SP |
+|-------------|-------------|----|
+| 121.7a | SKILL_ACTIVATION PhaseType | 1 | New enum value in `phase_event.py` |
+| 121.7b | AgentState `skill_instructions` field | 1 | New field in Pydantic state model |
+| 121.7c | Coordinator skill discovery + activation | 3 | Intent → skills mapping, SKILL.md reading, PhaseEvent emission |
+| 121.7d | AnswerGenerator skill injection | 1 | `## Active Skills` section before `**Antwort:**` |
+| 121.7e | Graph node pass-through | 1 | `llm_answer_node` passes `skill_instructions` to generator |
+| 121.7f | SSE skill_activation event | 1 | `chat.py` handles SKILL_ACTIVATION PhaseEvents |
+
+**Flow:**
+```
+Query → Coordinator → [SkillRegistry.discover() → SKILL.md reading → PhaseEvent]
+     → create_initial_state(skill_instructions=...) → graph.astream()
+     → llm_answer_node → AnswerGenerator(skill_instructions in system prompt)
+     → SSE: skill_activation event → Frontend: SkillActivationIndicator
+```
+
+### Files Modified
+
+| Action | File | Description |
+|--------|------|-------------|
+| **MODIFY** | `src/models/phase_event.py` | +1 PhaseType: `SKILL_ACTIVATION` |
+| **MODIFY** | `src/agents/state.py` | +1 field: `skill_instructions: str` |
+| **MODIFY** | `src/agents/coordinator.py` | Skill activation in `process_query()` and `_execute_workflow_with_events()` |
+| **MODIFY** | `src/agents/answer_generator.py` | `skill_instructions` parameter in `generate_with_citations_streaming()` |
+| **MODIFY** | `src/agents/graph.py` | Pass `skill_instructions` through `llm_answer_node` |
+| **MODIFY** | `src/api/v1/chat.py` | SSE handler for `SKILL_ACTIVATION` PhaseEvents |
+
+---
+
+### 121.8: ToolExecutionPanel UI Upgrade (4 SP)
+
+**Problem:** `ToolExecutionPanel.tsx` (Sprint 119) lacks input display, syntax highlighting, and copy-to-clipboard compared to `ToolExecutionDisplay.tsx` (Sprint 63). Also missing: tool-type icons, collapsible sections.
+
+**Changes:**
+
+| Sub-Feature | Description | SP |
+|-------------|-------------|----|
+| 121.8a | Tool input display (collapsible) | 1 | Shows tool parameters before execution |
+| 121.8b | Syntax-aware highlighting | 1 | bash/python/json/text detection based on tool name |
+| 121.8c | Copy-to-clipboard button | 1 | `navigator.clipboard.writeText()` with visual feedback |
+| 121.8d | Tool-type icons | 0.5 | Terminal/Code/Search/Globe/Wrench per tool type |
+| 121.8e | `skill_activation` SSE handler | 0.5 | Multi-skill array format support in `useStreamChat.ts` |
+
+### Files Modified
+
+| Action | File | Description |
+|--------|------|-------------|
+| **MODIFY** | `frontend/src/components/chat/ToolExecutionPanel.tsx` | Input display, syntax highlighting, copy, icons |
+| **MODIFY** | `frontend/src/hooks/useStreamChat.ts` | `skill_activation` array event handler |
+
+### Technical Debt Created
+
+| TD# | Title | SP | Priority |
+|-----|-------|-----|----------|
+| [TD-122](../technical-debt/TD-122_TOOL_PROGRESS_STREAMING.md) | Tool Progress Streaming (Backend) | 5 | LOW |
+| [TD-123](../technical-debt/TD-123_TOOL_DISPLAY_COMPONENT_MERGE.md) | Tool Display Component Merge | 3 | LOW |
 
 ---
 
