@@ -403,16 +403,19 @@ class SkillRegistry:
             logger.error("script_load_error", path=str(path), error=str(e))
         return None
 
-    def activate(self, name: str) -> str:
+    def activate(self, name: str, max_tokens: int = 300) -> str:
         """Activate a skill and return its instructions for the context.
 
         This is the key operation that adds skill knowledge to the agent.
+        Instructions are truncated to max_tokens to prevent prompt bloat.
 
         Args:
             name: Skill name to activate
+            max_tokens: Maximum tokens to return (default: 300 = ~1200 chars)
+                        Sprint 121: Added to prevent 6000+ byte instructions from slowing LLM
 
         Returns:
-            Skill instructions to add to agent context
+            Skill instructions to add to agent context (truncated if necessary)
 
         Example:
             >>> registry = SkillRegistry()
@@ -430,8 +433,32 @@ class SkillRegistry:
         if name not in self._active:
             self._active.append(name)
 
-        logger.info("skill_activated", name=name)
-        return skill.instructions
+        # Sprint 121: Truncate instructions to prevent prompt bloat
+        instructions = skill.instructions
+        max_chars = max_tokens * 4  # ~4 chars per token
+        if len(instructions) > max_chars:
+            # Find a good truncation point (end of paragraph or sentence)
+            truncated = instructions[:max_chars]
+            # Try to end at paragraph boundary
+            last_paragraph = truncated.rfind("\n\n")
+            if last_paragraph > max_chars * 0.6:  # At least 60% of content
+                truncated = truncated[:last_paragraph]
+            else:
+                # Try to end at sentence boundary
+                last_sentence = truncated.rfind(". ")
+                if last_sentence > max_chars * 0.6:
+                    truncated = truncated[:last_sentence + 1]
+            instructions = truncated.strip() + "\n\n[Instructions truncated for efficiency]"
+            logger.info(
+                "skill_instructions_truncated",
+                name=name,
+                original_chars=len(skill.instructions),
+                truncated_chars=len(instructions),
+                max_tokens=max_tokens,
+            )
+
+        logger.info("skill_activated", name=name, instruction_chars=len(instructions))
+        return instructions
 
     def deactivate(self, name: str):
         """Deactivate a skill to save context tokens.

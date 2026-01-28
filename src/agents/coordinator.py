@@ -358,27 +358,23 @@ class CoordinatorAgent:
                     target_skills = intent_skill_map.get(intent or "hybrid", ["retrieval"])
 
                     # Collect instructions from available skills
+                    # Sprint 121: Use registry.activate() for token-limited instructions
                     for skill_name in target_skills:
                         if skill_name in available:
-                            skill_meta = available[skill_name]
-                            # Read SKILL.md instructions
-                            skill_md_path = registry.skills_dir / skill_name / "SKILL.md"
-                            if skill_md_path.exists():
-                                content = skill_md_path.read_text()
-                                # Strip frontmatter, keep instructions
-                                import re
-
-                                fm_match = re.match(
-                                    r"^---\n.*?\n---\n?(.*)", content, re.DOTALL
-                                )
-                                instructions = (
-                                    fm_match.group(1).strip() if fm_match else content.strip()
-                                )
+                            try:
+                                # activate() returns truncated instructions (max 300 tokens)
+                                instructions = registry.activate(skill_name)
                                 if instructions:
                                     activated_skills.append(skill_name)
                                     skill_instructions += (
                                         f"\n\n## Skill: {skill_name}\n{instructions}"
                                     )
+                            except Exception as e:
+                                logger.warning(
+                                    "skill_activation_error",
+                                    skill=skill_name,
+                                    error=str(e),
+                                )
 
                     if activated_skills:
                         skill_instructions = skill_instructions.strip()
@@ -763,23 +759,21 @@ class CoordinatorAgent:
                 target_skills = intent_skill_map.get(intent or "hybrid", ["retrieval"])
 
                 # Collect instructions from available skills
+                # Sprint 121: Use registry.activate() for token-limited instructions
                 for skill_name in target_skills:
                     if skill_name in available:
-                        skill_meta = available[skill_name]
-                        # Read SKILL.md instructions
-                        skill_md_path = registry.skills_dir / skill_name / "SKILL.md"
-                        if skill_md_path.exists():
-                            content = skill_md_path.read_text()
-                            # Strip frontmatter, keep instructions
-                            import re
-
-                            fm_match = re.match(r"^---\n.*?\n---\n?(.*)", content, re.DOTALL)
-                            instructions = (
-                                fm_match.group(1).strip() if fm_match else content.strip()
-                            )
+                        try:
+                            # activate() returns truncated instructions (max 300 tokens)
+                            instructions = registry.activate(skill_name)
                             if instructions:
                                 activated_skills.append(skill_name)
                                 skill_instructions += f"\n\n## Skill: {skill_name}\n{instructions}"
+                        except Exception as e:
+                            logger.warning(
+                                "skill_activation_error",
+                                skill=skill_name,
+                                error=str(e),
+                            )
 
                 if activated_skills:
                     skill_instructions = skill_instructions.strip()
