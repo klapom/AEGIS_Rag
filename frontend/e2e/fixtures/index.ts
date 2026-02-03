@@ -114,6 +114,7 @@ export const test = base.extend<Fixtures>({
   chatPage: async ({ page }, use) => {
     await setupAuthMocking(page);
     const chatPage = new ChatPage(page);
+    // Sprint 122 Fix: ChatPage.goto() now handles skip-if-already-home logic
     await chatPage.goto();
     await use(chatPage);
   },

@@ -27,10 +27,20 @@ export class ChatPage extends BasePage {
 
   /**
    * Navigate to chat page
+   * Sprint 122 Fix: Skip navigation if already on home page to avoid race condition
+   * with auth token persistence. Just wait for chat UI to be ready.
    */
   async goto() {
-    await super.goto('/');
-    await this.waitForNetworkIdle();
+    const currentUrl = this.page.url();
+    const isAlreadyHome = currentUrl.endsWith('/') && !currentUrl.includes('/login');
+
+    if (!isAlreadyHome) {
+      await super.goto('/');
+      await this.waitForNetworkIdle();
+    }
+
+    // Always wait for chat interface to be ready
+    await this.messageInput.waitFor({ state: 'visible', timeout: 30000 });
   }
 
   /**

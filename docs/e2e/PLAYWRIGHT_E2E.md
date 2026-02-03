@@ -1,6 +1,6 @@
 # AegisRAG Playwright E2E Testing Guide
 
-**Last Updated:** 2026-01-26 (Sprint 119 - Skills/Tools 18/18, History 12/14, Phase 3 Testing)
+**Last Updated:** 2026-02-03 (Sprint 122 - Multi-Turn Timeout Fixes, 12/15 Pass Rate)
 **Framework:** Playwright + TypeScript
 **Test Environment:** http://192.168.178.10 (Docker Container)
 **Auth Credentials:** admin / admin123
@@ -8,7 +8,106 @@
 
 ---
 
-## 🆕 Sprint 119: Phase 3 Feature Testing & E2E Fixes ✅ COMPLETE
+## 🆕 Sprint 122: Multi-Turn RAG Timeout Fixes ✅ COMPLETE
+
+**Date:** 2026-02-03 | **Status:** ✅ Complete
+
+### Problem Summary
+
+Multi-turn RAG tests were timing out at 2-3 minutes per test, causing 0% pass rate. Root cause analysis revealed two critical issues:
+
+| Issue | Root Cause | Impact |
+|-------|------------|--------|
+| **LLM Context Truncation** | `nemotron-no-think:latest` has only 4K context window | RAG queries (8-15K tokens) truncated → empty/poor responses → timeouts |
+| **Auth Race Condition** | Double navigation after login (`setupAuthMocking` + `ChatPage.goto()`) | Auth token not persisted before page reload → redirect to login → timeout |
+
+### Fixes Implemented
+
+#### Fix 1: Model Configuration (.env)
+
+```bash
+# Before: Only 4K context window
+OLLAMA_MODEL_GENERATION=nemotron-no-think:latest
+OLLAMA_MODEL_ROUTER=nemotron-no-think:latest
+
+# After: 128K context window (Sprint 122)
+OLLAMA_MODEL_GENERATION=nemotron-3-nano:32k
+OLLAMA_MODEL_ROUTER=nemotron-3-nano:32k
+```
+
+**Why this matters:** RAG queries include System Prompt (~500 tokens) + Query (~100) + Retrieved Contexts (2,500-12,000) + History (1,000+). With 4K context, prompts were silently truncated, causing the LLM to produce empty or irrelevant responses.
+
+#### Fix 2: Smart Navigation (ChatPage.ts)
+
+```typescript
+// Before: Always navigated, causing race condition
+async goto() {
+  await super.goto('/');
+  await this.waitForNetworkIdle();
+}
+
+// After: Skip navigation if already on home page (Sprint 122)
+async goto() {
+  const currentUrl = this.page.url();
+  const isAlreadyHome = currentUrl.endsWith('/') && !currentUrl.includes('/login');
+
+  if (!isAlreadyHome) {
+    await super.goto('/');
+    await this.waitForNetworkIdle();
+  }
+
+  // Always wait for chat interface to be ready
+  await this.messageInput.waitFor({ state: 'visible', timeout: 30000 });
+}
+```
+
+**Why this matters:** After `setupAuthMocking` completes login, the URL is `/` and auth token is stored in localStorage. If `ChatPage.goto()` immediately navigates to `/` again, React hasn't finished persisting the token yet, causing the app to think the user is unauthenticated and redirecting back to login.
+
+### Test Results (Sprint 122)
+
+| Test Suite | Before | After | Improvement |
+|------------|--------|-------|-------------|
+| multi-turn-rag.spec.ts | 0/15 (0%) | **12/15 (80%)** | +80% |
+| Total Duration | 1.1 hours | **7.5 minutes** | 9x faster |
+| Avg Test Time | 2-3 min timeout | **~30 seconds** | 4-6x faster |
+
+### Remaining Failures (3 Tests)
+
+The 3 remaining failures are **NOT timeout issues** - they fail because the tests expect `[data-testid="conversation-id"]` which doesn't exist in the current UI:
+
+| Test | Line | Expected Element | Actual UI |
+|------|------|------------------|-----------|
+| should start new conversation with conversation_id | 29 | `[data-testid="conversation-id"]` | Session shown as "Session: xxx..." text |
+| should maintain separate conversations independently | 148 | `[data-testid="conversation-id"]` | Same as above |
+| should maintain conversation across page reload | 299 | `[data-testid="conversation-id"]` | Same as above |
+
+**Recommended Fix:** Either add `data-testid="conversation-id"` to the session display component, or update tests to use the actual selector.
+
+### Key Insights (Sprint 122)
+
+1. **Context Window is Critical:** For RAG applications, always ensure the LLM context window is large enough for: system prompt + query + all retrieved contexts + conversation history. 4K is far too small; 32K-128K is recommended.
+
+2. **Auth Token Persistence Timing:** React state updates and localStorage writes are asynchronous. After login, wait for the UI to fully render before triggering new navigation.
+
+3. **Double Navigation Anti-Pattern:** Fixtures that navigate to `/` should not be followed by Page Objects that also navigate to `/`. Make one or the other conditional.
+
+4. **Trace Analysis is Essential:** The Playwright trace viewer (`npx playwright show-trace trace.zip`) was crucial for diagnosing the race condition - it showed the exact sequence: login → navigate to `/` → immediate second `goto('/')` → page shows login again.
+
+### Next Tests to Address
+
+Based on the current test suite analysis, recommended priorities:
+
+| Priority | Test Suite | Current Status | Estimated Effort |
+|----------|------------|----------------|------------------|
+| 🔴 High | `group08-deep-research.spec.ts` | Likely timeout issues | Medium - may need similar fixes |
+| 🔴 High | `group09-long-context.spec.ts` | 128K context should help | Low - retest with new model |
+| 🟡 Medium | `chat/conversation-ui.spec.ts` | Auth-related | Low - apply same fixes |
+| 🟡 Medium | `research-mode.spec.ts` | Needs investigation | Medium |
+| 🟢 Low | Selector mismatches (3 tests) | Add missing data-testids | Low |
+
+---
+
+## Sprint 119: Phase 3 Feature Testing & E2E Fixes ✅ COMPLETE
 
 **Date:** 2026-01-25 to 2026-01-26 | **Status:** ✅ Complete
 
