@@ -339,7 +339,7 @@ export function StreamingAnswer({ query, mode, namespaces, sessionId, onSessionI
 
       {/* Metadata */}
       {metadata && !isStreaming && (
-        <div className="flex items-center space-x-6 text-sm text-gray-500 pt-4 border-t border-gray-200">
+        <div className="flex items-center flex-wrap gap-4 text-sm text-gray-500 pt-4 border-t border-gray-200">
           {metadata.latency_seconds && (
             <span className="flex items-center space-x-1">
               <span>⚡</span>
@@ -350,6 +350,20 @@ export function StreamingAnswer({ query, mode, namespaces, sessionId, onSessionI
             <span className="flex items-center space-x-1">
               <span>📊</span>
               <span>{metadata.agent_path.join(' → ')}</span>
+            </span>
+          )}
+          {/* Sprint 123.11: Display embedding model info */}
+          {metadata.embedding_model && (
+            <span className="flex items-center space-x-1" data-testid="embedding-model">
+              <span>🧬</span>
+              <span>{metadata.embedding_model}</span>
+            </span>
+          )}
+          {/* Sprint 123.11: Display vector dimension */}
+          {metadata.vector_dimension && (
+            <span className="flex items-center space-x-1" data-testid="vector-dimension">
+              <span>📐</span>
+              <span>{metadata.vector_dimension}D</span>
             </span>
           )}
         </div>

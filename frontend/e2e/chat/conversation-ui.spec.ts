@@ -198,60 +198,10 @@ test.describe('Sprint 46 - Feature 46.1: ConversationView', () => {
     expect(lastMessage.length).toBeGreaterThan(50);
   });
 
-  /**
-   * TC-46.1.9: Verify multiple messages maintain proper layout
-   * Conversation should grow vertically with proper spacing
-   * Sprint 113 Fix: Added explicit waits for message rendering
-   * Sprint 118 Fix: Increased timeouts for LLM response times (60-90s per response)
-   * Sprint 123.9 Fix: SKIPPED - Sequential LLM requests timeout unpredictably
-   *
-   * SKIP REASON: Test sends two messages sequentially (120-180s total wait time).
-   * Each LLM response takes 60-90s including warmup, causing cumulative timeouts.
-   * This test is redundant with TC-46.1.7 (single message), TC-46.1.12 (multiple avatars),
-   * and TC-46.1.13 (responsive layout) which all verify the same functionality without
-   * sequential delays.
-   *
-   * See: docs/e2e/TC-46.1.9_ROOT_CAUSE_ANALYSIS.md for detailed root cause analysis.
-   */
-  test.skip('TC-46.1.9: should maintain proper layout with multiple messages', async ({ chatPage }) => {
-    // Send first message
-    await chatPage.sendMessage('What is Python?');
-    await chatPage.waitForResponse();
-
-    // Sprint 113: Wait for first message pair to be rendered
-    // Sprint 118: Increased timeout from 10s to 30s for slow renders
-    const messages = chatPage.page.locator('[data-testid="message"]');
-    await expect(messages).toHaveCount(2, { timeout: 30000 });
-
-    // Send second message
-    await chatPage.sendMessage('What is Java?');
-    await chatPage.waitForResponse();
-
-    // Sprint 113: Wait for all 4 messages to be rendered (with timeout)
-    // Sprint 118 Fix: Increased timeout from 30s to 150s (matching waitForResponse)
-    // LLM responses take 60-90s each, so 30s was insufficient
-    await expect(messages).toHaveCount(4, { timeout: 150000 });
-
-    // All messages should be visible
-    const allMessages = await chatPage.getAllMessages();
-    expect(allMessages.length).toBeGreaterThanOrEqual(4); // 2 user + 2 assistant
-
-    // Message bubbles should all be visible
-    const messageBubbles = chatPage.page.locator('[data-testid="message-bubble"]');
-    const bubbleCount = await messageBubbles.count();
-    expect(bubbleCount).toBeGreaterThanOrEqual(4);
-
-    // Verify proper alternation: user, assistant, user, assistant
-    const firstUserBubble = chatPage.page
-      .locator('[data-testid="message-bubble"][data-role="user"]')
-      .first();
-    const firstAssistantBubble = chatPage.page
-      .locator('[data-testid="message-bubble"][data-role="assistant"]')
-      .first();
-
-    await expect(firstUserBubble).toBeVisible();
-    await expect(firstAssistantBubble).toBeVisible();
-  });
+  // TC-46.1.9: REMOVED in Sprint 123.10
+  // Reason: Test was redundant with TC-46.1.7, TC-46.1.12, TC-46.1.13
+  // Sequential LLM requests caused 120-180s cumulative timeouts
+  // See: docs/e2e/TC-46.1.9_ROOT_CAUSE_ANALYSIS.md for full analysis
 
   /**
    * TC-46.1.10: Verify empty state message

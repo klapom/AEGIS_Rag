@@ -24,7 +24,7 @@ import {
 } from '../settings';
 import type { GraphExpansionConfig } from '../../types/settings';
 
-export type SearchMode = 'hybrid' | 'vector' | 'graph' | 'memory';
+export type SearchMode = 'hybrid' | 'vector' | 'graph' | 'memory' | 'sparse';
 
 interface SearchInputProps {
   onSubmit: (query: string, mode: SearchMode, namespaces: string[], graphExpansionConfig?: GraphExpansionConfig) => void;
@@ -38,6 +38,8 @@ interface SearchInputProps {
   showResearchToggle?: boolean;
   /** Sprint 79: Whether Graph Expansion settings should be shown */
   showGraphExpansionToggle?: boolean;
+  /** Sprint 123.11: Initial mode (from URL or parent) */
+  initialMode?: SearchMode;
 }
 
 export function SearchInput({
@@ -48,10 +50,11 @@ export function SearchInput({
   onResearchModeToggle,
   showResearchToggle = true,
   showGraphExpansionToggle = true,
+  initialMode = 'hybrid',
 }: SearchInputProps) {
   const [query, setQuery] = useState('');
-  // Sprint 52: Fixed to hybrid mode (mode selector removed)
-  const mode: SearchMode = 'hybrid';
+  // Sprint 123.11: Mode selector support (replaces hardcoded 'hybrid')
+  const [mode, setMode] = useState<SearchMode>(initialMode);
   const [selectedNamespaces, setSelectedNamespaces] = useState<string[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -106,6 +109,29 @@ export function SearchInput({
 
   return (
     <div className="w-full space-y-3 overflow-visible">
+      {/* Sprint 123.11: Mode Selector */}
+      <div className="flex items-center gap-2" data-testid="search-mode-selector">
+        {(['vector', 'sparse', 'hybrid', 'graph', 'memory'] as const).map((modeOption) => (
+          <button
+            key={modeOption}
+            type="button"
+            onClick={() => setMode(modeOption)}
+            data-testid={`mode-${modeOption}`}
+            className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 ${
+              mode === modeOption
+                ? 'bg-primary text-white shadow-sm'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            {modeOption === 'vector' && '🔍 Vector'}
+            {modeOption === 'sparse' && '📝 Sparse'}
+            {modeOption === 'hybrid' && '⚡ Hybrid'}
+            {modeOption === 'graph' && '🕸️ Graph'}
+            {modeOption === 'memory' && '💭 Memory'}
+          </button>
+        ))}
+      </div>
+
       {/* Main input container with rounded border */}
       <div className="relative bg-white border border-gray-300 rounded-2xl shadow-sm
                       focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20

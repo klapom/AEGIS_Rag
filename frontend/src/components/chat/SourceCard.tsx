@@ -202,6 +202,11 @@ export function SourceCard({ source, index }: SourceCardProps) {
   // Sprint 92: Get graph hops from metadata (if graph search was used)
   const graphHops = source.metadata?.graph_hops_used as number | undefined;
 
+  // Sprint 123.11: Get RRF score breakdown from metadata (if available)
+  const sparseScore = source.metadata?.sparse_score as number | undefined;
+  const denseScore = source.metadata?.dense_score as number | undefined;
+  const hasRRFBreakdown = sparseScore !== undefined && denseScore !== undefined;
+
   // Sprint 62.4: Extract section metadata and document type
   const sectionMetadata = extractSectionMetadata(source);
   const docType = source.document_type || getDocumentType(source);
@@ -324,9 +329,14 @@ export function SourceCard({ source, index }: SourceCardProps) {
             </span>
           )}
 
-          {/* Score Badge */}
+          {/* Score Badge - Sprint 123.11: Show RRF breakdown if available */}
           {source.score != null && source.score > 0 && (
-            <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-700 rounded-md flex-shrink-0">
+            <span
+              className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-700 rounded-md flex-shrink-0"
+              title={hasRRFBreakdown ? `RRF: ${(source.score * 100).toFixed(0)}% (Dense: ${(denseScore! * 100).toFixed(0)}%, Sparse: ${(sparseScore! * 100).toFixed(0)}%)` : undefined}
+              data-testid="source-score-badge"
+            >
+              {hasRRFBreakdown && '⚡ '}
               {(source.score * 100).toFixed(0)}%
             </span>
           )}
@@ -394,6 +404,20 @@ export function SourceCard({ source, index }: SourceCardProps) {
               <div>
                 <span className="text-gray-500">Suchmethode:</span>
                 <span className="ml-2 text-gray-700">{getSearchTypeName(searchType)}</span>
+              </div>
+            )}
+
+            {/* Sprint 123.11: RRF Score Breakdown */}
+            {hasRRFBreakdown && (
+              <div className="col-span-2" data-testid="rrf-score-breakdown">
+                <span className="text-gray-500">RRF Fusion:</span>
+                <span className="ml-2 text-gray-700">
+                  Dense: <span className="font-medium text-blue-600">{(denseScore! * 100).toFixed(0)}%</span>
+                  {' + '}
+                  Sparse: <span className="font-medium text-amber-600">{(sparseScore! * 100).toFixed(0)}%</span>
+                  {' → '}
+                  Combined: <span className="font-medium text-primary">{(source.score! * 100).toFixed(0)}%</span>
+                </span>
               </div>
             )}
 

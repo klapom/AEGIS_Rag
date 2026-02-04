@@ -85,6 +85,7 @@ export function SearchResultsPage() {
               onSubmit={handleNewSearch}
               placeholder="Neue Frage..."
               autoFocus={false}
+              initialMode={mode}
             />
           </div>
         </div>
@@ -150,6 +151,7 @@ export function SearchResultsPage() {
             onSubmit={handleNewSearch}
             placeholder="Neue Suche..."
             autoFocus={false}
+            initialMode={mode}
           />
         </div>
       </div>
