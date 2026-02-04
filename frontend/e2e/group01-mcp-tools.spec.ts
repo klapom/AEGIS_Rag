@@ -8,12 +8,16 @@
  * - Tool configuration modal
  *
  * Sprint 106 Fix: Use Group 03 pattern (setupAuthMocking in beforeEach + page.goto)
+ * Sprint 123 Fix: Use navigateClientSide instead of setupAuthMocking + page.goto
+ *   - setupAuthMocking leaves user at / after login
+ *   - page.goto() does full page reload, losing React auth state
+ *   - navigateClientSide handles auth redirect properly
  *
  * @see /home/admin/projects/aegisrag/AEGIS_Rag/frontend/src/pages/admin/MCPToolsPage.tsx
  * @see /home/admin/projects/aegisrag/AEGIS_Rag/src/api/v1/mcp.py
  */
 
-import { test, expect, setupAuthMocking } from './fixtures';
+import { test, expect, navigateClientSide } from './fixtures';
 
 const MCP_TOOLS_URL = '/admin/tools';
 
@@ -129,10 +133,9 @@ const mockMCPTools = [
 ];
 
 test.describe('Group 1: MCP Tool Management', () => {
-  // Sprint 106 Fix: Use Group 03 pattern - setupAuthMocking + API mocks in beforeEach
+  // Sprint 123 Fix: Remove setupAuthMocking, use navigateClientSide in tests instead
+  // This avoids auth state race condition when page.goto() does full page reload
   test.beforeEach(async ({ page }) => {
-    await setupAuthMocking(page);
-
     // Mock MCP APIs with correct path pattern (frontend calls /api/v1/mcp/*)
     await page.route('**/api/v1/mcp/servers', async (route) => {
       await route.fulfill({
@@ -194,15 +197,14 @@ test.describe('Group 1: MCP Tool Management', () => {
   });
 
   test('should navigate to MCP Tools page', async ({ page }) => {
-    await page.goto(MCP_TOOLS_URL);
-    await page.waitForLoadState('networkidle');
+    await navigateClientSide(page, MCP_TOOLS_URL);
 
     // Verify page title
     const pageTitle = page.locator('h1:has-text("MCP Tools")');
     await expect(pageTitle).toBeVisible();
 
-    // Verify page description
-    const description = page.locator('text=Manage MCP servers and test tool execution');
+    // Verify page description (Sprint 123: Updated to match actual component text)
+    const description = page.locator('text=Extend your RAG system with external tools');
     await expect(description).toBeVisible();
 
     // Verify data-testid on main container
@@ -211,29 +213,28 @@ test.describe('Group 1: MCP Tool Management', () => {
   });
 
   test('should display MCP server list', async ({ page }) => {
-    await page.goto(MCP_TOOLS_URL);
-    await page.waitForLoadState('networkidle');
+    await navigateClientSide(page, MCP_TOOLS_URL);
 
     // Wait for server list to load
+    // Sprint 123: Use scoped selectors to avoid strict mode violations
     const serverList = page.locator('[data-testid="mcp-server-list"]');
     await expect(serverList).toBeVisible({ timeout: 10000 });
 
     // Verify bash-tools server is visible
-    const bashServer = page.locator('text=bash-tools');
+    const bashServer = serverList.locator('h3:has-text("bash-tools")');
     await expect(bashServer).toBeVisible();
 
     // Verify python-tools server is visible
-    const pythonServer = page.locator('text=python-tools');
+    const pythonServer = serverList.locator('h3:has-text("python-tools")');
     await expect(pythonServer).toBeVisible();
 
     // Verify browser-tools server is visible
-    const browserServer = page.locator('text=browser-tools');
+    const browserServer = serverList.locator('h3:has-text("browser-tools")');
     await expect(browserServer).toBeVisible();
   });
 
   test('should display tool count for each server', async ({ page }) => {
-    await page.goto(MCP_TOOLS_URL);
-    await page.waitForLoadState('networkidle');
+    await navigateClientSide(page, MCP_TOOLS_URL);
 
     // Look for tool count badges (may vary by implementation)
     const bashToolCount = page.locator('text=/bash-tools/').locator('xpath=../..').locator('text=/3.*tools?|tools?.*3/i');
@@ -244,8 +245,7 @@ test.describe('Group 1: MCP Tool Management', () => {
   });
 
   test('should display connection status badges', async ({ page }) => {
-    await page.goto(MCP_TOOLS_URL);
-    await page.waitForLoadState('networkidle');
+    await navigateClientSide(page, MCP_TOOLS_URL);
 
     // Check for status indicators (connected/disconnected)
     const connectedBadge = page.locator('text=/connected/i').first();
@@ -260,8 +260,7 @@ test.describe('Group 1: MCP Tool Management', () => {
   });
 
   test('should have search functionality', async ({ page }) => {
-    await page.goto(MCP_TOOLS_URL);
-    await page.waitForLoadState('networkidle');
+    await navigateClientSide(page, MCP_TOOLS_URL);
 
     // Find search input
     const searchInput = page.locator('[data-testid="server-search-input"]');
@@ -270,18 +269,20 @@ test.describe('Group 1: MCP Tool Management', () => {
     // Type in search
     await searchInput.fill('bash');
 
+    // Sprint 123: Use scoped selectors to avoid strict mode violations
+    const serverList = page.locator('[data-testid="mcp-server-list"]');
+
     // Verify bash-tools is visible
-    const bashServer = page.locator('text=bash-tools');
+    const bashServer = serverList.locator('h3:has-text("bash-tools")');
     await expect(bashServer).toBeVisible();
 
     // Verify browser-tools is not visible (filtered out)
-    const browserServer = page.locator('text=browser-tools');
+    const browserServer = serverList.locator('h3:has-text("browser-tools")');
     await expect(browserServer).not.toBeVisible();
   });
 
   test('should have status filter dropdown', async ({ page }) => {
-    await page.goto(MCP_TOOLS_URL);
-    await page.waitForLoadState('networkidle');
+    await navigateClientSide(page, MCP_TOOLS_URL);
 
     // Find status filter
     const statusFilter = page.locator('[data-testid="status-filter"]');
@@ -290,18 +291,20 @@ test.describe('Group 1: MCP Tool Management', () => {
     // Select "Connected" filter
     await statusFilter.selectOption('connected');
 
+    // Sprint 123: Use scoped selectors to avoid strict mode violations
+    const serverList = page.locator('[data-testid="mcp-server-list"]');
+
     // Verify bash-tools is visible (connected)
-    const bashServer = page.locator('text=bash-tools');
+    const bashServer = serverList.locator('h3:has-text("bash-tools")');
     await expect(bashServer).toBeVisible();
 
     // Verify browser-tools is not visible (disconnected)
-    const browserServer = page.locator('text=browser-tools');
+    const browserServer = serverList.locator('h3:has-text("browser-tools")');
     await expect(browserServer).not.toBeVisible();
   });
 
   test('should have refresh button', async ({ page }) => {
-    await page.goto(MCP_TOOLS_URL);
-    await page.waitForLoadState('networkidle');
+    await navigateClientSide(page, MCP_TOOLS_URL);
 
     // Find refresh button
     const refreshButton = page.locator('[data-testid="refresh-servers"]');
@@ -329,8 +332,7 @@ test.describe('Group 1: MCP Tool Management', () => {
   });
 
   test('should display connect button for disconnected servers', async ({ page }) => {
-    await page.goto(MCP_TOOLS_URL);
-    await page.waitForLoadState('networkidle');
+    await navigateClientSide(page, MCP_TOOLS_URL);
 
     // Find browser-tools server (disconnected)
     const browserServerCard = page.locator('text=browser-tools').locator('xpath=../..').first();
@@ -343,8 +345,7 @@ test.describe('Group 1: MCP Tool Management', () => {
   });
 
   test('should display disconnect button for connected servers', async ({ page }) => {
-    await page.goto(MCP_TOOLS_URL);
-    await page.waitForLoadState('networkidle');
+    await navigateClientSide(page, MCP_TOOLS_URL);
 
     // Find bash-tools server (connected)
     const bashServerCard = page.locator('text=bash-tools').locator('xpath=../..').first();
@@ -357,8 +358,7 @@ test.describe('Group 1: MCP Tool Management', () => {
   });
 
   test('should handle connect server action', async ({ page }) => {
-    await page.goto(MCP_TOOLS_URL);
-    await page.waitForLoadState('networkidle');
+    await navigateClientSide(page, MCP_TOOLS_URL);
 
     // Find connect button for browser-tools
     const browserServerCard = page.locator('text=browser-tools').locator('xpath=../..').first();
@@ -375,8 +375,7 @@ test.describe('Group 1: MCP Tool Management', () => {
   });
 
   test('should handle disconnect server action', async ({ page }) => {
-    await page.goto(MCP_TOOLS_URL);
-    await page.waitForLoadState('networkidle');
+    await navigateClientSide(page, MCP_TOOLS_URL);
 
     // Find disconnect button for bash-tools
     const bashServerCard = page.locator('text=bash-tools').locator('xpath=../..').first();
@@ -393,8 +392,7 @@ test.describe('Group 1: MCP Tool Management', () => {
   });
 
   test('should display health monitor', async ({ page }) => {
-    await page.goto(MCP_TOOLS_URL);
-    await page.waitForLoadState('networkidle');
+    await navigateClientSide(page, MCP_TOOLS_URL);
 
     // Look for health status indicators
     const healthStatus = page.locator('text=/healthy|connected.*servers?/i').first();
@@ -404,8 +402,7 @@ test.describe('Group 1: MCP Tool Management', () => {
   });
 
   test('should have back to admin button', async ({ page }) => {
-    await page.goto(MCP_TOOLS_URL);
-    await page.waitForLoadState('networkidle');
+    await navigateClientSide(page, MCP_TOOLS_URL);
 
     // Find back button
     const backButton = page.locator('[data-testid="back-to-admin-button"]');
@@ -420,8 +417,7 @@ test.describe('Group 1: MCP Tool Management', () => {
   });
 
   test('should display tool execution panel', async ({ page }) => {
-    await page.goto(MCP_TOOLS_URL);
-    await page.waitForLoadState('networkidle');
+    await navigateClientSide(page, MCP_TOOLS_URL);
 
     // Sprint 106 Fix: Use testid to avoid strict mode violation
     const toolExecution = page.locator('[data-testid="mcp-tool-execution-panel"]');
@@ -432,8 +428,7 @@ test.describe('Group 1: MCP Tool Management', () => {
     // Set mobile viewport
     await page.setViewportSize({ width: 375, height: 667 });
 
-    await page.goto(MCP_TOOLS_URL);
-    await page.waitForLoadState('networkidle');
+    await navigateClientSide(page, MCP_TOOLS_URL);
 
     // Look for mobile tab navigation
     const serversTab = page.locator('[data-testid="tab-servers"]');
@@ -455,10 +450,8 @@ test.describe('Group 1: MCP Tool Management', () => {
 });
 
 test.describe('Group 1: Tool List Display', () => {
-  // Sprint 106 Fix: Same pattern as main describe block
+  // Sprint 123 Fix: Remove setupAuthMocking, use navigateClientSide in tests
   test.beforeEach(async ({ page }) => {
-    await setupAuthMocking(page);
-
     // Mock APIs with correct path pattern
     await page.route('**/api/v1/mcp/servers', async (route) => {
       await route.fulfill({
@@ -491,8 +484,7 @@ test.describe('Group 1: Tool List Display', () => {
   });
 
   test('should list all available tools', async ({ page }) => {
-    await page.goto(MCP_TOOLS_URL);
-    await page.waitForLoadState('networkidle');
+    await navigateClientSide(page, MCP_TOOLS_URL);
 
     // Look for tool names in the page
     const bashExecute = page.locator('text=bash_execute').first();
@@ -509,8 +501,7 @@ test.describe('Group 1: Tool List Display', () => {
   });
 
   test('should display tool descriptions', async ({ page }) => {
-    await page.goto(MCP_TOOLS_URL);
-    await page.waitForLoadState('networkidle');
+    await navigateClientSide(page, MCP_TOOLS_URL);
 
     // Tool descriptions might be in tooltips, cards, or expanded views
     const bashDescription = page.locator('text=/Execute bash commands/i').first();
@@ -524,8 +515,7 @@ test.describe('Group 1: Tool List Display', () => {
   });
 
   test('should group tools by server', async ({ page }) => {
-    await page.goto(MCP_TOOLS_URL);
-    await page.waitForLoadState('networkidle');
+    await navigateClientSide(page, MCP_TOOLS_URL);
 
     // Verify server grouping in the UI
     const bashTools = page.locator('text=bash-tools').locator('xpath=../..').first();
@@ -538,7 +528,8 @@ test.describe('Group 1: Tool List Display', () => {
 
 test.describe('Group 1: MCP API Error Handling', () => {
   test('should handle MCP API errors gracefully', async ({ page }) => {
-    await setupAuthMocking(page);
+    // Sprint 123 Fix: Set up mocks first, then use navigateClientSide
+    // Mocks need to be set up before navigation triggers API calls
 
     // Mock API error
     await page.route('**/api/v1/mcp/servers', async (route) => {
@@ -583,8 +574,7 @@ test.describe('Group 1: MCP API Error Handling', () => {
       });
     });
 
-    await page.goto(MCP_TOOLS_URL);
-    await page.waitForLoadState('networkidle');
+    await navigateClientSide(page, MCP_TOOLS_URL);
 
     // Look for error message or empty state
     const errorMessage = page.locator('text=/failed|error|unable/i').first();
