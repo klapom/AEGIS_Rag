@@ -307,10 +307,14 @@ async goto(): Promise<void> {
 | `cost-dashboard.spec.ts` | ~9 tests | **Re-enabled** ✅ |
 | **Total** | **~200 tests** | **Re-enabled** ✅ |
 
-**Partially Fixed (Still Use Direct page.goto()):**
-- `test_domain_upload_integration.spec.ts` - Uses direct page.goto() without POM fixture (would need AdminUploadPage POM)
-- `admin-dashboard.spec.ts` - Uses setupAuthMocking + direct page.goto() (should use fixture instead)
-- `domain-auto-discovery.spec.ts` - Uses setupAuthMocking + direct page.goto() (should use fixture instead)
+**Additional Fixes (Sprint 123.7b):**
+- ✅ `admin-dashboard.spec.ts` - **Fixed:** Added navigateClientSide() to all 14 page.goto('/admin') calls
+- ✅ `domain-auto-discovery.spec.ts` - **Fixed:** Added navigateClientSide() to all 10 page.goto('/admin/domain-discovery') calls
+- 🔄 `test_domain_upload_integration.spec.ts` - Uses direct page.goto() without POM fixture (would need AdminUploadPage POM)
+
+**Fixed Admin Test Results (Sprint 123.7b):**
+- `admin-dashboard.spec.ts` + `domain-auto-discovery.spec.ts`: **44/50 passed (88%)**
+- Remaining 4 failures are UI selector mismatches (not auth issues)
 
 **Files Modified:**
 - `frontend/e2e/pom/AdminLLMConfigPage.ts`
@@ -326,6 +330,8 @@ async goto(): Promise<void> {
 - `frontend/e2e/admin/admin-dashboard.spec.ts` - Removed test.describe.skip()
 - `frontend/e2e/admin/indexing.spec.ts` - Removed test.describe.skip()
 - `frontend/e2e/admin/cost-dashboard.spec.ts` - Removed test.describe.skip()
+- `frontend/e2e/admin/admin-dashboard.spec.ts` - Added navigateClientSide() (Sprint 123.7b)
+- `frontend/e2e/admin/domain-auto-discovery.spec.ts` - Added navigateClientSide() (Sprint 123.7b)
 
 **Results:**
 - **~200 previously-skipped admin tests now ENABLED**

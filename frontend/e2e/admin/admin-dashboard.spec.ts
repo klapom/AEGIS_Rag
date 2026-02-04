@@ -1,4 +1,4 @@
-import { test, expect, setupAuthMocking } from '../fixtures';
+import { test, expect, navigateClientSide } from '../fixtures';
 
 /**
  * E2E Tests for Admin Dashboard - Feature 46.8
@@ -25,16 +25,11 @@ import { test, expect, setupAuthMocking } from '../fixtures';
  * Required: Authentication mocking (admin access)
  */
 
-// Sprint 123.7: Partially fixed - uses setupAuthMocking but still uses page.goto('/admin') instead of fixture
-// Use adminDashboardPage fixture instead to preserve auth state
+// Sprint 123.7: Fixed - uses adminDashboardPage fixture with navigateClientSide() to preserve auth state
 test.describe('Sprint 46 - Feature 46.8: Admin Dashboard', () => {
-  test.beforeEach(async ({ page }) => {
-    await setupAuthMocking(page);
-  });
-
-  test('TC-46.8.1: should load dashboard at /admin route', async ({ page }) => {
-    // Navigate to admin dashboard
-    await page.goto('/admin');
+  test('TC-46.8.1: should load dashboard at /admin route', async ({ adminDashboardPage, page }) => {
+    // Navigate to admin dashboard via fixture (preserves auth)
+    await adminDashboardPage.goto();
 
     // Wait for main dashboard heading
     const dashboardHeading = page.getByRole('heading', { name: /admin dashboard|dashboard/i });
@@ -94,7 +89,7 @@ test.describe('Sprint 46 - Feature 46.8: Admin Dashboard', () => {
       });
     });
 
-    await page.goto('/admin');
+    await navigateClientSide(page, '/admin');
 
     // Wait for page load
     await page.waitForTimeout(500);
@@ -146,7 +141,7 @@ test.describe('Sprint 46 - Feature 46.8: Admin Dashboard', () => {
       });
     });
 
-    await page.goto('/admin');
+    await navigateClientSide(page, '/admin');
 
     // Wait for page load
     await page.waitForTimeout(500);
@@ -188,7 +183,7 @@ test.describe('Sprint 46 - Feature 46.8: Admin Dashboard', () => {
       });
     });
 
-    await page.goto('/admin');
+    await navigateClientSide(page, '/admin');
 
     await page.waitForTimeout(500);
 
@@ -212,7 +207,7 @@ test.describe('Sprint 46 - Feature 46.8: Admin Dashboard', () => {
   });
 
   test('TC-46.8.5: should have clickable section headers', async ({ page }) => {
-    await page.goto('/admin');
+    await navigateClientSide(page, '/admin');
 
     await page.waitForTimeout(500);
 
@@ -240,7 +235,7 @@ test.describe('Sprint 46 - Feature 46.8: Admin Dashboard', () => {
   });
 
   test('TC-46.8.6: should toggle section collapse when header is clicked', async ({ page }) => {
-    await page.goto('/admin');
+    await navigateClientSide(page, '/admin');
 
     await page.waitForTimeout(500);
 
@@ -280,7 +275,7 @@ test.describe('Sprint 46 - Feature 46.8: Admin Dashboard', () => {
       });
     });
 
-    await page.goto('/admin');
+    await navigateClientSide(page, '/admin');
 
     await page.waitForTimeout(500);
 
@@ -317,7 +312,7 @@ test.describe('Sprint 46 - Feature 46.8: Admin Dashboard', () => {
     });
 
     // Navigate to admin page
-    await page.goto('/admin');
+    await navigateClientSide(page, '/admin');
 
     // Look for loading state immediately after navigation
     const loadingSpinner = page.locator('[data-testid="dashboard-loading"]');
@@ -354,7 +349,7 @@ test.describe('Sprint 46 - Feature 46.8: Admin Dashboard', () => {
       });
     });
 
-    await page.goto('/admin');
+    await navigateClientSide(page, '/admin');
 
     await page.waitForTimeout(500);
 
@@ -396,7 +391,7 @@ test.describe('Sprint 46 - Feature 46.8: Admin Dashboard', () => {
       });
     });
 
-    await page.goto('/admin');
+    await navigateClientSide(page, '/admin');
 
     // Wait for initial load
     await page.waitForTimeout(500);
@@ -429,7 +424,7 @@ test.describe('Sprint 46 - Feature 46.8: Admin Dashboard', () => {
       });
     });
 
-    await page.goto('/admin');
+    await navigateClientSide(page, '/admin');
 
     // Dashboard should still load without errors
     const dashboardHeading = page.getByRole('heading', { name: /admin|dashboard/i });
@@ -453,7 +448,7 @@ test.describe('Sprint 46 - Feature 46.8: Admin Dashboard', () => {
       });
     });
 
-    await page.goto('/admin');
+    await navigateClientSide(page, '/admin');
 
     // Look for error message
     const errorMessage = page.locator('[data-testid="dashboard-error"]');
@@ -471,7 +466,7 @@ test.describe('Sprint 46 - Feature 46.8: Admin Dashboard', () => {
   });
 
   test('TC-46.8.13: should show user information in header', async ({ page }) => {
-    await page.goto('/admin');
+    await navigateClientSide(page, '/admin');
 
     // Look for user profile/info section
     const userInfo = page.locator('[data-testid="user-profile"]');
@@ -495,7 +490,7 @@ test.describe('Sprint 46 - Feature 46.8: Admin Dashboard', () => {
     // Set mobile viewport
     await page.setViewportSize({ width: 375, height: 812 });
 
-    await page.goto('/admin');
+    await navigateClientSide(page, '/admin');
 
     // Dashboard should still be accessible
     const dashboardHeading = page.getByRole('heading', { name: /admin|dashboard/i });
@@ -522,7 +517,7 @@ test.describe('Sprint 46 - Feature 46.8: Admin Dashboard', () => {
       });
     });
 
-    await page.goto('/admin');
+    await navigateClientSide(page, '/admin');
 
     // Look for last updated timestamp
     const lastUpdated = page.locator('[data-testid="dashboard-last-updated"]');

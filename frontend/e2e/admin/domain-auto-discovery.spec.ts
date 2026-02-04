@@ -1,4 +1,4 @@
-import { test, expect, setupAuthMocking } from '../fixtures';
+import { test, expect, navigateClientSide } from '../fixtures';
 import * as fs from 'fs';
 
 /**
@@ -22,16 +22,12 @@ import * as fs from 'fs';
  * Required: Authentication mocking (admin access)
  */
 
-// Sprint 123.7: Partially fixed - still uses setupAuthMocking + direct page.goto()
-// Should use adminDomainTrainingPage fixture with navigateClientSide() instead
+// Sprint 123.7: Fixed - uses navigateClientSide() to preserve auth state
 test.describe('Sprint 46 - Feature 46.5: Domain Auto Discovery', () => {
-  test.beforeEach(async ({ page }) => {
-    await setupAuthMocking(page);
-  });
 
   test('TC-46.5.1: should render drag-drop upload area on page load', async ({ page }) => {
     // Navigate to domain auto discovery page
-    await page.goto('/admin/domain-discovery');
+    await navigateClientSide(page, '/admin/domain-discovery');
 
     // Verify main component is visible
     const component = page.locator('[data-testid="domain-auto-discovery"]');
@@ -54,7 +50,7 @@ test.describe('Sprint 46 - Feature 46.5: Domain Auto Discovery', () => {
   });
 
   test('TC-46.5.2: should accept TXT, MD, DOCX, HTML file types', async ({ page }) => {
-    await page.goto('/admin/domain-discovery');
+    await navigateClientSide(page, '/admin/domain-discovery');
 
     const fileInput = page.locator('[data-testid="domain-discovery-file-input"]');
 
@@ -84,7 +80,7 @@ test.describe('Sprint 46 - Feature 46.5: Domain Auto Discovery', () => {
   });
 
   test('TC-46.5.3: should reject unsupported file types', async ({ page }) => {
-    await page.goto('/admin/domain-discovery');
+    await navigateClientSide(page, '/admin/domain-discovery');
 
     // Mock error response for unsupported file
     await page.route('**/api/v1/admin/domains/discover', (route) => {
@@ -124,7 +120,7 @@ test.describe('Sprint 46 - Feature 46.5: Domain Auto Discovery', () => {
   });
 
   test('TC-46.5.4: should show error when >3 files selected', async ({ page }) => {
-    await page.goto('/admin/domain-discovery');
+    await navigateClientSide(page, '/admin/domain-discovery');
 
     // Sprint 114 (P-004 SKIP): File upload limitations >3 files
     // This test verifies component handles >3 files gracefully
@@ -176,7 +172,7 @@ test.describe('Sprint 46 - Feature 46.5: Domain Auto Discovery', () => {
   });
 
   test('TC-46.5.5: should trigger loading state when analyze button clicked', async ({ page }) => {
-    await page.goto('/admin/domain-discovery');
+    await navigateClientSide(page, '/admin/domain-discovery');
 
     // Sprint 114: Use file input element, not div upload area (P-009)
     const fileInput = page.locator('[data-testid="domain-discovery-file-input"]');
@@ -224,7 +220,7 @@ test.describe('Sprint 46 - Feature 46.5: Domain Auto Discovery', () => {
   });
 
   test('TC-46.5.6: should show suggestion after analysis completes', async ({ page }) => {
-    await page.goto('/admin/domain-discovery');
+    await navigateClientSide(page, '/admin/domain-discovery');
 
     // Mock successful domain discovery API
     await page.route('**/api/v1/admin/domains/discover', (route) => {
@@ -291,7 +287,7 @@ test.describe('Sprint 46 - Feature 46.5: Domain Auto Discovery', () => {
   });
 
   test('TC-46.5.7: should allow editing and accepting suggestion', async ({ page }) => {
-    await page.goto('/admin/domain-discovery');
+    await navigateClientSide(page, '/admin/domain-discovery');
 
     // Mock the discovery API
     await page.route('**/api/v1/admin/domains/discover', (route) => {
@@ -367,7 +363,7 @@ test.describe('Sprint 46 - Feature 46.5: Domain Auto Discovery', () => {
   });
 
   test('TC-46.5.8: should handle multiple files for more accurate discovery', async ({ page }) => {
-    await page.goto('/admin/domain-discovery');
+    await navigateClientSide(page, '/admin/domain-discovery');
 
     await page.route('**/api/v1/admin/domains/discover', (route) => {
       route.fulfill({
@@ -441,7 +437,7 @@ test.describe('Sprint 46 - Feature 46.5: Domain Auto Discovery', () => {
   });
 
   test('TC-46.5.9: should clear files and start over', async ({ page }) => {
-    await page.goto('/admin/domain-discovery');
+    await navigateClientSide(page, '/admin/domain-discovery');
 
     // Sprint 114: Use file input element, not div upload area (P-009)
     const fileInput = page.locator('[data-testid="domain-discovery-file-input"]');
@@ -473,7 +469,7 @@ test.describe('Sprint 46 - Feature 46.5: Domain Auto Discovery', () => {
   });
 
   test('TC-46.5.10: should handle API errors gracefully', async ({ page }) => {
-    await page.goto('/admin/domain-discovery');
+    await navigateClientSide(page, '/admin/domain-discovery');
 
     // Mock API error
     await page.route('**/api/v1/admin/domains/discover', (route) => {
