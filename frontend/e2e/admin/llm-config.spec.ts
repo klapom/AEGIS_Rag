@@ -21,10 +21,8 @@ import { test, expect } from '../fixtures';
  * - No backend API calls required (localStorage-based)
  */
 
-// Sprint 123.7: Skip entire suite - AdminLLMConfigPage.goto() uses page.goto() instead of navigateClientSide()
-// This causes auth state loss after page reload, resulting in 10s timeouts
-// Re-enable after fixing AdminLLMConfigPage POM to use navigateClientSide pattern
-test.describe.skip('Admin LLM Configuration - Page 36.3', () => {
+// Sprint 123.7: Re-enabled - AdminLLMConfigPage.goto() now uses navigateClientSide() to preserve auth state
+test.describe('Admin LLM Configuration - Page 36.3', () => {
   test.beforeEach(async ({ adminLLMConfigPage }) => {
     // Clear localStorage before each test to ensure clean state
     await adminLLMConfigPage.clearStoredConfig();

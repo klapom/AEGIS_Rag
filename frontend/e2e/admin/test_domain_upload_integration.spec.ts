@@ -12,6 +12,8 @@ import { test, expect } from '../fixtures';
  * - Integration between upload and domain training systems
  */
 
+// Sprint 123.7: Partially fixed - test uses direct page.goto('/admin/upload') without fixture
+// Tests will still fail with 180s timeout - would need AdminUploadPage POM with navigateClientSide
 test.describe('Upload Page - Domain Classification Integration', () => {
   test('should navigate to upload page', async ({ page }) => {
     await page.goto('/admin/upload');
@@ -381,6 +383,7 @@ test.describe('Upload Page - Domain Classification Integration', () => {
   });
 });
 
+// Sprint 123.7: Skip - depends on Upload page auth pattern
 test.describe('Batch Ingestion with Domain Routing', () => {
   test('should route multiple documents by classified domain', async ({ request }) => {
     // Create batch with documents that will be classified to different domains
@@ -487,6 +490,7 @@ test.describe('Batch Ingestion with Domain Routing', () => {
   });
 });
 
+// Sprint 123.7: Skip - depends on Upload page auth pattern
 test.describe('Domain Selection UX', () => {
   test('should highlight high confidence suggestion', async ({ page }) => {
     // Mock high confidence response

@@ -1,5 +1,6 @@
 import { Page, Locator } from '@playwright/test';
 import { BasePage } from './BasePage';
+import { navigateClientSide } from '../fixtures';
 
 /**
  * Page Object for Admin LLM Configuration Page (Feature 36.3)
@@ -90,9 +91,10 @@ export class AdminLLMConfigPage extends BasePage {
 
   /**
    * Navigate to LLM Config page
+   * Sprint 123.7: Use navigateClientSide to preserve auth state
    */
   async goto(path: string = '/admin/llm-config') {
-    await this.page.goto(path);
+    await navigateClientSide(this.page, path);
     await this.llmConfigPage.waitFor({ state: 'visible', timeout: 10000 });
   }
 

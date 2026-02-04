@@ -1,5 +1,6 @@
 import { Page, Locator } from '@playwright/test';
 import { BasePage } from './BasePage';
+import { navigateClientSide } from '../fixtures';
 
 /**
  * Page Object for Cost Dashboard (Feature 31.10)
@@ -46,9 +47,10 @@ export class CostDashboardPage extends BasePage {
 
   /**
    * Navigate to cost dashboard
+   * Sprint 123.7: Use navigateClientSide to preserve auth state
    */
   async goto(path: string = '/admin/costs') {
-    await super.goto(path);
+    await navigateClientSide(this.page, path);
     await this.waitForNetworkIdle();
   }
 

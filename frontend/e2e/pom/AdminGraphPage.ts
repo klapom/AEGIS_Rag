@@ -1,5 +1,6 @@
 import { Page, Locator } from '@playwright/test';
 import { BasePage } from './BasePage';
+import { navigateClientSide } from '../fixtures';
 
 /**
  * Page Object for Admin Graph Visualization
@@ -39,10 +40,11 @@ export class AdminGraphPage extends BasePage {
 
   /**
    * Navigate to admin graph page
+   * Sprint 123.7: Use navigateClientSide to preserve auth state
    * Sprint 123: Click visualization tab since default is 'analytics' (no graph canvas)
    */
   async goto() {
-    await super.goto('/admin/graph');
+    await navigateClientSide(this.page, '/admin/graph');
     await this.waitForNetworkIdle();
 
     // Sprint 123: Default tab is 'analytics' but graph-canvas is only in 'visualization' tab

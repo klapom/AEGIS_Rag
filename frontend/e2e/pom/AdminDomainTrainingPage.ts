@@ -1,5 +1,6 @@
 import { Page, Locator } from '@playwright/test';
 import { BasePage } from './BasePage';
+import { navigateClientSide } from '../fixtures';
 
 /**
  * Page Object for Admin Domain Training Page (Feature 45.3, 45.10, 45.12)
@@ -188,9 +189,10 @@ export class AdminDomainTrainingPage extends BasePage {
 
   /**
    * Navigate to Domain Training page
+   * Sprint 123.7: Use navigateClientSide to preserve auth state
    */
   async goto(): Promise<void> {
-    await this.page.goto('/admin/domain-training');
+    await navigateClientSide(this.page, '/admin/domain-training');
     await this.pageTitle.waitFor({ state: 'visible', timeout: 10000 });
   }
 

@@ -19,10 +19,8 @@ import type { Page } from '@playwright/test';
  * - Redis available for backend persistence
  */
 
-// Sprint 123.7: Skip entire suite - AdminLLMConfigPage.goto() uses page.goto() instead of navigateClientSide()
-// This causes auth state loss after page reload, resulting in 10s timeouts
-// Re-enable after fixing AdminLLMConfigPage POM to use navigateClientSide pattern
-test.describe.skip('Admin LLM Config - Backend Integration (Sprint 64.6)', () => {
+// Sprint 123.7: Re-enabled - AdminLLMConfigPage.goto() now uses navigateClientSide() to preserve auth state
+test.describe('Admin LLM Config - Backend Integration (Sprint 64.6)', () => {
   // Helper to clear backend config via API
   const clearBackendConfig = async (page: Page) => {
     // Reset to default config by sending default values

@@ -17,6 +17,7 @@ import { test, expect } from '../fixtures';
  * - Optional: Ollama with vision models or Alibaba Cloud API for integration tests
  */
 
+// Sprint 123.7: Re-enabled - AdminLLMConfigPage.goto() now uses navigateClientSide() to preserve auth state
 test.describe('VLM Backend Configuration', () => {
   test('should select local VLM by default', async ({ adminLLMConfigPage }) => {
     // Sprint 114 (P-002): Check initial state before clearing
@@ -128,6 +129,7 @@ test.describe('VLM Backend Configuration', () => {
   });
 });
 
+// Sprint 123.7: Skip - same auth pattern issue
 test.describe('VLM Integration with Admin Pages', () => {
   test('should navigate from LLM Config to Admin Indexing', async ({ page }) => {
     await page.goto('/admin/llm-config');
@@ -193,6 +195,7 @@ test.describe('VLM Integration with Admin Pages', () => {
   });
 });
 
+// Sprint 123.7: Skip - same auth pattern issue
 test.describe('VLM Cost Tracking', () => {
   test('local VLM should indicate zero cost option', async ({ adminLLMConfigPage }) => {
     // Select local VLM
@@ -254,6 +257,7 @@ test.describe('VLM Cost Tracking', () => {
   });
 });
 
+// Sprint 123.7: Skip - same auth pattern issue
 test.describe('VLM Model Capabilities', () => {
   test('should filter models based on vision requirement', async ({
     adminLLMConfigPage,
@@ -307,6 +311,7 @@ test.describe('VLM Model Capabilities', () => {
   });
 });
 
+// Sprint 123.7: Skip - same auth pattern issue
 test.describe('VLM Fallback Strategy', () => {
   test('should have local VLM as default (fallback option)', async ({
     adminLLMConfigPage,
@@ -369,6 +374,7 @@ test.describe('VLM Fallback Strategy', () => {
   });
 });
 
+// Sprint 123.7: Skip - same auth pattern issue
 test.describe('VLM UI Integration', () => {
   test('should display VLM use case prominently', async ({
     adminLLMConfigPage,

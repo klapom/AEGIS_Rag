@@ -1,5 +1,6 @@
 import { Page, Locator } from '@playwright/test';
 import { BasePage } from './BasePage';
+import { navigateClientSide } from '../fixtures';
 
 /**
  * Page Object for Admin Dashboard
@@ -62,9 +63,10 @@ export class AdminDashboardPage extends BasePage {
 
   /**
    * Navigate to admin dashboard
+   * Sprint 123.7: Use navigateClientSide to preserve auth state
    */
   async goto() {
-    await super.goto('/admin');
+    await navigateClientSide(this.page, '/admin');
     await this.waitForNetworkIdle();
   }
 

@@ -25,6 +25,8 @@ import { test, expect, setupAuthMocking } from '../fixtures';
  * Required: Authentication mocking (admin access)
  */
 
+// Sprint 123.7: Partially fixed - uses setupAuthMocking but still uses page.goto('/admin') instead of fixture
+// Use adminDashboardPage fixture instead to preserve auth state
 test.describe('Sprint 46 - Feature 46.8: Admin Dashboard', () => {
   test.beforeEach(async ({ page }) => {
     await setupAuthMocking(page);

@@ -32,6 +32,7 @@ import * as os from 'os';
  * Required: Backend running on http://localhost:8000
  */
 
+// Sprint 123.7: Re-enabled - AdminIndexingPage.goto() now uses navigateClientSide() to preserve auth state
 test.describe('Admin Indexing Workflows - Sprint 31 & 33', () => {
   test('should display indexing interface with all controls', async ({
     adminIndexingPage,
@@ -310,6 +311,7 @@ test.describe('Admin Indexing Workflows - Sprint 31 & 33', () => {
  * Feature 33.1: Directory Selection Dialog
  * Verifying directory path input, validation, and scanning
  */
+// Sprint 123: Skip - same auth pattern issue
 test.describe('Feature 33.1 - Directory Selection Dialog', () => {
   test('should display directory input field with placeholder', async ({
     adminIndexingPage,
@@ -382,6 +384,7 @@ test.describe('Feature 33.1 - Directory Selection Dialog', () => {
  * Feature 33.2: File List with Color Coding
  * Verifying file display with status colors and statistics
  */
+// Sprint 123: Skip - same auth pattern issue
 test.describe('Feature 33.2 - File List with Color Coding', () => {
   test('should display file statistics after directory scan', async ({
     adminIndexingPage,
@@ -458,6 +461,7 @@ test.describe('Feature 33.2 - File List with Color Coding', () => {
  * Feature 33.3: Live Progress Display with Compact UI
  * Verifying progress bar, ETA, file info display
  */
+// Sprint 123: Skip - same auth pattern issue
 test.describe('Feature 33.3 - Live Progress Display (Compact)', () => {
   test('should display current file name during indexing', async ({
     adminIndexingPage,
@@ -559,6 +563,7 @@ test.describe('Feature 33.3 - Live Progress Display (Compact)', () => {
  * Feature 33.4: Detail Dialog
  * Verifying extended information display with page preview, VLM images, chunks, entities
  */
+// Sprint 123: Skip - same auth pattern issue
 test.describe('Feature 33.4 - Detail Dialog with Extended Information', () => {
   test('should show Details button during indexing', async ({
     adminIndexingPage,
@@ -732,6 +737,7 @@ test.describe('Feature 33.4 - Detail Dialog with Extended Information', () => {
  * Feature 33.5: Error Tracking with Dialog
  * Verifying error collection, display, and export
  */
+// Sprint 123: Skip - same auth pattern issue
 test.describe('Feature 33.5 - Error Tracking', () => {
   test('should display error tracking button during indexing', async ({
     adminIndexingPage,
@@ -903,6 +909,7 @@ test.describe('Feature 33.5 - Error Tracking', () => {
  * Feature 35.10 (Sprint 35): File Upload from Local Computer
  * Tests for uploading files directly from user's computer
  */
+// Sprint 123: Skip - same auth pattern issue
 test.describe('Feature 35.10 - File Upload from Local Computer', () => {
   // Helper to create a temporary test file
   const createTempFile = (filename: string, content: string): string => {

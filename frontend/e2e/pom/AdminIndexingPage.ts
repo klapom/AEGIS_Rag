@@ -1,5 +1,6 @@
 import { Page, Locator } from '@playwright/test';
 import { BasePage } from './BasePage';
+import { navigateClientSide } from '../fixtures';
 
 /**
  * Page Object for Admin Indexing
@@ -54,9 +55,10 @@ export class AdminIndexingPage extends BasePage {
 
   /**
    * Navigate to admin indexing page
+   * Sprint 123.7: Use navigateClientSide to preserve auth state
    */
   async goto() {
-    await super.goto('/admin/indexing');
+    await navigateClientSide(this.page, '/admin/indexing');
     await this.waitForNetworkIdle();
   }
 

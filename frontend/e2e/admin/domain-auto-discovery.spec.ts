@@ -22,10 +22,9 @@ import * as fs from 'fs';
  * Required: Authentication mocking (admin access)
  */
 
-// Sprint 123: Skip entire suite - UI component not implemented yet
-// These tests wait for [data-testid="domain-auto-discovery"] which doesn't exist
-// Re-enable when DomainAutoDiscovery component is implemented
-test.describe.skip('Sprint 46 - Feature 46.5: Domain Auto Discovery', () => {
+// Sprint 123.7: Partially fixed - still uses setupAuthMocking + direct page.goto()
+// Should use adminDomainTrainingPage fixture with navigateClientSide() instead
+test.describe('Sprint 46 - Feature 46.5: Domain Auto Discovery', () => {
   test.beforeEach(async ({ page }) => {
     await setupAuthMocking(page);
   });
