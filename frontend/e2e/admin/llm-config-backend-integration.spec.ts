@@ -55,8 +55,8 @@ test.describe('Admin LLM Config - Backend Integration (Sprint 64.6)', () => {
     adminLLMConfigPage,
     page,
   }) => {
-    // Navigate to page
-    await page.goto('/admin/llm-config');
+    // Navigate to page (uses navigateClientSide to preserve auth)
+    await adminLLMConfigPage.goto();
     await adminLLMConfigPage.llmConfigPage.waitFor({ state: 'visible', timeout: 10000 });
 
     // Wait for config to load from backend
@@ -77,8 +77,8 @@ test.describe('Admin LLM Config - Backend Integration (Sprint 64.6)', () => {
     adminLLMConfigPage,
     page,
   }) => {
-    // Navigate to page
-    await page.goto('/admin/llm-config');
+    // Navigate to page (uses navigateClientSide to preserve auth)
+    await adminLLMConfigPage.goto();
     // Sprint 114 (P-008): Increase timeout for auth and page load
     await adminLLMConfigPage.llmConfigPage.waitFor({ state: 'visible', timeout: 60000 });
 
@@ -128,8 +128,8 @@ test.describe('Admin LLM Config - Backend Integration (Sprint 64.6)', () => {
       localStorage.removeItem('aegis-rag-llm-config-migrated');
     });
 
-    // Step 2: Navigate to page (should trigger migration)
-    await page.goto('/admin/llm-config');
+    // Step 2: Navigate to page (should trigger migration) - uses navigateClientSide to preserve auth
+    await adminLLMConfigPage.goto();
     // Sprint 114 (P-008): Increase timeout for auth and page load
     await adminLLMConfigPage.llmConfigPage.waitFor({ state: 'visible', timeout: 60000 });
 
@@ -165,8 +165,8 @@ test.describe('Admin LLM Config - Backend Integration (Sprint 64.6)', () => {
     adminLLMConfigPage,
     page,
   }) => {
-    // Navigate and change config
-    await page.goto('/admin/llm-config');
+    // Navigate and change config (uses navigateClientSide to preserve auth)
+    await adminLLMConfigPage.goto();
     // Sprint 114 (P-008): Increase timeout for auth and page load
     await adminLLMConfigPage.llmConfigPage.waitFor({ state: 'visible', timeout: 60000 });
 
@@ -204,8 +204,8 @@ test.describe('Admin LLM Config - Backend Integration (Sprint 64.6)', () => {
     adminLLMConfigPage,
     page,
   }) => {
-    // Navigate to page
-    await page.goto('/admin/llm-config');
+    // Navigate to page (uses navigateClientSide to preserve auth)
+    await adminLLMConfigPage.goto();
     // Sprint 114 (P-008): Increase timeout for auth and page load
     await adminLLMConfigPage.llmConfigPage.waitFor({ state: 'visible', timeout: 60000 });
 
@@ -234,8 +234,8 @@ test.describe('Admin LLM Config - Backend Integration (Sprint 64.6)', () => {
     adminLLMConfigPage,
     page,
   }) => {
-    // Navigate to page
-    await page.goto('/admin/llm-config');
+    // Navigate to page (uses navigateClientSide to preserve auth)
+    await adminLLMConfigPage.goto();
     await adminLLMConfigPage.llmConfigPage.waitFor({ state: 'visible', timeout: 10000 });
 
     // Change a model
@@ -262,8 +262,8 @@ test.describe('Admin LLM Config - Backend Integration (Sprint 64.6)', () => {
   });
 
   test('should handle concurrent saves correctly', async ({ adminLLMConfigPage, page }) => {
-    // Navigate to page
-    await page.goto('/admin/llm-config');
+    // Navigate to page (uses navigateClientSide to preserve auth)
+    await adminLLMConfigPage.goto();
     await adminLLMConfigPage.llmConfigPage.waitFor({ state: 'visible', timeout: 10000 });
 
     // Change model
@@ -286,8 +286,8 @@ test.describe('Admin LLM Config - Backend Integration (Sprint 64.6)', () => {
     adminLLMConfigPage,
     page,
   }) => {
-    // Navigate to page
-    await page.goto('/admin/llm-config');
+    // Navigate to page (uses navigateClientSide to preserve auth)
+    await adminLLMConfigPage.goto();
     await adminLLMConfigPage.llmConfigPage.waitFor({ state: 'visible', timeout: 10000 });
 
     // Test Ollama model transformation
@@ -322,8 +322,8 @@ test.describe.skip('Admin LLM Config - Backend Integration Verification', () => 
     adminLLMConfigPage,
     page,
   }) => {
-    // Navigate to page
-    await page.goto('/admin/llm-config');
+    // Navigate to page (uses navigateClientSide to preserve auth)
+    await adminLLMConfigPage.goto();
     // Sprint 114 (P-008): Increase timeout for auth and page load
     await adminLLMConfigPage.llmConfigPage.waitFor({ state: 'visible', timeout: 60000 });
 
@@ -348,8 +348,8 @@ test.describe.skip('Admin LLM Config - Backend Integration Verification', () => 
     adminLLMConfigPage,
     page,
   }) => {
-    // Navigate to page
-    await page.goto('/admin/llm-config');
+    // Navigate to page (uses navigateClientSide to preserve auth)
+    await adminLLMConfigPage.goto();
     // Sprint 114 (P-008): Increase timeout for auth and page load
     await adminLLMConfigPage.llmConfigPage.waitFor({ state: 'visible', timeout: 60000 });
 
