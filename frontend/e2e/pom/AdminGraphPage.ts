@@ -39,10 +39,19 @@ export class AdminGraphPage extends BasePage {
 
   /**
    * Navigate to admin graph page
+   * Sprint 123: Click visualization tab since default is 'analytics' (no graph canvas)
    */
   async goto() {
     await super.goto('/admin/graph');
     await this.waitForNetworkIdle();
+
+    // Sprint 123: Default tab is 'analytics' but graph-canvas is only in 'visualization' tab
+    const vizTab = this.page.locator('[data-testid="tab-visualization"]');
+    const isVizTabVisible = await vizTab.isVisible({ timeout: 5000 }).catch(() => false);
+    if (isVizTabVisible) {
+      await vizTab.click();
+      await this.page.waitForTimeout(500); // Wait for tab switch animation
+    }
   }
 
   /**
