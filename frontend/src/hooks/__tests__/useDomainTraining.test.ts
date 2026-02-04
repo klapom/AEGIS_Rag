@@ -54,7 +54,7 @@ describe('useDomainTraining Hooks', () => {
       expect(result.current.isLoading).toBe(true);
 
       await waitFor(() => {
-        expect(mockGet).toHaveBeenCalledWith('/admin/domains/');
+        expect(mockGet).toHaveBeenCalledWith('/api/v1/admin/domains/');
         expect(result.current.isLoading).toBe(false);
         expect(result.current.data).toEqual(mockDomains);
       });
@@ -119,7 +119,7 @@ describe('useDomainTraining Hooks', () => {
         await result.current.mutateAsync('domain-123');
       });
 
-      expect(mockDelete).toHaveBeenCalledWith('/admin/domains/domain-123');
+      expect(mockDelete).toHaveBeenCalledWith('/api/v1/admin/domains/domain-123');
     });
 
     it('should return response on successful deletion', async () => {

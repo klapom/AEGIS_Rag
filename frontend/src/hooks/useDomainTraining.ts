@@ -110,8 +110,9 @@ export function useDomains(options?: { refetchInterval?: number; enabled?: boole
     setError(null);
     try {
       // Sprint 117.8 Fix: API now returns ApiResponse wrapper with data inside
+      // Sprint 123.7c Fix: Use /api/v1 prefix to match backend routes
       // Trailing slash is required by FastAPI router configuration
-      const response = await apiClient.get<ApiResponse<Domain[]>>('/admin/domains/');
+      const response = await apiClient.get<ApiResponse<Domain[]>>('/api/v1/admin/domains/');
       // Handle both old format (direct array) and new format (wrapped in ApiResponse)
       const domains = Array.isArray(response) ? response : response.data;
       setData(domains);
@@ -152,7 +153,7 @@ export function useCreateDomain() {
     setError(null);
     try {
       // Trailing slash is required by FastAPI router configuration
-      const response = await apiClient.post<Domain>('/admin/domains/', data);
+      const response = await apiClient.post<Domain>('/api/v1/admin/domains/', data);
       return response;
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to create domain');
@@ -191,7 +192,7 @@ export function useDeleteDomain() {
     setError(null);
     try {
       const response = await apiClient.delete<DeleteDomainResponse>(
-        `/admin/domains/${domainId}`
+        `/api/v1/admin/domains/${domainId}`
       );
       return response;
     } catch (err) {
@@ -236,7 +237,7 @@ export function useStartTraining() {
         // Send samples directly - format already matches API
         // Include log_path for JSONL event logging (Feature 45.13)
         const response = await apiClient.post<StartTrainingResponse>(
-          `/admin/domains/${data.domain}/train`,
+          `/api/v1/admin/domains/${data.domain}/train`,
           {
             samples: data.dataset,
             log_path: data.log_path || null,
@@ -290,7 +291,7 @@ export function useAvailableModels() {
     try {
       // Sprint 110 Fix: Use /admin/llm/models endpoint (returns OllamaModelsResponse)
       const response = await apiClient.get<OllamaModelsResponse>(
-        '/admin/llm/models'
+        '/api/v1/admin/llm/models'
       );
       // Extract model names from the response
       if (response.ollama_available && response.models) {
@@ -335,7 +336,7 @@ export function useTrainingStatus(domainName: string, enabled = true) {
     setError(null);
     try {
       const response = await apiClient.get<TrainingStatusResponse>(
-        `/admin/domains/${domainName}/training-status`
+        `/api/v1/admin/domains/${domainName}/training-status`
       );
       setData(response);
       isFirstLoad.current = false;
@@ -375,7 +376,7 @@ export function useClassifyDocument() {
       setError(null);
       try {
         const response = await apiClient.post<ClassifyDocumentResponse>(
-          '/admin/domains/classify',
+          '/api/v1/admin/domains/classify',
           data
         );
         return response;
@@ -466,7 +467,7 @@ export function useDomainStats(
     setError(null);
     try {
       const response = await apiClient.get<DomainStatsResponse>(
-        `/admin/domains/${domainName}/stats`
+        `/api/v1/admin/domains/${domainName}/stats`
       );
       setData(response);
       isFirstLoad.current = false;
@@ -505,7 +506,7 @@ export function useReindexDomain() {
     setError(null);
     try {
       const response = await apiClient.post<ReindexDomainResponse>(
-        `/admin/domains/${domainName}/reindex`
+        `/api/v1/admin/domains/${domainName}/reindex`
       );
       return response;
     } catch (err) {
@@ -533,7 +534,7 @@ export function useValidateDomain() {
     setError(null);
     try {
       const response = await apiClient.post<ValidateDomainResponse>(
-        `/admin/domains/${domainName}/validate`
+        `/api/v1/admin/domains/${domainName}/validate`
       );
       return response;
     } catch (err) {
@@ -781,7 +782,7 @@ export function useAugmentTrainingData() {
       setError(null);
       try {
         const response = await apiClient.post<AugmentationResponse>(
-          '/admin/domains/augment',
+          '/api/v1/admin/domains/augment',
           data
         );
         return response;
@@ -837,7 +838,7 @@ export function useIngestBatch() {
       setError(null);
       try {
         const response = await apiClient.post<BatchIngestionResponse>(
-          '/admin/domains/ingest-batch',
+          '/api/v1/admin/domains/ingest-batch',
           data
         );
         return response;
@@ -877,7 +878,7 @@ export function useDomainDetails(domainName: string, enabled = true) {
     setError(null);
     try {
       const response = await apiClient.get<Domain>(
-        `/admin/domains/${domainName}`
+        `/api/v1/admin/domains/${domainName}`
       );
       setData(response);
     } catch (err) {
@@ -952,7 +953,7 @@ export function useConnectivityMetrics(
     setError(null);
     try {
       const response = await apiClient.post<ConnectivityEvaluationResponse>(
-        '/admin/domains/connectivity/evaluate',
+        '/api/v1/admin/domains/connectivity/evaluate',
         {
           namespace_id,
           domain_type,

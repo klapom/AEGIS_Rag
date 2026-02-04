@@ -186,11 +186,21 @@ export class AdminLLMConfigPage extends BasePage {
 
   /**
    * Get provider badge text for a use case
+   * Sprint 123.7b Fix: Badge is a nested span with provider badge styling
+   * Located inside the usecase selector div, filtered by Local/Cloud text
    */
   async getProviderBadge(useCase: string): Promise<string> {
     const selector = this.page.locator(`[data-testid="usecase-selector-${useCase}"]`);
-    const badge = selector.locator('span').filter({ hasText: /Local|Cloud/ });
-    return await badge.textContent() || '';
+    // Badge is the first span with text matching Local or Cloud
+    const badge = selector.locator('span', { hasText: /Local|Cloud/ }).first();
+
+    try {
+      const text = await badge.textContent({ timeout: 3000 });
+      return text || '';
+    } catch {
+      // Badge might not be visible yet, return empty
+      return '';
+    }
   }
 
   /**

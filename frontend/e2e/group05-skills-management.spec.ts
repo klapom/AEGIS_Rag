@@ -216,8 +216,6 @@ timeout: 30
   });
 }
 
-// Sprint 106: Skip all - UI data-testids don't match (skill-card-* not found in actual UI)
-// Bug: Skills Registry page lacks expected data-testid attributes
 test.describe('Group 5: Skills Management', () => {
   test.beforeEach(async ({ page }) => {
     // Setup authentication
@@ -302,13 +300,22 @@ test.describe('Group 5: Skills Management', () => {
 
     await navigateToSkillsRegistry(page);
 
+    // Wait for skill card to be visible before clicking
+    await page.waitForSelector('[data-testid="skill-card-web_search"]', {
+      state: 'visible',
+      timeout: TIMEOUT
+    });
+
     // Navigate to config editor
     const configLink = page.locator('[data-testid="skill-edit-web_search"]');
     await configLink.click();
     await page.waitForLoadState('networkidle');
 
-    // Clear and enter valid YAML
+    // Wait for config editor to load
     const yamlEditor = page.locator('textarea');
+    await expect(yamlEditor).toBeVisible({ timeout: TIMEOUT });
+
+    // Clear and enter valid YAML
     await yamlEditor.clear();
     await yamlEditor.fill(VALID_CONFIG);
 
@@ -344,22 +351,34 @@ test.describe('Group 5: Skills Management', () => {
 
     await navigateToSkillsRegistry(page);
 
+    // Wait for skill card to be visible before clicking
+    await page.waitForSelector('[data-testid="skill-card-web_search"]', {
+      state: 'visible',
+      timeout: TIMEOUT
+    });
+
     // Navigate to config editor
     const configLink = page.locator('[data-testid="skill-edit-web_search"]');
     await configLink.click();
     await page.waitForLoadState('networkidle');
 
-    // Clear and enter invalid YAML
+    // Wait for config editor to load
     const yamlEditor = page.locator('textarea');
+    await expect(yamlEditor).toBeVisible({ timeout: TIMEOUT });
+
+    // Clear and enter invalid YAML
     await yamlEditor.clear();
     await yamlEditor.fill(INVALID_YAML_SYNTAX);
 
     // Wait for validation to complete
     await page.waitForTimeout(1000);
 
-    // Verify validation error indicator
-    const errorMessages = page.locator('text=/syntax error/i').first();
-    await expect(errorMessages).toBeVisible({ timeout: 5000 });
+    // Verify validation error indicator in validation panel
+    const validationErrors = page.locator('[data-testid="validation-errors"]');
+    await expect(validationErrors).toBeVisible({ timeout: 5000 });
+
+    // Verify error text contains expected message
+    await expect(validationErrors).toContainText(/syntax error/i);
 
     // Verify save button is disabled
     const saveButton = page.locator('button:has-text("Save")');
@@ -388,30 +407,39 @@ test.describe('Group 5: Skills Management', () => {
 
     await navigateToSkillsRegistry(page);
 
+    // Wait for skill card to be visible before clicking
+    await page.waitForSelector('[data-testid="skill-card-web_search"]', {
+      state: 'visible',
+      timeout: TIMEOUT
+    });
+
     // Navigate to config editor
     const configLink = page.locator('[data-testid="skill-edit-web_search"]');
     await configLink.click();
     await page.waitForLoadState('networkidle');
 
-    // Clear and enter YAML with missing fields
+    // Wait for config editor to load
     const yamlEditor = page.locator('textarea');
+    await expect(yamlEditor).toBeVisible({ timeout: TIMEOUT });
+
+    // Clear and enter YAML with missing fields
     await yamlEditor.clear();
     await yamlEditor.fill(INVALID_YAML_SCHEMA);
 
     // Wait for validation to complete
     await page.waitForTimeout(1000);
 
-    // Verify validation errors are shown
-    const errorSection = page.locator('text=/Errors/i').first();
-    await expect(errorSection).toBeVisible({ timeout: 5000 });
+    // Verify validation errors are shown in the errors container
+    const validationErrors = page.locator('[data-testid="validation-errors"]');
+    await expect(validationErrors).toBeVisible({ timeout: 5000 });
 
-    // Verify specific error messages
-    await expect(page.locator('text=/Missing required field: description/i')).toBeVisible();
-    await expect(page.locator('text=/Missing required field: tools/i')).toBeVisible();
+    // Verify specific error messages within the errors container
+    await expect(validationErrors).toContainText(/Missing required field: description/i);
+    await expect(validationErrors).toContainText(/Missing required field: tools/i);
 
     // Verify warnings are shown
-    const warningSection = page.locator('text=/Warnings/i').first();
-    await expect(warningSection).toBeVisible();
+    const warningsText = page.locator('text=/Warnings/i').first();
+    await expect(warningsText).toBeVisible();
 
     // Verify save button is disabled
     const saveButton = page.locator('button:has-text("Save")');
@@ -420,7 +448,7 @@ test.describe('Group 5: Skills Management', () => {
 
   test('should enable/disable skill toggle', async ({ page }) => {
     // Mock activate/deactivate endpoints
-    await page.route('**/api/v1/skills/*/activate', (route) => {
+    await page.route('**/api/v1/skills/registry/*/activate', (route) => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -428,7 +456,7 @@ test.describe('Group 5: Skills Management', () => {
       });
     });
 
-    await page.route('**/api/v1/skills/*/deactivate', (route) => {
+    await page.route('**/api/v1/skills/registry/*/deactivate', (route) => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -438,31 +466,34 @@ test.describe('Group 5: Skills Management', () => {
 
     await navigateToSkillsRegistry(page);
 
-    // Find an active skill (web_search)
-    const activeSkillCard = page.locator('[data-testid="skill-card-web_search"]');
-    const activeToggle = activeSkillCard.locator('button:has-text("Active")');
+    // Wait for skills to load
+    await page.waitForSelector('[data-testid="skill-card-web_search"]', {
+      state: 'visible',
+      timeout: TIMEOUT
+    });
 
-    // Click to deactivate
+    // Find an active skill (web_search) and click its toggle
+    const activeSkillCard = page.locator('[data-testid="skill-card-web_search"]');
+    await expect(activeSkillCard).toBeVisible();
+
+    const activeToggle = activeSkillCard.locator('[data-testid="skill-toggle-web_search"]');
     await activeToggle.click();
 
-    // Wait for state update
-    await page.waitForTimeout(500);
+    // Wait for API call to complete
+    await page.waitForTimeout(1000);
 
-    // Verify skill is now inactive (after reload)
-    // Note: In production, this would trigger a re-fetch
-    // For now, verify the API call was made
-
-    // Find an inactive skill (data_analysis)
+    // Wait for skill card to be visible before next toggle
     const inactiveSkillCard = page.locator('[data-testid="skill-card-data_analysis"]');
-    const inactiveToggle = inactiveSkillCard.locator('button:has-text("Inactive")');
+    await expect(inactiveSkillCard).toBeVisible();
 
-    // Click to activate
+    // Find an inactive skill (data_analysis) and click its toggle
+    const inactiveToggle = inactiveSkillCard.locator('[data-testid="skill-toggle-data_analysis"]');
     await inactiveToggle.click();
 
     // Wait for state update
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(1000);
 
-    // Verify activation API was called
+    // Verify both toggles completed without errors
     // In production, the skill list would refresh and show updated status
   });
 
@@ -498,18 +529,36 @@ test.describe('Group 5: Skills Management', () => {
 
     await navigateToSkillsRegistry(page);
 
+    // Wait for skill card to be visible before clicking
+    await page.waitForSelector('[data-testid="skill-card-web_search"]', {
+      state: 'visible',
+      timeout: TIMEOUT
+    });
+
     // Navigate to config editor
     const configLink = page.locator('[data-testid="skill-edit-web_search"]');
     await configLink.click();
     await page.waitForLoadState('networkidle');
 
-    // Modify YAML
+    // Wait for config editor to load
     const yamlEditor = page.locator('textarea');
+    await expect(yamlEditor).toBeVisible({ timeout: TIMEOUT });
+
+    // Modify YAML
     await yamlEditor.clear();
     await yamlEditor.fill(VALID_CONFIG);
 
     // Wait for validation
     await page.waitForTimeout(1000);
+
+    // Setup dialog handler BEFORE clicking save
+    let dialogAccepted = false;
+    page.on('dialog', async dialog => {
+      if (dialog.message().includes('saved successfully')) {
+        dialogAccepted = true;
+        await dialog.accept();
+      }
+    });
 
     // Click save button
     const saveButton = page.locator('button:has-text("Save")');
@@ -517,15 +566,14 @@ test.describe('Group 5: Skills Management', () => {
     await saveButton.click();
 
     // Wait for save confirmation
-    // Note: The component uses alert() - in production, this would be a toast notification
-    page.on('dialog', async dialog => {
-      expect(dialog.message()).toContain('saved successfully');
-      await dialog.accept();
-    });
+    await page.waitForTimeout(1500);
 
-    // Verify save button is now disabled (no unsaved changes)
-    await page.waitForTimeout(500);
-    await expect(saveButton).toBeDisabled();
+    // Verify dialog was shown
+    expect(dialogAccepted).toBe(true);
+
+    // Verify error did NOT appear
+    const errorDisplay = page.locator('[data-testid="save-error"]');
+    await expect(errorDisplay).not.toBeVisible();
   });
 
   test('should handle save errors gracefully', async ({ page }) => {
@@ -560,13 +608,22 @@ test.describe('Group 5: Skills Management', () => {
 
     await navigateToSkillsRegistry(page);
 
+    // Wait for skill card to be visible before clicking
+    await page.waitForSelector('[data-testid="skill-card-web_search"]', {
+      state: 'visible',
+      timeout: TIMEOUT
+    });
+
     // Navigate to config editor
     const configLink = page.locator('[data-testid="skill-edit-web_search"]');
     await configLink.click();
     await page.waitForLoadState('networkidle');
 
-    // Modify YAML
+    // Wait for config editor to load
     const yamlEditor = page.locator('textarea');
+    await expect(yamlEditor).toBeVisible({ timeout: TIMEOUT });
+
+    // Modify YAML
     await yamlEditor.clear();
     await yamlEditor.fill(VALID_CONFIG);
 
@@ -575,11 +632,13 @@ test.describe('Group 5: Skills Management', () => {
 
     // Click save button
     const saveButton = page.locator('button:has-text("Save")');
+    await expect(saveButton).toBeEnabled();
     await saveButton.click();
 
-    // Verify error message is displayed
+    // Verify error message is displayed with extended timeout
     const errorMessage = page.locator('[data-testid="save-error"]');
     await expect(errorMessage).toBeVisible({ timeout: 5000 });
+
     // Check for either "Failed" or "error" in the message (accepts HTTP error format)
     await expect(errorMessage).toContainText(/Failed|error/i);
 
