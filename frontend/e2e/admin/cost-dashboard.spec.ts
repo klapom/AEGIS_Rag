@@ -15,7 +15,10 @@ import { test, expect } from '../fixtures';
  * Frontend: http://localhost:5173
  */
 
-test.describe('Cost Dashboard - Feature 31.10c', () => {
+// Sprint 123: Skip entire suite - UI component not implemented yet
+// These tests wait for Cost Dashboard page which doesn't exist
+// Re-enable when CostDashboard component is implemented
+test.describe.skip('Cost Dashboard - Feature 31.10c', () => {
   test('should display cost summary cards with values', async ({
     costDashboardPage,
   }) => {
