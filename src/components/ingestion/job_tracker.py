@@ -64,7 +64,8 @@ DB_PATH = Path("data/jobs/ingestion_jobs.db")
 # Job status literals
 JobStatus = Literal["running", "completed", "failed", "cancelled"]
 EventLevel = Literal["INFO", "DEBUG", "WARN", "ERROR"]
-Phase = Literal["parsing", "vlm", "chunking", "embedding", "bm25", "graph"]
+# Sprint 124: "bm25" renamed to "sparse" (BGE-M3 sparse vectors replaced BM25 in Sprint 87)
+Phase = Literal["parsing", "vlm", "chunking", "embedding", "sparse", "graph"]
 ParserType = Literal["docling", "llamaindex", "unsupported"]
 FileStatus = Literal["pending", "processing", "completed", "failed", "skipped"]
 

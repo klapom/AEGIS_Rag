@@ -1,7 +1,12 @@
 # RAGAS Evaluation Guide
 
-**Last Updated:** 2026-01-07 (Sprint 77+)
+**Last Updated:** 2026-02-04 (Sprint 124)
 **Purpose:** Standardized process for RAGAS evaluation using production ingestion pipeline
+
+> **Sprint 124 Updates:**
+> - Removed BM25 references (replaced by BGE-M3 sparse vectors since Sprint 87)
+> - Context window increased to 128K for accurate evaluation
+> - Removed 500-char truncation in eval harness
 
 ---
 
@@ -100,9 +105,8 @@ data/ragas_eval_txt_large/
    # Stop containers
    docker compose -f docker-compose.dgx-spark.yml down
 
-   # Clear data
+   # Clear data (Sprint 124: BM25 removed - lexical search now uses BGE-M3 sparse vectors)
    rm -rf data/qdrant_storage/* data/neo4j_data/* data/redis_data/* data/lightrag_storage/*.*
-   rm -f data/cache/bm25_index.pkl
 
    # Restart
    docker compose -f docker-compose.dgx-spark.yml up -d
@@ -340,7 +344,7 @@ curl -s 'http://localhost:6333/collections/documents_v1/points/scroll?limit=1' |
 2. ✅ **Clear databases before RAGAS runs** (prevent contamination)
 3. ✅ **Use separate namespaces** for different datasets
 4. ✅ **Verify upload success** before running evaluation
-5. ✅ **Check all 3 databases** (Qdrant, Neo4j, BM25)
+5. ✅ **Check both databases** (Qdrant for vectors, Neo4j for graph)
 6. ❌ **Never use admin endpoints** for evaluation ingestion
 7. ❌ **Never mix RAGAS data** with production data
 
@@ -351,11 +355,14 @@ curl -s 'http://localhost:6333/collections/documents_v1/points/scroll?limit=1' |
 - **Frontend Upload Endpoint:** `src/api/v1/retrieval.py:423`
 - **LangGraph Pipeline:** `src/components/ingestion/langgraph_pipeline.py`
 - **Docling Client:** `src/components/ingestion/docling_client.py`
+- **RAGAS Evaluator:** `src/evaluation/ragas_evaluator.py`
 - **Sprint 21 Feature 21.2:** Full ingestion pipeline implementation
 - **Sprint 76-77:** RAGAS evaluation infrastructure
+- **Sprint 87:** BGE-M3 hybrid search (replaces BM25)
+- **Sprint 124:** Context window 128K, truncation fixes
 
 ---
 
-**Document maintained by:** Sprint 77+ RAGAS Evaluation Team
+**Document maintained by:** RAGAS Evaluation Team
 **Review frequency:** Before each RAGAS evaluation run
-**Last RAGAS Run:** TBD (Post Sprint 77)
+**Last Update:** Sprint 124 (2026-02-04)

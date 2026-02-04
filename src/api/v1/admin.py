@@ -46,8 +46,8 @@ class SystemStats(BaseModel):
     qdrant_collection_name: str = Field(..., description="Qdrant collection name")
     qdrant_vector_dimension: int = Field(..., description="Vector dimension (BGE-M3: 1024)")
 
-    # BM25 statistics (if available)
-    bm25_corpus_size: int | None = Field(None, description="BM25 corpus size (number of documents)")
+    # BM25 statistics (DEPRECATED - Sprint 87: replaced by BGE-M3 sparse vectors)
+    bm25_corpus_size: int | None = Field(None, description="[Deprecated] Always None - use Qdrant sparse vectors")
 
     # Neo4j / LightRAG statistics
     neo4j_total_entities: int | None = Field(None, description="Total entities in Neo4j graph")
@@ -133,20 +133,11 @@ async def get_system_stats() -> SystemStats:
             logger.warning("failed_to_get_qdrant_stats", error=str(e), exc_info=True)
             qdrant_total_chunks = 0
 
-        # BM25 statistics (from HybridSearch)
-        logger.info("stats_collection_phase", phase="bm25", status="starting")
+        # Sprint 124: BM25 statistics deprecated - lexical search now uses BGE-M3 sparse vectors
+        # (Sprint 87: BGE-M3 hybrid search replaced BM25, see ADR-024)
+        # Field kept for API backwards compatibility but always returns None
         bm25_corpus_size = None
-        try:
-            from src.api.v1.retrieval import get_hybrid_search
-
-            hybrid_search = get_hybrid_search()
-            if hybrid_search.bm25_search.is_fitted():
-                bm25_corpus_size = hybrid_search.bm25_search.get_corpus_size()
-                logger.info("bm25_stats_retrieved", corpus_size=bm25_corpus_size)
-            else:
-                logger.debug("bm25_not_fitted")
-        except Exception as e:
-            logger.debug("bm25_stats_unavailable", error=str(e))
+        logger.debug("bm25_stats_skipped", reason="deprecated_since_sprint_87")
 
         # Neo4j statistics (direct Neo4j client)
         logger.info("stats_collection_phase", phase="neo4j", status="starting")

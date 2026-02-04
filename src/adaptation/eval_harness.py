@@ -430,10 +430,12 @@ class EvalHarness:
         start_time = time.perf_counter()
 
         # Build source context
+        # Sprint 124: Removed 500-char truncation - full context needed for accurate grounding
+        # Previous truncation caused false negatives (info existed but was cut off)
         source_texts = []
         for i, source in enumerate(sources, 1):
             text = source.get("text", source.get("content", ""))
-            source_texts.append(f"[{i}] {text[:500]}")  # Truncate to 500 chars
+            source_texts.append(f"[{i}] {text}")
 
         source_context = "\n\n".join(source_texts)
 

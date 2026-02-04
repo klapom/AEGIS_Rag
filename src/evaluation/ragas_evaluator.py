@@ -279,16 +279,16 @@ class RAGASEvaluator:
         # Create LangChain Ollama instances for RAGAS (native support)
         # Long timeout for RAGAS metric evaluation (complex prompts)
         # Sprint 75: Optimized for RAGAS output parsing (GitHub Issue #1228, #1955)
-        # Sprint 75: Optimized context budget for RAGAS with long documents
-        # Available tokens: 16384 (num_ctx) - 512 (num_predict) - 1000 (prompt overhead)
-        #                 = ~14,872 tokens × 4 chars/token ≈ 59,488 characters
+        # Sprint 124: Extended context window to 128K for accurate evaluation
+        # Available tokens: 131072 (num_ctx) - 2048 (num_predict) - 1000 (prompt overhead)
+        #                 = ~128,024 tokens × 4 chars/token ≈ 512,096 characters (~500KB)
         self.llm = ChatOllama(
             model=llm_model,
             base_url=OLLAMA_BASE_URL,
             temperature=0.0,  # Deterministic for consistent JSON output
             top_p=0.9,  # Reduce over-generation
             timeout=300,  # 5 minutes timeout for RAGAS evaluation
-            num_ctx=32768,  # Sprint 75 Fix: Increased to 32K (gpt-oss:20b supports 128K)
+            num_ctx=131072,  # Sprint 124: Increased to 128K for accurate RAGAS evaluation
             num_predict=2048,  # Sprint 75 Fix: Restored to 2048 for complex outputs
             format="json",  # Force JSON output for RAGAS metric parsing
         )
