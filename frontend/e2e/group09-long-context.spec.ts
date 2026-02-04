@@ -1,5 +1,7 @@
 import { test, expect, setupAuthMocking, navigateClientSide } from './fixtures';
 import * as fs from 'fs';
+import * as path from 'path';
+import { fileURLToPath } from 'url';
 
 /**
  * E2E Tests for Group 9: Long Context Features (Sprint 90/91/92)
@@ -29,11 +31,15 @@ import * as fs from 'fs';
  * - Loaded from external file: /tmp/long_context_test_input.md
  */
 
+// ES Module compatibility: derive __dirname from import.meta.url
+// Sprint 122: Fix for ES module scope (replaces CommonJS __dirname)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 // Load long context test data from fixture file (11,107 tokens)
 // File location: frontend/e2e/fixtures/long_context_test_input.md
 // This fixture contains real technical documentation compiled from Sprint plans and architecture docs
 // Contents: Sprints 90-92 features, testing infrastructure, performance optimization, monitoring
-import * as path from 'path';
 
 const FIXTURE_DIR = path.join(__dirname, 'fixtures');
 const LONG_CONTEXT_FILE = path.join(FIXTURE_DIR, 'long_context_test_input.md');

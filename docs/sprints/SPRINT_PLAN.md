@@ -1901,3 +1901,37 @@ Sprint 117.1 (Domain CRUD) - Foundation
 - **MCP:** LLM tool detection default, enhanced bilingual prompts, 9 skill triggers
 
 **See:** `docs/sprints/SPRINT_121_PLAN.md`
+
+---
+
+## Sprint 122 ✅ **COMPLETE** (2026-02-03)
+
+**Status:** ✅ COMPLETE (4/5 Features)
+**Focus:** E2E Test Stabilization - Timeout Fixes
+**Story Points:** 24 SP (21 delivered, 3 deferred to Sprint 123)
+**Predecessor:** Sprint 121
+
+**Features:**
+
+| # | Feature | SP | Status |
+|---|---------|-----|--------|
+| 122.1 | Multi-Turn RAG Timeout Fix | 8 | ✅ 0%→93% pass rate |
+| 122.2 | Deep Research E2E Tests | 5 | ✅ 91% pass rate (20/22) |
+| 122.3 | Long Context E2E Tests | 5 | ✅ 100% pass rate (46/46) |
+| 122.4 | Selector Mismatch Fixes | 3 | ✅ Fixed `session-id` selectors |
+| 122.5 | Research Mode E2E Tests | 3 | 🟡 Deferred (2/12 pass, needs backend profiling) |
+
+**Key Achievements:**
+- **Model Config:** Changed to `nemotron-3-nano:32k` (128K context vs 4K)
+- **Auth Fix:** `ChatPage.goto()` skip-if-already-home prevents race condition
+- **ES Module Fix:** `import.meta.url` pattern for `__dirname` in Playwright tests
+- **Selector Fix:** `conversation-id` → `session-id` with `getAttribute('data-session-id')`
+- **Test Duration:** 1.1h → 6min (**11x faster**)
+
+**Root Causes Fixed:**
+1. **LLM Context Truncation:** 4K context too small for RAG (needs 8-15K) → 128K model
+2. **Auth Race Condition:** Double navigation after login → Skip-if-already-home
+3. **ES Module `__dirname`:** ReferenceError in Playwright tests → `import.meta.url` pattern
+4. **Selector Mismatch:** `conversation-id` vs `session-id` naming → Use actual testids
+
+**See:** `docs/sprints/SPRINT_122_PLAN.md`
