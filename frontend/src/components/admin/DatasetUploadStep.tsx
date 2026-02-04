@@ -189,7 +189,7 @@ export function DatasetUploadStep({ dataset, onUpload, onBack, onNext, isLoading
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-semibold text-gray-900">
-              Dataset Preview ({dataset.length} samples)
+              Dataset Preview (<span data-testid="sample-count">{dataset.length}</span> samples)
             </h3>
             <button
               onClick={handleClearDataset}

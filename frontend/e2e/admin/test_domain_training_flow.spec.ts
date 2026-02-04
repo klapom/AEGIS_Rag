@@ -26,7 +26,7 @@ test.describe('Domain Training - Page Navigation & Display', () => {
   });
 
   // Sprint 106: Skip - "general" domain only exists if backend seeds it
-  test.skip('should display default "general" domain in list', async ({ adminDomainTrainingPage }) => {
+  test('should display default "general" domain in list', async ({ adminDomainTrainingPage }) => {
     // The general domain should always exist
     const exists = await adminDomainTrainingPage.domainExists('general');
     expect(exists).toBeTruthy();
@@ -34,8 +34,8 @@ test.describe('Domain Training - Page Navigation & Display', () => {
 });
 
 test.describe('Domain Training - New Domain Wizard Step 1', () => {
-  // Sprint 123.10: Skip all wizard tests - UI component not implemented (3-min timeouts)
-  test.skip('should open new domain wizard when clicking button', async ({
+  // Sprint 123.11: Re-enabled - POM testids updated to match actual UI
+  test('should open new domain wizard when clicking button', async ({
     adminDomainTrainingPage,
   }) => {
     await adminDomainTrainingPage.clickNewDomain();
@@ -46,7 +46,7 @@ test.describe('Domain Training - New Domain Wizard Step 1', () => {
     await expect(adminDomainTrainingPage.modelSelect).toBeVisible();
   });
 
-  // Sprint 123.10: Skip - UI wizard component not implemented (3-min timeout)
+  // Sprint 123.11: Skip - UI has no inline validation error display
   test.skip('should validate domain name with regex', async ({ adminDomainTrainingPage }) => {
     await adminDomainTrainingPage.clickNewDomain();
 
@@ -85,8 +85,8 @@ test.describe('Domain Training - New Domain Wizard Step 1', () => {
     expect(errorMessage.toLowerCase()).toMatch(/lowercase|invalid/i);
   });
 
-  // Sprint 123.10: Skip - UI wizard component not implemented (3-min timeout)
-  test.skip('should accept valid domain name format', async ({ adminDomainTrainingPage }) => {
+  // Sprint 123.11: Re-enabled - POM testids updated to match actual UI
+  test('should accept valid domain name format', async ({ adminDomainTrainingPage }) => {
     await adminDomainTrainingPage.clickNewDomain();
 
     // Valid: lowercase with underscores
@@ -115,8 +115,8 @@ test.describe('Domain Training - New Domain Wizard Step 1', () => {
     expect(errorMessage.toLowerCase()).toContain('required');
   });
 
-  // Sprint 123.10: Skip - UI wizard component not implemented (3-min timeout)
-  test.skip('should close wizard when clicking cancel', async ({ adminDomainTrainingPage }) => {
+  // Sprint 123.11: Re-enabled - POM testids updated to match actual UI
+  test('should close wizard when clicking cancel', async ({ adminDomainTrainingPage }) => {
     await adminDomainTrainingPage.clickNewDomain();
     await expect(adminDomainTrainingPage.wizardTitle).toBeVisible();
 
@@ -130,7 +130,7 @@ test.describe('Domain Training - New Domain Wizard Step 1', () => {
 
 // Sprint 123.10: Skip metric configuration tests - UI wizard component not implemented (3-min timeouts)
 test.describe('Domain Training - Metric Configuration', () => {
-  test.skip('should display metric configuration panel', async ({ adminDomainTrainingPage }) => {
+  test('should display metric configuration panel', async ({ adminDomainTrainingPage }) => {
     await adminDomainTrainingPage.clickNewDomain();
 
     await expect(adminDomainTrainingPage.metricConfigPanel).toBeVisible();
@@ -169,7 +169,7 @@ test.describe('Domain Training - Metric Configuration', () => {
     await expect(preset).toHaveAttribute('aria-pressed', 'true');
   });
 
-  test.skip('should show custom metric options when selecting custom preset', async ({
+  test('should show custom metric options when selecting custom preset', async ({
     adminDomainTrainingPage,
   }) => {
     await adminDomainTrainingPage.clickNewDomain();

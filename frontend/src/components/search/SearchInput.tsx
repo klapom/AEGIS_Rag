@@ -56,6 +56,11 @@ export function SearchInput({
   // Sprint 123.11: Mode selector support (replaces hardcoded 'hybrid')
   const [mode, setMode] = useState<SearchMode>(initialMode);
   const [selectedNamespaces, setSelectedNamespaces] = useState<string[]>([]);
+
+  // Sprint 123.11: Sync mode state when initialMode prop changes (e.g., from URL navigation)
+  useEffect(() => {
+    setMode(initialMode);
+  }, [initialMode]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Sprint 79 Feature 79.6: Graph expansion config state

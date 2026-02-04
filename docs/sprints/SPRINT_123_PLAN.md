@@ -1,9 +1,9 @@
 # Sprint 123: E2E Test Stabilization Phase 2
 
 **Date:** 2026-02-04
-**Status:** ✅ COMPLETE (123.1-123.3 All Complete)
-**Focus:** Fix Graph UI, MCP Service, and LLM Quality test failures
-**Story Points:** 21 SP estimated
+**Status:** ✅ COMPLETE (123.1-123.11 All Complete)
+**Focus:** Fix Graph UI, MCP Service, LLM Quality, and Hybrid Search test failures
+**Story Points:** 42 SP delivered
 **Predecessor:** Sprint 122
 
 ---
@@ -585,6 +585,52 @@ async goto(): Promise<void> {
 
 ---
 
+### 123.11 Hybrid Search Group 10 Final Fixes ✅ COMPLETE (5 SP)
+
+**Problem:** Group 10 Hybrid Search tests (13 tests) had 7 failures due to auth pattern and URL parameter issues.
+
+**Root Cause Analysis (FOUND & FIXED):**
+
+1. **Auth Pattern Issue:** Tests used `page.goto()` which causes full page reload, losing React auth state
+   - **Fix:** Replaced all `page.goto()` with `navigateClientSide()` from fixtures
+
+2. **LoginPage Query Parameter Loss:** After login redirect, URL query params were stripped
+   - **Cause:** `LoginPage.tsx` only used `from.pathname`, ignoring `from.search`
+   - **Fix:** Changed to `from.pathname + (from.search || '')`
+
+3. **SearchInput Mode Sync:** Mode selector didn't update when navigating to URL with different mode
+   - **Cause:** `useState(initialMode)` only sets initial value, doesn't re-sync on prop changes
+   - **Fix:** Added `useEffect` to sync `mode` state when `initialMode` prop changes
+
+4. **Test Expectation Mismatch:** Tests expected URL update on mode button click
+   - **Reality:** Mode selector only changes internal state; URL updates on search submit
+   - **Fix:** Updated tests to verify button visual state (`bg-primary` class) instead of URL
+
+**Files Modified:**
+- `frontend/e2e/group10-hybrid-search.spec.ts` - `navigateClientSide()` pattern + test expectations
+- `frontend/src/pages/LoginPage.tsx` - Include `search` params in redirect URL
+- `frontend/src/components/search/SearchInput.tsx` - Add `useEffect` for mode sync
+
+**Test Results:**
+```
+Before: 8 passed, 7 failed (auth redirects + URL param loss)
+After:  13 passed, 0 failed (100% pass rate)
+```
+
+**Key Pattern Documentation:**
+
+The `navigateClientSide()` + LoginPage query param fix is now the standard pattern for E2E tests:
+
+1. **Don't use:** `page.goto('/path?param=value')` - Loses auth state
+2. **Use instead:** `navigateClientSide(page, '/path?param=value')` - Preserves auth + params
+
+This combination ensures:
+- Auth state preserved across navigation (re-login if needed)
+- URL query parameters preserved after login redirect
+- React state properly synced with URL parameters
+
+---
+
 ## Implementation Plan
 
 ### Phase 1: Investigation (Day 1)
@@ -647,9 +693,11 @@ PLAYWRIGHT_BASE_URL=http://192.168.178.10 npx playwright test e2e/followup/follo
 - [x] Graph UI tests: >80% pass rate (currently ~17%) → **100% (40/40)** ✅
 - [x] MCP Service tests: >80% pass rate (currently ~29%) → **79% (30/38)** ✅
 - [x] LLM Quality tests: >80% pass rate (currently ~60%) → **Expanded keywords** ✅
+- [x] Hybrid Search tests (Group 10): **100% (13/13)** ✅ (Sprint 123.11)
 - [ ] Overall E2E pass rate: >75% (pending full test run - currently at ~26%)
 - [x] No tests timing out at 3+ minutes ✅
 - [x] Container healthchecks: All aegis containers healthy → **10/10** ✅
+- [x] Auth pattern documented and applied to all admin tests ✅
 
 ---
 

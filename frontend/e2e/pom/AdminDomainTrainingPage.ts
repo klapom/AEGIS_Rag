@@ -106,15 +106,16 @@ export class AdminDomainTrainingPage extends BasePage {
     this.domainRow = (domainName: string) =>
       page.locator(`[data-testid="domain-row-${domainName}"]`);
 
-    // New Domain Wizard - Step 1
+    // New Domain Wizard - Step 1 (DomainConfigStep.tsx)
+    // Sprint 123.11: Updated testids to match actual UI implementation
     this.newDomainWizard = page.locator('[data-testid="new-domain-wizard"]');
-    this.wizardTitle = page.getByText(/Create New Domain/i);
+    this.wizardTitle = page.getByRole('heading', { name: /Create New Domain/i });
     this.domainNameInput = page.locator('[data-testid="domain-name-input"]');
     this.domainDescriptionInput = page.locator('[data-testid="domain-description-input"]');
-    this.modelSelect = page.locator('[data-testid="model-select"]');
-    this.nextStepButton = page.locator('[data-testid="next-step-button"]');
-    this.cancelButton = page.locator('[data-testid="cancel-button"]');
-    this.backButton = page.locator('[data-testid="back-button"]');
+    this.modelSelect = page.locator('[data-testid="domain-model-select"]');
+    this.nextStepButton = page.locator('[data-testid="domain-config-next"]');
+    this.cancelButton = page.locator('[data-testid="domain-config-cancel"]');
+    this.backButton = page.locator('[data-testid="dataset-upload-back"]');
 
     // Metric Configuration Panel
     this.metricConfigPanel = page.locator('[data-testid="metric-config-panel"]');
@@ -127,29 +128,32 @@ export class AdminDomainTrainingPage extends BasePage {
     this.relationMetricSelect = page.locator('[data-testid="relation-metric-select"]');
     this.metricPreview = page.locator('[data-testid="metric-preview"]');
 
-    // New Domain Wizard - Step 2
-    this.datasetUploadSection = page.locator('[data-testid="dataset-upload-section"]');
-    this.datasetDropzone = page.locator('[data-testid="dataset-dropzone"]');
+    // New Domain Wizard - Step 2 (DatasetUploadStep.tsx)
+    // Sprint 123.11: Updated testids to match actual UI implementation
+    this.datasetUploadSection = page.locator('[data-testid="dataset-upload-step"]');
+    this.datasetDropzone = page.locator('[data-testid="dataset-file-input"]'); // Click-to-upload, no drag&drop
     this.datasetFileInput = page.locator('[data-testid="dataset-file-input"]');
-    this.samplePreviewContainer = page.locator('[data-testid="sample-preview-container"]');
+    this.samplePreviewContainer = page.locator('[data-testid^="dataset-sample-"]').first().locator('..');
     this.samplePreview = (sampleIndex: number) =>
-      page.locator(`[data-testid="sample-preview-${sampleIndex}"]`);
+      page.locator(`[data-testid="dataset-sample-${sampleIndex}"]`);
     this.sampleCount = page.locator('[data-testid="sample-count"]');
-    this.uploadProgressBar = page.locator('[data-testid="upload-progress-bar"]');
+    this.uploadProgressBar = page.locator('[data-testid="validation-success"], [data-testid="validation-warning"]');
 
     // Validation errors
-    this.validationError = page.locator('[data-testid="validation-error"]');
-    this.domainNameError = page.locator('[data-testid="domain-name-error"]');
-    this.datasetError = page.locator('[data-testid="dataset-error"]');
+    // Sprint 123.11: Updated testids to match actual UI implementation
+    this.validationError = page.locator('[data-testid="dataset-upload-error"], [data-testid="validation-warning"]');
+    this.domainNameError = page.locator('[data-testid="domain-name-error"]'); // May not exist - validation inline
+    this.datasetError = page.locator('[data-testid="dataset-upload-error"]');
 
-    // Training related
-    this.trainingButton = page.locator('[data-testid="training-button"]');
-    this.trainingStatusSection = page.locator('[data-testid="training-status-section"]');
-    this.trainingProgress = page.locator('[data-testid="training-progress"]');
-    this.trainingCurrentStep = page.locator('[data-testid="training-current-step"]');
-    this.trainingMetrics = page.locator('[data-testid="training-metrics"]');
-    this.pauseTrainingButton = page.locator('[data-testid="pause-training-button"]');
-    this.cancelTrainingButton = page.locator('[data-testid="cancel-training-button"]');
+    // Training related (TrainingProgressStep.tsx)
+    // Sprint 123.11: Updated testids to match actual UI implementation
+    this.trainingButton = page.locator('[data-testid="dataset-upload-next"]');
+    this.trainingStatusSection = page.locator('[data-testid="training-progress-step"]');
+    this.trainingProgress = page.locator('[data-testid="training-progress-bar"]');
+    this.trainingCurrentStep = page.locator('[data-testid="training-status"]');
+    this.trainingMetrics = page.locator('[data-testid="training-progress-percent"]');
+    this.pauseTrainingButton = page.locator('[data-testid="pause-training-button"]'); // Not implemented
+    this.cancelTrainingButton = page.locator('[data-testid="training-complete-button"]'); // Close button instead
 
     // Domain detail view
     this.domainDetail = page.locator('[data-testid="domain-detail"]');

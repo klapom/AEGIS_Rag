@@ -20,7 +20,9 @@ export function LoginPage() {
   const location = useLocation();
 
   // Get the page the user was trying to access, or default to home
-  const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/';
+  // Sprint 123.11: Include search params to preserve URL query parameters (mode, q, session_id, etc.)
+  const fromLocation = (location.state as { from?: { pathname: string; search?: string } })?.from;
+  const from = fromLocation ? `${fromLocation.pathname}${fromLocation.search || ''}` : '/';
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
