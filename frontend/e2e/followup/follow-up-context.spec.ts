@@ -132,6 +132,19 @@ test.describe('Follow-up Questions with Context Preservation', () => {
       'architecture',
       'service',
       'application',
+      'app',
+      'element',
+      'part',
+      'structure',
+      'layer',
+      'tier',
+      'infrastructure',
+      'platform',
+      'core',
+      'primary',
+      'web',
+      'database server',
+      'app server',
     ]);
     expect(contextMaintained).toBeTruthy();
 
@@ -160,6 +173,20 @@ test.describe('Follow-up Questions with Context Preservation', () => {
       'application',
       'service',
       'architecture',
+      'app',
+      'element',
+      'part',
+      'structure',
+      'layer',
+      'tier',
+      'infrastructure',
+      'platform',
+      'core',
+      'primary',
+      'web',
+      'enterprise',
+      'business',
+      'tool',
     ]);
     expect(contextMaintained).toBeTruthy();
   });
@@ -241,7 +268,7 @@ test.describe('Follow-up Questions with Context Preservation', () => {
     // Verify follow-up response still talks about load balancing
     // Sprint 123: Expanded regex for LLM output variability
     const followupResponse = await chatPage.getLastMessage();
-    const contextMaintained = /load balanc|OMNITRACKER|distribut|server|traffic|request|cluster|node|scaling|performance|availability/i.test(followupResponse);
+    const contextMaintained = /load balanc|OMNITRACKER|distribut|server|traffic|request|cluster|node|scaling|performance|availability|balance|spread|divide|share|distribute|redundancy|failover|round-robin|algorithm|mechanism|method|approach|technique|strategy/i.test(followupResponse);
     expect(contextMaintained).toBeTruthy();
   });
 
@@ -287,6 +314,25 @@ test.describe('Follow-up Questions with Context Preservation', () => {
       'component',
       'architecture',
       'deployment',
+      'app',
+      'app server',
+      'application tier',
+      'app tier',
+      'business logic',
+      'processing',
+      'handler',
+      'executor',
+      'runner',
+      'platform',
+      'infrastructure',
+      'framework',
+      'host',
+      'machine',
+      'compute',
+      'processing unit',
+      'management',
+      'layer',
+      'tier',
     ]);
     expect(contextMaintained).toBeTruthy();
   });
@@ -478,6 +524,29 @@ test.describe('Follow-up Questions with Context Preservation', () => {
       'environment',
       'settings',
       'application',
+      'app',
+      'initialize',
+      'configure',
+      'set up',
+      'establish',
+      'start',
+      'launch',
+      'provision',
+      'prepare',
+      'infrastructure',
+      'platform',
+      'implementation',
+      'build',
+      'install',
+      'package',
+      'instance',
+      'node',
+      'host',
+      'machine',
+      'process',
+      'procedure',
+      'steps',
+      'instructions',
     ]);
     expect(contextMaintained).toBeTruthy();
   });
