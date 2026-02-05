@@ -841,15 +841,26 @@ export interface GraphEntityDetail {
 
 /**
  * Graph relationship information
+ * Sprint 124 Fix: Support both API formats
+ * - Entity Detail API uses: source_id, source_name, target_id, target_name
+ * - Relations Search API uses: source_entity_id, source_entity_name, etc.
  */
 export interface GraphRelationship {
-  source_id: string;
-  source_name: string;
-  target_id: string;
-  target_name: string;
+  // Relations Search API format
+  source_entity_id?: string;
+  source_entity_name?: string;
+  target_entity_id?: string;
+  target_entity_name?: string;
+  // Entity Detail API format
+  source_id?: string;
+  source_name?: string;
+  target_id?: string;
+  target_name?: string;
+  // Common fields
   relation_type: string;
   description?: string | null;
   weight?: number;
+  namespace_id?: string;
 }
 
 /**

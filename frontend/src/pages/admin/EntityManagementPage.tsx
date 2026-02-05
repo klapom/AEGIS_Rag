@@ -12,7 +12,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Database,
   Search,
@@ -24,7 +24,10 @@ import {
   Network,
   AlertTriangle,
   X,
+  Share2,
+  FileText,
 } from 'lucide-react';
+import { ContextMenu } from '../../components/ui/ContextMenu';
 import { AdminNavigationBar } from '../../components/admin/AdminNavigationBar';
 import type {
   GraphEntity,
@@ -468,6 +471,7 @@ function EntitiesTab() {
  * Relations Tab Component
  */
 function RelationsTab() {
+  const navigate = useNavigate();
   const [relations, setRelations] = useState<GraphRelationship[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -480,6 +484,33 @@ function RelationsTab() {
   const [deleteConfirm, setDeleteConfirm] = useState<GraphRelationship | null>(null);
   const [namespaces, setNamespaces] = useState<Array<{ namespace_id: string }>>([]);
   const [relationTypes, setRelationTypes] = useState<string[]>([]);
+  const [selectedEntityForDetail, setSelectedEntityForDetail] = useState<string | null>(null);
+  const [entityDetailLoading, setEntityDetailLoading] = useState(false);
+  const [entityDetail, setEntityDetail] = useState<import('../../types/admin').GraphEntityDetail | null>(null);
+
+  // Helper: Navigate to graph visualization for an entity
+  const showEntityInGraph = (entityName: string) => {
+    navigate(`/admin/graph?entity=${encodeURIComponent(entityName)}&tab=visualization`);
+  };
+
+  // Helper: Navigate to graph visualization for a namespace
+  const showNamespaceInGraph = (namespaceId: string) => {
+    navigate(`/admin/graph?namespace=${encodeURIComponent(namespaceId)}&tab=visualization`);
+  };
+
+  // Helper: Load and show entity detail
+  const showEntityDetail = async (entityId: string) => {
+    setEntityDetailLoading(true);
+    try {
+      const detail = await getEntityDetail(entityId);
+      setEntityDetail(detail);
+      setSelectedEntityForDetail(entityId);
+    } catch (err) {
+      console.error('Failed to load entity detail:', err);
+    } finally {
+      setEntityDetailLoading(false);
+    }
+  };
 
   const pageSize = 20;
 
@@ -530,8 +561,8 @@ function RelationsTab() {
   const handleDeleteRelation = async (relation: GraphRelationship) => {
     try {
       await deleteRelation({
-        source_entity_id: relation.source_id,
-        target_entity_id: relation.target_id,
+        source_entity_id: relation.source_entity_id || relation.source_id || '',
+        target_entity_id: relation.target_entity_id || relation.target_id || '',
         relation_type: relation.relation_type,
       });
       setDeleteConfirm(null);
@@ -675,12 +706,32 @@ function RelationsTab() {
                     className="hover:bg-gray-50 dark:hover:bg-gray-700"
                     data-testid={`relation-row-${idx}`}
                   >
+                    {/* Source Entity with Context Menu */}
                     <td className="px-6 py-4">
-                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                        {relation.source_name}
-                      </div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
-                        {relation.source_id}
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                            {relation.source_entity_name || relation.source_name}
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            {relation.source_entity_id || relation.source_id}
+                          </div>
+                        </div>
+                        <ContextMenu
+                          data-testid={`source-menu-${idx}`}
+                          items={[
+                            {
+                              label: 'Show in Graph',
+                              icon: <Share2 className="w-4 h-4" />,
+                              onClick: () => showEntityInGraph(relation.source_entity_name || relation.source_name || ''),
+                            },
+                            {
+                              label: 'Show Entity Details',
+                              icon: <FileText className="w-4 h-4" />,
+                              onClick: () => showEntityDetail(relation.source_entity_id || relation.source_id || ''),
+                            },
+                          ]}
+                        />
                       </div>
                     </td>
                     <td className="px-6 py-4 text-center">
@@ -688,17 +739,51 @@ function RelationsTab() {
                         {relation.relation_type}
                       </span>
                     </td>
+                    {/* Target Entity with Context Menu */}
                     <td className="px-6 py-4">
-                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                        {relation.target_name}
-                      </div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
-                        {relation.target_id}
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                            {relation.target_entity_name || relation.target_name}
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            {relation.target_entity_id || relation.target_id}
+                          </div>
+                        </div>
+                        <ContextMenu
+                          data-testid={`target-menu-${idx}`}
+                          items={[
+                            {
+                              label: 'Show in Graph',
+                              icon: <Share2 className="w-4 h-4" />,
+                              onClick: () => showEntityInGraph(relation.target_entity_name || relation.target_name || ''),
+                            },
+                            {
+                              label: 'Show Entity Details',
+                              icon: <FileText className="w-4 h-4" />,
+                              onClick: () => showEntityDetail(relation.target_entity_id || relation.target_id || ''),
+                            },
+                          ]}
+                        />
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                      {/* Using source entity namespace as proxy */}
-                      {namespaceFilter || 'default'}
+                    {/* Namespace with Context Menu */}
+                    <td className="px-6 py-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-500 dark:text-gray-400">
+                          {relation.namespace_id || namespaceFilter || 'default'}
+                        </span>
+                        <ContextMenu
+                          data-testid={`namespace-menu-${idx}`}
+                          items={[
+                            {
+                              label: 'Show Namespace in Graph',
+                              icon: <Network className="w-4 h-4" />,
+                              onClick: () => showNamespaceInGraph(relation.namespace_id || namespaceFilter || 'default'),
+                            },
+                          ]}
+                        />
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-right text-sm font-medium">
                       <button
@@ -755,6 +840,32 @@ function RelationsTab() {
           onConfirm={() => handleDeleteRelation(deleteConfirm)}
           onCancel={() => setDeleteConfirm(null)}
         />
+      )}
+
+      {/* Entity Detail Panel (from context menu) */}
+      {entityDetail && (
+        <EntityDetailPanel
+          entity={entityDetail}
+          onClose={() => {
+            setEntityDetail(null);
+            setSelectedEntityForDetail(null);
+          }}
+          onDelete={() => {
+            // Close panel after noting the entity ID for potential deletion
+            setEntityDetail(null);
+            setSelectedEntityForDetail(null);
+          }}
+        />
+      )}
+
+      {/* Loading overlay for entity detail */}
+      {entityDetailLoading && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-40">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-xl">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-gray-300 border-t-blue-600"></div>
+            <p className="text-gray-600 dark:text-gray-400 mt-4">Loading entity details...</p>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -861,7 +972,7 @@ function EntityDetailPanel({ entity, onClose, onDelete }: EntityDetailPanelProps
                   data-testid={`relationship-${idx}`}
                 >
                   <span className="text-gray-900 dark:text-gray-100 font-medium">
-                    {rel.source_name}
+                    {rel.source_entity_name || rel.source_name}
                   </span>
                   <span className="text-gray-400">→</span>
                   <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded text-xs">
@@ -869,7 +980,7 @@ function EntityDetailPanel({ entity, onClose, onDelete }: EntityDetailPanelProps
                   </span>
                   <span className="text-gray-400">→</span>
                   <span className="text-gray-900 dark:text-gray-100 font-medium">
-                    {rel.target_name}
+                    {rel.target_entity_name || rel.target_name}
                   </span>
                 </div>
               ))}
@@ -1005,7 +1116,7 @@ function RelationDeleteConfirmDialog({
             <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 mb-4 text-sm">
               <div className="flex items-center gap-2">
                 <span className="font-medium text-gray-900 dark:text-gray-100">
-                  {relation.source_name}
+                  {relation.source_entity_name || relation.source_name}
                 </span>
                 <span className="text-gray-400">→</span>
                 <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded text-xs">
@@ -1013,7 +1124,7 @@ function RelationDeleteConfirmDialog({
                 </span>
                 <span className="text-gray-400">→</span>
                 <span className="font-medium text-gray-900 dark:text-gray-100">
-                  {relation.target_name}
+                  {relation.target_entity_name || relation.target_name}
                 </span>
               </div>
             </div>

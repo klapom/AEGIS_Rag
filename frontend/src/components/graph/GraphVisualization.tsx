@@ -104,7 +104,21 @@ export function GraphVisualization({
     new Set(Object.keys(EDGE_COLORS).filter((k) => k !== 'DEFAULT'))
   );
 
-  // Initialize or update network
+  // Sprint 124 Fix: Separate network initialization from data updates
+  // This prevents vis.js DOM conflicts when data changes
+
+  // Initialize network once on mount
+  useEffect(() => {
+    return () => {
+      // Cleanup network ONLY on unmount
+      if (networkRef.current) {
+        networkRef.current.destroy();
+        networkRef.current = null;
+      }
+    };
+  }, []); // Empty deps = only runs on mount/unmount
+
+  // Update network data when data/filters change
   useEffect(() => {
     if (!containerRef.current || !data || loading) return;
 
@@ -208,7 +222,7 @@ export function GraphVisualization({
       },
     };
 
-    // Create or update network
+    // Create network if it doesn't exist
     if (!networkRef.current) {
       networkRef.current = new Network(containerRef.current, { nodes, edges }, options);
 
@@ -244,16 +258,9 @@ export function GraphVisualization({
         setHoveredEdge(null);
       });
     } else {
+      // Update existing network with new data
       networkRef.current.setData({ nodes, edges });
     }
-
-    return () => {
-      // Cleanup network on unmount
-      if (networkRef.current) {
-        networkRef.current.destroy();
-        networkRef.current = null;
-      }
-    };
   }, [data, loading, edgeFilters, visibleEdgeTypes, onNodeClick]);
 
   // Control handlers

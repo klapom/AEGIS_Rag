@@ -3,8 +3,10 @@
  * Sprint 29 Feature 29.5: Graph Explorer with Search
  * Sprint 34 Feature 34.6: Graph Edge Filter Controls
  * Sprint 51: Added search for entity types and relationship types
+ * Sprint 124: Added Entity Name Search with typeahead for graph focus
  *
  * Features:
+ * - Entity name search with typeahead autocomplete (Sprint 124)
  * - Multi-select for entity types with search
  * - Slider for minimum degree (1-20)
  * - Dropdown for max nodes (50/100/200/500)
@@ -13,8 +15,10 @@
  * - onChange callback with updated filters
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import type { EdgeFilters } from '../../types/graph';
+import { searchEntities } from '../../api/graphEntities';
+import type { GraphEntity } from '../../types/admin';
 
 export interface GraphFilterValues {
   entityTypes: string[];
@@ -31,6 +35,10 @@ interface GraphFiltersProps {
   onEdgeFilterChange?: (edgeFilters: EdgeFilters) => void;
   // Sprint 51: Available relationship types from graph
   availableRelationshipTypes?: string[];
+  // Sprint 124: Entity name search with focus callback
+  onEntityFocus?: (entityName: string) => void;
+  focusedEntity?: string | null;
+  onClearFocus?: () => void;
 }
 
 const ENTITY_TYPE_OPTIONS = [
@@ -77,6 +85,9 @@ export function GraphFilters({
   edgeFilters,
   onEdgeFilterChange,
   availableRelationshipTypes,
+  onEntityFocus,
+  focusedEntity,
+  onClearFocus,
 }: GraphFiltersProps) {
   const [localFilters, setLocalFilters] = useState(value);
   const [localEdgeFilters, setLocalEdgeFilters] = useState<EdgeFilters>(
@@ -85,6 +96,72 @@ export function GraphFilters({
   // Sprint 51: Search states
   const [entitySearch, setEntitySearch] = useState('');
   const [relationshipSearch, setRelationshipSearch] = useState('');
+
+  // Sprint 124: Entity name search state
+  const [entityNameSearch, setEntityNameSearch] = useState('');
+  const [entitySuggestions, setEntitySuggestions] = useState<GraphEntity[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  const entitySearchRef = useRef<HTMLInputElement>(null);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
+
+  // Sprint 124: Debounced entity search
+  useEffect(() => {
+    if (!entityNameSearch.trim() || entityNameSearch.length < 2) {
+      setEntitySuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    const timeoutId = setTimeout(async () => {
+      setSuggestionsLoading(true);
+      try {
+        const result = await searchEntities({
+          search: entityNameSearch,
+          page: 1,
+          page_size: 10,
+        });
+        setEntitySuggestions(result.entities || []);
+        setShowSuggestions(true);
+      } catch (error) {
+        console.error('Entity search failed:', error);
+        setEntitySuggestions([]);
+      } finally {
+        setSuggestionsLoading(false);
+      }
+    }, 300); // 300ms debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [entityNameSearch]);
+
+  // Sprint 124: Close suggestions on click outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        suggestionsRef.current &&
+        !suggestionsRef.current.contains(event.target as Node) &&
+        entitySearchRef.current &&
+        !entitySearchRef.current.contains(event.target as Node)
+      ) {
+        setShowSuggestions(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Sprint 124: Handle entity selection
+  const handleEntitySelect = useCallback(
+    (entity: GraphEntity) => {
+      setEntityNameSearch('');
+      setShowSuggestions(false);
+      if (onEntityFocus) {
+        onEntityFocus(entity.entity_name);
+      }
+    },
+    [onEntityFocus]
+  );
 
   // Sprint 116 Feature 116.8: Helper to get selected rel types from edge filters
   const getSelectedRelTypesFromFilters = (filters: EdgeFilters): string[] => {
@@ -219,6 +296,111 @@ export function GraphFilters({
 
   return (
     <div className="space-y-6 p-4 bg-white rounded-lg border-2 border-gray-200">
+      {/* Sprint 124: Entity Name Search with Typeahead */}
+      <div className="relative">
+        <label className="block text-sm font-semibold text-gray-900 mb-2">
+          🔍 Search Entity by Name
+        </label>
+        {/* Focused Entity Banner */}
+        {focusedEntity && (
+          <div className="mb-3 p-2 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
+            <span className="text-sm text-blue-800">
+              Focused: <strong>{focusedEntity}</strong>
+            </span>
+            {onClearFocus && (
+              <button
+                onClick={onClearFocus}
+                className="text-blue-600 hover:text-blue-800 text-xs font-medium"
+                data-testid="clear-entity-focus"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        )}
+        {/* Search Input */}
+        <div className="relative">
+          <input
+            ref={entitySearchRef}
+            type="text"
+            value={entityNameSearch}
+            onChange={(e) => setEntityNameSearch(e.target.value)}
+            onFocus={() => entitySuggestions.length > 0 && setShowSuggestions(true)}
+            placeholder="Type entity name..."
+            className="w-full px-3 py-2 pl-9 text-sm border-2 border-gray-200 rounded-lg
+                       focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20"
+            data-testid="entity-name-search-input"
+          />
+          <svg
+            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            />
+          </svg>
+          {suggestionsLoading && (
+            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary" />
+            </div>
+          )}
+          {entityNameSearch && !suggestionsLoading && (
+            <button
+              onClick={() => {
+                setEntityNameSearch('');
+                setShowSuggestions(false);
+              }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
+        {/* Suggestions Dropdown */}
+        {showSuggestions && entitySuggestions.length > 0 && (
+          <div
+            ref={suggestionsRef}
+            className="absolute z-50 w-full mt-1 bg-white border-2 border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+            data-testid="entity-suggestions-dropdown"
+          >
+            {entitySuggestions.map((entity) => (
+              <button
+                key={entity.entity_id}
+                onClick={() => handleEntitySelect(entity)}
+                className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2 border-b border-gray-100 last:border-b-0"
+                data-testid={`entity-suggestion-${entity.entity_id}`}
+              >
+                <span
+                  className="w-2 h-2 rounded-full flex-shrink-0"
+                  style={{
+                    backgroundColor:
+                      ENTITY_TYPE_OPTIONS.find((opt) => opt.value === entity.entity_type)?.color || '#6b7280',
+                  }}
+                />
+                <span className="text-sm font-medium text-gray-900 truncate">{entity.entity_name}</span>
+                <span className="text-xs text-gray-500 ml-auto">{entity.entity_type}</span>
+              </button>
+            ))}
+          </div>
+        )}
+        {showSuggestions && entityNameSearch.length >= 2 && entitySuggestions.length === 0 && !suggestionsLoading && (
+          <div className="absolute z-50 w-full mt-1 bg-white border-2 border-gray-200 rounded-lg shadow-lg p-3">
+            <p className="text-sm text-gray-500 text-center">No entities found for "{entityNameSearch}"</p>
+          </div>
+        )}
+        <p className="text-xs text-gray-500 mt-1">Type at least 2 characters to search</p>
+      </div>
+
+      {/* Divider */}
+      <div className="border-t border-gray-200" />
+
       {/* Entity Types Filter */}
       <div>
         <label className="block text-sm font-semibold text-gray-900 mb-2">

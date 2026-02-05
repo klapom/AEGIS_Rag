@@ -25,7 +25,8 @@ import { useGraphStatistics } from '../../hooks/useGraphStatistics';
 import { useCommunities } from '../../hooks/useCommunities';
 import { useGraphData } from '../../hooks/useGraphData';
 import { fetchGraphStats, type GraphStats } from '../../api/admin';
-import type { GraphFilters as GraphFiltersType, EdgeFilters } from '../../types/graph';
+import { fetchQuerySubgraph } from '../../api/graphViz';
+import type { GraphFilters as GraphFiltersType, EdgeFilters, GraphData } from '../../types/graph';
 
 type TabView = 'analytics' | 'visualization' | 'communities';
 
@@ -39,13 +40,35 @@ export function GraphAnalyticsPage() {
   // Admin access check (simple implementation - can be enhanced with JWT/auth context)
   const [isAdmin] = useState<boolean>(true); // TODO: Replace with actual auth check
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [activeTab, setActiveTab] = useState<TabView>('analytics');
+
+  // Sprint 116 Feature 116.8: URL parameter support for edge filters
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Sprint 124: URL parameter support for entity/namespace/tab
+  const urlTab = searchParams.get('tab');
+  const urlEntity = searchParams.get('entity');
+  const urlNamespace = searchParams.get('namespace');
+
+  // Initialize activeTab from URL param or default to 'analytics'
+  const [activeTab, setActiveTab] = useState<TabView>(
+    urlTab === 'visualization' || urlTab === 'communities' ? urlTab : 'analytics'
+  );
+
+  // Sprint 124: Focused entity for visualization
+  const [focusedEntity, setFocusedEntity] = useState<string | null>(urlEntity);
+  const [focusedNamespace, setFocusedNamespace] = useState<string | null>(urlNamespace);
 
   // Sprint 116 Feature 116.9: Visualization mode toggle (force-graph vs vis-network)
   const [useVisNetwork, setUseVisNetwork] = useState(true);
 
-  // Sprint 116 Feature 116.8: URL parameter support for edge filters
-  const [searchParams, setSearchParams] = useSearchParams();
+  // Sprint 124: Auto-switch to visualization tab when entity/namespace is provided
+  useEffect(() => {
+    if (urlEntity || urlNamespace) {
+      setActiveTab('visualization');
+      if (urlEntity) setFocusedEntity(urlEntity);
+      if (urlNamespace) setFocusedNamespace(urlNamespace);
+    }
+  }, [urlEntity, urlNamespace]);
 
   // Sprint 71 Feature 71.16: Community dialogs state
   const [isSectionDialogOpen, setIsSectionDialogOpen] = useState(false);
@@ -107,8 +130,53 @@ export function GraphAnalyticsPage() {
     highlightCommunities: selectedCommunity ? [selectedCommunity] : undefined,
   };
   const { data: graphData, loading: graphDataLoading, error: graphDataError } = useGraphData(
-    useVisNetwork ? graphFiltersForData : {}
+    useVisNetwork && !focusedEntity ? graphFiltersForData : {}
   );
+
+  // Sprint 124: Entity-focused graph data fetching
+  const [entityGraphData, setEntityGraphData] = useState<GraphData | null>(null);
+  const [entityGraphLoading, setEntityGraphLoading] = useState(false);
+  const [entityGraphError, setEntityGraphError] = useState<Error | null>(null);
+
+  // Fetch entity-focused subgraph when focusedEntity changes
+  useEffect(() => {
+    if (!focusedEntity) {
+      setEntityGraphData(null);
+      return;
+    }
+
+    const loadEntityGraph = async () => {
+      setEntityGraphLoading(true);
+      setEntityGraphError(null);
+      try {
+        const data = await fetchQuerySubgraph([focusedEntity]);
+        setEntityGraphData(data);
+      } catch (err) {
+        setEntityGraphError(err instanceof Error ? err : new Error('Failed to fetch entity graph'));
+      } finally {
+        setEntityGraphLoading(false);
+      }
+    };
+
+    void loadEntityGraph();
+  }, [focusedEntity]);
+
+  // Determine which graph data to use
+  const activeGraphData = focusedEntity ? entityGraphData : graphData;
+  const activeGraphLoading = focusedEntity ? entityGraphLoading : graphDataLoading;
+  const activeGraphError = focusedEntity ? entityGraphError : graphDataError;
+
+  // Sprint 124: Clear focused entity/namespace
+  const clearFocus = () => {
+    setFocusedEntity(null);
+    setFocusedNamespace(null);
+    // Update URL to remove params
+    const newParams = new URLSearchParams(searchParams);
+    newParams.delete('entity');
+    newParams.delete('namespace');
+    newParams.delete('tab');
+    setSearchParams(newParams, { replace: true });
+  };
 
   // Sprint 116 Feature 116.8: Parse edge filters from URL params
   const parseEdgeFiltersFromURL = useCallback((): EdgeFilters => {
@@ -362,6 +430,13 @@ export function GraphAnalyticsPage() {
                   onChange={setFilters}
                   edgeFilters={edgeFilters}
                   onEdgeFilterChange={handleEdgeFilterChange}
+                  // Sprint 124: Entity name search integration
+                  onEntityFocus={(entityName) => {
+                    setFocusedEntity(entityName);
+                    setFocusedNamespace(null);
+                  }}
+                  focusedEntity={focusedEntity}
+                  onClearFocus={clearFocus}
                 />
               </section>
 
@@ -429,11 +504,31 @@ export function GraphAnalyticsPage() {
               </button>
             </div>
 
+            {/* Sprint 124: Focused Entity/Namespace Banner */}
+            {(focusedEntity || focusedNamespace) && (
+              <div className="absolute top-16 left-1/2 -translate-x-1/2 z-20 bg-blue-50 border border-blue-200 rounded-lg shadow-lg px-4 py-2 flex items-center gap-3">
+                <span className="text-sm text-blue-800">
+                  {focusedEntity && (
+                    <>Showing graph for entity: <strong>{focusedEntity}</strong></>
+                  )}
+                  {focusedNamespace && !focusedEntity && (
+                    <>Showing graph for namespace: <strong>{focusedNamespace}</strong></>
+                  )}
+                </span>
+                <button
+                  onClick={clearFocus}
+                  className="text-blue-600 hover:text-blue-800 text-sm font-medium underline"
+                >
+                  Clear filter
+                </button>
+              </div>
+            )}
+
             {useVisNetwork ? (
               <GraphVisualization
-                data={graphData}
-                loading={graphDataLoading}
-                error={graphDataError}
+                data={activeGraphData}
+                loading={activeGraphLoading}
+                error={activeGraphError}
                 edgeFilters={edgeFilters}
               />
             ) : (
