@@ -124,6 +124,23 @@ class TrainingSample(BaseModel):
     )
 
 
+class DomainConfig(BaseModel):
+    """Domain configuration for training.
+
+    Sprint 124: Added to allow specifying llm_model in training request.
+    """
+
+    name: str | None = Field(default=None, description="Domain name (optional, uses URL param)")
+    description: str | None = Field(default=None, description="Domain description")
+    llm_model: str | None = Field(
+        default=None,
+        description="LLM model to use for extraction (e.g., gpt-oss:120b)",
+        examples=["gpt-oss:120b", "nemotron-3-nano:128k", "qwen3:32b"],
+    )
+    entity_types: list[str] | None = Field(default=None, description="Entity types")
+    relation_types: list[str] | None = Field(default=None, description="Relation types")
+
+
 class TrainingDataset(BaseModel):
     """Dataset for training a domain.
 
@@ -139,6 +156,10 @@ class TrainingDataset(BaseModel):
         description="Optional path to save training log as JSONL. "
         "All events (prompts, responses, scores) will be saved for later analysis.",
         examples=["/var/log/aegis/training/tech_docs_2025-12-12.jsonl"],
+    )
+    domain_config: DomainConfig | None = Field(
+        default=None,
+        description="Sprint 124: Domain configuration including llm_model override",
     )
 
 
@@ -579,13 +600,20 @@ async def create_domain(
 
     try:
         from src.components.domain_training import get_domain_repository
-        from src.components.vector_search import EmbeddingService
+        from src.components.shared.embedding_factory import get_embedding_service
 
         repo = get_domain_repository()
-        embedding_service = EmbeddingService()
+        embedding_service = get_embedding_service()
 
         # Generate description embedding using BGE-M3
-        description_embedding = await embedding_service.embed_single(domain_request.description)
+        # Sprint 124 Fix: Use embedding factory for correct backend selection
+        embedding_result = await embedding_service.embed_single(domain_request.description)
+
+        # Handle both dict (flag-embedding) and list[float] (other backends)
+        if isinstance(embedding_result, dict):
+            description_embedding = embedding_result.get("dense", [])
+        else:
+            description_embedding = embedding_result
 
         logger.info(
             "description_embedded",
@@ -1100,6 +1128,16 @@ async def start_training(
 
         # Start background training with transactional rollback support
         # If domain doesn't exist, run_dspy_optimization will create it transactionally
+        # Sprint 124: Pass domain_config to allow llm_model override
+        domain_config_dict = None
+        if dataset.domain_config:
+            domain_config_dict = dataset.domain_config.model_dump(exclude_none=True)
+            logger.info(
+                "domain_config_provided",
+                domain=domain_name,
+                llm_model=domain_config_dict.get("llm_model"),
+            )
+
         background_tasks.add_task(
             run_dspy_optimization,
             domain_name=domain_name,
@@ -1107,6 +1145,7 @@ async def start_training(
             dataset=[s.model_dump() for s in dataset.samples],
             log_path=dataset.log_path,  # SSE event log for later DSPy evaluation
             create_domain_if_not_exists=domain is None,  # Signal to create domain transactionally
+            domain_config=domain_config_dict,  # Sprint 124: Pass llm_model override
         )
 
         logger.info(
@@ -1261,7 +1300,13 @@ async def get_training_status(domain_name: str) -> TrainingStatusResponse:
 
         if started_at:
             # Parse started_at (Neo4j datetime object or ISO string)
-            if hasattr(started_at, "isoformat"):
+            # Sprint 124 Fix: Handle Neo4j DateTime vs Python datetime
+            if hasattr(started_at, "to_native"):
+                # Neo4j DateTime object - convert to Python datetime
+                started_at_dt = started_at.to_native()
+                started_at_str = started_at_dt.isoformat()
+            elif hasattr(started_at, "isoformat"):
+                # Already a Python datetime
                 started_at_dt = started_at
                 started_at_str = started_at.isoformat()
             else:

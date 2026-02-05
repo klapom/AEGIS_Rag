@@ -326,3 +326,20 @@ class TrainingProgressTracker:
             List of progress events (copy, not reference)
         """
         return self._events.copy()
+
+    @property
+    def progress_percent(self) -> float:
+        """Get current progress percentage.
+
+        Returns the progress_percent from the most recent event,
+        or 0.0 if no events have been emitted.
+
+        Returns:
+            Current progress percentage (0-100)
+
+        Sprint 124 Fix: Added property to support error handling
+        in training_runner.py that accesses tracker.progress_percent.
+        """
+        if self._events:
+            return self._events[-1].progress_percent
+        return 0.0

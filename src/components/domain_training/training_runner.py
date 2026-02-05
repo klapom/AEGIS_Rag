@@ -85,6 +85,7 @@ async def run_dspy_optimization(
     dataset: list[dict[str, Any]],
     log_path: str | None = None,
     create_domain_if_not_exists: bool = False,
+    domain_config: dict[str, Any] | None = None,  # Sprint 124: Allow llm_model override
 ) -> None:
     """Run DSPy optimization with comprehensive progress tracking and SSE streaming.
 
@@ -193,7 +194,9 @@ async def run_dspy_optimization(
 
     # Track if we need to create domain after successful training (deferred commit)
     is_new_domain = False
-    domain_config = None
+    # Sprint 124: Use passed domain_config or prepare to create new one
+    passed_domain_config = domain_config  # Preserve passed config
+    new_domain_config = None  # Config to create after successful training
 
     try:
         # --- Phase 1: Initialization (0-5%) ---
@@ -214,30 +217,55 @@ async def run_dspy_optimization(
             # This ensures rollback-like behavior without long-running transactions
             is_new_domain = True
 
-            # Sprint 64 Feature 64.6: Use Admin UI configured model for entity extraction
-            # CRITICAL BUG FIX: Previously used hardcoded settings.lightrag_llm_model
-            # Now respects Admin UI configuration
-            from src.components.llm_config import LLMUseCase, get_llm_config_service
+            # Sprint 124: Check if domain_config was passed with llm_model override
+            if passed_domain_config and passed_domain_config.get("llm_model"):
+                llm_model = passed_domain_config["llm_model"]
+                logger.info(
+                    "using_passed_llm_model_override",
+                    domain=domain_name,
+                    llm_model=llm_model,
+                    source="domain_config parameter",
+                )
+            else:
+                # Sprint 64 Feature 64.6: Fall back to Admin UI configured model
+                from src.components.llm_config import LLMUseCase, get_llm_config_service
 
-            config_service = get_llm_config_service()
-            llm_model = await config_service.get_model_for_use_case(LLMUseCase.ENTITY_EXTRACTION)
+                config_service = get_llm_config_service()
+                llm_model = await config_service.get_model_for_use_case(LLMUseCase.ENTITY_EXTRACTION)
+                logger.info(
+                    "using_default_llm_model_for_new_domain",
+                    domain=domain_name,
+                    llm_model=llm_model,
+                    source="LLMConfigService",
+                )
 
             # Store config for later domain creation (after training succeeds)
-            domain_config = {
+            # Merge passed config with determined llm_model
+            new_domain_config = {
                 "name": domain_name,
                 "llm_model": llm_model,
-                "description": f"Domain {domain_name}",  # Basic description
+                "description": passed_domain_config.get("description", f"Domain {domain_name}") if passed_domain_config else f"Domain {domain_name}",
             }
-
-            logger.info(
-                "using_default_llm_model_for_new_domain",
-                domain=domain_name,
-                llm_model=llm_model,
-            )
+            # Sprint 124: Preserve entity_types and relation_types if provided
+            if passed_domain_config:
+                if passed_domain_config.get("entity_types"):
+                    new_domain_config["entity_types"] = passed_domain_config["entity_types"]
+                if passed_domain_config.get("relation_types"):
+                    new_domain_config["relation_types"] = passed_domain_config["relation_types"]
         elif not domain:
             raise ValueError(f"Domain '{domain_name}' not found")
         else:
-            llm_model = domain["llm_model"]
+            # Sprint 124: Allow llm_model override even for existing domains
+            if passed_domain_config and passed_domain_config.get("llm_model"):
+                llm_model = passed_domain_config["llm_model"]
+                logger.info(
+                    "using_passed_llm_model_override_for_existing_domain",
+                    domain=domain_name,
+                    original_llm_model=domain["llm_model"],
+                    override_llm_model=llm_model,
+                )
+            else:
+                llm_model = domain["llm_model"]
 
         tracker.update_progress(
             0.8,
@@ -469,58 +497,63 @@ async def run_dspy_optimization(
             "Saving optimized prompts and metrics to Neo4j...",
         )
 
-        # Feature 64.2 Part 2: Transactional domain creation
-        # If this is a new domain, create it atomically with training results
-        # using a transaction. If save fails, domain won't be created.
-        if is_new_domain and domain_config:
+        # Feature 64.2 Part 2: Domain creation with training results
+        # Sprint 124 Workaround: Use non-transactional approach to avoid
+        # Neo4j connection timeout issues during long-running training (~10min).
+        # The transactional approach (async with repo.transaction()) fails
+        # with "'coroutine' object does not support the asynchronous context manager"
+        # when the Neo4j connection becomes stale during optimization.
+        if is_new_domain and new_domain_config:
             logger.info(
-                "creating_domain_with_training_results_transactionally",
+                "creating_domain_with_training_results",
+                domain=domain_name,
+                llm_model=new_domain_config.get("llm_model"),
+            )
+
+            # Step 1: Create domain with training status
+            # Sprint 124 Fix: Use embedding factory for correct backend selection
+            from src.components.shared.embedding_factory import get_embedding_service
+
+            embedding_service = get_embedding_service()
+            embedding_result = await embedding_service.embed_single(
+                new_domain_config["description"]
+            )
+
+            # Handle both dict (flag-embedding) and list[float] (other backends)
+            if isinstance(embedding_result, dict):
+                description_embedding = embedding_result.get("dense", [])
+            else:
+                description_embedding = embedding_result
+
+            await repo.create_domain(
+                name=new_domain_config["name"],
+                description=new_domain_config["description"],
+                llm_model=new_domain_config["llm_model"],
+                description_embedding=description_embedding,
+                status="training",
+            )
+
+            logger.info(
+                "new_domain_created",
                 domain=domain_name,
             )
 
-            # Use transaction to create domain + save training results atomically
-            async with repo.transaction() as tx:
-                # Step 1: Create domain with training status
-                # We need to generate description embedding first
-                from src.components.vector_search import EmbeddingService
+            # Step 2: Save training results
+            await repo.save_training_results(
+                domain_name=domain_name,
+                entity_prompt=entity_prompt,
+                relation_prompt=relation_prompt,
+                entity_examples=entity_examples,
+                relation_examples=relation_examples,
+                metrics=training_metrics,
+                status="ready",
+            )
 
-                embedding_service = EmbeddingService()
-                description_embedding = await embedding_service.embed_single(
-                    domain_config["description"]
-                )
-
-                await repo.create_domain(
-                    name=domain_config["name"],
-                    description=domain_config["description"],
-                    llm_model=domain_config["llm_model"],
-                    description_embedding=description_embedding,
-                    status="training",
-                    tx=tx,
-                )
-
-                logger.info(
-                    "new_domain_created_in_transaction",
-                    domain=domain_name,
-                )
-
-                # Step 2: Save training results within same transaction
-                await repo.save_training_results(
-                    domain_name=domain_name,
-                    entity_prompt=entity_prompt,
-                    relation_prompt=relation_prompt,
-                    entity_examples=entity_examples,
-                    relation_examples=relation_examples,
-                    metrics=training_metrics,
-                    status="ready",
-                    tx=tx,
-                )
-
-                # Transaction commits automatically on success
-                logger.info(
-                    "domain_and_training_results_committed_atomically",
-                    domain=domain_name,
-                    metrics=training_metrics,
-                )
+            logger.info(
+                "domain_and_training_results_saved",
+                domain=domain_name,
+                metrics=training_metrics,
+            )
         else:
             # Existing domain: Just update prompts (non-transactional)
             await repo.update_domain_prompts(

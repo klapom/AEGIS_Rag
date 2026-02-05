@@ -44,6 +44,7 @@ from typing import Any
 import structlog
 
 from src.components.domain_training.semantic_matcher import get_semantic_matcher
+from src.core.config import settings
 
 logger = structlog.get_logger(__name__)
 
@@ -168,12 +169,14 @@ class DSPyOptimizer:
             return
 
         # Create Ollama LLM (configuration done via context manager for async safety)
+        # Sprint 124 Fix: Use settings.ollama_base_url for Docker compatibility
+        ollama_url = settings.ollama_base_url
         self.lm = self._dspy.LM(
             model=f"ollama_chat/{self.llm_model}",
-            api_base="http://localhost:11434",
+            api_base=ollama_url,
             api_key="",  # Not needed for local Ollama
         )
-        logger.info("dspy_lm_created", model=self.llm_model, backend="ollama")
+        logger.info("dspy_lm_created", model=self.llm_model, backend="ollama", api_base=ollama_url)
 
     def _get_dspy_context(self) -> Any:
         """Get DSPy context manager for async-safe configuration.
@@ -492,10 +495,22 @@ class DSPyOptimizer:
                 progress_callback, "Extracting optimized prompt", 95.0
             )
 
-            # Extract prompt components
+            # Extract prompt components (Sprint 124: Extract optimized instructions)
+            optimized_instructions = self._extract_optimized_instructions(
+                optimized_module, EntityExtractionSignature.get_instructions()
+            )
+            extracted_demos = self._extract_demos(optimized_module)
+
+            logger.info(
+                "entity_prompt_extracted",
+                instructions_length=len(optimized_instructions),
+                demos_count=len(extracted_demos),
+                used_fallback=optimized_instructions == EntityExtractionSignature.get_instructions(),
+            )
+
             result = {
-                "instructions": EntityExtractionSignature.get_instructions(),
-                "demos": self._extract_demos(optimized_module),
+                "instructions": optimized_instructions,
+                "demos": extracted_demos,
                 "metrics": {
                     "val_f1": eval_score,
                     "val_samples": len(valset),
@@ -745,10 +760,22 @@ class DSPyOptimizer:
                 progress_callback, "Extracting optimized prompt", 95.0
             )
 
-            # Extract prompt components
+            # Extract prompt components (Sprint 124: Extract optimized instructions)
+            optimized_instructions = self._extract_optimized_instructions(
+                optimized_module, RelationExtractionSignature.get_instructions()
+            )
+            extracted_demos = self._extract_demos(optimized_module)
+
+            logger.info(
+                "relation_prompt_extracted",
+                instructions_length=len(optimized_instructions),
+                demos_count=len(extracted_demos),
+                used_fallback=optimized_instructions == RelationExtractionSignature.get_instructions(),
+            )
+
             result = {
-                "instructions": RelationExtractionSignature.get_instructions(),
-                "demos": self._extract_demos(optimized_module),
+                "instructions": optimized_instructions,
+                "demos": extracted_demos,
                 "metrics": {
                     "val_f1": eval_score,
                     "val_samples": len(valset),
@@ -801,8 +828,103 @@ class DSPyOptimizer:
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, _evaluate_sync)
 
+    def _extract_optimized_instructions(
+        self, module: Any, fallback_instructions: str
+    ) -> str:
+        """Extract optimized instructions from MIPROv2 compiled module.
+
+        Sprint 124: MIPROv2 stores optimized instructions in the predictor's
+        signature or extended_signature. This method tries multiple extraction
+        strategies to get the best available instructions.
+
+        Args:
+            module: Optimized DSPy module
+            fallback_instructions: Default instructions to use if extraction fails
+
+        Returns:
+            Optimized instructions string, or fallback if extraction fails
+        """
+        try:
+            # Log module structure for debugging
+            logger.debug(
+                "extracting_instructions",
+                module_type=type(module).__name__,
+                has_predict=hasattr(module, "predict"),
+            )
+
+            # Strategy 1: Check predictor's extended_signature (MIPROv2 style)
+            predictors_to_check = []
+
+            if hasattr(module, "predict"):
+                predictors_to_check.append(("predict", module.predict))
+            if hasattr(module, "predictor"):
+                predictors_to_check.append(("predictor", module.predictor))
+
+            # Also check via named_predictors()
+            if hasattr(module, "named_predictors") and callable(module.named_predictors):
+                try:
+                    for name, pred in module.named_predictors():
+                        predictors_to_check.append((f"named:{name}", pred))
+                except Exception:
+                    pass
+
+            for source, predictor in predictors_to_check:
+                # Check extended_signature (MIPROv2 optimized)
+                if hasattr(predictor, "extended_signature"):
+                    sig = predictor.extended_signature
+                    if hasattr(sig, "instructions") and sig.instructions:
+                        logger.info(
+                            "optimized_instructions_found",
+                            source=f"{source}.extended_signature",
+                            instructions_preview=sig.instructions[:100],
+                        )
+                        return sig.instructions
+
+                # Check signature (may also have optimized instructions)
+                if hasattr(predictor, "signature"):
+                    sig = predictor.signature
+                    if hasattr(sig, "instructions") and sig.instructions:
+                        logger.info(
+                            "optimized_instructions_found",
+                            source=f"{source}.signature",
+                            instructions_preview=sig.instructions[:100],
+                        )
+                        return sig.instructions
+
+            # Strategy 2: Check module-level signature
+            if hasattr(module, "signature"):
+                sig = module.signature
+                if hasattr(sig, "instructions") and sig.instructions:
+                    logger.info(
+                        "optimized_instructions_found",
+                        source="module.signature",
+                        instructions_preview=sig.instructions[:100],
+                    )
+                    return sig.instructions
+
+            logger.warning(
+                "optimized_instructions_not_found",
+                fallback_used=True,
+                fallback_preview=fallback_instructions[:100],
+            )
+            return fallback_instructions
+
+        except Exception as e:
+            logger.warning(
+                "instruction_extraction_failed",
+                error=str(e),
+                fallback_used=True,
+            )
+            return fallback_instructions
+
     def _extract_demos(self, module: Any) -> list[dict[str, Any]]:
         """Extract few-shot demonstrations from optimized module.
+
+        Sprint 124 Fix: Enhanced extraction to support MIPROv2's module structure.
+        MIPROv2 stores demos differently than BootstrapFewShot:
+        - May use named_predictors() instead of predictors()
+        - May store demos directly on module attributes (e.g., module.predict.demos)
+        - Demo objects may be dspy.Example or dict format
 
         Args:
             module: Optimized DSPy module
@@ -812,20 +934,231 @@ class DSPyOptimizer:
         """
         demos = []
         try:
-            if hasattr(module, "predictors"):
-                for predictor in module.predictors():
-                    if hasattr(predictor, "demos"):
-                        for demo in predictor.demos:
-                            demos.append(
-                                {
-                                    "input": demo.inputs() if hasattr(demo, "inputs") else {},
-                                    "output": demo.labels() if hasattr(demo, "labels") else {},
-                                }
-                            )
+            # Log module structure for debugging
+            module_attrs = [attr for attr in dir(module) if not attr.startswith("_")]
+            logger.debug(
+                "extracting_demos_from_module",
+                module_type=type(module).__name__,
+                attributes=module_attrs[:20],  # First 20 attrs
+            )
+
+            predictors_found = []
+
+            # Method 1: Try predictors() method (BootstrapFewShot style)
+            if hasattr(module, "predictors") and callable(module.predictors):
+                try:
+                    for predictor in module.predictors():
+                        predictors_found.append(("predictors()", predictor))
+                except Exception as e:
+                    logger.debug("predictors_method_failed", error=str(e))
+
+            # Method 2: Try named_predictors() method (MIPROv2 style)
+            if hasattr(module, "named_predictors") and callable(module.named_predictors):
+                try:
+                    for name, predictor in module.named_predictors():
+                        predictors_found.append((f"named_predictors:{name}", predictor))
+                except Exception as e:
+                    logger.debug("named_predictors_method_failed", error=str(e))
+
+            # Method 3: Try direct attribute access (e.g., module.predict)
+            for attr_name in ["predict", "predictor", "generate", "extract"]:
+                if hasattr(module, attr_name):
+                    predictor = getattr(module, attr_name)
+                    if predictor is not None:
+                        predictors_found.append((f"attr:{attr_name}", predictor))
+
+            logger.debug(
+                "predictors_found",
+                count=len(predictors_found),
+                sources=[src for src, _ in predictors_found],
+            )
+
+            # Extract demos from all found predictors
+            for source, predictor in predictors_found:
+                if hasattr(predictor, "demos") and predictor.demos:
+                    logger.debug(
+                        "demos_found_in_predictor",
+                        source=source,
+                        demo_count=len(predictor.demos),
+                        demo_type=type(predictor.demos[0]).__name__ if predictor.demos else "none",
+                    )
+                    for demo in predictor.demos:
+                        demo_dict = self._convert_demo_to_dict(demo)
+                        if demo_dict:
+                            demos.append(demo_dict)
+
+            # Deduplicate demos (same demo might appear from multiple sources)
+            seen = set()
+            unique_demos = []
+            for demo in demos:
+                demo_key = str(sorted(demo.items()))
+                if demo_key not in seen:
+                    seen.add(demo_key)
+                    unique_demos.append(demo)
+            demos = unique_demos
+
+            logger.info(
+                "demos_extracted",
+                total_demos=len(demos),
+                predictors_checked=len(predictors_found),
+            )
+
         except Exception as e:
-            logger.warning("demo_extraction_failed", error=str(e))
+            logger.warning("demo_extraction_failed", error=str(e), exc_info=True)
 
         return demos
+
+    def _convert_demo_to_dict(self, demo: Any) -> dict[str, Any] | None:
+        """Convert a DSPy demo object to a dictionary format.
+
+        Sprint 124 Fix: Handles MIPROv2 demos that may not have inputs set.
+        MIPROv2 creates demos during bootstrapping without calling .with_inputs(),
+        so we need to access demo fields directly and classify them by convention.
+
+        Args:
+            demo: DSPy Example or dict-like object
+
+        Returns:
+            Dictionary with 'input' and 'output' keys, or None if conversion fails
+        """
+        # Define input/output field conventions for entity/relation extraction
+        INPUT_FIELD_NAMES = {"source_text", "text", "query", "input", "question", "context"}
+        OUTPUT_FIELD_NAMES = {"entities", "relations", "answer", "output", "result", "response"}
+
+        try:
+            # Strategy 0: Try direct attribute access for known field names first
+            # This is the most reliable for MIPROv2 demos which have _store dict internally
+            inputs = {}
+            outputs = {}
+
+            # Check for internal _store dict (DSPy Example stores data here)
+            if hasattr(demo, "_store") and isinstance(demo._store, dict):
+                store = demo._store
+                logger.debug("demo_store_found", store_keys=list(store.keys()))
+                for key, value in store.items():
+                    key_lower = key.lower()
+                    if key_lower in INPUT_FIELD_NAMES or key.endswith("_input"):
+                        inputs[key] = value
+                    elif key_lower in OUTPUT_FIELD_NAMES or key.endswith("_output"):
+                        outputs[key] = value
+                    else:
+                        outputs[key] = value
+                if inputs or outputs:
+                    logger.debug(
+                        "demo_extracted_from_store",
+                        input_keys=list(inputs.keys()),
+                        output_keys=list(outputs.keys()),
+                    )
+                    return {"input": inputs, "output": outputs}
+
+            # Try direct getattr for expected field names
+            for field_name in list(INPUT_FIELD_NAMES) + list(OUTPUT_FIELD_NAMES):
+                try:
+                    value = getattr(demo, field_name, None)
+                    if value is not None:
+                        if field_name.lower() in INPUT_FIELD_NAMES:
+                            inputs[field_name] = value
+                        else:
+                            outputs[field_name] = value
+                except Exception:
+                    continue
+
+            if inputs or outputs:
+                logger.debug(
+                    "demo_extracted_from_getattr",
+                    input_keys=list(inputs.keys()),
+                    output_keys=list(outputs.keys()),
+                )
+                return {"input": inputs, "output": outputs}
+
+            # Strategy 1: DSPy Example with keys() - access fields directly (MIPROv2 style)
+            # This works even when .with_inputs() was not called
+            if hasattr(demo, "keys") and callable(demo.keys):
+                demo_keys = list(demo.keys())
+                logger.debug("demo_keys_found", keys=demo_keys, demo_type=type(demo).__name__)
+
+                inputs = {}
+                outputs = {}
+                for key in demo_keys:
+                    try:
+                        value = demo[key] if hasattr(demo, "__getitem__") else getattr(demo, key, None)
+                        # Classify by field name convention
+                        key_lower = key.lower()
+                        if key_lower in INPUT_FIELD_NAMES or key.endswith("_input"):
+                            inputs[key] = value
+                        elif key_lower in OUTPUT_FIELD_NAMES or key.endswith("_output"):
+                            outputs[key] = value
+                        else:
+                            # Default unknown fields to outputs (likely predictions)
+                            outputs[key] = value
+                    except Exception as e:
+                        logger.debug("demo_field_access_failed", key=key, error=str(e))
+                        continue
+
+                if inputs or outputs:
+                    return {"input": inputs, "output": outputs}
+
+            # Strategy 2: Try inputs()/labels() methods (BootstrapFewShot style)
+            # Only if the example has inputs set
+            if hasattr(demo, "_input_keys") and demo._input_keys:
+                if hasattr(demo, "inputs") and callable(demo.inputs):
+                    try:
+                        input_dict = demo.inputs()
+                        output_dict = demo.labels() if hasattr(demo, "labels") else {}
+                        return {"input": dict(input_dict), "output": dict(output_dict)}
+                    except Exception as e:
+                        logger.debug("inputs_labels_failed", error=str(e))
+
+            # Strategy 3: Dict-like object with items()
+            if hasattr(demo, "items") and callable(demo.items):
+                try:
+                    demo_dict = dict(demo)
+                    inputs = {}
+                    outputs = {}
+                    for key, value in demo_dict.items():
+                        key_lower = key.lower()
+                        if key_lower in INPUT_FIELD_NAMES or key.endswith("_input"):
+                            inputs[key] = value
+                        else:
+                            outputs[key] = value
+                    if inputs or outputs:
+                        return {"input": inputs, "output": outputs}
+                except Exception as e:
+                    logger.debug("items_conversion_failed", error=str(e))
+
+            # Strategy 4: toDict() method
+            if hasattr(demo, "toDict") and callable(demo.toDict):
+                try:
+                    demo_dict = demo.toDict()
+                    return {
+                        "input": demo_dict.get("inputs", demo_dict.get("input", {})),
+                        "output": demo_dict.get("outputs", demo_dict.get("output", {})),
+                    }
+                except Exception as e:
+                    logger.debug("toDict_failed", error=str(e))
+
+            # Strategy 5: Direct __dict__ access
+            if hasattr(demo, "__dict__"):
+                demo_dict = dict(demo.__dict__)
+                # Filter out private attributes
+                filtered = {k: v for k, v in demo_dict.items() if not k.startswith("_")}
+                if filtered:
+                    inputs = {}
+                    outputs = {}
+                    for key, value in filtered.items():
+                        key_lower = key.lower()
+                        if key_lower in INPUT_FIELD_NAMES:
+                            inputs[key] = value
+                        else:
+                            outputs[key] = value
+                    return {"input": inputs, "output": outputs}
+
+            logger.warning("unknown_demo_format", demo_type=type(demo).__name__)
+            return None
+
+        except Exception as e:
+            logger.warning("demo_conversion_failed", error=str(e), demo_type=type(demo).__name__)
+            return None
 
     def _mock_entity_optimization_result(
         self, training_data: list[dict[str, Any]]
