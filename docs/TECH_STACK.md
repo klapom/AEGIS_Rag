@@ -160,7 +160,8 @@ pip install --break-system-packages <package>
 
 | Priority | Provider | Models | Cost | Use Case |
 |----------|----------|--------|------|----------|
-| **1** | **Ollama (DGX Spark)** | nemotron-nano  gpt-oss:20 | $0 | Primary (Dev + Prod) |
+| **1** | **Ollama (DGX Spark)** | nemotron-nano, gpt-oss:120b | $0 | Chat, Generation |
+| **1b** | **vLLM (DGX Spark)** | Nemotron-3-Nano-30B-A3B-NVFP4 | $0 | Extraction (Sprint 125+) |
 | **2** | **Alibaba Cloud DashScope** | qwen-turbo/plus/max, qwen3-vl | $0-120/mo | Cloud Fallback |
 | **3** | **OpenAI** | gpt-4o, gpt-4o-mini | Optional | Optional Fallback |
 
@@ -168,18 +169,58 @@ pip install --break-system-packages <package>
 
 | Task | Model | Provider | Size | Purpose |
 |------|-------|----------|------|---------|
-| **Query Understanding** | nemotron-nano | Ollama | 2,5GB | Fast intent classification |
-| **Answer Generation** | nemotron-nano | Ollama | 2,5GB | Quality responses |
-| **Entity Extraction (Rank 1)** | Nemotron3 Nano 30/3a | Ollama | 2.5GB | Primary ER-Extraction (Sprint 83) |
-| **Entity Extraction (Rank 2)** | gpt-oss:20b | Ollama | 12GB | Fallback ER-Extraction (Sprint 83) |
-| **Entity Extraction (Rank 3)** | SpaCy NER + gpt-oss:20b | SpaCy + Ollama | - | Hybrid NER (DE/EN/FR/ES) + LLM relations (Sprint 83) |
-| **Complex Reasoning** | 2,5 | Ollama | 4.7GB | Multi-hop queries |
+| **Query Understanding** | nemotron-3-nano:128k | Ollama | 25GB | Fast intent classification |
+| **Answer Generation** | nemotron-3-nano:128k | Ollama | 25GB | Quality responses |
+| **Entity Extraction** | Nemotron-3-Nano-30B-A3B-NVFP4 | vLLM | ~18GB | Primary ER-Extraction (Sprint 125+) |
+| **Entity Extraction (Fallback)** | nemotron-3-nano:128k | Ollama | 25GB | Fallback when vLLM unavailable |
+| **Entity Extraction (Legacy R1)** | Nemotron3 Nano 30/3a | Ollama | 25GB | Sprint 83-124 cascade |
+| **Entity Extraction (Legacy R2)** | gpt-oss:120b | Ollama | 75GB | Sprint 124 benchmark (MXFP4) |
+| **Entity Extraction (Legacy R3)** | SpaCy NER + LLM | SpaCy + Ollama | - | Hybrid NER (DE/EN/FR/ES) + LLM relations |
+| **Complex Reasoning** | nemotron-3-nano:128k | Ollama | 25GB | Multi-hop queries |
 | **Embeddings** | BGE-M3 (1024-dim) | flag-embedding | 2.3GB | Universal semantic embeddings |
 | **Reranking** | bge-reranker-v2-m3 | flag-embedding | - | Cross-encoder reranking |
 | **VLM (Images)** | qwen3-vl-30b-a3b | DashScope | - | Image descriptions (cloud) |
 
-**Total Model Storage:** ~23GB (all Ollama models)
-**Typical VRAM Usage:** 8-12GB (2-3 models loaded simultaneously)
+**Total Model Storage:** ~25-43GB (Ollama + vLLM)
+**Typical VRAM Usage:** 25-43GB (Normal: Ollama only, Ingestion: Ollama + vLLM)
+
+### vLLM Extraction Engine (Sprint 125+ / ADR-059)
+
+**Architecture:** Dual-engine — Ollama for chat + vLLM for extraction (on-demand via Docker profile)
+
+| Spec | Value |
+|------|-------|
+| **Image** | `vllm/vllm-openai:latest` |
+| **Model** | `nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-NVFP4` |
+| **Architecture** | Mamba2 + MoE + Attention (30B total / 3.5B active) |
+| **Quantization** | NVFP4 (optimized for Blackwell sm_121) |
+| **VRAM** | ~18GB (32K context), up to 51GB (256K context) |
+| **API** | OpenAI-compatible `/v1/chat/completions` on port 8001 |
+| **Max Concurrent** | 256+ (continuous batching) |
+| **Expected Throughput** | 60-80 tok/s (DGX Spark) |
+| **Docker Profile** | `--profile ingestion` (on-demand start) |
+| **Environment** | `VLLM_USE_FLASHINFER_MOE_FP4=1`, `VLLM_FLASHINFER_MOE_BACKEND=throughput` |
+
+**Performance Comparison (DGX Spark / Red Hat A100):**
+
+| Metric | Ollama | vLLM | Factor |
+|--------|--------|------|--------|
+| Peak Throughput | 41-74 tok/s | 60-793 tok/s | 1-19× |
+| TTFT P99 | 673 ms | 80 ms | 8.4× |
+| Max Concurrent | 4 | 256+ | 64× |
+| Batching | Sequential | Continuous | ∞ |
+
+**Start/Stop:**
+```bash
+# Normal mode (Chat): Ollama only
+docker compose -f docker-compose.dgx-spark.yml up -d
+
+# Ingestion mode: Ollama + vLLM
+docker compose -f docker-compose.dgx-spark.yml --profile ingestion up -d
+
+# Stop vLLM after ingestion
+docker compose -f docker-compose.dgx-spark.yml stop vllm
+```
 
 ### Ollama Rationale (ADR-002)
 
@@ -196,10 +237,32 @@ pip install --break-system-packages <package>
 
 **Trade-offs:**
 - ⚠️ Lower quality than GPT-4o for very complex tasks (acceptable trade-off)
-- ⚠️ Requires GPU (12GB VRAM recommended)
+- ⚠️ Requires GPU (25GB VRAM for Nemotron-3-Nano:128k)
 - ⚠️ Manual model updates
+- ⚠️ Max 4 concurrent requests (bottleneck for bulk ingestion → use vLLM)
 - ✅ No API rate limits, unlimited usage
 - ✅ Privacy by design
+
+### VRAM Budget (DGX Spark 128GB Unified Memory)
+
+```
+Normal Mode (Chat):
+  Ollama Nemotron-3-Nano:128k   25 GB
+  BGE-M3 Embeddings              2 GB
+  Reranker (cross-encoder)        1 GB
+  OS + CUDA Overhead             10 GB
+  ─────────────────────────────────────
+  Total:                         38 GB  |  Free: 90 GB
+
+Ingestion Mode (Chat + vLLM):
+  Ollama Nemotron-3-Nano:128k   25 GB
+  vLLM Nemotron NVFP4           ~18 GB  (up to 51 GB with 256K ctx)
+  BGE-M3 Embeddings              2 GB
+  Reranker (cross-encoder)        1 GB
+  OS + CUDA Overhead             10 GB
+  ─────────────────────────────────────
+  Total:                      56-82 GB  |  Free: 46-72 GB
+```
 
 ### Cost Tracking
 

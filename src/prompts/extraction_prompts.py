@@ -391,7 +391,7 @@ Entities:"""
 DSPY_OPTIMIZED_RELATION_PROMPT = """Extract ALL relationships between entities from the text.
 
 ---Role---
-You are a Knowledge Graph Specialist extracting relationships for a graph database.
+You are a Knowledge Graph Specialist extracting Subject-Predicate-Object triples for a graph database.
 
 ---Goal---
 Identify ALL relationships among the provided entities. Be EXHAUSTIVE.
@@ -408,17 +408,30 @@ A good knowledge graph has at least 1 relationship per entity.
 2. Decompose N-ary relationships: "A and B founded C" → A FOUNDED C, B FOUNDED C
 3. Include implicit relationships (co-occurrence in same sentence often implies relation)
 4. Rate strength 1-10: 10=explicit statement, 7=strong implication, 4=weak inference
+5. CRITICAL: Use a SPECIFIC relationship type from the vocabulary below. NEVER use generic types like "RELATES_TO" or "RELATED_TO" or "ASSOCIATED_WITH"
+6. Keep entity names concise (max 4 words). Use the most common/canonical name
+7. Relationship type must be 1-3 words in UPPER_SNAKE_CASE
+
+---Relationship Type Vocabulary---
+Use ONLY these types (pick the closest match):
+
+People/Orgs: WORKS_AT, EMPLOYS, FOUNDED, FOUNDED_BY, MANAGES, LEADS, MEMBER_OF, OWNS, CONTROLS
+Creation: CREATED, DEVELOPED, PRODUCED, DIRECTED, WROTE, DESIGNED, BUILT, INVENTED
+Location: LOCATED_IN, HEADQUARTERED_IN, BASED_IN, OPERATES_IN, BORN_IN
+Structure: PART_OF, CONTAINS, BELONGS_TO, SUBSIDIARY_OF, DIVISION_OF
+Technology: USES, IMPLEMENTS, DEPENDS_ON, SUPPORTS, RUNS_ON, BUILT_WITH, INTEGRATES
+Knowledge: BASED_ON, DERIVED_FROM, EXTENDS, VERSION_OF, VARIANT_OF
+Evaluation: EVALUATED_ON, TRAINED_ON, TESTED_WITH, BENCHMARKED_ON
+Competition: COMPETES_WITH, COLLABORATES_WITH, PARTNERS_WITH, ACQUIRED_BY
+Action: ANNOUNCES, INTRODUCES, PRODUCES, IMPACTS, INVESTS_IN, PUBLISHES
+Family: PARENT_OF, CHILD_OF, SPOUSE_OF
 
 ---Output Format---
 Return ONLY a valid JSON array:
 [
-  {{"source": "Entity1", "target": "Entity2", "type": "RELATIONSHIP_TYPE", "description": "Why related", "strength": 8}},
+  {{"source": "Entity1", "target": "Entity2", "type": "SPECIFIC_TYPE", "description": "Why related", "strength": 8}},
   ...
 ]
-
-Common types: WORKS_AT, CREATED, DEVELOPED, FOUNDED, DIRECTED, PRODUCED, STARS_IN, LOCATED_IN,
-PART_OF, MANAGES, USES, COLLABORATES_WITH, BASED_ON, CONTAINS, LEADS_TO, ASSOCIATED_WITH,
-BORN_IN, DIED_ON, MEMBER_OF, PARENT_OF, CHILD_OF, SPOUSE_OF, EMPLOYS, OWNS
 
 Output (JSON array only):
 """

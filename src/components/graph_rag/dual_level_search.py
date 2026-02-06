@@ -582,10 +582,10 @@ Answer:"""
 
             # Sprint 76: Use entity_name (actual property name in Neo4j)
             cypher_query = """
-            MATCH (e1:base)-[r:RELATED_TO]->(e2:base)
+            MATCH (e1:base)-[r:RELATES_TO]->(e2:base)
             WHERE e1.entity_name IN $entity_names OR e2.entity_name IN $entity_names
             RETURN r.relationship_id AS id, e1.entity_name AS source, e2.entity_name AS target,
-                   r.relationship_type AS type, r.description AS description,
+                   r.relation_type AS type, r.description AS description,
                    r.source_id AS source_document
             LIMIT 20
             """

@@ -201,7 +201,10 @@ class GraphContext(BaseModel):
         if self.relationships:
             context_parts.append("\n## Relationships")
             for rel in self.relationships[:30]:  # Limit to top 30
-                context_parts.append(f"- {rel.source} --[{rel.type}]--> {rel.target}")
+                rel_line = f"- {rel.source} --[{rel.type}]--> {rel.target}"
+                if rel.description:
+                    rel_line += f": {rel.description}"
+                context_parts.append(rel_line)
 
         # Paths section (multi-hop)
         if self.paths:

@@ -287,6 +287,7 @@ async def store_relates_to_relationships(
                 MERGE (e1)-[r:RELATES_TO]->(e2)
                 SET r.weight = toFloat(rel.strength) / 10.0,
                     r.description = rel.description,
+                    r.relation_type = rel.relation_type,
                     r.source_chunk_id = $chunk_id,
                     r.namespace_id = $namespace_id,
                     r.created_at = datetime()
@@ -298,6 +299,7 @@ async def store_relates_to_relationships(
                         "target": r["target"],
                         "description": r.get("description", ""),
                         "strength": r.get("strength", 5),
+                        "relation_type": r.get("type", r.get("relation_type", "RELATES_TO")),
                     }
                     for r in relations
                 ],

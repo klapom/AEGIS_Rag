@@ -840,7 +840,65 @@
 
 ---
 
-**Last Updated:** 2026-01-15 (Sprint 93)
-**Total Decisions Documented:** 153 (+52 from Sprints 75-93)
-**Current Sprint:** Sprint 93 (In Progress - Tool Composition & LangGraph 1.0)
-**Next Sprint:** Sprint 94 (Planned)
+## Sprint 124 Decisions (2026-02-06)
+
+### 2026-02-06 | gpt-oss:120b Benchmark for RAGAS Phase 1 (Sprint 124, Feature 124.5)
+**Context:** Nemotron-3-Nano Q4_K_M (31.6B) produces poor ER extraction quality (100% RELATES_TO). Need larger model for RAGAS Phase 1 benchmark baseline.
+
+**Decision:** Deploy gpt-oss:120b (MXFP4, 75GB VRAM) via Ollama for bulk ingestion benchmark. Increase Ollama memory limit from 64GB to 100GB.
+
+**Consequences:**
+- Positive: Higher quality entity extraction (854 entities, 931 relations from 28 documents)
+- Negative: Ollama max 4 concurrent requests → HTTP 000 timeouts, stuck at 28/498 documents
+- Negative: 100% RELATES_TO relations (generic extraction prompt)
+- Timeline: Sprint 124 (benchmark only, ingestion incomplete)
+
+### 2026-02-06 | Environment-Variable LLM Model Selection (Sprint 124, Feature 124.6)
+**Context:** Model name was hardcoded in relation_extractor.py and extraction_cascade.py. Switching models for benchmarking required code changes.
+
+**Decision:** Introduce `LIGHTRAG_LLM_MODEL` environment variable for model selection. Both relation_extractor.py and extraction_cascade.py read from env var with fallback to nemotron-3-nano:128k.
+
+**Consequences:** Zero-code model switching via .env or docker-compose, enables rapid A/B testing
+
+### 2026-02-06 | Configurable LLM Thinking Mode (Sprint 124, Feature 124.7)
+**Context:** Nemotron3 Nano's "thinking" mode (CoT reasoning) was hardcoded off (`think=False`). Some tasks benefit from reasoning.
+
+**Decision:** Introduce `AEGIS_LLM_THINKING` environment variable (true/false). Applied to both regular and streaming LLM execution paths in AegisLLMProxy.
+
+**Consequences:** Configurable per deployment, enables reasoning benchmarks without code changes
+
+---
+
+## Sprint 125 Decisions (2026-02-06)
+
+### 2026-02-06 | vLLM as Extraction Inference Engine (Sprint 125, Feature 125.1) — ADR-059
+**Context:** Ollama bottleneck: max 4 concurrent requests, HTTP 000 timeouts at scale. NVIDIA txt2kg cookbook uses vLLM for 19× throughput over Ollama. Red Hat benchmarks: vLLM 793 tok/s vs Ollama 41 tok/s (A100 40GB).
+
+**Decision:** Add vLLM as separate Docker container with `--profile ingestion` for on-demand start. Dual-engine architecture: Ollama for chat + vLLM for extraction. VRAM budget: Ollama 25GB + vLLM ~18GB = 43GB of 128GB available.
+
+**Consequences:**
+- Positive: 19× throughput, 256+ concurrent batching, continuous batch scheduling
+- Positive: NVFP4 optimized for Blackwell sm_121 (4× FLOPS over BF16)
+- Negative: Additional container complexity, ~60s cold start
+- Trade-off: Different model format (HuggingFace NVFP4 vs Ollama GGUF)
+
+### 2026-02-06 | Nemotron-3-Nano-30B-A3B-NVFP4 for Extraction (Sprint 125, Feature 125.1)
+**Context:** Need high-quality extraction model optimized for vLLM on DGX Spark. Compare: gpt-oss:120b (75GB, 20 tok/s), Nemotron Q4_K_M (25GB, 74 tok/s).
+
+**Decision:** Use nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-NVFP4 — 30B total / 3.5B active (MoE), ~18GB VRAM, 60-80 tok/s expected on vLLM. Mamba2 + MoE + Attention hybrid architecture. Up to 256K context, 86.7% AIME 2025.
+
+**Consequences:** 3.3× throughput vs dense models (only 10% parameter activation), fits alongside Ollama in 128GB VRAM
+
+### 2026-02-06 | Specific Relation Type Extraction (Sprint 125, Feature 125.3)
+**Context:** Sprint 124 benchmark: 100% RELATES_TO relations (931/931). Root cause: DSPy extraction prompt generates generic types. NVIDIA txt2kg uses Subject-Predicate-Object triples.
+
+**Decision:** Update DSPY_OPTIMIZED_RELATION_PROMPT to enforce specific S-P-O relation types (WORKS_AT, CREATED, LOCATED_IN, USES, etc.). Add relation type validation in relation_extractor.py. Target: <30% RELATES_TO, >70% specific types.
+
+**Consequences:** Dramatically improved graph query quality, enables graph-based reasoning for RAGAS evaluation
+
+---
+
+**Last Updated:** 2026-02-06 (Sprint 125)
+**Total Decisions Documented:** 159 (+6 from Sprints 124-125)
+**Current Sprint:** Sprint 125 (In Progress - vLLM Integration + RAGAS Phase 1 Completion)
+**Next Sprint:** Sprint 126 (Planned)

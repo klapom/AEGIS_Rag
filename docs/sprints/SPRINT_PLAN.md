@@ -1993,7 +1993,7 @@ Sprint 117.1 (Domain CRUD) - Foundation
 
 **Status:** 📝 PLANNED
 **Focus:** vLLM Integration + RAGAS Phase 1 Completion
-**Story Points:** 34 SP (estimated)
+**Story Points:** 40 SP (estimated, +6 from txt2kg alignment)
 **Predecessor:** Sprint 124
 
 **Features:**
@@ -2002,20 +2002,25 @@ Sprint 117.1 (Domain CRUD) - Foundation
 |---|---------|-----|--------|
 | 125.1 | vLLM Container Integration (Docker profile) | 8 | 📝 |
 | 125.2 | AegisLLMProxy vLLM Routing | 5 | 📝 |
-| 125.3 | Specific Relation Type Extraction (fix RELATES_TO) | 5 | 📝 |
+| 125.3 | S-P-O Triple Extraction (aligned with NVIDIA txt2kg) | 8 | 📝 |
+| 125.3b | Entity Deduplication & Normalization | 3 | 📝 |
 | 125.4 | RAGAS Phase 1 Ingestion Completion (498 docs) | 8 | 📝 |
 | 125.5 | Performance Benchmark + RAGAS Evaluation | 5 | 📝 |
-| 125.6 | Documentation + ADR-058 | 3 | 📝 |
+| 125.6 | Documentation + ADR-059 | 3 | 📝 |
 
 **Key Decisions:**
 - **vLLM** replaces Ollama for EXTRACTION tasks (19× throughput, continuous batching)
 - **Nemotron-3-Nano-30B-A3B-NVFP4** for ER extraction (3.5B active, 18 GB VRAM, NVFP4)
 - **Docker profiles:** `--profile ingestion` starts vLLM on demand
 - **Dual-engine:** Ollama (Chat) + vLLM (Extraction) coexist
+- **S-P-O schema** aligned with NVIDIA txt2kg (predefined entity categories + relation verbs)
+- **Entity dedup** inspired by txt2kg's EntityRelationNormalizer
 
 **Targets:**
 - All 498 RAGAS Phase 1 documents ingested
 - >70% specific relation types (down from 100% RELATES_TO)
+- Entity names < 4 words, relations 1-3 words
+- >30% entity deduplication
 - ER Ratio >1.5 (up from 1.09)
 - RAGAS baseline evaluation completed
 

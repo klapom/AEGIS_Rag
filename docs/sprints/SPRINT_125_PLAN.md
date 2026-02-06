@@ -2,7 +2,7 @@
 
 **Date:** 2026-02-06
 **Status:** 📝 Planned
-**Total Story Points:** 34 SP (estimated)
+**Total Story Points:** 40 SP (estimated, +6 SP from txt2kg alignment)
 **Predecessor:** Sprint 124 (RAGAS Evaluation Reboot + gpt-oss:120b Benchmark)
 
 ---
@@ -12,7 +12,8 @@
 1. **Integrate vLLM as extraction inference engine** (replace Ollama for bulk ingestion)
 2. **Deploy Nemotron-3-Nano-30B-A3B-NVFP4** for high-quality ER extraction
 3. **Complete RAGAS Phase 1 ingestion** (500 samples, currently 28/498)
-4. **Fix generic RELATES_TO relations** (produce specific relation types)
+4. **Fix generic RELATES_TO relations** (S-P-O triples aligned with NVIDIA txt2kg)
+5. **Add Entity Deduplication** (inspired by txt2kg's EntityRelationNormalizer)
 
 ---
 
@@ -189,34 +190,81 @@ async def _select_provider(self, task: LLMTask) -> str:
 
 ---
 
-### 125.3: Specific Relation Type Extraction (5 SP)
+### 125.3: S-P-O Triple Extraction (Aligned with NVIDIA txt2kg) (8 SP)
 
-**Goal:** Replace generic `RELATES_TO` with specific S-P-O triples.
+**Goal:** Replace generic `RELATES_TO` with specific S-P-O triples, adopting NVIDIA txt2kg's structured extraction schema.
 
 **Problem:** Sprint 124 benchmark showed 100% `RELATES_TO` relations (931/931).
 
+**Reference:** NVIDIA txt2kg playbook uses strict JSON schema with predefined entity categories and relation verbs. This approach ensures graph query quality.
+
 **Tasks:**
-- [ ] Update `DSPY_OPTIMIZED_RELATION_PROMPT` to enforce specific relation types
+- [ ] Update `DSPY_OPTIMIZED_RELATION_PROMPT` to enforce S-P-O triple JSON schema
+- [ ] Define predefined entity categories (aligned with txt2kg: ORG, PERSON, GPE, PRODUCT, EVENT, etc.)
+- [ ] Define predefined relation vocabulary (aligned with txt2kg + domain-specific)
+- [ ] Enforce entity length constraint (< 4 words)
+- [ ] Enforce relation length constraint (1-3 words max, ideally 1-2)
 - [ ] Add relation type validation in `relation_extractor.py`
 - [ ] Map extracted types to Neo4j relationship types
 - [ ] Benchmark: compare relation quality before/after
 
-**Target Relation Types:**
+**S-P-O JSON Schema (from txt2kg):**
+```json
+{
+  "subject": "string (< 4 words)",
+  "subject_type": "ORG | PERSON | GPE | INSTITUTION | PRODUCT | EVENT | FIELD | METRIC | TOOL | CONCEPT",
+  "relation": "string (1-3 words max)",
+  "object": "string (< 4 words)",
+  "object_type": "string (same categories as subject_type)"
+}
 ```
-WORKS_AT, CREATED, DEVELOPED, FOUNDED, DIRECTED, PRODUCED
+
+**Predefined Relation Vocabulary:**
+```
+# txt2kg core verbs
+HAS, ANNOUNCES, OPERATES_IN, INTRODUCES, PRODUCES, CONTROLS
+PARTICIPATES_IN, IMPACTS, INVESTS_IN, IS_MEMBER_OF
+
+# AegisRAG domain-specific additions
+WORKS_AT, CREATED, DEVELOPED, FOUNDED, DIRECTED
 LOCATED_IN, PART_OF, CONTAINS, BELONGS_TO
 USES, IMPLEMENTS, DEPENDS_ON, SUPPORTS
-MANAGES, OWNS, CONTROLS, EMPLOYS
+MANAGES, OWNS, EMPLOYS
 BASED_ON, DERIVED_FROM, EXTENDS, VERSION_OF
 EVALUATED_ON, TRAINED_ON, TESTED_WITH
-COMPETES_WITH, COLLABORATES_WITH, ASSOCIATED_WITH
+COMPETES_WITH, COLLABORATES_WITH
 ```
 
 **Acceptance Criteria:**
 - [ ] <30% `RELATES_TO` relations (down from 100%)
 - [ ] >70% specific relation types
+- [ ] Entity names < 4 words (90%+ compliance)
+- [ ] Relation names 1-3 words (100% compliance)
 - [ ] Neo4j stores specific types as relationship labels
 - [ ] No regression in entity extraction quality
+
+---
+
+### 125.3b: Entity Deduplication & Normalization (3 SP)
+
+**Goal:** Add post-extraction entity normalization (inspired by txt2kg's EntityRelationNormalizer).
+
+**Problem:** Without deduplication, the same entity appears as multiple nodes (e.g., "MIT", "Massachusetts Institute of Technology", "M.I.T.").
+
+**Reference:** txt2kg uses an EntityRelationNormalizer that consolidates entity variations and normalizes relation types.
+
+**Tasks:**
+- [ ] Implement `EntityRelationNormalizer` in `src/components/graph_rag/`
+- [ ] Exact match deduplication (case-insensitive, punctuation-stripped)
+- [ ] Acronym resolution (optional: LLM-based for complex cases)
+- [ ] Relation normalization (merge semantically similar relations)
+- [ ] Integration point: post-extraction, pre-Neo4j storage
+- [ ] Unit tests
+
+**Acceptance Criteria:**
+- [ ] Duplicate entities reduced by >30%
+- [ ] Acronym variations consolidated (e.g., "SQL Server" = "Microsoft SQL Server")
+- [ ] Graph connectivity improved (fewer orphan nodes)
 
 ---
 
@@ -348,11 +396,52 @@ Ingestion Mode (Chat + vLLM):
 
 ---
 
+## txt2kg Gap Analysis (Research Findings)
+
+**Source:** NVIDIA DGX Spark txt2kg Playbook ([GitHub](https://github.com/NVIDIA/dgx-spark-playbooks/tree/main/nvidia/txt2kg))
+
+### What txt2kg Does That AegisRAG Doesn't (Yet)
+
+| Feature | txt2kg | AegisRAG (Sprint 124) | Sprint 125 Action |
+|---------|--------|----------------------|-------------------|
+| **S-P-O JSON Schema** | Strict: subject, subject_type, relation, object, object_type | Free-form entity/relation | 125.3: Adopt schema |
+| **Predefined Relations** | 15 verbs (Has, Produce, Control, etc.) | 100% RELATES_TO | 125.3: Add vocabulary |
+| **Entity Length** | < 4 words enforced | No constraint | 125.3: Add constraint |
+| **Relation Length** | 1-3 words max | No constraint | 125.3: Add constraint |
+| **Entity Dedup** | EntityRelationNormalizer (exact+fuzzy) | None | 125.3b: NEW feature |
+| **vLLM Engine** | docker-compose.vllm.yml with Nemotron-Super-49B | Ollama only | 125.1-2: Add vLLM |
+
+### What AegisRAG Already Does Better
+
+| Feature | AegisRAG | txt2kg |
+|---------|----------|--------|
+| **Graph DB** | Neo4j 5 Community (Cypher, GDS, communities) | ArangoDB (basic traversal) |
+| **Embeddings** | BGE-M3 1024-dim (Dense+Sparse) | MiniLM-L6-v2 384-dim (planned) |
+| **Chunking** | Section-aware 800-1800 tokens | 2048 char recursive |
+| **Entity Types** | 15 DSPy-trained types | 12 predefined |
+| **Community Detection** | GDS-based Leiden algorithm | Not implemented |
+| **RAG Pipeline** | Hybrid Vector+Graph+Memory | KG-only (no vector search yet) |
+| **Evaluation** | RAGAS 0.4.2 (4 metrics) | None |
+
+### txt2kg Model: NOT Nemotron-3-Nano-30B-A3B-NVFP4
+
+The txt2kg playbook currently uses:
+- **Default mode:** `llama3.1:8b` via Ollama (basic, 4K context)
+- **vLLM mode:** `nvidia/Llama-3.3-Nemotron-Super-49B-v1.5-FP8` (128K context, 4.9B active MoE)
+
+The NVFP4 model is newer (Feb 2026) and not yet integrated into the playbook. Sprint 125 will use the NVFP4 model which is more efficient (3.5B active, 1M context, ~18GB VRAM).
+
+---
+
 ## References
 
 - [NVIDIA txt2kg Playbook](https://github.com/NVIDIA/dgx-spark-playbooks/tree/main/nvidia/txt2kg)
+- [NVIDIA txt2kg Build Page](https://build.nvidia.com/spark/txt2kg)
 - [Nemotron-3-Nano-30B-A3B-NVFP4 (HuggingFace)](https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-NVFP4)
+- [Nemotron NVFP4 QAD Blog](https://www.marktechpost.com/2026/02/01/nvidia-ai-brings-nemotron-3-nano-30b-to-nvfp4-with-quantization-aware-distillation-qad-for-efficient-reasoning-inference/)
 - [Red Hat: Ollama vs vLLM Benchmark](https://developers.redhat.com/articles/2025/08/08/ollama-vs-vllm-deep-dive-performance-benchmarking)
 - [NVIDIA Forum: DGX Spark Performance](https://forums.developer.nvidia.com/t/investigating-performance-issue-bottleneck/359200)
 - [vLLM for DGX Spark](https://build.nvidia.com/spark/vllm)
+- [vLLM: Run Nemotron 3 Nano Recipe](https://docs.vllm.ai/projects/recipes/en/latest/NVIDIA/Nemotron-3-Nano-30B-A3B.html)
+- [NVIDIA: LLM-Driven Knowledge Graphs](https://developer.nvidia.com/blog/insights-techniques-and-evaluation-for-llm-driven-knowledge-graphs/)
 - [RAGAS_JOURNEY.md](../ragas/RAGAS_JOURNEY.md)

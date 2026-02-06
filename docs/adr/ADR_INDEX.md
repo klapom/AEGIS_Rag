@@ -69,6 +69,7 @@ ADRs dokumentieren wichtige Architektur-Entscheidungen mit Kontext, Alternativen
 | 056 | Graph Search Early-Exit Optimization | Accepted | 2026-01-19 |
 | 057 | Graph Query Optimization - Disable Redundant SmartEntityExpander | Accepted | 2026-01-20 |
 | 058 | Skill Tool Auto-Resolve (Hybrid Install-Time Classification) | Accepted | 2026-01-28 |
+| 059 | vLLM Integration for Extraction Pipeline (Dual-Engine Architecture) | Accepted | 2026-02-06 |
 
 ---
 
