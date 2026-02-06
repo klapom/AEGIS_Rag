@@ -29,6 +29,7 @@ Responsibilities:
 
 from __future__ import annotations
 
+import os
 import time
 from enum import Enum
 from typing import TYPE_CHECKING, Any
@@ -739,17 +740,23 @@ class AegisLLMProxy:
         #
         # See: docs/adr/ADR-038-dashscope-extra-body-parameters.md
 
-        # Local Ollama: Disable thinking mode for faster inference
+        # Local Ollama: Thinking mode control via environment variable
         # Sprint 36: Without this, thinking models generate 200+ thinking tokens internally
         # Sprint 46: Extended to include gpt-oss and nemotron models
+        # Sprint 124: Made configurable via AEGIS_LLM_THINKING env var (default: false)
+        #   - Benchmark showed nemotron is 2.6x FASTER with think=true!
+        #   - gpt-oss shows no difference
         # CRITICAL: Pass "think" directly, NOT via extra_body (ANY-LLM requirement)
         thinking_models = ["qwen3", "gpt-oss", "nemotron"]
         if provider == "local_ollama" and any(m in model.lower() for m in thinking_models):
-            completion_kwargs["think"] = False
+            # Sprint 124: Read from environment, default to False for backwards compatibility
+            thinking_enabled = os.environ.get("AEGIS_LLM_THINKING", "false").lower() == "true"
+            completion_kwargs["think"] = thinking_enabled
             logger.info(
-                "ollama_thinking_disabled",
+                "ollama_thinking_configured",
                 model=model,
-                reason="performance_optimization_127x_speedup",
+                thinking_enabled=thinking_enabled,
+                env_var="AEGIS_LLM_THINKING",
             )
 
         # Alibaba Cloud (DashScope) specific parameters - these DO need extra_body
@@ -896,13 +903,15 @@ class AegisLLMProxy:
         }
 
         # Provider-specific parameters (same as _execute_with_any_llm)
+        # Sprint 124: Thinking mode control via environment variable
         thinking_models = ["qwen3", "gpt-oss", "nemotron"]
         if provider == "local_ollama" and any(m in model.lower() for m in thinking_models):
-            completion_kwargs["think"] = False
+            thinking_enabled = os.environ.get("AEGIS_LLM_THINKING", "false").lower() == "true"
+            completion_kwargs["think"] = thinking_enabled
             logger.info(
-                "streaming_ollama_thinking_disabled",
+                "streaming_ollama_thinking_configured",
                 model=model,
-                reason="performance_optimization_127x_speedup",
+                thinking_enabled=thinking_enabled,
             )
 
         # Alibaba Cloud (DashScope) specific parameters

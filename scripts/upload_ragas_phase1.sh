@@ -17,9 +17,14 @@ set -e
 
 # Configuration
 API="http://localhost:8000"
-LOGIN_ENDPOINT="$API/api/v1/auth/login"
+# Sprint 124: Fixed login endpoint (was /api/v1/auth/login which uses bcrypt DB auth)
+# The simple admin/admin123 auth is at /api/v1/retrieval/auth/token
+LOGIN_ENDPOINT="$API/api/v1/retrieval/auth/token"
 UPLOAD_ENDPOINT="$API/api/v1/retrieval/upload"
-NAMESPACE="ragas_phase1"
+# Sprint 124: Use configurable namespace (default: ragas_phase1_sprint124)
+NAMESPACE="${NAMESPACE:-ragas_phase1_sprint124}"
+# Sprint 124: Domain for DSPy-optimized prompts (entertainment = MIPROv2-trained prompts)
+DOMAIN="${DOMAIN:-entertainment}"
 CONTEXTS_DIR="data/ragas_phase1_contexts"
 
 # Parse arguments
@@ -57,6 +62,7 @@ echo "================================================================"
 echo "RAGAS Phase 1 Upload (Frontend API)"
 echo "================================================================"
 echo "Namespace: ${NAMESPACE}"
+echo "Domain: ${DOMAIN}"
 echo "Contexts directory: ${CONTEXTS_DIR}"
 echo "API Base: ${API}"
 echo "Max samples: ${MAX_SAMPLES} (-1 = all)"
@@ -137,8 +143,9 @@ upload_file() {
             -H "Authorization: Bearer $TOKEN" \
             -F "file=@$file" \
             -F "namespace_id=$namespace" \
+            -F "domain=$DOMAIN" \
             -w "\n%{http_code}" \
-            --max-time 300)  # 5 min timeout per file
+            --max-time 1800)  # 30 min timeout per file (gpt-oss:120b needs time for quality extraction)
 
         HTTP_CODE=$(echo "$RESPONSE" | tail -1)
         BODY=$(echo "$RESPONSE" | head -n -1)

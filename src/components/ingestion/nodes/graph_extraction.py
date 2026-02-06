@@ -351,9 +351,10 @@ async def graph_extraction_node(state: IngestionState) -> IngestionState:
 
                 try:
                     # Sprint 85 Feature 85.8: Extract relations with gleaning for improved ER ratio
-                    # Use gleaning_steps=2 for two additional passes if completeness check fails
+                    # Sprint 124: Gleaning disabled for benchmark (gleaning_steps=0)
+                    # TODO: Re-enable with gleaning_steps=2 after vLLM integration
                     relations = await relation_extractor.extract_with_gleaning(
-                        chunk_text, entities, gleaning_steps=2
+                        chunk_text, entities, gleaning_steps=0
                     )
 
                     # Store relations to Neo4j with RELATES_TO relationships

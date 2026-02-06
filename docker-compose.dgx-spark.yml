@@ -83,9 +83,9 @@ services:
               count: all
               capabilities: [gpu]
         limits:
-          # Allow up to 64GB for LLM operations
-          # Qwen3-32B (20GB) + Qwen3-VL-32B (21GB) + overhead
-          memory: 64G
+          # Sprint 124: Increased to 100GB for gpt-oss:120b benchmark (needs ~80GB)
+          # Previous: 64GB for Qwen3-32B (20GB) + Qwen3-VL-32B (21GB) + overhead
+          memory: 100G
     healthcheck:
       test: ["CMD", "ollama", "list"]
       interval: 30s
@@ -445,12 +445,17 @@ services:
       - USE_SETFIT_CLASSIFIER=${USE_SETFIT_CLASSIFIER:-true}
       # LLM Configuration
       - OLLAMA_BASE_URL=http://ollama:11434
-      - OLLAMA_MODEL_GENERATION=${OLLAMA_MODEL_GENERATION:-nemotron-no-think:latest}
+      - OLLAMA_MODEL_GENERATION=${OLLAMA_MODEL_GENERATION:-nemotron-3-nano:128k}
       - OLLAMA_MODEL_QUERY=${OLLAMA_MODEL_QUERY:-gpt-oss:20b}
       - OLLAMA_MODEL_EXTRACTION=${OLLAMA_MODEL_EXTRACTION:-gpt-oss:20b}
       - OLLAMA_MODEL_VLM=${OLLAMA_MODEL_VLM:-qwen3-vl:32b}
-      - LIGHTRAG_LLM_MODEL=${OLLAMA_MODEL_GENERATION:-nemotron-no-think:latest}
-      - GEMMA_MODEL=${OLLAMA_MODEL_GENERATION:-nemotron-no-think:latest}
+      # Sprint 124: Separate LIGHTRAG_LLM_MODEL for ER extraction
+      - LIGHTRAG_LLM_MODEL=${LIGHTRAG_LLM_MODEL:-nemotron-3-nano:128k}
+      - GEMMA_MODEL=${OLLAMA_MODEL_GENERATION:-nemotron-3-nano:128k}
+      # Sprint 124: LLM-First Cascade (SpaCy only as Rank 3 fallback)
+      - AEGIS_USE_LEGACY_CASCADE=${AEGIS_USE_LEGACY_CASCADE:-0}
+      # Sprint 124: Thinking mode control (default: false)
+      - AEGIS_LLM_THINKING=${AEGIS_LLM_THINKING:-false}
       - VLM_BACKEND=ollama
       - EMBEDDING_BACKEND=flag-embedding  # Sprint 87: Multi-vector (dense + sparse)
       - ST_MODEL_NAME=BAAI/bge-m3
@@ -622,12 +627,17 @@ services:
       - LOG_LEVEL=DEBUG
       # LLM Configuration (same as api service)
       - OLLAMA_BASE_URL=http://ollama:11434
-      - OLLAMA_MODEL_GENERATION=${OLLAMA_MODEL_GENERATION:-nemotron-no-think:latest}
+      - OLLAMA_MODEL_GENERATION=${OLLAMA_MODEL_GENERATION:-nemotron-3-nano:128k}
       - OLLAMA_MODEL_QUERY=${OLLAMA_MODEL_QUERY:-gpt-oss:20b}
       - OLLAMA_MODEL_EXTRACTION=${OLLAMA_MODEL_EXTRACTION:-gpt-oss:20b}
       - OLLAMA_MODEL_VLM=${OLLAMA_MODEL_VLM:-qwen3-vl:32b}
-      - LIGHTRAG_LLM_MODEL=${OLLAMA_MODEL_GENERATION:-nemotron-no-think:latest}
-      - GEMMA_MODEL=${OLLAMA_MODEL_GENERATION:-nemotron-no-think:latest}
+      # Sprint 124: Separate LIGHTRAG_LLM_MODEL for ER extraction
+      - LIGHTRAG_LLM_MODEL=${LIGHTRAG_LLM_MODEL:-nemotron-3-nano:128k}
+      - GEMMA_MODEL=${OLLAMA_MODEL_GENERATION:-nemotron-3-nano:128k}
+      # Sprint 124: LLM-First Cascade
+      - AEGIS_USE_LEGACY_CASCADE=${AEGIS_USE_LEGACY_CASCADE:-0}
+      # Sprint 124: Thinking mode control (default: false)
+      - AEGIS_LLM_THINKING=${AEGIS_LLM_THINKING:-false}
       - VLM_BACKEND=ollama
       - EMBEDDING_BACKEND=flag-embedding  # Sprint 87: Multi-vector (dense + sparse)
       - ST_MODEL_NAME=BAAI/bge-m3

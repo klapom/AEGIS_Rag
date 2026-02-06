@@ -3410,3 +3410,93 @@ Results saved to: `data/benchmark_results/sprint124_20260205_101527/`
 4. **Qwen3-235B Test:** After download completes, test the larger model
 
 ---
+
+## Sprint 124: Phase 1 Ingestion Benchmark (gpt-oss:120b) — Stopped
+
+**Date:** 2026-02-06
+**Status:** ⏹️ Stopped at 28/498 documents (5.6%)
+**Model:** gpt-oss:120b (MXFP4, 75 GB VRAM) for ER extraction
+**Namespace:** `ragas_phase1_sprint124`
+**Prompts:** DSPy MIPROv2 optimized (Sprint 86.3 default, technical/scientific/organizational)
+**Data Source:** RAGAS Phase 1 Benchmark (Samsung E-Manuals, TechQA APARs, HotpotQA, RAGBench)
+
+### Ingestion Statistics
+
+| Metric | Value |
+|--------|-------|
+| Total files attempted | 81 upload attempts |
+| Successfully uploaded | ~28 (unique docs reaching API) |
+| Documents in Neo4j | 61 (unique source_ids) |
+| Failed uploads (HTTP 000) | 15+ (connection timeout) |
+| Namespace | `ragas_phase1_sprint124` |
+
+### Graph Extraction Results (Neo4j)
+
+| Metric | Value |
+|--------|-------|
+| **Total Entities** | 854 |
+| **Total Relations** | 931 |
+| **ER Ratio** | 1.09 (931/854) |
+| **Communities** | 184 |
+| **Qdrant Chunks** | 90 |
+
+#### Entity Type Distribution
+
+| Entity Type | Count | % |
+|-------------|-------|---|
+| CONCEPT | 254 | 29.7% |
+| PRODUCT | 195 | 22.8% |
+| OTHER | 182 | 21.3% |
+| TECHNOLOGY | 69 | 8.1% |
+| ORGANIZATION | 40 | 4.7% |
+| DATE | 36 | 4.2% |
+| LOCATION | 19 | 2.2% |
+| PERSON | 17 | 2.0% |
+| EVENT | 15 | 1.8% |
+| PAPER | 11 | 1.3% |
+| TEMPORAL | 7 | 0.8% |
+| BENCHMARK | 4 | 0.5% |
+| MODEL | 2 | 0.2% |
+
+#### Relation Types
+
+| Type | Count |
+|------|-------|
+| RELATES_TO | 931 (100%) |
+
+### Quality Observations
+
+1. **Entity Quality:** DSPy prompts produce diverse entity types (CONCEPT, PRODUCT, TECHNOLOGY dominate for technical docs)
+2. **Relation Quality:** All relations are generic `RELATES_TO` — the DSPy relation prompt does not produce specific types (WORKS_AT, CREATED, etc.)
+3. **ER Ratio 1.09:** Acceptable (>1.0 target), but lower than ideal (~2.0 for rich graphs)
+4. **Community Detection:** 184 communities from 854 entities = good clustering density
+5. **Domain Match:** Technical DSPy prompts correctly applied to technical data (TechQA, E-Manuals)
+6. **Traceability:** Full chain works: filename → document_id (hash) → source_id (UUID) → Neo4j entities
+
+### Performance Observations
+
+- **gpt-oss:120b extraction:** ~20s per chunk (entity + relation extraction)
+- **Community Summarization:** ~11s per community (Nemotron-3-Nano:128k)
+- **Bottleneck:** Background processing (community summarization) blocks new uploads → HTTP 000 timeouts
+- **Both models loaded simultaneously:** gpt-oss:120b (75 GB) + Nemotron-3-Nano (25 GB) = 100 GB of 128 GB VRAM
+
+### Stop Reason
+
+Upload script stuck at 28/498 with repeated `HTTP 000` (connection timeout) errors. The API was healthy but occupied with community summarization backlog from the first 28 documents. The upload script's retry logic re-authenticated but the API couldn't accept new uploads while processing background jobs.
+
+### Issues Identified
+
+1. **HTTP 000 Timeout Loop:** Upload script retries infinitely on timeout, never advances
+2. **No Upload Throttling:** Script doesn't wait for background processing to complete
+3. **Generic Relations:** All 931 relations are `RELATES_TO` — need specific relation types for useful graph queries
+4. **Counter Not Advancing:** Log shows `[28/498]` for files beyond position 28 (counter bug)
+
+### Recommendations for Next Attempt
+
+1. **Add upload throttling:** Wait for background processing (community summarization) before next upload
+2. **Increase API timeout:** Current timeout too short for concurrent extraction + summarization
+3. **Fix relation type extraction:** Update DSPy relation prompt to produce specific types
+4. **Sequential processing:** Upload → wait for completion → upload next (slower but reliable)
+5. **Consider disabling community summarization** during bulk ingestion (run as batch job after)
+
+---

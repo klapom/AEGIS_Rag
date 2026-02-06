@@ -3,14 +3,16 @@
 Sprint 13 Feature 13.9: ADR-018 - Initial implementation with Gemma 3 4B
 Sprint 14 Feature 14.5: Added retry logic and error handling
 Sprint 23 Feature 23.6: AegisLLMProxy Integration
+Sprint 124: Configurable model via LIGHTRAG_LLM_MODEL env var (no hardcoding)
 Migrated from Ollama Client to multi-cloud LLM proxy (Local → Alibaba Cloud → OpenAI).
-Default model: Gemma 3 4B Q4_K_M (local), with automatic cloud fallback.
+Default model: Uses LIGHTRAG_LLM_MODEL env var, fallback to nemotron-3-nano.
 
 Author: Claude Code
-Date: 2025-10-24, Updated: 2025-11-13
+Date: 2025-10-24, Updated: 2026-02-05
 """
 
 import json
+import os
 import re
 from typing import Any
 
@@ -26,6 +28,7 @@ from tenacity import (
 from src.components.llm_proxy import get_aegis_llm_proxy
 from src.components.llm_proxy.models import (
     Complexity,
+    DataClassification,
     LLMTask,
     QualityRequirement,
     TaskType,
@@ -116,7 +119,7 @@ class RelationExtractor:
 
     def __init__(
         self,
-        model: str = "nemotron-3-nano",  # Sprint 51: Fast Nemotron 3 Nano on DGX Spark
+        model: str | None = None,  # Sprint 124: Read from LIGHTRAG_LLM_MODEL env var
         temperature: float = 0.1,
         num_predict: int = 2000,
         num_ctx: int = 16384,
@@ -124,11 +127,14 @@ class RelationExtractor:
         retry_min_wait: float = 2.0,
         retry_max_wait: float = 10.0,
     ) -> None:
-        """Initialize Gemma relation extractor.
+        """Initialize relation extractor with configurable model.
+
+        Sprint 124: Model is now configurable via LIGHTRAG_LLM_MODEL env var.
+        This ensures RelationExtractor uses the same model as entity extraction.
 
         Args:
-            model: Preferred local model name
-                  Default: Gemma 3 4B Q4_K_M (best performance from benchmarks)
+            model: Preferred local model name. If None, reads from LIGHTRAG_LLM_MODEL
+                  env var, falling back to 'nemotron-3-nano' if not set.
             temperature: LLM temperature (0.0-1.0, lower = more deterministic)
             num_predict: Max tokens to generate
             num_ctx: Context window size
@@ -136,6 +142,9 @@ class RelationExtractor:
             retry_min_wait: Min wait time between retries in seconds (Sprint 14)
             retry_max_wait: Max wait time between retries in seconds (Sprint 14)
         """
+        # Sprint 124: Use LIGHTRAG_LLM_MODEL env var for consistency with entity extraction
+        if model is None:
+            model = os.environ.get("LIGHTRAG_LLM_MODEL", "nemotron-3-nano")
         self.model = model
         # Sprint 23: Use AegisLLMProxy instead of direct Ollama client
         self.proxy = get_aegis_llm_proxy()
@@ -146,9 +155,12 @@ class RelationExtractor:
         self.retry_min_wait = retry_min_wait
         self.retry_max_wait = retry_max_wait
 
+        # Sprint 124: Log model source for debugging
+        model_source = "LIGHTRAG_LLM_MODEL env" if os.environ.get("LIGHTRAG_LLM_MODEL") else "default"
         logger.info(
             "relation_extractor_initialized",
             model=model,
+            model_source=model_source,
             temperature=temperature,
             num_predict=num_predict,
             num_ctx=num_ctx,
@@ -254,9 +266,11 @@ class RelationExtractor:
             # Sprint 23: Use AegisLLMProxy with combined system + user prompt
             combined_prompt = f"{SYSTEM_PROMPT_RELATION}\n\n{user_prompt}"
 
+            # Sprint 124: Use CONFIDENTIAL to force local-only execution (no cloud fallbacks)
             task = LLMTask(
                 task_type=TaskType.EXTRACTION,
                 prompt=combined_prompt,
+                data_classification=DataClassification.CONFIDENTIAL,  # Force local only
                 quality_requirement=QualityRequirement.HIGH,
                 complexity=Complexity.MEDIUM,
                 temperature=self.temperature,
@@ -436,9 +450,11 @@ Answer with ONLY "YES" or "NO".
 Answer:"""
 
         try:
+            # Sprint 124: Use CONFIDENTIAL for local-only execution
             task = LLMTask(
                 task_type=TaskType.GENERATION,  # Sprint 85 Fix: Use GENERATION for yes/no
                 prompt=prompt,
+                data_classification=DataClassification.CONFIDENTIAL,  # Force local only
                 complexity=Complexity.LOW,
                 quality_requirement=QualityRequirement.LOW,  # Sprint 85 Hotfix: STANDARD doesn't exist
                 temperature=0.1,
@@ -499,9 +515,11 @@ Focus on CAUSAL, HIERARCHICAL, and SEMANTIC relationships.
 Output (valid JSON only):"""
 
         try:
+            # Sprint 124: Use CONFIDENTIAL for local-only execution
             task = LLMTask(
                 task_type=TaskType.EXTRACTION,
                 prompt=prompt,
+                data_classification=DataClassification.CONFIDENTIAL,  # Force local only
                 complexity=Complexity.MEDIUM,
                 quality_requirement=QualityRequirement.HIGH,
                 temperature=self.temperature,
@@ -556,8 +574,10 @@ def create_relation_extractor_from_config(config) -> RelationExtractor:
         >>> extractor = create_relation_extractor_from_config(settings)
     """
     # Sprint 23: No longer need Ollama client - AegisLLMProxy handles routing
+    # Sprint 124: Env var LIGHTRAG_LLM_MODEL takes precedence over config
+    model = os.environ.get("LIGHTRAG_LLM_MODEL") or getattr(config, "gemma_model", None)
     return RelationExtractor(
-        model=getattr(config, "gemma_model", "nemotron-3-nano"),  # Sprint 51: Fast Nemotron 3 Nano
+        model=model,  # Sprint 124: None triggers env var lookup in __init__
         temperature=getattr(config, "gemma_temperature", 0.1),
         num_predict=getattr(config, "gemma_num_predict", 2000),
         num_ctx=getattr(config, "gemma_num_ctx", 16384),
