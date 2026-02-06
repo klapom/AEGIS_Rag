@@ -349,28 +349,34 @@ Given a **Document Text** and a **Domain** label, your job is to identify all re
    - `Reasoning:` – a single line that starts with `Reasoning:` followed by your step‑by‑step reasoning.
    - `Entities:` – a single line that starts with `Entities:` followed by a **valid JSON array** of objects.
      Each object must contain the keys:
-     * `name`   – the canonical entity string as it appears in the text (preserve case).
-     * `type`   – one of the allowed type tags (see below).
+     * `name`   – the canonical entity string as it appears in the text (MAX 4 WORDS, use shortest common name).
+     * `type`   – one of the 15 universal type tags (see below).
      * `description` – a concise, one‑sentence explanation of the entity's role in the text.
 
-**Allowed type tags**
+**15 Universal Entity Types (ADR-060 Standard)**
 
-| Tag | Typical meaning |
-|-----|-----------------|
-| `PERSON` | Individual person |
-| `ORGANIZATION` | Company, lab, institute |
-| `LOCATION` | City, country, address |
-| `DATE` | Calendar year, month, day |
-| `TECHNOLOGY` | Software, framework, platform |
-| `PRODUCT` | Physical or digital product |
-| `EVENT` | Conference, meeting, occurrence |
-| `CONCEPT` | Abstract idea or theory |
-| `PROGRAMMING_LANGUAGE` | Programming language |
-| `MODEL` | AI/ML model or framework |
-| `BENCHMARK` | Dataset or evaluation set |
-| `ARCHITECTURE` | Neural or software architecture |
-| `PAPER` | Publication title |
-| `OTHER` | Any entity that does not fit above |
+| Tag | Typical meaning | Examples |
+|-----|-----------------|----------|
+| `PERSON` | Individual person | "John Smith", "Einstein" |
+| `ORGANIZATION` | Company, lab, institute, agency | "NVIDIA", "WHO", "MIT" |
+| `LOCATION` | City, country, address, region | "Berlin", "Europe", "GPS coordinates" |
+| `EVENT` | Conference, meeting, occurrence | "WWII", "NeurIPS 2025" |
+| `DATE_TIME` | Calendar year, month, day, period | "2025", "Q1 2026" |
+| `CONCEPT` | Abstract idea, theory, method | "machine learning", "democracy" |
+| `TECHNOLOGY` | Software, framework, platform, protocol | "Docker", "TCP/IP", "React" |
+| `PRODUCT` | Physical or digital product, service | "iPhone", "ChatGPT", "AWS" |
+| `METRIC` | Measurements, KPIs, scores | "accuracy 95%", "GDP", "F1 score" |
+| `DOCUMENT` | Standards, laws, papers, patents | "RFC 2616", "GDPR", "ISO 9001" |
+| `PROCESS` | Procedures, workflows, algorithms | "gradient descent", "CI/CD" |
+| `MATERIAL` | Physical substances, compounds | "silicon", "H2O", "steel" |
+| `REGULATION` | Laws, policies, compliance rules | "GDPR Article 17", "FDA approval" |
+| `QUANTITY` | Numerical values with units | "5 GB", "100 meters", "3 days" |
+| `FIELD` | Academic discipline, professional field | "neuroscience", "engineering" |
+
+**IMPORTANT Entity Naming Rules**
+- **MAX 4 WORDS**: Use concise names (e.g., "NVIDIA" not "NVIDIA Corporation headquartered in Santa Clara")
+- **Canonical names**: Use most common name (e.g., "Einstein" not "Albert Einstein, German physicist")
+- If entity name in text is > 4 words, shorten it to canonical form
 
 If no entities match the domain or the text, output an empty JSON array: `[]`.
 
@@ -388,10 +394,10 @@ Domain: {domain}
 Reasoning: Let's think step by step in order to identify all named entities.
 Entities:"""
 
-DSPY_OPTIMIZED_RELATION_PROMPT = """Extract ALL relationships between entities from the text.
+DSPY_OPTIMIZED_RELATION_PROMPT = """Extract ALL relationships between entities from the text as Subject-Predicate-Object triples.
 
 ---Role---
-You are a Knowledge Graph Specialist extracting Subject-Predicate-Object triples for a graph database.
+You are a Knowledge Graph Specialist extracting structured S-P-O triples for a graph database.
 
 ---Goal---
 Identify ALL relationships among the provided entities. Be EXHAUSTIVE.
@@ -408,30 +414,73 @@ A good knowledge graph has at least 1 relationship per entity.
 2. Decompose N-ary relationships: "A and B founded C" → A FOUNDED C, B FOUNDED C
 3. Include implicit relationships (co-occurrence in same sentence often implies relation)
 4. Rate strength 1-10: 10=explicit statement, 7=strong implication, 4=weak inference
-5. CRITICAL: Use a SPECIFIC relationship type from the vocabulary below. NEVER use generic types like "RELATES_TO" or "RELATED_TO" or "ASSOCIATED_WITH"
-6. Keep entity names concise (max 4 words). Use the most common/canonical name
+5. CRITICAL: Use a SPECIFIC relationship type from the 22 universal types below
+6. Keep entity names concise (MAX 4 WORDS). Use the most common/canonical name
 7. Relationship type must be 1-3 words in UPPER_SNAKE_CASE
+8. Use "RELATED_TO" ONLY as fallback when no specific type fits
 
----Relationship Type Vocabulary---
+---22 Universal Relation Types (ADR-060 Standard)---
 Use ONLY these types (pick the closest match):
 
-People/Orgs: WORKS_AT, EMPLOYS, FOUNDED, FOUNDED_BY, MANAGES, LEADS, MEMBER_OF, OWNS, CONTROLS
-Creation: CREATED, DEVELOPED, PRODUCED, DIRECTED, WROTE, DESIGNED, BUILT, INVENTED
-Location: LOCATED_IN, HEADQUARTERED_IN, BASED_IN, OPERATES_IN, BORN_IN
-Structure: PART_OF, CONTAINS, BELONGS_TO, SUBSIDIARY_OF, DIVISION_OF
-Technology: USES, IMPLEMENTS, DEPENDS_ON, SUPPORTS, RUNS_ON, BUILT_WITH, INTEGRATES
-Knowledge: BASED_ON, DERIVED_FROM, EXTENDS, VERSION_OF, VARIANT_OF
-Evaluation: EVALUATED_ON, TRAINED_ON, TESTED_WITH, BENCHMARKED_ON
-Competition: COMPETES_WITH, COLLABORATES_WITH, PARTNERS_WITH, ACQUIRED_BY
-Action: ANNOUNCES, INTRODUCES, PRODUCES, IMPACTS, INVESTS_IN, PUBLISHES
-Family: PARENT_OF, CHILD_OF, SPOUSE_OF
+**Structural Relations:**
+- PART_OF: Component is part of whole (e.g., "GPU is PART_OF DGX Spark")
+- CONTAINS: Whole contains component (e.g., "DGX Spark CONTAINS GPU")
+- INSTANCE_OF: Specific instance of a type (e.g., "Fido INSTANCE_OF Dog")
+- TYPE_OF: Subtype relationship (e.g., "Dog TYPE_OF Animal")
 
----Output Format---
-Return ONLY a valid JSON array:
+**Organizational Relations:**
+- EMPLOYS: Organization employs person (e.g., "NVIDIA EMPLOYS John")
+- MANAGES: Person manages entity (e.g., "John MANAGES team")
+- FOUNDED_BY: Organization founded by person (e.g., "Microsoft FOUNDED_BY Bill Gates")
+- OWNS: Entity owns another entity (e.g., "Google OWNS YouTube")
+- LOCATED_IN: Entity located in location (e.g., "Office LOCATED_IN Berlin")
+
+**Causal Relations:**
+- CAUSES: X causes Y (e.g., "Fire CAUSES smoke")
+- ENABLES: X enables Y (e.g., "API ENABLES integration")
+- REQUIRES: X requires Y (e.g., "Python REQUIRES interpreter")
+- LEADS_TO: X leads to Y (e.g., "Training LEADS_TO model")
+
+**Temporal Relations:**
+- PRECEDES: X happens before Y (e.g., "Testing PRECEDES deployment")
+- FOLLOWS: X happens after Y (e.g., "Q2 FOLLOWS Q1")
+
+**Functional Relations:**
+- USES: X uses Y (e.g., "Application USES database")
+- CREATES: X creates Y (e.g., "Model CREATES predictions")
+- IMPLEMENTS: X implements Y (e.g., "Code IMPLEMENTS algorithm")
+- DEPENDS_ON: X depends on Y (e.g., "Service DEPENDS_ON API")
+
+**Semantic Relations:**
+- SIMILAR_TO: X is similar to Y (e.g., "BERT SIMILAR_TO GPT")
+- ASSOCIATED_WITH: X is associated with Y (e.g., "Research ASSOCIATED_WITH paper")
+
+**Fallback (use ONLY when no specific type fits):**
+- RELATED_TO: Generic relationship (e.g., "Topic RELATED_TO concept")
+
+---S-P-O Triple Output Format---
+Return ONLY a valid JSON array with this structure:
 [
-  {{"source": "Entity1", "target": "Entity2", "type": "SPECIFIC_TYPE", "description": "Why related", "strength": 8}},
+  {{
+    "subject": "Entity1",
+    "subject_type": "ORGANIZATION",
+    "relation": "DEVELOPED",
+    "object": "Entity2",
+    "object_type": "PRODUCT",
+    "description": "Entity1 developed Entity2 to solve problem X",
+    "strength": 9
+  }},
   ...
 ]
+
+**IMPORTANT:**
+- "subject" = source entity (short name, max 4 words)
+- "subject_type" = one of the 15 universal entity types
+- "relation" = one of the 21 universal relation types (1-3 words, UPPER_SNAKE_CASE)
+- "object" = target entity (short name, max 4 words)
+- "object_type" = one of the 15 universal entity types
+- "description" = evidence from text explaining the relationship (1 sentence)
+- "strength" = confidence score 1-10
 
 Output (JSON array only):
 """
@@ -445,8 +494,8 @@ ENTITY_ENRICHMENT_PROMPT = """You are enriching a SpaCy NER baseline with domain
 ---Context---
 SpaCy has already extracted these entities: {spacy_entities}
 
-SpaCy is good at: PERSON, ORGANIZATION, LOCATION, DATE
-SpaCy MISSES: CONCEPT, TECHNOLOGY, PRODUCT, MODEL, ARCHITECTURE, PROGRAMMING_LANGUAGE
+SpaCy is good at: PERSON, ORGANIZATION, LOCATION, DATE_TIME
+SpaCy MISSES: CONCEPT, TECHNOLOGY, PRODUCT, PROCESS, METRIC, DOCUMENT, MATERIAL, REGULATION, QUANTITY, FIELD
 
 ---Your Task---
 Find ONLY entities that SpaCy MISSED. Do NOT repeat SpaCy entities.
@@ -456,15 +505,20 @@ Find ONLY entities that SpaCy MISSED. Do NOT repeat SpaCy entities.
 
 ---Instructions---
 1. Review SpaCy's entities - these are already captured
-2. Find ADDITIONAL entities of types SpaCy cannot detect:
-   - CONCEPT: Abstract ideas, theories, methods (e.g., "machine learning", "agile methodology")
-   - TECHNOLOGY: Frameworks, platforms, tools (e.g., "Docker", "Kubernetes", "React")
-   - PRODUCT: Software products, services (e.g., "ChatGPT", "iPhone")
-   - MODEL: AI/ML models (e.g., "GPT-4", "BERT", "ResNet")
-   - ARCHITECTURE: System/neural architectures (e.g., "Transformer", "microservices")
-   - PROGRAMMING_LANGUAGE: Languages (e.g., "Python", "TypeScript")
+2. Find ADDITIONAL entities of types SpaCy cannot detect (use 15 universal types from ADR-060):
+   - CONCEPT: Abstract ideas, theories, methods (e.g., "machine learning", "democracy")
+   - TECHNOLOGY: Frameworks, platforms, tools, protocols (e.g., "Docker", "TCP/IP", "React")
+   - PRODUCT: Software products, hardware, services (e.g., "ChatGPT", "iPhone", "AWS")
+   - PROCESS: Procedures, workflows, algorithms (e.g., "gradient descent", "CI/CD")
+   - METRIC: Measurements, KPIs, scores (e.g., "accuracy 95%", "GDP", "F1 score")
+   - DOCUMENT: Standards, laws, papers, patents (e.g., "RFC 2616", "GDPR", "ISO 9001")
+   - MATERIAL: Physical substances, compounds (e.g., "silicon", "H2O", "steel")
+   - REGULATION: Laws, policies, compliance rules (e.g., "GDPR Article 17", "FDA approval")
+   - QUANTITY: Numerical values with units (e.g., "5 GB", "100 meters", "3 days")
+   - FIELD: Academic discipline, professional field (e.g., "neuroscience", "engineering")
 3. Do NOT repeat any entity from SpaCy's list
 4. Be thorough but precise - only include clear entities
+5. IMPORTANT: Keep entity names SHORT (max 4 words, use canonical names)
 
 ---Output Format---
 Return ONLY a valid JSON array of NEW entities (not already in SpaCy list):
@@ -494,19 +548,23 @@ Create a COMPLETE relationship graph. Every entity should have at least ONE rela
 
 ---Instructions---
 1. Consider ALL entity pairs - check if any relationship exists
-2. Decompose complex relationships: "A and B work at C" → A WORKS_AT C, B WORKS_AT C
+2. Decompose complex relationships: "A and B work at C" → A EMPLOYS John, B EMPLOYS Jane (inverse of WORKS_AT)
 3. Include implicit relationships from context
 4. Rate strength 1-10: 10=explicit, 7=implied, 4=inferred
+5. Use ONLY the 22 universal relation types (ADR-060 Standard)
+6. Keep entity names SHORT (max 4 words)
+7. Relation types must be 1-3 words in UPPER_SNAKE_CASE
 
----Relationship Types---
-Use specific types when possible:
-- WORKS_AT, WORKS_FOR, EMPLOYS, MANAGES
-- CREATED, DEVELOPED, FOUNDED, INVENTED
-- USES, IMPLEMENTS, DEPENDS_ON, EXTENDS
-- LOCATED_IN, BASED_IN, HEADQUARTERED_IN
-- PART_OF, CONTAINS, BELONGS_TO
-- COLLABORATES_WITH, ASSOCIATED_WITH
-- RELATES_TO (only if no specific type fits)
+---22 Universal Relation Types (ADR-060 Standard)---
+Use ONLY these types:
+
+**Structural:** PART_OF, CONTAINS, INSTANCE_OF, TYPE_OF
+**Organizational:** EMPLOYS, MANAGES, FOUNDED_BY, OWNS, LOCATED_IN
+**Causal:** CAUSES, ENABLES, REQUIRES, LEADS_TO
+**Temporal:** PRECEDES, FOLLOWS
+**Functional:** USES, CREATES, IMPLEMENTS, DEPENDS_ON
+**Semantic:** SIMILAR_TO, ASSOCIATED_WITH
+**Fallback:** RELATED_TO (only if no specific type fits)
 
 ---Output Format---
 Return ONLY a valid JSON array:

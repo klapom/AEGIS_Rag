@@ -3500,3 +3500,62 @@ Upload script stuck at 28/498 with repeated `HTTP 000` (connection timeout) erro
 5. **Consider disabling community summarization** during bulk ingestion (run as batch job after)
 
 ---
+
+## Sprint 125: vLLM Integration + Domain-Aware Extraction (2026-02-06)
+
+### Overview
+
+Sprint 125 introduces the **Dual-Engine Architecture (ADR-059)**: Ollama for chat, vLLM for extraction. This resolves the Ollama 4-concurrent-request bottleneck that caused 28/498 docs to get stuck during Phase 1 ingestion.
+
+### vLLM Performance on DGX Spark
+
+| Metric | Value | Notes |
+|--------|-------|-------|
+| Image | `nvcr.io/nvidia/vllm:26.01-py3` | NGC ARM64 for DGX Spark |
+| Model | Nemotron-3-Nano-30B-A3B-NVFP4 | 19GB, NVFP4 quantization |
+| Warm Throughput | ~54 tok/s | Single request |
+| Cold Throughput | ~9 tok/s | First request (CUDA graph capture) |
+| Max Concurrent | 8 seqs (configurable to 256+) | vs Ollama's 4 |
+| GPU Memory | 18.65 GiB | 40% utilization setting |
+| KV Cache | FP8 | Reduced memory footprint |
+| First Start | ~22 min | Image pull + model download + compile |
+| Restart | ~2-7 min | With compile cache |
+
+### Reasoning Parser (nano_v3)
+
+The Nemotron model outputs `reasoning_content` (Chain-of-Thought) separate from `content` (final answer). This means the model can "think" without consuming the output token budget — perfect for extraction tasks where structured JSON output is needed.
+
+```json
+{
+  "reasoning_content": "We need to extract entities... Aspirin is a Drug, Bayer is a Company...",
+  "content": "{\"entities\": [{\"id\": \"Aspirin\", \"type\": \"Drug\"}, ...], \"relations\": [...]}"
+}
+```
+
+### Domain-Aware Extraction Pipeline (125.7)
+
+- Domain classification runs BEFORE extraction (BGE-M3 classifier)
+- Domain-trained prompts (from Neo4j `:Domain` nodes) used when available
+- Fallback to generic DSPy prompts when domain has no training
+- `domain_id` stored in both Qdrant payloads AND Neo4j entity nodes
+
+### S-P-O Triple Extraction (125.3)
+
+- Replaced 100% RELATES_TO relations with 21 universal relation types (ADR-060)
+- Subject-Predicate-Object format: `{subject, subject_type, predicate, object, object_type}`
+- Universal types: DEVELOPS, OPERATES_IN, PRODUCES, TREATS, REGULATES, etc.
+
+### Impact on Sprint 126 RAGAS Evaluation
+
+Sprint 126 will run RAGAS Phase 1 (498 docs) with these improvements:
+1. **vLLM** for extraction (54 tok/s, 8+ concurrent vs Ollama's 4)
+2. **S-P-O triples** instead of RELATES_TO (21 relation types)
+3. **Domain-aware prompts** for targeted extraction
+4. **VLLM_ENABLED=true** in `.env` to activate vLLM routing
+
+Expected improvements:
+- Ingestion speed: 10-50x faster (concurrent extraction)
+- Relation diversity: 0% → ~80%+ non-RELATES_TO relations
+- Extraction quality: Domain-specific prompts + reasoning parser
+
+---

@@ -192,3 +192,147 @@ def graph_test_client():
             "session": mock_session,
         }
         yield client
+
+
+# Sprint 125: Domain API Fixtures
+
+
+@pytest.fixture
+def mock_domain_classifier():
+    """Mock domain classifier for Sprint 125 domain detection tests."""
+    classifier = AsyncMock()
+    classifier.is_loaded.return_value = True
+    classifier.load_domains = AsyncMock()
+    classifier.classify_document.return_value = [
+        {"domain": "computer_science_it", "score": 0.85},
+        {"domain": "mathematics", "score": 0.72},
+        {"domain": "physics", "score": 0.65},
+    ]
+    return classifier
+
+
+@pytest.fixture
+def mock_domain_repository():
+    """Mock domain repository for Sprint 125 domain API tests."""
+    repo = AsyncMock()
+
+    async def get_domain_impl(domain_id):
+        if domain_id == "medicine_health":
+            return {
+                "id": "domain_1",
+                "name": "Medicine & Health",
+                "description": "Medical domain",
+                "entity_types": ["PERSON", "MEDICATION"],
+                "relation_types": ["TREATS", "CAUSES"],
+            }
+        elif domain_id == "law":
+            return {
+                "id": "domain_2",
+                "name": "Law",
+                "description": "Legal domain",
+                "entity_types": ["PERSON", "LAW"],
+                "relation_types": ["REGULATES", "CITES"],
+            }
+        return None
+
+    repo.get_domain = AsyncMock(side_effect=get_domain_impl)
+    repo.create_domain = AsyncMock(return_value={"id": "new_domain", "name": "new"})
+    return repo
+
+
+@pytest.fixture
+def mock_redis_client():
+    """Mock Redis client for Sprint 125 deployment profile storage."""
+    redis = AsyncMock()
+    redis.get.return_value = None  # Default: no profile set
+    redis.set = AsyncMock()
+    redis.delete = AsyncMock()
+    return redis
+
+
+@pytest.fixture
+def mock_seed_catalog():
+    """Mock seed catalog for Sprint 125 domain seeding tests."""
+    return {
+        "universal_entity_types": [
+            "PERSON",
+            "ORGANIZATION",
+            "LOCATION",
+            "TECHNOLOGY",
+            "CONCEPT",
+            "DOCUMENT",
+            "EVENT",
+            "PROCESS",
+            "PRODUCT",
+            "PROJECT",
+            "LEGISLATION",
+            "REGULATION",
+            "RELATIONSHIP",
+            "PUBLICATION",
+            "AWARD",
+        ],
+        "universal_relation_types": [
+            "PART_OF",
+            "CONTAINS",
+            "INSTANCE_OF",
+            "TYPE_OF",
+            "EMPLOYS",
+            "MANAGES",
+            "FOUNDED_BY",
+            "OWNS",
+            "LOCATED_IN",
+            "CAUSES",
+            "ENABLES",
+            "REQUIRES",
+            "LEADS_TO",
+            "PRECEDES",
+            "FOLLOWS",
+            "USES",
+            "CREATES",
+            "IMPLEMENTS",
+            "DEPENDS_ON",
+            "SIMILAR_TO",
+            "ASSOCIATED_WITH",
+            "RELATED_TO",
+        ],
+        "domains": [
+            {
+                "domain_id": "computer_science_it",
+                "name": "Computer Science & IT",
+                "description": "AI, ML, software engineering",
+                "entity_types": ["PERSON", "ORGANIZATION", "TECHNOLOGY"],
+                "relation_types": ["USES", "IMPLEMENTS", "CREATES"],
+                "keywords": ["algorithm", "programming", "software"],
+            },
+            {
+                "domain_id": "medicine_health",
+                "name": "Medicine & Health",
+                "description": "Medical and health-related content",
+                "entity_types": ["PERSON", "ORGANIZATION"],
+                "relation_types": ["TREATS", "CAUSES", "PREVENTS"],
+                "keywords": ["disease", "treatment", "medication"],
+            },
+            {
+                "domain_id": "law",
+                "name": "Law & Legal",
+                "description": "Legal documents and contracts",
+                "entity_types": ["PERSON", "ORGANIZATION", "LEGISLATION"],
+                "relation_types": ["REGULATES", "CITES", "AMENDS"],
+                "keywords": ["statute", "contract", "liability"],
+            },
+            {
+                "domain_id": "chemistry",
+                "name": "Chemistry",
+                "description": "Chemical compounds and reactions",
+                "entity_types": ["CONCEPT", "PROCESS", "PRODUCT"],
+                "relation_types": ["REACTS_WITH", "PRODUCES", "DECOMPOSES"],
+                "keywords": ["molecule", "compound", "reaction"],
+            },
+        ],
+        "deployment_profiles": {
+            "default": ["computer_science_it", "medicine_health", "law", "chemistry"],
+            "pharma_company": ["medicine_health", "chemistry"],
+            "law_firm": ["law"],
+            "tech_startup": ["computer_science_it"],
+        },
+    }

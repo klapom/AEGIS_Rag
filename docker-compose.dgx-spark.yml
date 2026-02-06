@@ -406,6 +406,85 @@ services:
       - prometheus
 
   # ============================================================================
+  # vLLM - OpenAI-Compatible LLM Server (High-Throughput Inference)
+  # ============================================================================
+  # Sprint 125 Feature 125.1: vLLM for entity/relation extraction
+  #
+  # Purpose: Handle 256+ concurrent requests with batching
+  # (Ollama maxes out at 4, bottlenecking ingestion at 28/498 docs stuck)
+  #
+  # Image: NGC vLLM container (ARM64-compatible for DGX Spark)
+  # Source: NVIDIA forum recommendation for Nemotron-3-Nano on DGX Spark
+  # Reference: christopherowen/spark-vllm-mxfp4-docker (GPT-OSS-120B patterns)
+  #
+  # Usage:
+  #   # Start with ingestion profile (includes vLLM)
+  #   docker compose -f docker-compose.dgx-spark.yml --profile ingestion up -d
+  #
+  #   # Check vLLM is serving
+  #   curl http://localhost:8001/v1/models
+  # ============================================================================
+  vllm:
+    image: nvcr.io/nvidia/vllm:26.01-py3
+    container_name: aegis-vllm
+    profiles:
+      - ingestion  # Only start when explicitly requested
+    ports:
+      - "8001:8001"
+    # DGX Spark: IPC host mode for shared memory (NCCL, CUDA IPC)
+    ipc: host
+    ulimits:
+      memlock: -1
+      stack: 67108864
+    volumes:
+      # Bind mount to local HF cache — shares models with host tools, avoids
+      # re-downloading ~18GB Nemotron model. Same pattern as NVIDIA forum recommendation.
+      - ${HOME}/.cache/huggingface:/root/.cache/huggingface
+    environment:
+      # FlashInfer MOE optimization for NVFP4 models on Blackwell (SM121)
+      - VLLM_USE_FLASHINFER_MOE_FP4=1
+      - VLLM_FLASHINFER_MOE_BACKEND=throughput
+      # HuggingFace cache (persists model downloads between restarts)
+      - HF_HOME=/root/.cache/huggingface
+      # Disable GPU Direct Storage (not available on DGX Spark)
+      - VLLM_FASTSAFETENSORS_NOGDS=1
+    # NGC vLLM image needs explicit entrypoint override (not vllm-openai)
+    # Downloads reasoning parser plugin on startup, then launches vLLM serve
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        wget -q https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-NVFP4/resolve/main/nano_v3_reasoning_parser.py && \
+        exec vllm serve nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-NVFP4 \
+          --host 0.0.0.0 \
+          --port 8001 \
+          --max-model-len 32768 \
+          --max-num-seqs 8 \
+          --gpu-memory-utilization 0.4 \
+          --trust-remote-code \
+          --enable-auto-tool-choice \
+          --tool-call-parser qwen3_coder \
+          --reasoning-parser-plugin nano_v3_reasoning_parser.py \
+          --reasoning-parser nano_v3 \
+          --kv-cache-dtype fp8
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8001/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 180s  # NGC image + model loading takes longer
+    restart: unless-stopped
+    networks:
+      - aegis-network
+
+  # ============================================================================
   # AEGIS RAG API - FastAPI Backend
   # ============================================================================
   api:
@@ -452,6 +531,12 @@ services:
       # Sprint 124: Separate LIGHTRAG_LLM_MODEL for ER extraction
       - LIGHTRAG_LLM_MODEL=${LIGHTRAG_LLM_MODEL:-nemotron-3-nano:128k}
       - GEMMA_MODEL=${OLLAMA_MODEL_GENERATION:-nemotron-3-nano:128k}
+      # Sprint 125 Feature 125.1: vLLM for high-throughput extraction
+      # Set VLLM_ENABLED=true to route extraction tasks to vLLM (256+ concurrent)
+      # Requires: docker compose --profile ingestion up -d vllm
+      - VLLM_ENABLED=${VLLM_ENABLED:-false}
+      - VLLM_BASE_URL=http://vllm:8001
+      - VLLM_MODEL=nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-NVFP4
       # Sprint 124: LLM-First Cascade (SpaCy only as Rank 3 fallback)
       - AEGIS_USE_LEGACY_CASCADE=${AEGIS_USE_LEGACY_CASCADE:-0}
       # Sprint 124: Thinking mode control (default: false)
@@ -689,6 +774,7 @@ volumes:
     driver: local
   docling_ocr_cache:
     driver: local
+  # huggingface_cache removed — vLLM now uses bind mount to ~/.cache/huggingface
 
 # ============================================================================
 # Networks

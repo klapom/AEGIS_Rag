@@ -1,7 +1,7 @@
 # AEGIS RAG Architecture
 
 **Project:** AEGIS RAG (Agentic Enterprise Graph Intelligence System)
-**Last Updated:** 2026-01-15 (Sprint 93: Tool Composition Framework, Skill-Tool Mapping Layer)
+**Last Updated:** 2026-02-06 (Sprint 125: vLLM Dual-Engine, Domain-Aware Extraction)
 
 ---
 
@@ -23,53 +23,68 @@
 ## High-Level System Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                         AEGIS RAG System                            │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  ┌──────────────────────────────────────────────────────┐          │
-│  │   React Frontend (Port 5179)                        │          │
-│  │   - SearchResultsPage (SSE streaming)               │          │
-│  │   - StreamingAnswer (ReactMarkdown)                 │          │
-│  │   - Citation (inline [1][2][3])                     │          │
-│  │   - FollowUpQuestions                               │          │
-│  │   - Settings (localStorage)                         │          │
-│  └──────────────┬───────────────────────────────────────┘          │
-│                 │ HTTP POST /api/v1/chat (SSE)                     │
-│                 ▼                                                  │
-│  ┌──────────────────────────────────────────────────────────────┐  │
-│  │              FastAPI Backend (Port 8000)                      │  │
-│  │  ┌────────────┐  ┌──────────────┐  ┌──────────────┐         │  │
-│  │  │ Health API │  │ Retrieval API│  │ Graph Viz API│         │  │
-│  │  │ (Sprint 2) │  │  (Sprint 2)  │  │ (Sprint 12)  │         │  │
-│  │  └────────────┘  └──────┬───────┘  └──────────────┘         │  │
-│  └─────────────────────────┼──────────────────────────────────────┘  │
-│                            │                                         │
-│                            ▼                                         │
-│  ┌──────────────────────────────────────────────────────────────┐  │
-│  │          LangGraph Multi-Agent Orchestration                  │  │
-│  │  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐         │  │
-│  │  │ Router  │→ │ Vector  │  │  Graph  │  │ Memory  │         │  │
-│  │  │  Agent  │  │  Agent  │  │  Agent  │  │  Agent  │         │  │
-│  │  └─────────┘  └────┬────┘  └────┬────┘  └────┬────┘         │  │
-│  │                    │            │            │               │  │
-│  │               ┌────┴────────────┴────────────┴────┐          │  │
-│  │               │     Aggregator Node              │          │  │
-│  │               └──────────────┬───────────────────┘          │  │
-│  └──────────────────────────────┼──────────────────────────────┘  │
-│                                 │                                  │
-│                                 ▼                                  │
-│  ┌──────────────────────────────────────────────────────────────┐  │
-│  │                   Storage Layer                               │  │
-│  │  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────────┐     │  │
-│  │  │  Redis  │  │ Qdrant  │  │ Neo4j   │  │AegisLLMProxy│     │  │
-│  │  │(Memory) │  │(Vector) │  │ (Graph) │  │ Multi-Cloud │     │  │
-│  │  │Port 6379│  │Port 6333│  │Port 7687│  │ LLM Routing │     │  │
-│  │  │         │  │ BGE-M3  │  │         │  │ (ADR-033)   │     │  │
-│  │  └─────────┘  └─────────┘  └─────────┘  └─────────────┘     │  │
-│  └──────────────────────────────────────────────────────────────┘  │
-│                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         AEGIS RAG System (Sprint 125+)                       │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌──────────────────────────────────────────────────────────┐              │
+│  │   React Frontend (Port 80)                              │              │
+│  │   - Domain Detection at Upload (BGE-M3)                 │              │
+│  │   - Domain Filter + Deployment Profile Selection        │              │
+│  │   - Sub-Type Display in Graph Visualization             │              │
+│  └──────────────┬───────────────────────────────────────────┘              │
+│                 │ HTTP POST /api/v1/chat + /api/v1/retrieval/upload       │
+│                 ▼                                                          │
+│  ┌──────────────────────────────────────────────────────────────────────┐  │
+│  │              FastAPI Backend (Port 8000)                             │  │
+│  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────────┐  │  │
+│  │  │ Chat API     │  │ Retrieval API│  │ Domain-Aware Ingestion   │  │  │
+│  │  │ (Ollama)     │  │ (Vector+Graph)  │ (vLLM Extraction)        │  │  │
+│  │  └──────────┬───┘  └──────┬───────┘  └───────────┬──────────────┘  │  │
+│  └─────────────┼─────────────┼──────────────────────┼─────────────────────┘  │
+│                │             │                      │                       │
+│                ▼             ▼                      ▼                       │
+│  ┌──────────────────────────────────────────────────────────────────────┐  │
+│  │          LangGraph Multi-Agent Orchestration (Sprint 125)             │  │
+│  │  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌──────────────────────┐   │  │
+│  │  │ Router  │→ │ Vector  │  │  Graph  │  │ Domain Classifier    │   │  │
+│  │  │  Agent  │  │  Agent  │  │  Agent  │  │ (Extraction Prompt)  │   │  │
+│  │  └─────────┘  └────┬────┘  └────┬────┘  └──────────┬───────────┘   │  │
+│  │                    │            │                   │               │  │
+│  │               ┌────┴────────────┴───────────────────┘               │  │
+│  │               │     Aggregator Node (Intent-Weighted RRF)          │  │
+│  │               └──────────────┬──────────────────────────┘           │  │
+│  └──────────────────────────────┼──────────────────────────────────────┘  │
+│                                 │                                        │
+│                                 ▼                                        │
+│  ┌──────────────────────────────────────────────────────────────────────┐  │
+│  │                   Dual-Engine LLM Routing                             │  │
+│  │                                                                      │  │
+│  │  ┌─────────────────────┐           ┌──────────────────────────┐     │  │
+│  │  │ Ollama (Chat)       │           │ vLLM (Extraction)        │     │  │
+│  │  │ Port 11434          │           │ Port 8001                │     │  │
+│  │  │ Nemotron-3-Nano:128k│           │ Nemotron NVFP4 30B-A3B  │     │  │
+│  │  │ 4 concurrent max    │           │ 256+ concurrent          │     │  │
+│  │  │ 74 tok/s            │           │ 60-80 tok/s (DGX Spark) │     │  │
+│  │  │ User-facing queries │           │ S-P-O extraction jobs    │     │  │
+│  │  └─────────────────────┘           └──────────────────────────┘     │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+│                                 │                                        │
+│                                 ▼                                        │
+│  ┌──────────────────────────────────────────────────────────────────────┐  │
+│  │                   Storage Layer (Sprint 125)                          │  │
+│  │  ┌─────────┐  ┌──────────────┐  ┌──────────┐  ┌─────────────────┐  │  │
+│  │  │  Redis  │  │ Qdrant       │  │ Neo4j    │  │ Domain Taxonomy │  │  │
+│  │  │(Memory) │  │ (Vector)     │  │ (Graph)  │  │ (35 DDC+FORD)   │  │  │
+│  │  │Port 6379│  │Port 6333     │  │Port 7687 │  │ + Sub-Types     │  │  │
+│  │  │         │  │ Dense 1024D  │  │          │  │ Entity Prompts  │  │  │
+│  │  │         │  │ Sparse Lex.  │  │ with_id: │  │                 │  │  │
+│  │  │         │  │ Server RRF   │  │ domain_id│  │ domain_id →     │  │  │
+│  │  │         │  │              │  │          │  │ prompt selection│  │  │
+│  │  └─────────┘  └──────────────┘  └──────────┘  └─────────────────┘  │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -232,6 +247,100 @@ Phase 2: Background Refinement (30-60s async)
 - **Multi-language NER** (DE/EN/FR/ES SpaCy support)
 - **Comprehensive logging** (P50/P95/P99 metrics, LLM cost tracking, GPU VRAM monitoring)
 - **Ollama health monitoring** (periodic checks + auto-restart capability)
+
+### Domain-Aware Ingestion Pipeline (Sprint 125 / ADR-060, ADR-061)
+
+**Architecture:** Three-stage domain classification → prompts → S-P-O extraction
+
+```
+Phase 1: Fast Upload (2-5s)
+Document Upload (Frontend) →
+├→ Step 1: Parse & OCR (Docling CUDA)
+├→ Step 2: Section Chunking (800-1800 tokens)
+├→ Step 3: BGE-M3 Embedding (Dense 1024D + Sparse lexical)
+├→ Step 4: Domain Classification (BGE-M3 cosine sim ≥0.85)
+│           └→ Match against 35 DDC+FORD domain embeddings
+│           └→ Select domain_id (default: "generic")
+├→ Step 5: Qdrant Upload (vector + domain_id metadata)
+├→ Step 6: Fast NER (SpaCy, multi-language)
+└→ Response: "processing_background" + document_id
+
+Phase 2: Background Refinement (30-120s async)
+Domain-Driven S-P-O Extraction →
+├→ Step 7: Select Extraction Prompt (by domain_id)
+│           └→ If "medical": use medical entity/relation types
+│           └→ If "legal": use legal domain vocabulary
+│           └→ Else: use 15+22 universal types
+├→ Step 8: vLLM Extraction (Nemotron NVFP4, 256+ parallel)
+│           └→ S-P-O output (subject, predicate, object with types)
+│           └→ Fallback: Ollama (Nemotron Nano) if vLLM unavailable
+├→ Step 9: Type Validation (15 entity + 22 relation universal types)
+├→ Step 10: Neo4j Storage (with domain_id + sub_type property)
+├→ Step 11: Community Detection (Leiden/Louvain)
+└→ Status: "ready" when complete
+
+Phase 3: Domain Seeding (Optional)
+Seed Domains from YAML (Spring 125.8) →
+├→ 35 domains (DDC + FORD categories)
+├→ Entity/relation vocabularies per domain
+├→ Deployment profiles (1-5 active domains per customer)
+└→ Auto-configuration from seed_domains.yaml
+```
+
+**Domain Taxonomy (35 DDC+FORD Domains):**
+
+| Category | Domains | Examples |
+|----------|---------|----------|
+| **DDC (30)** | Knowledge, Computing, Language, Medicine, etc. | 000-999 hierarchy |
+| **FORD (5)** | Engineering, Business, Environmental, etc. | Domain-specific |
+| **Special** | Custom, Generic | Fallback types |
+
+**Two-Tier Entity/Relation System (ADR-060):**
+
+| Tier | Purpose | Storage |
+|------|---------|---------|
+| **Tier 1: Universal** | 15 entity types (Person, Org, Location, etc.), 22 relation types | Neo4j Label + Property |
+| **Tier 2: Domain** | Domain-specific sub-types (e.g., "Physician" for medical domain) | Neo4j `sub_type` property |
+
+**Deployment Profiles (Sprint 125.8):**
+
+```yaml
+# seed_domains.yaml
+profiles:
+  healthcare:
+    domains: [medical, pharmaceutical]
+    entity_types: [Person, Organization, Procedure, Medication]
+    relation_types: [TREATS, CAUSED_BY, PRESCRIBED_BY]
+
+  legal:
+    domains: [law, regulation]
+    entity_types: [Person, Organization, Law, Case]
+    relation_types: [CITES, CONTRADICTS, ENFORCES]
+
+  academic:
+    domains: [research, education]
+    entity_types: [Person, Organization, Topic, Publication]
+    relation_types: [AUTHORED_BY, CITES, COLLABORATES_WITH]
+```
+
+**Domain-Aware Frontend (Sprint 125.9):**
+
+1. **Domain Detection at Upload:**
+   - Show detected domain (e.g., "Medical" for healthcare docs)
+   - Allow manual override to specific domain
+
+2. **Deployment Profile Page:**
+   - Select active domains (1-5 per environment)
+   - Configure entity/relation type vocabularies
+   - Manage domain-specific extraction rules
+
+3. **Domain Filter in Graph Retrieval:**
+   - Filter entities by domain (e.g., "Show only medical entities")
+   - Sub-type display in graph visualization
+
+4. **Retrieval Targeting:**
+   - Query inherits document's domain context
+   - Graph queries respect domain boundaries
 
 ---
 

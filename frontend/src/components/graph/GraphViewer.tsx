@@ -185,9 +185,10 @@ export function GraphViewer({
   const getNodeLabel = useCallback((node: any) => {
     const label = node.label || node.id || 'Unknown';
     const type = node.type || 'Unknown';
+    const subType = node.sub_type || node.entity_sub_type;
     const degree = node.degree || 0;
     const community = node.community;
-    return `${label}\nType: ${type}\nConnections: ${degree}${
+    return `${label}\nType: ${type}${subType ? `\nSub-Type: ${subType}` : ''}\nConnections: ${degree}${
       community ? `\nCommunity: ${community}` : ''
     }`;
   }, []);
@@ -316,6 +317,14 @@ export function GraphViewer({
                 <span className="text-gray-600">Type:</span>
                 <span className="font-medium">{(selectedNode || hoveredNode)?.type}</span>
               </div>
+              {((selectedNode || hoveredNode)?.sub_type || (selectedNode || hoveredNode)?.entity_sub_type) && (
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600">Sub-Type:</span>
+                  <span className="font-medium text-sm italic text-gray-700">
+                    {(selectedNode || hoveredNode)?.sub_type || (selectedNode || hoveredNode)?.entity_sub_type}
+                  </span>
+                </div>
+              )}
               <div className="flex items-center justify-between">
                 <span className="text-gray-600">Connections:</span>
                 <span className="font-medium">{(selectedNode || hoveredNode)?.degree || 0}</span>

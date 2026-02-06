@@ -54,11 +54,25 @@ export function SearchResultsPage() {
     loadHistory();
   }, [initialSessionId, query]);
 
-  const handleNewSearch = (newQuery: string, newMode: SearchMode) => {
-    // Sprint 17 Feature 17.2: Include session_id in URL to maintain conversation context
-    const url = activeSessionId
-      ? `/search?q=${encodeURIComponent(newQuery)}&mode=${newMode}&session_id=${activeSessionId}`
-      : `/search?q=${encodeURIComponent(newQuery)}&mode=${newMode}`;
+  const handleNewSearch = (
+    newQuery: string,
+    newMode: SearchMode,
+    _namespaces?: string[],
+    _graphExpansionConfig?: unknown,
+    domainIds?: string[]
+  ) => {
+    // Sprint 125 Feature 125.9d: Include domain_ids in URL
+    const params = new URLSearchParams();
+    params.append('q', newQuery);
+    params.append('mode', newMode);
+    if (activeSessionId) {
+      params.append('session_id', activeSessionId);
+    }
+    if (domainIds && domainIds.length > 0) {
+      domainIds.forEach((id) => params.append('domain_ids', id));
+    }
+
+    const url = `/search?${params.toString()}`;
     navigate(url);
   };
 

@@ -109,6 +109,12 @@ class SearchRequest(BaseModel):
         description="Namespaces to filter by (Sprint 81 TD-099)",
         examples=[["default"], ["ragas_eval"], ["default", "general"]],
     )
+    # Sprint 125 Feature 125.9b: Domain filtering
+    domain_ids: list[str] | None = Field(
+        None,
+        description="Domain IDs to filter by (Sprint 125 Feature 125.9b)",
+        examples=[["computer_science_it"], ["medicine_health", "chemistry"]],
+    )
 
     model_config = ConfigDict(
         # P1: Validate assignment to prevent invalid data
@@ -279,6 +285,24 @@ async def search(
                 namespaces=search_params.namespaces,
             )
 
+        # Sprint 125 Feature 125.9b: Add domain filtering to MetadataFilters
+        if search_params.domain_ids:
+            if metadata_filters is None:
+                metadata_filters = MetadataFilters()
+            # Add domain_id filter (assuming MetadataFilters supports custom filters)
+            # This will be handled by Qdrant filtering on domain_id payload field
+            if not hasattr(metadata_filters, "domain_ids"):
+                # Store in filters dict if MetadataFilters doesn't have domain_ids attribute
+                if not hasattr(metadata_filters, "_custom_filters"):
+                    metadata_filters._custom_filters = {}
+                metadata_filters._custom_filters["domain_ids"] = search_params.domain_ids
+            else:
+                metadata_filters.domain_ids = search_params.domain_ids
+            logger.info(
+                "domain_filter_applied",
+                domain_ids=search_params.domain_ids,
+            )
+
         if search_params.search_type == "hybrid":
             # Hybrid search (Vector + BM25 + RRF + optional Reranking + optional Filters)
             result = await hybrid_search.hybrid_search(
@@ -439,12 +463,193 @@ async def ingest(
         ) from None
 
 
+@router.post("/detect-domain")
+@limiter.limit(f"{settings.rate_limit_upload}/minute")  # Config-driven rate limit
+async def detect_domain(
+    request: Request,
+    file: UploadFile = File(None),
+    text_sample: str = Form(None),
+    current_user: str | None = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Detect document domain from file or text sample.
+
+    Sprint 125 Feature 125.9a: Domain Detection API
+
+    Analyzes document content and returns top-3 domain predictions using BGE-M3
+    embedding similarity against domain keyword embeddings from seed catalog.
+
+    Args:
+        request: FastAPI request (for rate limiting)
+        file: Optional uploaded file (PDF or text)
+        text_sample: Optional text sample for classification
+        current_user: Authenticated user (optional)
+
+    Returns:
+        Dictionary with:
+        - domains: List of top-3 domain predictions with scores
+        - text_sample_length: Length of analyzed text
+        - classification_method: "bge_m3_similarity"
+
+    Example:
+        ```bash
+        # From file
+        curl -X POST "http://localhost:8000/api/v1/retrieval/detect-domain" \\
+             -F "file=@research_paper.pdf"
+
+        # From text
+        curl -X POST "http://localhost:8000/api/v1/retrieval/detect-domain" \\
+             -F "text_sample=This paper discusses neural networks..."
+        ```
+    """
+    import io
+
+    try:
+        # Require either file or text_sample
+        if not file and not text_sample:
+            raise HTTPException(
+                status_code=400,
+                detail="Either 'file' or 'text_sample' must be provided",
+            )
+
+        # Extract text sample
+        extracted_text = ""
+        sample_length = 0
+
+        if text_sample:
+            extracted_text = text_sample
+            sample_length = len(text_sample)
+            logger.info("domain_detection_from_text", sample_length=sample_length)
+
+        elif file:
+            # Read file and extract first ~2000 characters
+            file_content = await file.read()
+            file_path = Path(file.filename)
+
+            if file_path.suffix.lower() == ".pdf":
+                # Extract text from PDF using pdfminer.six
+                try:
+                    from pdfminer.high_level import extract_text_to_fp
+                    from pdfminer.layout import LAParams
+
+                    output = io.StringIO()
+                    extract_text_to_fp(
+                        io.BytesIO(file_content),
+                        output,
+                        laparams=LAParams(),
+                        maxpages=3,  # Only first 3 pages
+                    )
+                    extracted_text = output.getvalue()[:2000]
+                    sample_length = len(extracted_text)
+
+                except ImportError:
+                    logger.error("pdfminer_not_installed")
+                    raise HTTPException(
+                        status_code=500,
+                        detail="PDF support not available. Install pdfminer.six",
+                    ) from None
+
+            elif file_path.suffix.lower() in [".txt", ".md"]:
+                # Plain text file
+                extracted_text = file_content.decode("utf-8", errors="ignore")[:2000]
+                sample_length = len(extracted_text)
+
+            else:
+                # Try as plain text
+                try:
+                    extracted_text = file_content.decode("utf-8", errors="ignore")[:2000]
+                    sample_length = len(extracted_text)
+                except Exception as e:
+                    logger.warning("file_decode_failed", filename=file.filename, error=str(e))
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Could not extract text from file: {file.filename}",
+                    ) from None
+
+            logger.info(
+                "domain_detection_from_file",
+                filename=file.filename,
+                sample_length=sample_length,
+            )
+
+        # Validate extracted text
+        if not extracted_text or not extracted_text.strip():
+            raise HTTPException(
+                status_code=400,
+                detail="No text could be extracted from input",
+            )
+
+        # Load domain classifier
+        from src.components.domain_training import get_domain_classifier
+        from src.components.domain_training.domain_seeder import get_active_domains
+
+        classifier = get_domain_classifier()
+
+        # Ensure domains are loaded
+        if not classifier.is_loaded():
+            await classifier.load_domains()
+
+        # Classify document
+        results = classifier.classify_document(
+            text=extracted_text,
+            top_k=3,
+            sample_size=2000,
+        )
+
+        # Filter by active deployment profile domains
+        active_domain_ids = await get_active_domains()
+        filtered_results = [r for r in results if r["domain"] in active_domain_ids]
+
+        # If no active domains match, return all results (backward compatibility)
+        final_results = filtered_results if filtered_results else results
+
+        # Load domain metadata from catalog
+        from src.components.domain_training.domain_seeder import _load_seed_domains
+
+        catalog = _load_seed_domains()
+        domain_lookup = {d["domain_id"]: d for d in catalog.get("domains", [])}
+
+        # Enrich results with domain names
+        enriched_results = []
+        for result in final_results:
+            domain_id = result["domain"]
+            domain_config = domain_lookup.get(domain_id, {})
+            enriched_results.append(
+                {
+                    "domain_id": domain_id,
+                    "name": domain_config.get("name", domain_id),
+                    "score": result["score"],
+                }
+            )
+
+        logger.info(
+            "domain_detection_complete",
+            num_results=len(enriched_results),
+            top_match=enriched_results[0] if enriched_results else None,
+        )
+
+        return {
+            "domains": enriched_results,
+            "text_sample_length": sample_length,
+            "classification_method": "bge_m3_similarity",
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("domain_detection_failed", error=str(e), exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Domain detection failed: {str(e)}",
+        ) from None
+
+
 @router.post("/upload")
 @limiter.limit(f"{settings.rate_limit_upload}/minute")  # Config-driven rate limit
 async def upload_file(
     request: Request,
     file: UploadFile = File(...),
     namespace_id: str = Form("default"),
+    domain_id: str = Form(None),
     current_user: str | None = Depends(get_current_user),
 ) -> IngestionResponse:
     """Upload and index a single document file.
@@ -454,10 +659,15 @@ async def upload_file(
     - Container-based parsing with GPU acceleration
     - Progress tracking and error handling
 
+    Sprint 125 Feature 125.9b: Domain-aware ingestion
+    - Optional domain_id parameter for manual domain assignment
+    - If not provided, domain will be auto-detected by ingestion pipeline
+
     Args:
         request: FastAPI request (for rate limiting)
         file: Uploaded file (30 formats supported, see /formats endpoint)
         namespace_id: Namespace for data isolation (default: "default")
+        domain_id: Optional domain identifier (e.g., "cs_it", "medicine_health")
         current_user: Authenticated user (optional)
 
     Returns:
@@ -467,7 +677,8 @@ async def upload_file(
         ```bash
         curl -X POST "http://localhost:8000/api/v1/retrieval/upload" \\
              -F "file=@document.pdf" \\
-             -F "namespace_id=my_namespace"
+             -F "namespace_id=my_namespace" \\
+             -F "domain_id=computer_science_it"
         ```
     """
     import hashlib
@@ -533,6 +744,7 @@ async def upload_file(
                 batch_index=0,
                 total_documents=1,
                 namespace_id=namespace_id,
+                domain_id=domain_id,  # Sprint 125.9b: Pass domain_id to pipeline
                 max_retries=3,
             )
             duration_seconds = (datetime.now() - start_time).total_seconds()
@@ -766,3 +978,189 @@ async def login(
         detail="Invalid credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
+
+
+# Sprint 125 Feature 125.9c: Deployment Profile Management
+@router.get("/admin/deployment-profile")
+async def get_deployment_profile(
+    current_user: str | None = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Get current deployment profile and active domains.
+
+    Sprint 125 Feature 125.9c: Deployment Profile API
+
+    Returns the currently active deployment profile and list of enabled domains.
+
+    Returns:
+        Dictionary with:
+        - profile_name: Current profile (e.g., "pharma_company", "university")
+        - active_domains: List of domain IDs enabled for this profile
+        - domain_count: Number of active domains
+
+    Example:
+        ```bash
+        curl "http://localhost:8000/api/v1/retrieval/admin/deployment-profile"
+        ```
+    """
+    try:
+        from src.components.domain_training.domain_seeder import (
+            _load_seed_domains,
+            get_active_domains,
+        )
+        from src.core.config import settings
+
+        import redis.asyncio as aioredis
+
+        # Get active profile from Redis
+        redis_client = aioredis.from_url(
+            f"redis://{settings.redis_host}:{settings.redis_port}",
+            encoding="utf-8",
+            decode_responses=True,
+        )
+
+        profile_name = await redis_client.get("aegis:deployment_profile")
+        await redis_client.close()
+
+        # Get active domains
+        active_domains = await get_active_domains()
+
+        # Load catalog for profile metadata
+        catalog = _load_seed_domains()
+        profiles = catalog.get("deployment_profiles", {})
+        profile_config = profiles.get(profile_name, {}) if profile_name else {}
+
+        logger.info(
+            "deployment_profile_retrieved",
+            profile=profile_name or "none",
+            active_domains_count=len(active_domains),
+        )
+
+        return {
+            "profile_name": profile_name or None,
+            "profile_display_name": profile_config.get("name", profile_name),
+            "active_domains": active_domains,
+            "domain_count": len(active_domains),
+        }
+
+    except Exception as e:
+        logger.error("get_deployment_profile_failed", error=str(e), exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to retrieve deployment profile: {str(e)}",
+        ) from None
+
+
+@router.put("/admin/deployment-profile")
+async def set_deployment_profile_endpoint(
+    profile_name: str = Form(...),
+    current_user: str | None = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Set deployment profile (activates relevant domains).
+
+    Sprint 125 Feature 125.9c: Deployment Profile API
+
+    Sets the active deployment profile, which determines which domains are
+    enabled for document classification and search filtering.
+
+    Args:
+        profile_name: Profile to activate (e.g., "pharma_company", "law_firm", "university")
+
+    Returns:
+        Dictionary with updated profile information
+
+    Example:
+        ```bash
+        curl -X PUT "http://localhost:8000/api/v1/retrieval/admin/deployment-profile" \\
+             -F "profile_name=pharma_company"
+        ```
+    """
+    try:
+        from src.components.domain_training.domain_seeder import (
+            get_active_domains,
+            set_deployment_profile,
+        )
+
+        # Set profile (validates against seed catalog)
+        success = await set_deployment_profile(profile_name)
+
+        if not success:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid profile name: {profile_name}",
+            )
+
+        # Get updated active domains
+        active_domains = await get_active_domains()
+
+        logger.info(
+            "deployment_profile_updated",
+            profile=profile_name,
+            active_domains_count=len(active_domains),
+        )
+
+        return {
+            "status": "success",
+            "profile_name": profile_name,
+            "active_domains": active_domains,
+            "domain_count": len(active_domains),
+        }
+
+    except ValueError as e:
+        logger.warning("invalid_deployment_profile", profile=profile_name, error=str(e))
+        raise HTTPException(
+            status_code=400,
+            detail=str(e),
+        ) from None
+    except Exception as e:
+        logger.error("set_deployment_profile_failed", error=str(e), exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to set deployment profile: {str(e)}",
+        ) from None
+
+
+@router.get("/admin/domains")
+async def list_domains(
+    current_user: str | None = Depends(get_current_user),
+) -> dict[str, Any]:
+    """List all available domains from seed catalog.
+
+    Sprint 125 Feature 125.9c: Domain Catalog API
+
+    Returns the complete list of 35 domains from seed_domains.yaml with
+    metadata including DDC codes, FORD codes, keywords, and entity sub-types.
+
+    Returns:
+        Dictionary with:
+        - domains: List of all domain configurations
+        - total_domains: Number of domains in catalog
+        - deployment_profiles: Available deployment profiles
+
+    Example:
+        ```bash
+        curl "http://localhost:8000/api/v1/retrieval/admin/domains"
+        ```
+    """
+    try:
+        from src.components.domain_training.domain_seeder import _load_seed_domains
+
+        # Load full catalog
+        catalog = _load_seed_domains()
+
+        domains = catalog.get("domains", [])
+        profiles = catalog.get("deployment_profiles", {})
+
+        logger.info("domains_catalog_retrieved", total_domains=len(domains))
+
+        return {
+            "domains": domains,
+            "total_domains": len(domains),
+            "deployment_profiles": profiles,
+        }
+
+    except Exception as e:
+        logger.error("list_domains_failed", error=str(e), exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to retrieve domains: {str(e)}",
+        ) from None

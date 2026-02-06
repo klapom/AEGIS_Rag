@@ -17,6 +17,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { NamespaceSelector } from './NamespaceSelector';
+import { DomainFilter } from './DomainFilter';
 import { ResearchModeToggleCompact } from '../research';
 import {
   GraphExpansionSettingsCompact,
@@ -27,7 +28,7 @@ import type { GraphExpansionConfig } from '../../types/settings';
 export type SearchMode = 'hybrid' | 'vector' | 'graph' | 'memory' | 'sparse';
 
 interface SearchInputProps {
-  onSubmit: (query: string, mode: SearchMode, namespaces: string[], graphExpansionConfig?: GraphExpansionConfig) => void;
+  onSubmit: (query: string, mode: SearchMode, namespaces: string[], graphExpansionConfig?: GraphExpansionConfig, domainIds?: string[]) => void;
   placeholder?: string;
   autoFocus?: boolean;
   /** Sprint 63: Whether Research Mode is enabled */
@@ -40,6 +41,8 @@ interface SearchInputProps {
   showGraphExpansionToggle?: boolean;
   /** Sprint 123.11: Initial mode (from URL or parent) */
   initialMode?: SearchMode;
+  /** Sprint 125: Whether Domain Filter should be shown */
+  showDomainFilter?: boolean;
 }
 
 export function SearchInput({
@@ -50,12 +53,15 @@ export function SearchInput({
   onResearchModeToggle,
   showResearchToggle = true,
   showGraphExpansionToggle = true,
+  showDomainFilter = true,
   initialMode = 'hybrid',
 }: SearchInputProps) {
   const [query, setQuery] = useState('');
   // Sprint 123.11: Mode selector support (replaces hardcoded 'hybrid')
   const [mode, setMode] = useState<SearchMode>(initialMode);
   const [selectedNamespaces, setSelectedNamespaces] = useState<string[]>([]);
+  // Sprint 125 Feature 125.9d: Domain filter state
+  const [selectedDomains, setSelectedDomains] = useState<string[]>([]);
 
   // Sprint 123.11: Sync mode state when initialMode prop changes (e.g., from URL navigation)
   useEffect(() => {
@@ -96,8 +102,14 @@ export function SearchInput({
     if (!trimmedQuery) {
       return;
     }
-    // Sprint 79 Feature 79.6: Pass graph expansion config with submit
-    onSubmit(trimmedQuery, mode, selectedNamespaces, graphExpansionConfig);
+    // Sprint 125 Feature 125.9d: Pass domain IDs with submit
+    onSubmit(
+      trimmedQuery,
+      mode,
+      selectedNamespaces,
+      graphExpansionConfig,
+      selectedDomains.length > 0 ? selectedDomains : undefined
+    );
     setQuery('');
     // Reset textarea height after clearing
     if (textareaRef.current) {
@@ -187,9 +199,9 @@ export function SearchInput({
         </button>
       </div>
 
-      {/* Bottom row: Project selector, Graph Expansion, and Research toggle - overflow-visible for dropdown */}
+      {/* Bottom row: Project selector, Domain Filter, Graph Expansion, and Research toggle - overflow-visible for dropdown */}
       <div className="flex items-center justify-between overflow-visible">
-        {/* Left side: Project Selector, Graph Expansion, and Research Toggle */}
+        {/* Left side: Project Selector, Domain Filter, Graph Expansion, and Research Toggle */}
         <div className="flex items-center gap-2">
           {/* Compact Project Selector */}
           <NamespaceSelector
@@ -197,6 +209,15 @@ export function SearchInput({
             onSelectionChange={setSelectedNamespaces}
             compact={true}
           />
+
+          {/* Sprint 125 Feature 125.9d: Domain Filter */}
+          {showDomainFilter && (
+            <DomainFilter
+              selectedDomains={selectedDomains}
+              onSelectionChange={setSelectedDomains}
+              compact={true}
+            />
+          )}
 
           {/* Sprint 79 Feature 79.6: Graph Expansion Settings */}
           {showGraphExpansionToggle && (

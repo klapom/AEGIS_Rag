@@ -1,7 +1,7 @@
 # AEGIS RAG Technology Stack
 
 **Project:** AEGIS RAG (Agentic Enterprise Graph Intelligence System)
-**Last Updated:** 2026-01-15 (Sprint 93: Tool Composition, LangGraph 1.0, Playwright Integration)
+**Last Updated:** 2026-02-06 (Sprint 125: vLLM Dual-Engine, Domain-Aware Extraction)
 
 ---
 
@@ -154,16 +154,16 @@ pip install --break-system-packages <package>
 
 ## LLM Configuration & Routing
 
-### AegisLLMProxy Multi-Cloud Routing (ADR-033)
+### AegisLLMProxy Multi-Cloud Routing with Dual-Engine Architecture (ADR-033, ADR-059)
 
-**Architecture:** Local-First with Cloud Fallback
+**Architecture:** Dual-Engine Local-First with Cloud Fallback
 
-| Priority | Provider | Models | Cost | Use Case |
-|----------|----------|--------|------|----------|
-| **1** | **Ollama (DGX Spark)** | nemotron-nano, gpt-oss:120b | $0 | Chat, Generation |
-| **1b** | **vLLM (DGX Spark)** | Nemotron-3-Nano-30B-A3B-NVFP4 | $0 | Extraction (Sprint 125+) |
-| **2** | **Alibaba Cloud DashScope** | qwen-turbo/plus/max, qwen3-vl | $0-120/mo | Cloud Fallback |
-| **3** | **OpenAI** | gpt-4o, gpt-4o-mini | Optional | Optional Fallback |
+| Priority | Provider | Models | Purpose | Cost | Concurrency |
+|----------|----------|--------|---------|------|------------|
+| **1** | **Ollama (DGX Spark)** | nemotron-nano:128k | Chat, Streaming, User-Facing | $0 | 4 max |
+| **1b** | **vLLM (DGX Spark)** | Nemotron-3-Nano-30B-A3B-NVFP4 | Extraction (Sprint 125+) | $0 | 256+ |
+| **2** | **Alibaba Cloud DashScope** | qwen-turbo/plus/max, qwen3-vl | Cloud Fallback | $0-120/mo | 10+ |
+| **3** | **OpenAI** | gpt-4o, gpt-4o-mini | Optional Fallback | Optional | - |
 
 ### Model Selection by Task
 
@@ -171,44 +171,47 @@ pip install --break-system-packages <package>
 |------|-------|----------|------|---------|
 | **Query Understanding** | nemotron-3-nano:128k | Ollama | 25GB | Fast intent classification |
 | **Answer Generation** | nemotron-3-nano:128k | Ollama | 25GB | Quality responses |
-| **Entity Extraction** | Nemotron-3-Nano-30B-A3B-NVFP4 | vLLM | ~18GB | Primary ER-Extraction (Sprint 125+) |
-| **Entity Extraction (Fallback)** | nemotron-3-nano:128k | Ollama | 25GB | Fallback when vLLM unavailable |
-| **Entity Extraction (Legacy R1)** | Nemotron3 Nano 30/3a | Ollama | 25GB | Sprint 83-124 cascade |
-| **Entity Extraction (Legacy R2)** | gpt-oss:120b | Ollama | 75GB | Sprint 124 benchmark (MXFP4) |
-| **Entity Extraction (Legacy R3)** | SpaCy NER + LLM | SpaCy + Ollama | - | Hybrid NER (DE/EN/FR/ES) + LLM relations |
+| **Entity/Relation Extraction** | Nemotron-3-Nano-30B-A3B-NVFP4 | vLLM | ~18GB | S-P-O triples, 15+22 universal types (Sprint 125+) |
+| **ER Extraction (Fallback)** | nemotron-3-nano:128k | Ollama | 25GB | Fallback when vLLM unavailable |
+| **ER Extraction (Legacy)** | gpt-oss:120b (MXFP4) | Ollama | 75GB | Rank 2 cascade (Sprint 124) |
+| **ER Extraction (Legacy R3)** | SpaCy NER + LLM | SpaCy + Ollama | - | Rank 3 hybrid (DE/EN/FR/ES) + LLM relations |
 | **Complex Reasoning** | nemotron-3-nano:128k | Ollama | 25GB | Multi-hop queries |
 | **Embeddings** | BGE-M3 (1024-dim) | flag-embedding | 2.3GB | Universal semantic embeddings |
 | **Reranking** | bge-reranker-v2-m3 | flag-embedding | - | Cross-encoder reranking |
 | **VLM (Images)** | qwen3-vl-30b-a3b | DashScope | - | Image descriptions (cloud) |
 
 **Total Model Storage:** ~25-43GB (Ollama + vLLM)
-**Typical VRAM Usage:** 25-43GB (Normal: Ollama only, Ingestion: Ollama + vLLM)
+**Typical VRAM Usage:**
+- Normal Mode: 38GB (Ollama only)
+- Ingestion Mode: 56-82GB (Ollama + vLLM, see Docker Profiles below)
 
 ### vLLM Extraction Engine (Sprint 125+ / ADR-059)
 
-**Architecture:** Dual-engine — Ollama for chat + vLLM for extraction (on-demand via Docker profile)
+**Architecture:** Dual-Engine Architecture — Ollama for chat + vLLM for high-throughput extraction
 
 | Spec | Value |
 |------|-------|
 | **Image** | `vllm/vllm-openai:latest` |
 | **Model** | `nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-NVFP4` |
-| **Architecture** | Mamba2 + MoE + Attention (30B total / 3.5B active) |
-| **Quantization** | NVFP4 (optimized for Blackwell sm_121) |
+| **Architecture** | Mamba2 + MoE + Attention (30B total / 3.5B active, 10% activation) |
+| **Quantization** | NVFP4 (optimized for Blackwell sm_121 FP4 tensor cores) |
 | **VRAM** | ~18GB (32K context), up to 51GB (256K context) |
 | **API** | OpenAI-compatible `/v1/chat/completions` on port 8001 |
-| **Max Concurrent** | 256+ (continuous batching) |
-| **Expected Throughput** | 60-80 tok/s (DGX Spark) |
-| **Docker Profile** | `--profile ingestion` (on-demand start) |
+| **Max Concurrent Requests** | 256+ (continuous batching, 64x vs Ollama) |
+| **Expected Throughput** | 60-80 tok/s (DGX Spark), up to 793 tok/s (Red Hat A100 benchmark) |
+| **Docker Profile** | `--profile ingestion` (on-demand start with Ollama) |
 | **Environment** | `VLLM_USE_FLASHINFER_MOE_FP4=1`, `VLLM_FLASHINFER_MOE_BACKEND=throughput` |
+| **Default Port** | 8001 |
 
-**Performance Comparison (DGX Spark / Red Hat A100):**
+**Performance Comparison (Ollama vs vLLM):**
 
-| Metric | Ollama | vLLM | Factor |
-|--------|--------|------|--------|
-| Peak Throughput | 41-74 tok/s | 60-793 tok/s | 1-19× |
-| TTFT P99 | 673 ms | 80 ms | 8.4× |
-| Max Concurrent | 4 | 256+ | 64× |
-| Batching | Sequential | Continuous | ∞ |
+| Metric | Ollama (DGX Spark) | vLLM (DGX Spark) | vLLM (Red Hat A100) | Factor |
+|--------|----------|------|--------|--------|
+| Peak Throughput | 41-74 tok/s | 60-80 tok/s | 793 tok/s | 1.0-19.3× |
+| TTFT P99 | 673 ms | ~150 ms | 80 ms | 4.5-8.4× |
+| Max Concurrent | 4 | 256+ | 256+ | 64× |
+| Batching | Sequential | Continuous | Continuous | Unlimited |
+| **Extraction Use Case** | 4 parallel uploads (bottleneck) | 256+ parallel uploads | 256+ parallel uploads | **64×** |
 
 **Start/Stop:**
 ```bash
@@ -601,21 +604,42 @@ Qdrant performs Reciprocal Rank Fusion on search results:
 
 ---
 
-### Section-Aware Chunking (ADR-039 - Sprint 32)
+### Domain-Aware Extraction (ADR-060 - Sprint 125)
 
-**Architecture:** Pure Python + BGE-M3 Tokenizer
+**Architecture:** Multi-Tier Universal Type System
 
-**Why Section-Aware:**
-- **Context Preservation:** Chunks respect document structure (headings, paragraphs)
-- **Adaptive Sizing:** 800-1800 tokens (optimized for BGE-M3's 8192 context window)
-- **Neo4j Section Nodes:** Hierarchical structure in graph
-- **Multi-Section Metadata:** Qdrant chunks track parent sections
+**Two-Tier Type System:**
+
+| Tier | Purpose | Count | Storage | Use Case |
+|------|---------|-------|---------|----------|
+| **Tier 1: Universal** | Neo4j Labels, Prometheus metrics, UI display | 15 entity types | Neo4j Labels | Standard data types (Person, Organization, Location) |
+| **Tier 2: Domain-Specific** | Prompt selection, graph queries, analytics | ~50+ sub-types | Neo4j `sub_type` property | Domain vocabularies (DDC/FORD classifications) |
+
+**Domain Taxonomy (35 DDC+FORD Domains):**
+- **30 DDC (Dewey Decimal Classification):** Academic fields (000-999)
+- **5 FORD (Field of Research and Development):** Engineering/Business domains
+- Mapping: `domain_id` → `entity_prompt` selection → `domain-trained_extraction_pipeline`
+
+**Automatic Domain Detection Pipeline:**
+```
+Upload → BGE-M3 Section Classification → Domain Match (cosine sim ≥0.85) →
+Select Domain Prompts → S-P-O Extraction (15+22 types) → Storage (with domain_id)
+```
+
+**Entity Types (15 Universal + Domain Sub-Types):**
+- **People:** Person, Organization Role, Group
+- **Places:** Location, Building, Institution
+- **Concepts:** Topic, Methodology, Metric
+- **Products:** Software, Hardware, Dataset
+- **Other:** Date, Quantity, Identifier
+
+**Relation Types (22 Universal):**
+- WORKS_FOR, LOCATED_IN, CREATED, PART_OF, RELATED_TO, MENTIONS, CITES, etc.
 
 **No New Dependencies:**
-- Section extraction: Native Python string parsing
-- Adaptive merging: Existing BGE-M3 tokenizer
-- Neo4j Section nodes: Existing Neo4j driver (5.14.0)
-- Multi-section metadata: Existing Qdrant client (1.11.0)
+- Domain classification: BGE-M3 embeddings (existing)
+- Prompt selection: Dictionary lookup (existing LLM config)
+- S-P-O extraction: vLLM routing (Sprint 125.1-125.2)
 
 ---
 
@@ -1071,6 +1095,42 @@ services:
   - Code generation evaluation
   - Functional correctness scoring
   - LLM-assisted execution validation
+
+### Entity/Relation Extraction: S-P-O Triple System (ADR-060 - Sprint 125)
+
+**Status:** ✅ **ACTIVE** (Sprint 125: 15 entity + 22 relation universal types)
+
+**Architecture:** Subject-Predicate-Object triples with typed extraction
+
+| Component | Specification |
+|-----------|---------------|
+| **Engine** | vLLM (Nemotron-3-Nano-30B-A3B-NVFP4) |
+| **Output Format** | JSON (objects with s, p, o, confidence) |
+| **Entity Types** | 15 universal types (Person, Organization, Location, etc.) |
+| **Relation Types** | 22 universal types (WORKS_FOR, LOCATED_IN, CREATED, etc.) |
+| **Domain Prompts** | 35 domain-specific vocabularies (DDC+FORD) |
+| **Fallback Chain** | vLLM → Ollama (Nemotron) → SpaCy NER + LLM |
+| **Validation** | Type schema enforcement + confidence threshold |
+
+**ADR-060 Reference:** Universal type system enables graph queries (Neo4j labels) + ontology mappings (domain sub-types).
+
+---
+
+### Entity/Relation Type System (Sprint 125 / ADR-060)
+
+**15 Universal Entity Types:**
+```
+Person, Organization, Location, Event, Artifact, Building, Institution,
+Group, Work/Publication, Concept, Methodology, Metric, Product, Identifier, Date
+```
+
+**22 Universal Relation Types:**
+```
+WORKS_FOR, LOCATED_IN, CREATED, PART_OF, RELATED_TO, MENTIONS, CITES,
+USES, DERIVED_FROM, COMPARABLE_TO, ALTERNATIVE_TO, CONTRADICTS,
+AUTHORED_BY, CONTAINS, OCCURRED_AT, HAS_PROPERTY, FOLLOWED_BY,
+SPECIALIZES_IN, COLLABORATES_WITH, DEPENDS_ON, INFLUENCES, RESULTED_IN
+```
 
 **Sprint 79 RAGAS Upgrade (0.3.9 → 0.4.2):**
 - **Universal LLM Factory:** Auto-detect LLM and prompt routing

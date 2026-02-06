@@ -21,8 +21,9 @@ API="http://localhost:8000"
 # The simple admin/admin123 auth is at /api/v1/retrieval/auth/token
 LOGIN_ENDPOINT="$API/api/v1/retrieval/auth/token"
 UPLOAD_ENDPOINT="$API/api/v1/retrieval/upload"
-# Sprint 124: Use configurable namespace (default: ragas_phase1_sprint124)
-NAMESPACE="${NAMESPACE:-ragas_phase1_sprint124}"
+# Sprint 126: Use configurable namespace (default: ragas_phase1_sprint126)
+# Sprint 125 switched extraction to vLLM (Nemotron-3-Nano-30B via NGC container)
+NAMESPACE="${NAMESPACE:-ragas_phase1_sprint126}"
 # Sprint 124: Domain for DSPy-optimized prompts (entertainment = MIPROv2-trained prompts)
 DOMAIN="${DOMAIN:-entertainment}"
 CONTEXTS_DIR="data/ragas_phase1_contexts"

@@ -1989,39 +1989,135 @@ Sprint 117.1 (Domain CRUD) - Foundation
 
 ---
 
-## Sprint 125 📝 **Planned** (2026-02-06)
+## Sprint 125 ✅ **Complete** (2026-02-06)
 
-**Status:** 📝 PLANNED
-**Focus:** vLLM Integration + RAGAS Phase 1 Completion
-**Story Points:** 40 SP (estimated, +6 from txt2kg alignment)
+**Status:** ✅ COMPLETE
+**Focus:** vLLM Integration + Domain-Aware Extraction + Domain Frontend
+**Story Points:** 45 SP (100% delivered: 8+5+6+3+5+8+8)
 **Predecessor:** Sprint 124
 
 **Features:**
 
 | # | Feature | SP | Status |
 |---|---------|-----|--------|
-| 125.1 | vLLM Container Integration (Docker profile) | 8 | 📝 |
-| 125.2 | AegisLLMProxy vLLM Routing | 5 | 📝 |
-| 125.3 | S-P-O Triple Extraction (aligned with NVIDIA txt2kg) | 8 | 📝 |
-| 125.3b | Entity Deduplication & Normalization | 3 | 📝 |
-| 125.4 | RAGAS Phase 1 Ingestion Completion (498 docs) | 8 | 📝 |
-| 125.5 | Performance Benchmark + RAGAS Evaluation | 5 | 📝 |
-| 125.6 | Documentation + ADR-059 | 3 | 📝 |
+| 125.1 | vLLM Container Integration (Docker profile) | 8 | ✅ |
+| 125.2 | AegisLLMProxy vLLM Routing | 5 | ✅ |
+| 125.3 | S-P-O Triple Extraction (ADR-060 universal types) | 6 | ✅ |
+| 125.6 | Documentation (ADR-059, ADR-060, TECH_STACK) | 3 | ✅ |
+| 125.7 | Domain-Aware Extraction Pipeline | 5 | ✅ |
+| 125.8 | Domain Taxonomy & Seed Catalog (ADR-060) | 8 | ✅ |
+| 125.9 | Domain-Aware Frontend (upload, profiles, filter) | 8 | ✅ |
+
+> **Dropped:** 125.3b Entity Dedup (3 SP) — existing EntityCanonicalizer (Sprint 85) sufficient
+> **Moved to Sprint 126:** 125.4 RAGAS Ingestion (8 SP) + 125.5 Benchmark (5 SP)
 
 **Key Decisions:**
 - **vLLM** replaces Ollama for EXTRACTION tasks (19× throughput, continuous batching)
 - **Nemotron-3-Nano-30B-A3B-NVFP4** for ER extraction (3.5B active, 18 GB VRAM, NVFP4)
 - **Docker profiles:** `--profile ingestion` starts vLLM on demand
-- **Dual-engine:** Ollama (Chat) + vLLM (Extraction) coexist
-- **S-P-O schema** aligned with NVIDIA txt2kg (predefined entity categories + relation verbs)
-- **Entity dedup** inspired by txt2kg's EntityRelationNormalizer
+- **Dual-engine:** Ollama (Chat) + vLLM (Extraction) coexist (ADR-059)
+- **S-P-O schema** with ADR-060 universal types (15 entity types, 21 relation types)
+- **DDC+FORD Hybrid Taxonomy:** 35 standards-based domains with ontology-backed vocabularies (ADR-060)
+- **Two-Tier Type System:** 15 universal types (Neo4j/Prometheus/UI) + 8-12 domain sub-types (prompts/properties)
+- **Deployment Profiles:** Companies activate 1-5 domains at setup (pharma, law_firm, etc.)
+- **Domain detection at upload:** BGE-M3 classifier runs BEFORE ingestion, user can confirm/override
+- **Domain storage:** `domain_id` in both Qdrant payloads AND Neo4j nodes for targeted queries
 
 **Targets:**
-- All 498 RAGAS Phase 1 documents ingested
 - >70% specific relation types (down from 100% RELATES_TO)
+- Entity types from 15 universal types (>95% compliance)
 - Entity names < 4 words, relations 1-3 words
-- >30% entity deduplication
-- ER Ratio >1.5 (up from 1.09)
-- RAGAS baseline evaluation completed
+- Domain detection before upload with >80% accuracy
+- Domain stored in Qdrant + Neo4j for retrieval filtering
 
 **See:** `docs/sprints/SPRINT_125_PLAN.md`
+
+---
+
+## Sprint 126 📝 **Planned** (after Sprint 125)
+
+**Status:** 📝 PLANNED
+**Focus:** RAGAS Phase 1 Benchmark + vLLM Performance Evaluation
+**Story Points:** 13 SP (estimated)
+**Predecessor:** Sprint 125
+
+**Features:**
+
+| # | Feature | SP | Status |
+|---|---------|-----|--------|
+| 126.1 | RAGAS Phase 1 Ingestion Completion (498 docs via vLLM) | 8 | 📝 |
+| 126.2 | Performance Benchmark + RAGAS Evaluation | 5 | 📝 |
+
+**Rationale:** Moved from Sprint 125 to benchmark AFTER all extraction improvements (S-P-O triples, domain-aware prompts, vLLM engine) are complete. Running RAGAS on old extraction quality would produce misleading baselines.
+
+**See:** `docs/sprints/SPRINT_125_PLAN.md` (moved features section)
+
+---
+
+## Sprint 127 📝 **Planned** (after Sprint 126)
+
+**Status:** 📝 PLANNED
+**Focus:** LightRAG Removal — Direct Neo4j Architecture
+**Story Points:** 8 SP (estimated)
+**Predecessor:** Sprint 126
+
+**Features:**
+
+| # | Feature | SP | Status |
+|---|---------|-----|--------|
+| 127.1 | Replace LightRAG Neo4j driver with existing neo4j_client.py | 1 | 📝 |
+| 127.2 | Eliminate double data storage (remove ainsert_custom_kg) | 1 | 📝 |
+| 127.3 | Replace rag.aquery() with DualLevelSearch in maximum_hybrid_search | 2 | 📝 |
+| 127.4 | Remove lightrag-hku dependency + cleanup (7 files, ~1,500 LOC) | 1 | 📝 |
+| 127.5 | Structured Table Ingestion Investigation (Excel/CSV/HTML tables) | 3 | 📝 |
+
+**127.5 — Structured Table Ingestion (Investigation Spike)**
+- **Goal:** Evaluate strategies for ingesting tabular data (Excel, CSV, HTML tables in PDFs)
+- **Option A — Direct DB Storage:** Store tables in a relational/structured format (PostgreSQL or Neo4j properties) and query via SQL/Cypher instead of chunking as text
+- **Option B — Table-Aware Chunking:** Keep in RAG pipeline but preserve row/column structure in chunks (Markdown tables, structured JSON)
+- **Option C — Hybrid:** Small tables → text chunks with Markdown formatting; large tables → dedicated DB with NL-to-SQL query agent
+- **Investigation scope:** Docling already extracts tables from PDFs as structured data (TableData objects with cells/rows/columns) — evaluate if this can feed directly into a queryable store
+- **Deliverable:** ADR with recommendation + prototype for chosen approach
+
+**Key Decisions:**
+- **ADR-061:** LightRAG provides only 3 functions; 45+ files / ~12,000 LOC are custom AegisRAG code
+- **Audit finding:** Data written to Neo4j twice (LightRAG internal + AegisRAG schema) → eliminate double writes
+- **Verification:** RAGAS benchmark comparison (Sprint 126 baseline vs Sprint 127 post-removal)
+- **ADR-005 superseded:** LightRAG no longer used; AegisRAG has superior custom implementations
+- **Table ingestion:** Investigate structured storage vs text chunking for tabular data (Excel/CSV)
+
+**Rollback Plan:** If RAGAS metrics degrade >5% → revert removal, re-evaluate
+
+**See:** `docs/sprints/SPRINT_125_PLAN.md` (moved features section)
+
+---
+
+## Sprint 128 📝 **Planned** (after Sprint 127)
+
+**Status:** 📝 PLANNED
+**Focus:** Domain Editor UI + Table Ingestion Implementation
+**Story Points:** ~18 SP (estimated)
+**Predecessor:** Sprint 127
+
+**Features:**
+
+| # | Feature | SP | Status |
+|---|---------|-----|--------|
+| 128.1 | Domain Management Admin Page (list, filter, search) | 2 | 📝 |
+| 128.2 | Domain Detail Editor (keywords, entity sub-types, relation hints) | 3 | 📝 |
+| 128.3 | Custom Domain Creation Wizard (with template copy) | 2 | 📝 |
+| 128.4 | Domain CRUD Backend API (7 endpoints, Neo4j MERGE) | 3 | 📝 |
+| 128.5 | Reset to YAML Default + Re-Train Trigger | 3 | 📝 |
+| 128.6 | Table Ingestion Implementation (based on 127.5 ADR) | 5 | 📝 |
+
+**Architecture:**
+- **YAML = Factory Default** (seed_domains.yaml, read-only, versioned in Git)
+- **Neo4j = Runtime Config** (user edits, trained prompts, custom domains)
+- **Reset to Default:** Reads YAML, overwrites Neo4j node (preserves trained prompts option)
+- **Custom Domains:** Exist only in Neo4j (not in YAML), deletable
+
+**Key Design Decisions:**
+- Extends existing DomainTrainingPage (Sprint 45) with CRUD capabilities
+- Entity sub-types editable per domain (Tier 2 types from ADR-060)
+- Re-Train button triggers DSPy MIPROv2 with updated sub-types/keywords
+- Table Ingestion approach TBD by Sprint 127.5 investigation ADR

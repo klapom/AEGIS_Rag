@@ -34,6 +34,7 @@ import time
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 
+import httpx
 import structlog
 
 # Lazy import for optional ANY-LLM dependency
@@ -163,12 +164,26 @@ class AegisLLMProxy:
         self._request_count = 0
         self._total_cost = 0.0
 
+        # Sprint 125 Feature 125.2: vLLM health check caching
+        self._vllm_health_cache: bool = False
+        self._vllm_health_checked_at: float = 0.0
+        self._vllm_health_cache_ttl: int = 30  # seconds
+
+        # Load vLLM configuration from settings
+        from src.core.config import settings
+
+        self._vllm_enabled = settings.vllm_enabled
+        self._vllm_base_url = settings.vllm_base_url
+        self._vllm_model = settings.vllm_model
+
         logger.info(
             "aegis_llm_proxy_initialized",
             providers=list(self.config.providers.keys()),
             budgets=self.config.budgets.get("monthly_limits", {}),
             current_spending=self._monthly_spending,
             cache_enabled=self._cache_enabled,
+            vllm_enabled=self._vllm_enabled,
+            vllm_base_url=self._vllm_base_url if self._vllm_enabled else None,
         )
 
     def _is_budget_exceeded(self, provider: str) -> bool:
@@ -181,8 +196,8 @@ class AegisLLMProxy:
         Returns:
             True if budget exceeded
         """
-        if provider == "local_ollama":
-            return False  # Local is always free
+        if provider in ["local_ollama", "vllm"]:
+            return False  # Local and vLLM are always free
 
         limit = self.config.get_budget_limit(provider)
         if limit == 0.0:
@@ -190,6 +205,61 @@ class AegisLLMProxy:
 
         spent = self._monthly_spending.get(provider, 0.0)
         return spent >= limit
+
+    async def _check_vllm_health(self) -> bool:
+        """
+        Check if vLLM is running and healthy with 30s caching.
+
+        Sprint 125 Feature 125.2: vLLM health check with cache TTL.
+
+        Returns:
+            True if vLLM is healthy and available
+
+        Example:
+            if await self._check_vllm_health():
+                # Use vLLM for extraction
+        """
+        # Check if cache is still valid
+        current_time = time.time()
+        if (
+            current_time - self._vllm_health_checked_at < self._vllm_health_cache_ttl
+            and self._vllm_health_checked_at > 0
+        ):
+            logger.debug(
+                "vllm_health_cache_hit",
+                cached_status=self._vllm_health_cache,
+                age_seconds=current_time - self._vllm_health_checked_at,
+            )
+            return self._vllm_health_cache
+
+        # Perform health check
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(f"{self._vllm_base_url}/health", timeout=5.0)
+                is_healthy = response.status_code == 200
+
+                # Update cache
+                self._vllm_health_cache = is_healthy
+                self._vllm_health_checked_at = current_time
+
+                logger.info(
+                    "vllm_health_check",
+                    base_url=self._vllm_base_url,
+                    status_code=response.status_code,
+                    is_healthy=is_healthy,
+                )
+                return is_healthy
+
+        except Exception as e:
+            logger.warning(
+                "vllm_health_check_failed",
+                base_url=self._vllm_base_url,
+                error=str(e),
+            )
+            # Update cache with failure
+            self._vllm_health_cache = False
+            self._vllm_health_checked_at = current_time
+            return False
 
     def _get_cache_ttl(self, task: LLMTask) -> int:
         """
@@ -244,7 +314,7 @@ class AegisLLMProxy:
                     print(chunk["content"], end="", flush=True)
         """
         # Step 1: AEGIS ROUTING LOGIC (custom)
-        provider, reason = self._route_task(task)
+        provider, reason = await self._route_task(task)
 
         logger.info(
             "streaming_routing_decision",
@@ -369,7 +439,7 @@ class AegisLLMProxy:
                 )
 
         # Step 1: AEGIS ROUTING LOGIC (custom)
-        provider, reason = self._route_task(task)
+        provider, reason = await self._route_task(task)
 
         logger.info(
             "routing_decision",
@@ -546,18 +616,19 @@ class AegisLLMProxy:
                     f"All LLM providers failed for task {task.id}"
                 ) from local_error
 
-    def _route_task(self, task: LLMTask) -> tuple[str, str]:
+    async def _route_task(self, task: LLMTask) -> tuple[str, str]:
         """
         Route task to optimal provider (AEGIS CUSTOM LOGIC).
 
         Routing Priority:
             1. Data Privacy: PII/HIPAA/Confidential → ALWAYS local
             2. Task Type: Embeddings → ALWAYS local
-            3. Budget Check: If exceeded → Local
-            4. prefer_cloud: If true → Route extraction/generation to cloud
-            5. Quality + Complexity: Critical + High → OpenAI
-            6. Quality or Batch: High quality OR batch → Ollama Cloud
-            7. Default: Local (70% of tasks)
+            3. Sprint 125.2: Extraction → vLLM (if available)
+            4. Budget Check: If exceeded → Local
+            5. prefer_cloud: If true → Route extraction/generation to cloud
+            6. Quality + Complexity: Critical + High → OpenAI
+            7. Quality or Batch: High quality OR batch → Ollama Cloud
+            8. Default: Local (70% of tasks)
 
         Args:
             task: LLM task with routing criteria
@@ -586,6 +657,26 @@ class AegisLLMProxy:
         # PRIORITY 2: Task Type (embeddings always local)
         if task.task_type == TaskType.EMBEDDING:
             return ("local_ollama", "embeddings_local_only")
+
+        # PRIORITY 2.3: Sprint 125.2 - Extraction tasks → vLLM (if enabled and healthy)
+        # vLLM supports 256+ concurrent requests vs Ollama's max 4
+        if task.task_type == TaskType.EXTRACTION and self._vllm_enabled:
+            # Check vLLM health (with 30s cache)
+            is_healthy = await self._check_vllm_health()
+            if is_healthy:
+                logger.info(
+                    "routing_vllm_extraction",
+                    task_type=task.task_type,
+                    vllm_base_url=self._vllm_base_url,
+                    reason="high_concurrency_extraction",
+                )
+                return ("vllm", "extraction_high_concurrency")
+            else:
+                logger.warning(
+                    "vllm_unhealthy_fallback",
+                    task_type=task.task_type,
+                    fallback="continue_routing",
+                )
 
         # PRIORITY 2.5: Vision tasks (VLM) - Prefer Alibaba Cloud Qwen3-VL-30B
         if task.task_type == TaskType.VISION:
@@ -652,6 +743,81 @@ class AegisLLMProxy:
         # DEFAULT: TIER 1 (Local) - 70% of tasks
         return ("local_ollama", "default_local")
 
+    async def _call_vllm(
+        self,
+        task: LLMTask,
+    ) -> LLMResponse:
+        """
+        Call vLLM OpenAI-compatible endpoint.
+
+        Sprint 125 Feature 125.2: vLLM provider for high-concurrency extraction.
+
+        Args:
+            task: LLM task
+
+        Returns:
+            LLMResponse with generated content and metadata
+
+        Raises:
+            Exception: If vLLM execution fails
+
+        Example:
+            response = await self._call_vllm(task)
+        """
+        messages = [{"role": "user", "content": task.prompt}]
+
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{self._vllm_base_url}/v1/chat/completions",
+                    json={
+                        "model": self._vllm_model,
+                        "messages": messages,
+                        "temperature": task.temperature,
+                        "max_tokens": task.max_tokens,
+                    },
+                    timeout=120.0,
+                )
+                response.raise_for_status()
+                data = response.json()
+
+                # Extract response content
+                content = data["choices"][0]["message"]["content"]
+
+                # Extract token usage
+                usage = data.get("usage", {})
+                tokens_input = usage.get("prompt_tokens", 0)
+                tokens_output = usage.get("completion_tokens", 0)
+                tokens_used = usage.get("total_tokens", tokens_input + tokens_output)
+
+                logger.info(
+                    "vllm_request_complete",
+                    model=self._vllm_model,
+                    tokens_input=tokens_input,
+                    tokens_output=tokens_output,
+                    total_tokens=tokens_used,
+                )
+
+                # vLLM is free (local deployment)
+                return LLMResponse(
+                    content=content,
+                    provider="vllm",
+                    model=self._vllm_model,
+                    tokens_used=tokens_used,
+                    tokens_input=tokens_input,
+                    tokens_output=tokens_output,
+                    cost_usd=0.0,  # Local deployment, no cost
+                )
+
+        except Exception as e:
+            logger.error(
+                "vllm_request_failed",
+                base_url=self._vllm_base_url,
+                model=self._vllm_model,
+                error=str(e),
+            )
+            raise
+
     async def _execute_with_any_llm(
         self,
         provider: str,
@@ -659,7 +825,9 @@ class AegisLLMProxy:
         stream: bool,
     ) -> LLMResponse:
         """
-        Execute task with ANY-LLM acompletion function.
+        Execute task with ANY-LLM acompletion function or vLLM.
+
+        Sprint 125 Feature 125.2: Added vLLM provider support.
 
         ANY-LLM responsibilities:
             - Convert to provider-specific API format
@@ -667,7 +835,7 @@ class AegisLLMProxy:
             - Automatic retry on transient errors
 
         Args:
-            provider: Provider name (local_ollama, alibaba_cloud, openai)
+            provider: Provider name (local_ollama, alibaba_cloud, openai, vllm)
             task: LLM task
             stream: Enable streaming
 
@@ -677,6 +845,9 @@ class AegisLLMProxy:
         Raises:
             Exception: If provider execution fails
         """
+        # Sprint 125.2: Route to vLLM if provider is vllm
+        if provider == "vllm":
+            return await self._call_vllm(task)
         model = self._get_model_for_provider(provider, task)
 
         # Map internal provider name to LLMProvider enum
@@ -852,12 +1023,13 @@ class AegisLLMProxy:
         Execute task with streaming enabled.
 
         Sprint 51 Feature 51.2: LLM Answer Streaming
+        Sprint 125 Feature 125.2: vLLM does not support streaming (extraction only)
 
         This method streams LLM responses token-by-token using the ANY-LLM
         acompletion function with stream=True.
 
         Args:
-            provider: Provider name (local_ollama, alibaba_cloud, openai)
+            provider: Provider name (local_ollama, alibaba_cloud, openai, vllm)
             task: LLM task
 
         Yields:
@@ -866,6 +1038,16 @@ class AegisLLMProxy:
         Raises:
             Exception: If provider execution fails
         """
+        # Sprint 125.2: vLLM doesn't support streaming - fall back to regular execution
+        if provider == "vllm":
+            logger.warning(
+                "vllm_streaming_not_supported",
+                fallback="non_streaming_execution",
+            )
+            response = await self._call_vllm(task)
+            # Yield entire response as single chunk
+            yield {"content": response.content}
+            return
         model = self._get_model_for_provider(provider, task)
 
         # Map internal provider name to LLMProvider enum
@@ -973,6 +1155,8 @@ class AegisLLMProxy:
         """
         Get optimal model for provider and task.
 
+        Sprint 125 Feature 125.2: Added vLLM model support.
+
         Args:
             provider: Provider name
             task: LLM task (may contain model preferences)
@@ -984,6 +1168,10 @@ class AegisLLMProxy:
             model = self._get_model_for_provider("openai", task)
             # → "gpt-4o" (if task.quality_requirement == CRITICAL)
         """
+        # Sprint 125.2: vLLM uses configured model
+        if provider == "vllm":
+            return self._vllm_model
+
         # Check task-specific model preference
         if provider == "local_ollama" and task.model_local:
             return task.model_local
@@ -1017,6 +1205,7 @@ class AegisLLMProxy:
 
         Pricing (as of 2025-11-13, International Singapore region):
             - Local Ollama: FREE
+            - vLLM: FREE (Sprint 125.2 - local deployment)
             - Alibaba Cloud qwen-turbo: $0.05/M input, $0.2/M output
             - Alibaba Cloud qwen-plus: $0.4/M input, $1.2/M output
             - Alibaba Cloud qwen-max: $1.6/M input, $6.4/M output
@@ -1036,6 +1225,7 @@ class AegisLLMProxy:
             # Use legacy pricing (average input+output rate, per 1M tokens)
             pricing_legacy = {
                 "local_ollama": 0.0,  # Free
+                "vllm": 0.0,  # Free (Sprint 125.2)
                 "alibaba_cloud": 0.125,  # avg of $0.05/$0.2 per 1M = $0.125 per 1M
                 "openai": 6.25,  # avg of $2.50/$10.00 per 1M = $6.25 per 1M
             }
@@ -1044,6 +1234,7 @@ class AegisLLMProxy:
             # Use accurate input/output pricing
             pricing = {
                 "local_ollama": {"input": 0.0, "output": 0.0},  # Free
+                "vllm": {"input": 0.0, "output": 0.0},  # Free (Sprint 125.2)
                 "alibaba_cloud": {
                     "input": 0.05,  # $0.05 per 1M tokens (qwen-turbo)
                     "output": 0.2,  # $0.2 per 1M tokens (qwen-turbo)

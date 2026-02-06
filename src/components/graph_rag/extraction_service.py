@@ -81,6 +81,307 @@ from src.prompts.extraction_prompts import (
 
 logger = structlog.get_logger(__name__)
 
+# ============================================================================
+# Sprint 125 Feature 125.3: ADR-060 Universal Types
+# ============================================================================
+
+# 15 Universal Entity Types (ADR-060 Standard)
+UNIVERSAL_ENTITY_TYPES = {
+    "PERSON", "ORGANIZATION", "LOCATION", "EVENT", "DATE_TIME",
+    "CONCEPT", "TECHNOLOGY", "PRODUCT", "METRIC", "DOCUMENT",
+    "PROCESS", "MATERIAL", "REGULATION", "QUANTITY", "FIELD"
+}
+
+# 21 Universal Relation Types (ADR-060 Standard)
+UNIVERSAL_RELATION_TYPES = {
+    # Structural (4)
+    "PART_OF", "CONTAINS", "INSTANCE_OF", "TYPE_OF",
+    # Organizational (5)
+    "EMPLOYS", "MANAGES", "FOUNDED_BY", "OWNS", "LOCATED_IN",
+    # Causal (4)
+    "CAUSES", "ENABLES", "REQUIRES", "LEADS_TO",
+    # Temporal (2)
+    "PRECEDES", "FOLLOWS",
+    # Functional (4)
+    "USES", "CREATES", "IMPLEMENTS", "DEPENDS_ON",
+    # Semantic (2)
+    "SIMILAR_TO", "ASSOCIATED_WITH",
+    # Fallback (1)
+    "RELATED_TO"
+}
+
+# Entity Type Mapping for Unknown Types (ADR-060 Standard)
+# Maps common variations and domain-specific types to universal types
+ENTITY_TYPE_ALIASES = {
+    # Organization aliases
+    "COMPANY": "ORGANIZATION",
+    "CORPORATION": "ORGANIZATION",
+    "INSTITUTION": "ORGANIZATION",
+    "UNIVERSITY": "ORGANIZATION",
+    "AGENCY": "ORGANIZATION",
+    "TEAM": "ORGANIZATION",
+    "LAB": "ORGANIZATION",
+
+    # Location aliases
+    "PLACE": "LOCATION",
+    "CITY": "LOCATION",
+    "COUNTRY": "LOCATION",
+    "GPE": "LOCATION",
+    "REGION": "LOCATION",
+
+    # Technology aliases
+    "TOOL": "TECHNOLOGY",
+    "SOFTWARE": "TECHNOLOGY",
+    "FRAMEWORK": "TECHNOLOGY",
+    "PLATFORM": "TECHNOLOGY",
+    "PROGRAMMING_LANGUAGE": "TECHNOLOGY",
+
+    # Process/Method aliases
+    "ALGORITHM": "PROCESS",
+    "METHOD": "PROCESS",
+    "TECHNIQUE": "PROCESS",
+    "PROCEDURE": "PROCESS",
+
+    # Document aliases
+    "PAPER": "DOCUMENT",
+    "REPORT": "DOCUMENT",
+    "PUBLICATION": "DOCUMENT",
+    "STANDARD": "DOCUMENT",
+
+    # Regulation aliases
+    "LAW": "REGULATION",
+    "POLICY": "REGULATION",
+    "RULE": "REGULATION",
+
+    # Concept aliases
+    "FIELD": "CONCEPT",
+    "TOPIC": "CONCEPT",
+    "THEORY": "CONCEPT",
+    "IDEA": "CONCEPT",
+
+    # Product aliases
+    "DEVICE": "PRODUCT",
+    "HARDWARE": "PRODUCT",
+    "SERVICE": "PRODUCT",
+
+    # Metric aliases
+    "BENCHMARK": "METRIC",
+    "SCORE": "METRIC",
+    "MEASUREMENT": "METRIC",
+    "KPI": "METRIC",
+
+    # Material aliases
+    "SUBSTANCE": "MATERIAL",
+    "CHEMICAL": "MATERIAL",
+    "COMPOUND": "MATERIAL",
+
+    # Date aliases
+    "DATE": "DATE_TIME",
+    "TIME": "DATE_TIME",
+    "PERIOD": "DATE_TIME",
+
+    # Model aliases (domain-specific)
+    "MODEL": "PRODUCT",
+    "ARCHITECTURE": "CONCEPT",
+    "DATASET": "PRODUCT",
+}
+
+# Relation Type Mapping for Unknown Types
+RELATION_TYPE_ALIASES = {
+    # Legacy aliases
+    "RELATES_TO": "RELATED_TO",
+    "ASSOCIATED": "ASSOCIATED_WITH",
+
+    # Common variations
+    "WORKS_AT": "EMPLOYS",  # Inverse - parser will swap subject/object
+    "FOUNDED": "FOUNDED_BY",  # Inverse
+    "BASED_IN": "LOCATED_IN",
+    "HEADQUARTERED_IN": "LOCATED_IN",
+    "OPERATES_IN": "LOCATED_IN",
+
+    # Functional aliases
+    "DEVELOPED": "CREATES",
+    "BUILT": "CREATES",
+    "PRODUCED": "CREATES",
+    "INVENTED": "CREATES",
+
+    # Knowledge aliases
+    "BASED_ON": "DEPENDS_ON",
+    "EXTENDS": "TYPE_OF",
+    "DERIVED_FROM": "TYPE_OF",
+
+    # Legacy action types (map to closest universal type)
+    "MODIFIES": "USES",
+    "READS": "USES",
+    "WRITES": "CREATES",
+    "DELETES": "USES",
+}
+
+
+def validate_entity_type(entity_type: str) -> str:
+    """Validate and normalize entity type to universal type.
+
+    Sprint 125 Feature 125.3: ADR-060 Universal Types
+
+    Args:
+        entity_type: Raw entity type from LLM (may be unknown)
+
+    Returns:
+        Normalized universal entity type (one of 15 types)
+        Falls back to "CONCEPT" if no mapping found
+
+    Example:
+        >>> validate_entity_type("COMPANY")
+        "ORGANIZATION"
+        >>> validate_entity_type("UNKNOWN_TYPE")
+        "CONCEPT"
+    """
+    if not entity_type:
+        return "CONCEPT"
+
+    entity_type_upper = entity_type.upper().strip()
+
+    # Check if already a universal type
+    if entity_type_upper in UNIVERSAL_ENTITY_TYPES:
+        return entity_type_upper
+
+    # Check if it's a known alias
+    if entity_type_upper in ENTITY_TYPE_ALIASES:
+        mapped_type = ENTITY_TYPE_ALIASES[entity_type_upper]
+        logger.debug(
+            "entity_type_mapped",
+            original=entity_type,
+            mapped=mapped_type,
+        )
+        return mapped_type
+
+    # Fallback to CONCEPT for unknown types
+    logger.warning(
+        "unknown_entity_type_mapped_to_concept",
+        original=entity_type,
+        fallback="CONCEPT",
+    )
+    return "CONCEPT"
+
+
+def validate_relation_type(relation_type: str) -> str:
+    """Validate and normalize relation type to universal type.
+
+    Sprint 125 Feature 125.3: ADR-060 Universal Types
+
+    Args:
+        relation_type: Raw relation type from LLM (may be unknown)
+
+    Returns:
+        Normalized universal relation type (one of 21 types)
+        Falls back to "RELATED_TO" if no mapping found
+
+    Example:
+        >>> validate_relation_type("WORKS_AT")
+        "EMPLOYS"
+        >>> validate_relation_type("UNKNOWN_RELATION")
+        "RELATED_TO"
+    """
+    if not relation_type:
+        return "RELATED_TO"
+
+    relation_type_upper = relation_type.upper().strip()
+
+    # Check if already a universal type
+    if relation_type_upper in UNIVERSAL_RELATION_TYPES:
+        return relation_type_upper
+
+    # Check if it's a known alias
+    if relation_type_upper in RELATION_TYPE_ALIASES:
+        mapped_type = RELATION_TYPE_ALIASES[relation_type_upper]
+        logger.debug(
+            "relation_type_mapped",
+            original=relation_type,
+            mapped=mapped_type,
+        )
+        return mapped_type
+
+    # Fallback to RELATED_TO for unknown types
+    logger.warning(
+        "unknown_relation_type_mapped_to_related_to",
+        original=relation_type,
+        fallback="RELATED_TO",
+    )
+    return "RELATED_TO"
+
+
+def validate_entity_name_length(entity_name: str, max_words: int = 4) -> str:
+    """Validate and truncate entity name to max word count.
+
+    Sprint 125 Feature 125.3: Entity names must be < 4 words
+
+    Args:
+        entity_name: Raw entity name from LLM
+        max_words: Maximum allowed words (default: 4)
+
+    Returns:
+        Truncated entity name if > max_words
+
+    Example:
+        >>> validate_entity_name_length("NVIDIA Corporation headquartered in Santa Clara")
+        "NVIDIA Corporation headquartered in"
+    """
+    if not entity_name:
+        return ""
+
+    words = entity_name.split()
+
+    if len(words) > max_words:
+        truncated = " ".join(words[:max_words])
+        logger.warning(
+            "entity_name_truncated",
+            original=entity_name,
+            truncated=truncated,
+            original_words=len(words),
+            max_words=max_words,
+        )
+        return truncated
+
+    return entity_name
+
+
+def validate_relation_name_length(relation_name: str, max_words: int = 3) -> str:
+    """Validate and truncate relation name to max word count.
+
+    Sprint 125 Feature 125.3: Relation names must be 1-3 words
+
+    Args:
+        relation_name: Raw relation name from LLM
+        max_words: Maximum allowed words (default: 3)
+
+    Returns:
+        Truncated relation name if > max_words
+
+    Example:
+        >>> validate_relation_name_length("IS_A_COMPONENT_OF_THE_SYSTEM")
+        "IS_A_COMPONENT"
+    """
+    if not relation_name:
+        return ""
+
+    # Remove underscores and check word count
+    words = relation_name.replace("_", " ").split()
+
+    if len(words) > max_words:
+        truncated_words = words[:max_words]
+        truncated = "_".join(truncated_words)
+        logger.warning(
+            "relation_name_truncated",
+            original=relation_name,
+            truncated=truncated,
+            original_words=len(words),
+            max_words=max_words,
+        )
+        return truncated.upper()
+
+    return relation_name.upper()
+
+
 # Sprint 86.7: Coreference Resolution Feature Flag
 # Default: enabled (1) - resolves pronouns to antecedents before extraction
 # Disable: AEGIS_USE_COREFERENCE=0 if causing issues
@@ -430,24 +731,55 @@ def _extract_json_objects_individually(
                 # Validate required fields
                 if data_type == "entity":
                     if "name" in obj and "type" in obj:
-                        objects.append(obj)
+                        # Sprint 125 Feature 125.3: Validate and normalize entity
+                        validated_entity = {
+                            "name": validate_entity_name_length(obj["name"], max_words=4),
+                            "type": validate_entity_type(obj["type"]),
+                            "description": obj.get("description", ""),
+                        }
+                        objects.append(validated_entity)
                 elif data_type == "relationship":
                     # Sprint 85 Fix: Accept both formats and normalize
+                    # Sprint 125 Feature 125.3: Add S-P-O format support
                     # Format 1: {source, target, type} (standard)
                     # Format 2: {subject, predicate, object} (generic prompt)
+                    # Format 3: {subject, relation, object, subject_type, object_type} (S-P-O)
+
                     if "source" in obj and "target" in obj and "type" in obj:
-                        objects.append(obj)
-                    elif "subject" in obj and "object" in obj:
-                        # Map subject/predicate/object to source/target/type
-                        normalized = {
-                            "source": obj["subject"],
-                            "target": obj["object"],
-                            "type": _normalize_predicate_to_type(
-                                obj.get("predicate", "RELATES_TO")
-                            ),
-                            "description": obj.get("predicate", ""),
+                        # Standard format - validate and normalize
+                        validated_relation = {
+                            "source": validate_entity_name_length(obj["source"], max_words=4),
+                            "target": validate_entity_name_length(obj["target"], max_words=4),
+                            "type": validate_relation_type(obj["type"]),
+                            "description": obj.get("description", ""),
+                            "strength": obj.get("strength", 5),
                         }
-                        objects.append(normalized)
+                        # Add subject/object types if present (S-P-O format)
+                        if "subject_type" in obj:
+                            validated_relation["subject_type"] = validate_entity_type(obj["subject_type"])
+                        if "object_type" in obj:
+                            validated_relation["object_type"] = validate_entity_type(obj["object_type"])
+
+                        objects.append(validated_relation)
+
+                    elif "subject" in obj and "object" in obj:
+                        # S-P-O format or generic prompt - map to standard format
+                        relation_type = obj.get("relation") or obj.get("predicate", "RELATED_TO")
+
+                        validated_relation = {
+                            "source": validate_entity_name_length(obj["subject"], max_words=4),
+                            "target": validate_entity_name_length(obj["object"], max_words=4),
+                            "type": validate_relation_type(relation_type),
+                            "description": obj.get("description", relation_type),
+                            "strength": obj.get("strength", 5),
+                        }
+                        # Add subject/object types if present (S-P-O format)
+                        if "subject_type" in obj:
+                            validated_relation["subject_type"] = validate_entity_type(obj["subject_type"])
+                        if "object_type" in obj:
+                            validated_relation["object_type"] = validate_entity_type(obj["object_type"])
+
+                        objects.append(validated_relation)
                 else:
                     objects.append(obj)
 
@@ -552,78 +884,92 @@ class ExtractionService:
 
         Sprint 45 Feature 45.8: Domain-specific or generic fallback prompts.
         Sprint 86 Feature 86.2: DSPy MIPROv2 optimized prompts with feature flag.
+        Sprint 125 Feature 125.7: Domain-trained prompts prioritized over generic DSPy.
 
-        Priority order:
-        1. DSPy-optimized prompts (if AEGIS_USE_DSPY_PROMPTS=1)
-        2. Domain-specific prompts (if domain is provided and has custom prompts)
-        3. Generic extraction prompts (fallback)
+        Priority order (Sprint 125.7):
+        1. Domain-trained prompts (from Neo4j :Domain node, if domain provided and has trained prompts)
+        2. Generic DSPy-optimized prompts (default, if AEGIS_USE_DSPY_PROMPTS=1)
+        3. Legacy generic prompts (fallback, if AEGIS_USE_LEGACY_PROMPTS=1)
 
         Args:
-            domain: Domain name (e.g., "tech_docs", "legal_contracts")
+            domain: Domain name (e.g., "entertainment", "medicine_health", "software_dev")
 
         Returns:
             Tuple of (entity_prompt, relation_prompt)
 
         Example:
             >>> service = get_extraction_service()
-            >>> entity_prompt, relation_prompt = await service.get_extraction_prompts("tech_docs")
-            >>> # If tech_docs domain exists with custom prompts, returns those
-            >>> # Otherwise returns generic prompts
+            >>> # With domain_id="entertainment" and trained prompts
+            >>> entity_prompt, relation_prompt = await service.get_extraction_prompts("entertainment")
+            >>> # Returns domain-trained prompts from DSPy MIPROv2 training
+            >>>
+            >>> # With domain_id="new_domain" (no trained prompts yet)
+            >>> entity_prompt, relation_prompt = await service.get_extraction_prompts("new_domain")
+            >>> # Returns generic DSPy-optimized prompts
         """
-        # Sprint 86.3: DSPy-optimized prompts are now the DEFAULT for all domains
-        # Domain-specific prompts are stored in domain training config (see below)
-        # Set AEGIS_USE_LEGACY_PROMPTS=1 to revert to old generic prompts
-        if USE_DSPY_PROMPTS:
-            logger.debug(
-                "using_dspy_optimized_prompts",
-                domain=domain,
-                note="DSPy prompts default since Sprint 86.3",
-            )
-            return get_active_extraction_prompts(domain or "technical")
-
         # Import here to avoid circular dependency
         from src.components.domain_training import get_domain_repository
 
-        # If no domain specified, use generic prompts
-        if not domain:
-            logger.info("using_generic_prompts", reason="no_domain_specified")
-            return (GENERIC_ENTITY_EXTRACTION_PROMPT, GENERIC_RELATION_EXTRACTION_PROMPT)
+        # Sprint 125 Feature 125.7: Priority 1 - Domain-trained prompts
+        # Check if domain is provided and has trained prompts
+        if domain:
+            try:
+                domain_repo = get_domain_repository()
+                domain_config = await domain_repo.get_domain(domain)
 
-        try:
-            # Try to get domain-specific prompts
-            domain_repo = get_domain_repository()
-            domain_config = await domain_repo.get_domain(domain)
-
-            if (
-                domain_config
-                and domain_config.get("entity_prompt")
-                and domain_config.get("relation_prompt")
-            ):
-                logger.info(
-                    "using_domain_specific_prompts",
+                if (
+                    domain_config
+                    and domain_config.get("entity_prompt")
+                    and domain_config.get("relation_prompt")
+                ):
+                    logger.info(
+                        "using_domain_trained_prompts",
+                        domain=domain,
+                        status=domain_config.get("status"),
+                        trained_at=domain_config.get("trained_at"),
+                        source="dspy_miprov2",
+                    )
+                    return (
+                        domain_config["entity_prompt"],
+                        domain_config["relation_prompt"],
+                    )
+                else:
+                    logger.info(
+                        "domain_exists_no_trained_prompts",
+                        domain=domain,
+                        fallback="generic_dspy_prompts",
+                        reason="domain_not_trained_yet",
+                    )
+            except Exception as e:
+                # If domain lookup fails, continue to generic prompts
+                logger.warning(
+                    "domain_prompt_lookup_failed",
                     domain=domain,
-                    status=domain_config.get("status"),
+                    error=str(e),
+                    fallback="generic_prompts",
                 )
-                return (
-                    domain_config["entity_prompt"],
-                    domain_config["relation_prompt"],
-                )
-            else:
-                logger.info(
-                    "using_generic_prompts",
-                    reason="domain_not_found_or_no_prompts",
-                    domain=domain,
-                )
-                return (GENERIC_ENTITY_EXTRACTION_PROMPT, GENERIC_RELATION_EXTRACTION_PROMPT)
 
-        except Exception as e:
-            # If anything goes wrong, fall back to generic prompts
-            logger.warning(
-                "domain_prompt_lookup_failed_using_generic",
+        # Sprint 125 Feature 125.7: Priority 2 - Generic DSPy-optimized prompts
+        # These are used when:
+        # - No domain provided
+        # - Domain exists but no trained prompts yet
+        # - Domain lookup failed
+        if USE_DSPY_PROMPTS:
+            logger.info(
+                "using_generic_dspy_prompts",
                 domain=domain,
-                error=str(e),
+                reason="no_trained_prompts" if domain else "no_domain",
             )
-            return (GENERIC_ENTITY_EXTRACTION_PROMPT, GENERIC_RELATION_EXTRACTION_PROMPT)
+            return get_active_extraction_prompts(domain or "technical")
+
+        # Sprint 125 Feature 125.7: Priority 3 - Legacy generic prompts
+        # Only used if AEGIS_USE_LEGACY_PROMPTS=1 is set
+        logger.info(
+            "using_legacy_generic_prompts",
+            domain=domain,
+            reason="AEGIS_USE_LEGACY_PROMPTS=1",
+        )
+        return (GENERIC_ENTITY_EXTRACTION_PROMPT, GENERIC_RELATION_EXTRACTION_PROMPT)
 
     async def _get_llm_model(self) -> str:
         """Get LLM model from explicit config or Admin UI configuration.
@@ -736,26 +1082,61 @@ class ExtractionService:
                             required_fields = ["name", "type"]
                             is_valid = all(field in item for field in required_fields)
                             if is_valid:
-                                valid_items.append(item)
+                                # Sprint 125 Feature 125.3: Validate and normalize entity
+                                validated_entity = {
+                                    "name": validate_entity_name_length(item["name"], max_words=4),
+                                    "type": validate_entity_type(item["type"]),
+                                    "description": item.get("description", ""),
+                                }
+                                valid_items.append(validated_entity)
                         elif data_type == "relationship":
                             # Sprint 85 Fix: Accept both formats
+                            # Sprint 125 Feature 125.3: Add S-P-O format support and validation
                             # Format 1: {source, target, type} (standard)
-                            if "source" in item and "target" in item and "type" in item:
-                                valid_items.append(item)
                             # Format 2: {subject, predicate, object} (generic prompt)
-                            elif "subject" in item and "object" in item:
-                                normalized = {
-                                    "source": item["subject"],
-                                    "target": item["object"],
-                                    "type": _normalize_predicate_to_type(item.get("predicate", "")),
-                                    "description": item.get("predicate", ""),
+                            # Format 3: {subject, relation, object, subject_type, object_type} (S-P-O)
+
+                            if "source" in item and "target" in item and "type" in item:
+                                # Standard format - validate and normalize
+                                validated_relation = {
+                                    "source": validate_entity_name_length(item["source"], max_words=4),
+                                    "target": validate_entity_name_length(item["target"], max_words=4),
+                                    "type": validate_relation_type(item["type"]),
+                                    "description": item.get("description", ""),
+                                    "strength": item.get("strength", 5),
                                 }
-                                valid_items.append(normalized)
+                                # Add subject/object types if present (S-P-O format)
+                                if "subject_type" in item:
+                                    validated_relation["subject_type"] = validate_entity_type(item["subject_type"])
+                                if "object_type" in item:
+                                    validated_relation["object_type"] = validate_entity_type(item["object_type"])
+
+                                valid_items.append(validated_relation)
+
+                            elif "subject" in item and "object" in item:
+                                # S-P-O format or generic prompt - map to standard format
+                                relation_type = item.get("relation") or item.get("predicate", "RELATED_TO")
+
+                                validated_relation = {
+                                    "source": validate_entity_name_length(item["subject"], max_words=4),
+                                    "target": validate_entity_name_length(item["object"], max_words=4),
+                                    "type": validate_relation_type(relation_type),
+                                    "description": item.get("description", relation_type),
+                                    "strength": item.get("strength", 5),
+                                }
+                                # Add subject/object types if present (S-P-O format)
+                                if "subject_type" in item:
+                                    validated_relation["subject_type"] = validate_entity_type(item["subject_type"])
+                                if "object_type" in item:
+                                    validated_relation["object_type"] = validate_entity_type(item["object_type"])
+
+                                valid_items.append(validated_relation)
+
                                 logger.debug(
                                     "relationship_format_normalized",
                                     index=i,
                                     original=item,
-                                    normalized=normalized,
+                                    normalized=validated_relation,
                                 )
                             else:
                                 logger.warning(

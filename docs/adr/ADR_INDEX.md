@@ -70,6 +70,8 @@ ADRs dokumentieren wichtige Architektur-Entscheidungen mit Kontext, Alternativen
 | 057 | Graph Query Optimization - Disable Redundant SmartEntityExpander | Accepted | 2026-01-20 |
 | 058 | Skill Tool Auto-Resolve (Hybrid Install-Time Classification) | Accepted | 2026-01-28 |
 | 059 | vLLM Integration for Extraction Pipeline (Dual-Engine Architecture) | Accepted | 2026-02-06 |
+| 060 | Standards-Based Domain Taxonomy Architecture (DDC+FORD, Two-Tier Types) | Accepted | 2026-02-06 |
+| 061 | LightRAG Removal — Direct Neo4j Architecture | Proposed | 2026-02-06 |
 
 ---
 

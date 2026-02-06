@@ -46,14 +46,19 @@ async def graph_extraction_node(state: IngestionState) -> IngestionState:
     - Image page numbers for quick filtering
     - NO full BBox data (stored only in Qdrant)
 
+    Sprint 125 Feature 125.7 Changes:
+    - Auto-classify domain using BGE-M3 DomainClassifier if domain_id not set
+    - Use domain-trained prompts when available
+
     Uses ThreePhaseExtractor (SpaCy + Semantic Dedup + Gemma 3 4B)
     via LightRAG wrapper for Neo4j storage.
 
     Workflow:
     1. Get enhanced chunks from state
-    2. Add minimal provenance to metadata
-    3. Extract entities/relations via LightRAG
-    4. Store in Neo4j graph database
+    2. Auto-classify domain if not set (Sprint 125.7)
+    3. Add minimal provenance to metadata
+    4. Extract entities/relations via LightRAG (with domain prompts)
+    5. Store in Neo4j graph database
 
     Args:
         state: Current ingestion state
@@ -84,6 +89,106 @@ async def graph_extraction_node(state: IngestionState) -> IngestionState:
     state["graph_start_time"] = time.time()
 
     try:
+        # Sprint 125 Feature 125.7: Auto-classify domain if not set
+        # This enables domain-trained prompts to be used during extraction
+        if not state.get("domain_id"):
+            try:
+                # Get first chunk text for classification
+                chunk_data_list = state.get("chunks", [])
+                if chunk_data_list:
+                    # Extract text from first chunk
+                    first_chunk_data = chunk_data_list[0]
+                    if isinstance(first_chunk_data, dict):
+                        first_chunk = first_chunk_data.get("chunk")
+                    else:
+                        first_chunk = first_chunk_data
+
+                    # Get chunk text
+                    if hasattr(first_chunk, "content"):
+                        sample_text = first_chunk.content
+                    elif hasattr(first_chunk, "text"):
+                        sample_text = first_chunk.text
+                    else:
+                        sample_text = None
+
+                    if sample_text:
+                        # Classify using BGE-M3 DomainClassifier
+                        from src.components.domain_training.domain_classifier import (
+                            get_domain_classifier,
+                        )
+                        from src.components.domain_training.domain_seeder import get_active_domains
+
+                        classifier = get_domain_classifier()
+
+                        # Load domains if not loaded yet
+                        if not classifier.is_loaded():
+                            await classifier.load_domains()
+
+                        # Get active domains based on deployment profile
+                        active_domain_ids = await get_active_domains()
+
+                        # Classify document (returns top 3 by default)
+                        classification_results = classifier.classify_document(
+                            text=sample_text, top_k=1, sample_size=2000
+                        )
+
+                        if classification_results:
+                            classified_domain = classification_results[0]["domain"]
+                            classification_score = classification_results[0]["score"]
+
+                            # Check if classified domain is in active domains
+                            if classified_domain in active_domain_ids:
+                                state["domain_id"] = classified_domain
+                                logger.info(
+                                    "domain_classified",
+                                    document_id=state["document_id"],
+                                    domain=classified_domain,
+                                    score=round(classification_score, 3),
+                                    method="bge_m3_auto",
+                                    active_domains_count=len(active_domain_ids),
+                                )
+                            else:
+                                logger.info(
+                                    "domain_classified_but_inactive",
+                                    document_id=state["document_id"],
+                                    domain=classified_domain,
+                                    score=round(classification_score, 3),
+                                    active_domains=active_domain_ids,
+                                    using_default="No domain set, will use generic prompts",
+                                )
+                        else:
+                            logger.info(
+                                "domain_classification_no_match",
+                                document_id=state["document_id"],
+                                reason="no_domains_above_threshold",
+                            )
+                    else:
+                        logger.warning(
+                            "domain_classification_skipped",
+                            document_id=state["document_id"],
+                            reason="no_text_in_first_chunk",
+                        )
+                else:
+                    logger.warning(
+                        "domain_classification_skipped",
+                        document_id=state["document_id"],
+                        reason="no_chunks_available",
+                    )
+
+            except Exception as e:
+                # Don't fail extraction if classification fails
+                logger.warning(
+                    "domain_classification_failed",
+                    document_id=state["document_id"],
+                    error=str(e),
+                    fallback="continuing_without_domain",
+                )
+        else:
+            logger.info(
+                "domain_provided_by_user",
+                document_id=state["document_id"],
+                domain=state["domain_id"],
+            )
         # Get enhanced chunks (Feature 21.6: list of {chunk, image_bboxes})
         chunk_data_list = state.get("chunks", [])
         if not chunk_data_list:

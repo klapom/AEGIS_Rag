@@ -1056,6 +1056,20 @@ class Settings(BaseSettings):
         description="Maximum token length for query-document pairs",
     )
 
+    # Sprint 125 Feature 125.2: vLLM Provider Configuration
+    vllm_enabled: bool = Field(
+        default=False,
+        description="Enable vLLM provider for extraction tasks (Sprint 125.2, 256+ concurrent requests)",
+    )
+    vllm_base_url: str = Field(
+        default="http://localhost:8001",
+        description="vLLM OpenAI-compatible API endpoint (Sprint 125.2)",
+    )
+    vllm_model: str = Field(
+        default="nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-NVFP4",
+        description="vLLM model name for extraction tasks (Sprint 125.2)",
+    )
+
     # Sprint 33 Performance: Parallel Ingestion Settings
     ingestion_parallel_files: int = Field(
         default=3,

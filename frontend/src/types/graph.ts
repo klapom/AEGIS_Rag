@@ -7,6 +7,8 @@ export interface GraphNode {
   id: string;
   label: string;
   type: string; // Entity type (PERSON, ORGANIZATION, LOCATION, etc.)
+  sub_type?: string; // Entity sub-type (tech_company, hospital, etc.) - Sprint 125
+  entity_sub_type?: string; // Alias for sub_type
   community?: string;
   degree?: number; // Number of connections
   metadata?: Record<string, any>;

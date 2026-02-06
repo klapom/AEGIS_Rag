@@ -25,6 +25,7 @@ import {
   ShieldCheck,
   FileCheck,
   Store,
+  Settings,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 
@@ -83,6 +84,12 @@ const navItems: NavItem[] = [
     label: 'Training',
     icon: <GraduationCap className="w-4 h-4" />,
     testId: 'admin-nav-training',
+  },
+  {
+    href: '/admin/deployment-profile',
+    label: 'Profile',
+    icon: <Settings className="w-4 h-4" />,
+    testId: 'admin-nav-deployment-profile',
   },
   {
     href: '/admin/indexing',

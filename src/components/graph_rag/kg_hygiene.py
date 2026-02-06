@@ -26,45 +26,56 @@ from src.core.models import GraphRelationship
 logger = structlog.get_logger(__name__)
 
 
-# Valid relation types (extend as needed)
+# Valid relation types (ADR-060 Universal Types - Sprint 125 Feature 125.3)
+# 21 Universal Relation Types for standardized S-P-O triple extraction
 VALID_RELATION_TYPES = {
-    # Standard types
-    "RELATES_TO",
-    "RELATED_TO",
-    "ASSOCIATED_WITH",
-    # Technical types
-    "USES",
-    "USED_BY",
-    "DEPENDS_ON",
-    "IMPLEMENTS",
-    "EXTENDS",
-    "CONTAINS",
-    "PART_OF",
-    "INSTANCE_OF",
-    "TYPE_OF",
-    # Causal types
-    "CAUSES",
-    "LEADS_TO",
-    "ENABLES",
-    "REQUIRES",
-    "FOLLOWS",
-    "PRECEDES",
-    # Organizational types
-    "OWNS",
-    "MANAGES",
-    "EMPLOYS",
-    "FOUNDED_BY",
-    "LOCATED_IN",
-    # Semantic types
-    "SIMILAR_TO",
-    "OPPOSITE_OF",
-    "SYNONYM_OF",
-    # Action types
-    "CREATES",
-    "MODIFIES",
-    "DELETES",
-    "READS",
-    "WRITES",
+    # Structural Relations (4)
+    "PART_OF",          # Component is part of whole
+    "CONTAINS",         # Whole contains component
+    "INSTANCE_OF",      # Specific instance of a type
+    "TYPE_OF",          # Subtype relationship
+
+    # Organizational Relations (5)
+    "EMPLOYS",          # Organization employs person
+    "MANAGES",          # Person manages entity
+    "FOUNDED_BY",       # Organization founded by person
+    "OWNS",             # Entity owns another entity
+    "LOCATED_IN",       # Entity located in location
+
+    # Causal Relations (4)
+    "CAUSES",           # X causes Y
+    "ENABLES",          # X enables Y
+    "REQUIRES",         # X requires Y
+    "LEADS_TO",         # X leads to Y
+
+    # Temporal Relations (2)
+    "PRECEDES",         # X happens before Y
+    "FOLLOWS",          # X happens after Y
+
+    # Functional Relations (4)
+    "USES",             # X uses Y
+    "CREATES",          # X creates Y
+    "IMPLEMENTS",       # X implements Y
+    "DEPENDS_ON",       # X depends on Y
+
+    # Semantic Relations (2)
+    "SIMILAR_TO",       # X is similar to Y
+    "ASSOCIATED_WITH",  # X is associated with Y
+
+    # Fallback (1) - only when no specific type fits
+    "RELATED_TO",       # Generic relationship
+
+    # Legacy aliases for backward compatibility (Sprint 125)
+    # These will be mapped to universal types by output parser
+    "RELATES_TO",       # Legacy alias for RELATED_TO
+    "USED_BY",          # Legacy - use inverse of USES
+    "EXTENDS",          # Legacy - map to TYPE_OF or BASED_ON
+    "OPPOSITE_OF",      # Legacy - domain-specific
+    "SYNONYM_OF",       # Legacy - domain-specific
+    "MODIFIES",         # Legacy - domain-specific
+    "DELETES",          # Legacy - domain-specific
+    "READS",            # Legacy - domain-specific
+    "WRITES",           # Legacy - domain-specific
 }
 
 

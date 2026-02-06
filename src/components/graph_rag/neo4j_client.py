@@ -295,6 +295,9 @@ class Neo4jClient:
             "entity_transaction_to": "CREATE INDEX entity_transaction_to IF NOT EXISTS FOR (e:base) ON (e.transaction_to)",
             "entity_version_id": "CREATE INDEX entity_version_id IF NOT EXISTS FOR (e:base) ON (e.version_id)",
             "entity_version_number": "CREATE INDEX entity_version_number IF NOT EXISTS FOR (e:base) ON (e.version_number)",
+            # Sprint 125 Feature 125.9b: Domain-aware indexing
+            "entity_domain_id": "CREATE INDEX entity_domain_id IF NOT EXISTS FOR (e:base) ON (e.domain_id)",
+            "chunk_domain_id": "CREATE INDEX chunk_domain_id IF NOT EXISTS FOR (c:chunk) ON (c.domain_id)",
         }
 
         results = {}

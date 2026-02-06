@@ -117,6 +117,7 @@ async def store_chunks_and_provenance(
                         c.start_token = $start_token,
                         c.end_token = $end_token,
                         c.namespace_id = $namespace_id,
+                        c.domain_id = $domain_id,
                         c.created_at = datetime()
                     """,
                     chunk_id=chunk_id,
@@ -128,6 +129,7 @@ async def store_chunks_and_provenance(
                     start_token=start_token,
                     end_token=end_token,
                     namespace_id=namespace_id,
+                    domain_id=chunk.get("domain_id"),  # Sprint 125.9b
                 )
                 stats["chunks_created"] += 1
 
@@ -151,28 +153,63 @@ async def store_chunks_and_provenance(
                 sanitized_type = _sanitize_cypher_label(entity_type)
                 labels_str = f"base:{sanitized_type}"
 
+                # Sprint 125 Feature 125.8: Add sub_type property support
+                # Sub-type is optional (only set when domain provides it)
+                entity_sub_type = entity.get("entity_sub_type")  # Tier 2 type from domain
+
                 try:
-                    await session.run(
-                        f"""
-                        MERGE (e:{labels_str} {{entity_id: $entity_id}})
-                        SET e.entity_name = $entity_name,
-                            e.entity_type = $entity_type,
-                            e.description = $description,
-                            e.source_id = $source_id,
-                            e.file_path = $file_path,
-                            e.chunk_index = $chunk_index,
-                            e.namespace_id = $namespace_id,
-                            e.created_at = datetime()
-                        """,
-                        entity_id=entity_id,
-                        entity_name=entity_name,
-                        entity_type=entity_type,
-                        description=entity.get("description", ""),
-                        source_id=entity.get("source_id", ""),
-                        file_path=entity.get("file_path", ""),
-                        chunk_index=entity.get("chunk_index", 0),
-                        namespace_id=namespace_id,
-                    )
+                    # Build query with conditional sub_type
+                    if entity_sub_type:
+                        await session.run(
+                            f"""
+                            MERGE (e:{labels_str} {{entity_id: $entity_id}})
+                            SET e.entity_name = $entity_name,
+                                e.entity_type = $entity_type,
+                                e.entity_sub_type = $entity_sub_type,
+                                e.description = $description,
+                                e.source_id = $source_id,
+                                e.file_path = $file_path,
+                                e.chunk_index = $chunk_index,
+                                e.namespace_id = $namespace_id,
+                                e.domain_id = $domain_id,
+                                e.created_at = datetime()
+                            """,
+                            entity_id=entity_id,
+                            entity_name=entity_name,
+                            entity_type=entity_type,
+                            entity_sub_type=entity_sub_type,
+                            description=entity.get("description", ""),
+                            source_id=entity.get("source_id", ""),
+                            file_path=entity.get("file_path", ""),
+                            chunk_index=entity.get("chunk_index", 0),
+                            namespace_id=namespace_id,
+                            domain_id=entity.get("domain_id"),  # Sprint 125.9b
+                        )
+                    else:
+                        # No sub_type (most entities won't have it)
+                        await session.run(
+                            f"""
+                            MERGE (e:{labels_str} {{entity_id: $entity_id}})
+                            SET e.entity_name = $entity_name,
+                                e.entity_type = $entity_type,
+                                e.description = $description,
+                                e.source_id = $source_id,
+                                e.file_path = $file_path,
+                                e.chunk_index = $chunk_index,
+                                e.namespace_id = $namespace_id,
+                                e.domain_id = $domain_id,
+                                e.created_at = datetime()
+                            """,
+                            entity_id=entity_id,
+                            entity_name=entity_name,
+                            entity_type=entity_type,
+                            description=entity.get("description", ""),
+                            source_id=entity.get("source_id", ""),
+                            file_path=entity.get("file_path", ""),
+                            chunk_index=entity.get("chunk_index", 0),
+                            namespace_id=namespace_id,
+                            domain_id=entity.get("domain_id"),  # Sprint 125.9b
+                        )
                     entities_created += 1
                 except Exception as e:
                     logger.error(

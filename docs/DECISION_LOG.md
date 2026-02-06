@@ -896,9 +896,60 @@
 
 **Consequences:** Dramatically improved graph query quality, enables graph-based reasoning for RAGAS evaluation
 
+### 2026-02-06 | DDC+FORD Hybrid Domain Taxonomy (Sprint 125, Feature 125.8) — ADR-060
+**Context:** Domain-aware extraction requires a principled taxonomy. Industry standards (NAICS, GICS) classify businesses, not knowledge. Need ~35 domains that cover all document types with ontology-backed entity/relation vocabularies. Empirical BGE-M3 testing on DGX Spark validated 35 domains with 0 danger pairs, 0 warning pairs.
+
+**Decision:** Use DDC (Dewey Decimal, 138+ countries) + FORD (OECD Fields of R&D) as basis for 35 seed domains across 5 sectors. Store in `data/seed_domains.yaml` with DDC/FORD codes, keywords, ontology references, and entity/relation type mappings.
+
+**Consequences:** Standards-based, traceable taxonomy. No ad-hoc domain naming. Every domain linked to established ontologies (SNOMED-CT, FIBO, ACM CCS, etc.).
+
+### 2026-02-06 | Two-Tier Entity/Relation Type System (Sprint 125, Feature 125.8) — ADR-060
+**Context:** Need domain-specific entity types (e.g., DISEASE, MEDICATION for medicine) without exploding Prometheus cardinality (260+ types × 3 models), Neo4j labels (260+ indexes), or UI colors (260+ types).
+
+**Decision:** Tier 1: 15 universal entity types + 21 universal relation types (in Neo4j labels, Prometheus, UI). Tier 2: 8-12 domain-specific sub-types per domain (only in extraction prompts and Neo4j property `sub_type`, mapped to Tier 1). Total per extraction prompt: ~25 entity types + ~28 relation types = ~150-200 tokens overhead.
+
+**Consequences:** Prometheus sees only 15 labels (not 260+). Neo4j has 15 labels (not 260+). UI shows 15 colors. LLM gets focused domain context per chunk.
+
+### 2026-02-06 | Deployment Profiles for Domain Activation (Sprint 125, Feature 125.8) — ADR-060
+**Context:** Research shows most companies use 1-5 domains (65% use 1-2). Even Samsung/Berkshire Hathaway max ~7-8 domains. Universities are the only case needing all 35. Loading 35 domains for a law firm (2 domains) wastes resources and adds noise.
+
+**Decision:** Pre-defined deployment profiles (pharma, law_firm, engineering, software, etc.) that activate only relevant domains. Profile selected at setup. University profile activates all 35. Custom profile for manual selection.
+
+**Consequences:** Typical deployment: 15 universal + (3 domains × 10 sub-types) = ~45 total types. Minimal overhead.
+
+### 2026-02-06 | Ontology-Backed Entity/Relation Vocabularies (Sprint 125, Feature 125.8) — ADR-060
+**Context:** 32/35 proposed domains have free, formal ontologies (SNOMED-CT for medicine, FIBO for finance, ACM CCS for CS, GEMET for environment, NATOTerm for defense, etc.). Entity/relation sub-types should derive from these standards, not be invented ad-hoc.
+
+**Decision:** Each domain in seed_domains.yaml references its ontology sources with URLs and licenses. Domain sub-types are extracted from these ontologies. Relation hints are domain-specific (e.g., "TREATS → Medication → Disease" for medicine).
+
+**Consequences:** Entity/relation vocabularies are traceable to international standards. Enables future deep integration with ontology APIs (e.g., SNOMED-CT FHIR, FIBO SPARQL).
+
+### 2026-02-06 | LightRAG Removal — Direct Neo4j (Sprint 127, planned) — ADR-061
+**Context:** Comprehensive audit revealed AegisRAG uses only 3 functions from `lightrag-hku` (Neo4j driver init, `ainsert_custom_kg`, `aquery`). 45+ files / ~12,000 LOC of extraction, dedup, community detection, graph query, and monitoring are 100% custom. Data is written to Neo4j twice (LightRAG internal + AegisRAG custom schema).
+
+**Decision:** Remove `lightrag-hku` dependency in Sprint 127. Replace Neo4j driver with existing `neo4j_client.py`, eliminate `ainsert_custom_kg()` (double storage), replace `rag.aquery()` with `DualLevelSearch` in `maximum_hybrid_search.py`. Verify with RAGAS benchmark comparison (Sprint 126 baseline vs 127 post-removal).
+
+**Consequences:** ~50% fewer Neo4j writes during ingestion. One Neo4j client instead of two. Eliminates format conversion overhead. ADR-005 (LightRAG statt GraphRAG) superseded. Risk: RRF quality in hybrid search — mitigated by RAGAS comparison.
+
+### 2026-02-06 | Entity Deduplication via Existing EntityCanonicalizer (Sprint 125)
+**Context:** Sprint 125 originally planned a new EntityRelationNormalizer (125.3b, 3 SP) inspired by txt2kg. Audit of existing `entity_canonicalization.py` (Sprint 85) revealed it already implements 3-strategy matching: exact normalization (lowercase + underscore), Levenshtein distance (≤2 edits for short names), and BGE-M3 embedding similarity (≥0.85 threshold).
+
+**Decision:** Drop Feature 125.3b. Existing EntityCanonicalizer is sufficient. Unknown entity types from LLM output handled by a new output-parser validation step in 125.3 that maps to nearest universal type.
+
+**Consequences:** 3 SP saved in Sprint 125. No new dedup code needed. Sprint 125 reduced from 53 to 45 SP.
+
+---
+
+### 2026-02-06 | Structured Table Ingestion Investigation (Sprint 127.5)
+**Context:** LightRAG audit revealed unused Excel/CSV ingestion capability (via textract). LightRAG's approach is basic text extraction that loses tabular structure. Docling CUDA already extracts tables from PDFs as structured `TableData` objects with cell coordinates, rows, and columns. Tabular data (financial reports, specs, benchmarks) loses meaning when chunked as flat text.
+
+**Decision:** Add Investigation Spike (127.5, 3 SP) to evaluate three strategies: (A) Direct DB storage with SQL/Cypher queries, (B) Table-aware chunking preserving row/column structure, (C) Hybrid approach with NL-to-SQL agent for large tables. Deliverable: ADR with recommendation + prototype.
+
+**Consequences:** Sprint 127 grows from 5 to 8 SP. Opens path for structured data retrieval that text-based RAG cannot handle well (e.g., "What was NVIDIA's revenue in Q3 2025?" requires cell lookup, not semantic similarity).
+
 ---
 
 **Last Updated:** 2026-02-06 (Sprint 125)
-**Total Decisions Documented:** 159 (+6 from Sprints 124-125)
-**Current Sprint:** Sprint 125 (In Progress - vLLM Integration + RAGAS Phase 1 Completion)
-**Next Sprint:** Sprint 126 (Planned)
+**Total Decisions Documented:** 166 (+13 from Sprints 124-125)
+**Current Sprint:** Sprint 125 (In Progress - vLLM + Domain-Aware Extraction + Domain Frontend)
+**Next Sprint:** Sprint 126 (RAGAS Phase 1 Ingestion + Benchmark), Sprint 127 (LightRAG Removal + Table Ingestion Investigation)
