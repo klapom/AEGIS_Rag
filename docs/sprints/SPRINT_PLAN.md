@@ -1934,27 +1934,89 @@ Sprint 117.1 (Domain CRUD) - Foundation
 
 ---
 
-## Sprint 123 🔄 **IN PROGRESS** (2026-02-04)
+## Sprint 123 ✅ **Complete** (2026-02-04)
 
-**Status:** 🔄 IN PROGRESS
-**Focus:** E2E Test Stabilization Phase 2 - Graph UI, MCP Service, LLM Quality
-**Story Points:** 21 SP estimated
+**Status:** ✅ COMPLETE
+**Focus:** E2E Test Stabilization + Hybrid Search Fixes
+**Story Points:** 21 SP
 **Predecessor:** Sprint 122
 
 **Features:**
 
 | # | Feature | SP | Status |
 |---|---------|-----|--------|
-| 123.1 | Graph UI Test Fixes | 8 | 🔄 Selector audit + timeout |
-| 123.2 | MCP Service Test Fixes | 8 | 📋 Mock service / warmup |
-| 123.3 | LLM Quality Test Fixes | 5 | 📋 Fuzzy matching |
+| 123.1 | Graph UI Test Fixes | 8 | ✅ Selector audit + timeout |
+| 123.2 | MCP Service Test Fixes | 8 | ✅ Mock service / warmup |
+| 123.3 | LLM Quality Test Fixes | 5 | ✅ Fuzzy matching |
+| 123.10 | Hybrid Search UI + TC-46.1.9 removal | - | ✅ |
+| 123.11 | Hybrid Search + Domain Training E2E fixes | - | ✅ |
 
-**Problem Analysis:**
-
-| Category | Tests | Issue | Fix Strategy |
-|----------|-------|-------|--------------|
-| Graph UI | ~32 | 19s timeout | Audit selectors vs frontend |
-| MCP Service | ~5 | 180s timeout | Mock or warmup |
-| LLM Quality | ~9 | Assertion fail | Fuzzy matching |
-
+**Commits:** `392b89e`, `fba691b`
 **See:** `docs/sprints/SPRINT_123_PLAN.md`
+
+---
+
+## Sprint 124 ✅ **Complete** (2026-02-06)
+
+**Status:** ✅ COMPLETE
+**Focus:** RAGAS Evaluation Reboot + gpt-oss:120b Ingestion Benchmark
+**Story Points:** 36 SP
+**Predecessor:** Sprint 123
+
+**Features:**
+
+| # | Feature | SP | Status |
+|---|---------|-----|--------|
+| 124.1 | RAGAS Accuracy Fixes (truncation, 128K ctx, BM25 cleanup) | 5 | ✅ |
+| 124.2 | Database Reset (clean slate) | 2 | ✅ |
+| 124.3 | Phase 1 Ingestion (28/498 with gpt-oss:120b) | 8 | ⏹️ Stopped (HTTP 000) |
+| 124.6 | LLM Extraction Benchmark (3 models, think flag) | 3 | ✅ |
+| 124.7 | DSPy Entertainment Domain Training (gpt-oss:120b) | 5 | ✅ |
+| 124.8 | Entity Name Search (GraphFilters typeahead) | 5 | ✅ |
+| 124.9 | Show in Graph (ContextMenu + URL params) | 5 | ✅ |
+| 124.10 | Configurable extraction pipeline (env vars) | 3 | ✅ |
+
+**Key Results:**
+- **854 entities, 931 relations, 184 communities** from 28 docs
+- **gpt-oss:120b benchmark:** 20s/extraction, but HTTP 000 bottleneck at Ollama
+- **DSPy MIPROv2:** Entity F1 80%, Relation F1 88.9% (entertainment domain)
+- **Frontend:** Entity Name Search, Show in Graph navigation, ContextMenu component
+- **Finding:** Need vLLM for bulk ingestion (Ollama max 4 parallel)
+- **Finding:** 100% RELATES_TO relations → need specific relation types
+
+**Commits:** `060c5f0`, `8f2612b`, `5345720`, `b8bc9ff`
+**See:** `docs/sprints/SPRINT_124_PLAN.md`
+
+---
+
+## Sprint 125 📝 **Planned** (2026-02-06)
+
+**Status:** 📝 PLANNED
+**Focus:** vLLM Integration + RAGAS Phase 1 Completion
+**Story Points:** 34 SP (estimated)
+**Predecessor:** Sprint 124
+
+**Features:**
+
+| # | Feature | SP | Status |
+|---|---------|-----|--------|
+| 125.1 | vLLM Container Integration (Docker profile) | 8 | 📝 |
+| 125.2 | AegisLLMProxy vLLM Routing | 5 | 📝 |
+| 125.3 | Specific Relation Type Extraction (fix RELATES_TO) | 5 | 📝 |
+| 125.4 | RAGAS Phase 1 Ingestion Completion (498 docs) | 8 | 📝 |
+| 125.5 | Performance Benchmark + RAGAS Evaluation | 5 | 📝 |
+| 125.6 | Documentation + ADR-058 | 3 | 📝 |
+
+**Key Decisions:**
+- **vLLM** replaces Ollama for EXTRACTION tasks (19× throughput, continuous batching)
+- **Nemotron-3-Nano-30B-A3B-NVFP4** for ER extraction (3.5B active, 18 GB VRAM, NVFP4)
+- **Docker profiles:** `--profile ingestion` starts vLLM on demand
+- **Dual-engine:** Ollama (Chat) + vLLM (Extraction) coexist
+
+**Targets:**
+- All 498 RAGAS Phase 1 documents ingested
+- >70% specific relation types (down from 100% RELATES_TO)
+- ER Ratio >1.5 (up from 1.09)
+- RAGAS baseline evaluation completed
+
+**See:** `docs/sprints/SPRINT_125_PLAN.md`
