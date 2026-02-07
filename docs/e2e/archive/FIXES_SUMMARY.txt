@@ -12,8 +12,8 @@ STATUS: ✅ COMPLETE
 ISSUE IDENTIFIED
 ================================================================================
 
-All 13 tests in Group 9 timeout after 30 seconds because API mocks 
-(registered with page.route()) were defined AFTER page navigation 
+All 13 tests in Group 9 timeout after 30 seconds because API mocks
+(registered with page.route()) were defined AFTER page navigation
 (chatPage.goto()), making them inactive during API calls.
 
 ROOT CAUSE:
@@ -35,7 +35,7 @@ PATTERN CHANGE:
   await goto()                  await page.route()  ← Register first
   await page.route()  ← Too late
                                 await goto()        ← Navigate with mocks
-  
+
 IMPLEMENTATION:
   - Moved all 13 page.route() calls to execute BEFORE chatPage.goto()
   - Added clarifying comments at each location
@@ -127,7 +127,7 @@ EXPECTED RESULT:
 
 DETAILED VERIFICATION:
   grep -n "page.route\|chatPage.goto()" frontend/e2e/group09-long-context.spec.ts
-  
+
   Should show pattern: route_line < goto_line for each test
 
 ================================================================================

@@ -198,42 +198,42 @@ def append_to_log(
 ):
     """Append test execution to model's log file."""
     log_content = f"""
-{'='*80}
-TEST CASE {test_case['id']}: {test_case['name']}
-{'='*80}
+{"=" * 80}
+TEST CASE {test_case["id"]}: {test_case["name"]}
+{"=" * 80}
 
 Start Time: {start_time.isoformat()}
 End Time: {end_time.isoformat()}
 Duration: {duration:.2f}s
-Expected: {test_case['expected_entities']} entities, {test_case['expected_relations']} relations
+Expected: {test_case["expected_entities"]} entities, {test_case["expected_relations"]} relations
 
-{'='*80}
+{"=" * 80}
 SYSTEM PROMPT:
-{'='*80}
+{"=" * 80}
 {system_prompt}
 
-{'='*80}
+{"=" * 80}
 USER PROMPT:
-{'='*80}
+{"=" * 80}
 {user_prompt}
 
-{'='*80}
+{"=" * 80}
 RAW JSON RESPONSE FROM LLM:
-{'='*80}
+{"=" * 80}
 {raw_response}
 
-{'='*80}
+{"=" * 80}
 VALIDATION RESULTS:
-{'='*80}
-JSON Valid: {validation['json_valid']}
-Entities Found: {validation['entity_count']}
-Relations Found: {validation['relation_count']}
-Errors: {validation['errors']}
+{"=" * 80}
+JSON Valid: {validation["json_valid"]}
+Entities Found: {validation["entity_count"]}
+Relations Found: {validation["relation_count"]}
+Errors: {validation["errors"]}
 
-{'='*80}
+{"=" * 80}
 CONVERTED LIGHTRAG FORMAT:
-{'='*80}
-{validation['lightrag_format']}
+{"=" * 80}
+{validation["lightrag_format"]}
 
 """
 
@@ -353,9 +353,9 @@ def test_model(
 def main():
     """Main test execution."""
     print(
-        f"""{'='*80}
+        f"""{"=" * 80}
      NuExtract JSON Format Test - Convert to LightRAG
-{'='*80}
+{"=" * 80}
 
 Testing NuExtract models with JSON output format:
 - System Prompt: Requests JSON with entities and relations arrays
@@ -386,9 +386,9 @@ entity<|#|>X<|#|>Y<|#|>Z
     for model, supports_think in models_to_test:
         model_short = model.split("/")[-1] if "/" in model else model
 
-        print(f"\n{'='*80}")
+        print(f"\n{'=' * 80}")
         print(f"MODEL: {model_short}")
-        print(f"{'='*80}")
+        print(f"{'=' * 80}")
 
         # ====================================================================
         # WARMUP: Load model before first measured test
@@ -416,9 +416,9 @@ entity<|#|>X<|#|>Y<|#|>Z
         # Write log header
         with open(log_path, "w", encoding="utf-8") as f:
             f.write(
-                f"""{'='*80}
+                f"""{"=" * 80}
 NuExtract JSON FORMAT TEST LOG
-{'='*80}
+{"=" * 80}
 
 Model: {model}
 Mode: {mode}
@@ -426,7 +426,7 @@ Test Suite: All 3 LightRAG Original Examples
 Context Window: 16384
 Start Time: {datetime.now().isoformat()}
 
-{'='*80}
+{"=" * 80}
 
 """
             )
@@ -456,9 +456,9 @@ Start Time: {datetime.now().isoformat()}
             # Write log header
             with open(log_path, "w", encoding="utf-8") as f:
                 f.write(
-                    f"""{'='*80}
+                    f"""{"=" * 80}
 NuExtract JSON FORMAT TEST LOG
-{'='*80}
+{"=" * 80}
 
 Model: {model}
 Mode: {mode}
@@ -466,7 +466,7 @@ Test Suite: All 3 LightRAG Original Examples
 Context Window: 16384
 Start Time: {datetime.now().isoformat()}
 
-{'='*80}
+{"=" * 80}
 
 """
                 )
@@ -491,15 +491,15 @@ Start Time: {datetime.now().isoformat()}
     # ========================================================================
     # SUMMARY
     # ========================================================================
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print("SUMMARY: JSON VALIDATION & CONVERSION")
-    print(f"{'='*80}\n")
+    print(f"{'=' * 80}\n")
 
     # Summary table
     print(
         f"{'Model':<35} {'Mode':<15} {'Test':<30} {'JSON':<8} {'Entities':<12} {'Relations':<12} {'Status':<8}"
     )
-    print(f"{'-'*35} {'-'*15} {'-'*30} {'-'*8} {'-'*12} {'-'*12} {'-'*8}")
+    print(f"{'-' * 35} {'-' * 15} {'-' * 30} {'-' * 8} {'-' * 12} {'-' * 12} {'-' * 8}")
 
     for r in results:
         model_short = r["model"].split("/")[-1] if "/" in r["model"] else r["model"]
@@ -516,10 +516,10 @@ Start Time: {datetime.now().isoformat()}
     with open(output_file, "w", encoding="utf-8") as f:
         json.dump(results, f, indent=2)
 
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print(f"[OK] Detailed results saved to: {output_file}")
     print(f"[OK] Detailed logs saved to: {log_dir}/")
-    print(f"{'='*80}")
+    print(f"{'=' * 80}")
 
 
 if __name__ == "__main__":

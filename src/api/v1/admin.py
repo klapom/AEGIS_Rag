@@ -47,7 +47,9 @@ class SystemStats(BaseModel):
     qdrant_vector_dimension: int = Field(..., description="Vector dimension (BGE-M3: 1024)")
 
     # BM25 statistics (DEPRECATED - Sprint 87: replaced by BGE-M3 sparse vectors)
-    bm25_corpus_size: int | None = Field(None, description="[Deprecated] Always None - use Qdrant sparse vectors")
+    bm25_corpus_size: int | None = Field(
+        None, description="[Deprecated] Always None - use Qdrant sparse vectors"
+    )
 
     # Neo4j / LightRAG statistics
     neo4j_total_entities: int | None = Field(None, description="Total entities in Neo4j graph")

@@ -266,9 +266,7 @@ class TestDomainTraining:
                 logger.info(f"Parsed F1 score: {f1_score}")
 
                 # Verify realistic range
-                assert (
-                    0.4 <= f1_score <= 0.95
-                ), f"F1 score {f1_score} outside realistic range"
+                assert 0.4 <= f1_score <= 0.95, f"F1 score {f1_score} outside realistic range"
 
                 # Verify not the mock value
                 assert f1_score != 0.850, "F1 score appears to be mocked (exactly 0.850)"

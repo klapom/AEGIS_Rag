@@ -65,7 +65,7 @@ def get_qdrant_client() -> QdrantClient:
 def generate_doc_id(name: str, namespace: str) -> str:
     """Generate deterministic document ID from name and namespace."""
     key = f"{namespace}:{name}"
-    return f"doc_{hashlib.md5(key.encode()).hexdigest()[:12]}"
+    return f"doc_{hashlib.md5(key.encode(), usedforsecurity=False).hexdigest()[:12]}"
 
 
 async def _list_documents_internal(

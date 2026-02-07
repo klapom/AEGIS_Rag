@@ -121,9 +121,9 @@ Sprint 13 TD-31: Testing which models support thinking mode
     results = []
 
     for model in models:
-        print(f"\n{'='*80}")
+        print(f"\n{'=' * 80}")
         print(f"MODEL: {model.split('/')[-1] if '/' in model else model}")
-        print(f"{'='*80}")
+        print(f"{'=' * 80}")
 
         # Test 1: Default mode (no think parameter)
         result_default = test_model(model, client, use_think_false=False)
@@ -138,14 +138,14 @@ Sprint 13 TD-31: Testing which models support thinking mode
             print("  --> Skipping think=False test (not supported)")
 
     # COMPARISON TABLE
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print("COMPARISON RESULTS")
-    print(f"{'='*80}\n")
+    print(f"{'=' * 80}\n")
 
     print(
         f"{'Model':<40} {'Mode':<15} {'Entities':<12} {'Time (s)':<12} {'Think Tags':<12} {'Status'}"
     )
-    print(f"{'-'*40} {'-'*15} {'-'*12} {'-'*12} {'-'*12} {'-'*10}")
+    print(f"{'-' * 40} {'-' * 15} {'-' * 12} {'-' * 12} {'-' * 12} {'-' * 10}")
 
     for r in results:
         model_short = r["model"].split("/")[-1] if "/" in r["model"] else r["model"]
@@ -157,9 +157,9 @@ Sprint 13 TD-31: Testing which models support thinking mode
         )
 
     # ANALYSIS
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print("ANALYSIS: Thinking Mode Support")
-    print(f"{'='*80}\n")
+    print(f"{'=' * 80}\n")
 
     for model in models:
         model_short = model.split("/")[-1] if "/" in model else model
@@ -204,9 +204,9 @@ Sprint 13 TD-31: Testing which models support thinking mode
                         print(f"  Quality change: {entity_diff:+d} entities")
 
     # RECOMMENDATION
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print("RECOMMENDATION")
-    print(f"{'='*80}\n")
+    print(f"{'=' * 80}\n")
 
     # Find best overall
     successful_results = [r for r in results if r["success"]]

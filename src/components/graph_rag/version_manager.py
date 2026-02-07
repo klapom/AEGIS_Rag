@@ -119,7 +119,7 @@ class VersionManager:
 
         create_query = f"""
         CREATE (e:base {{id: $entity_id}})
-        SET {', '.join(prop_assignments)}
+        SET {", ".join(prop_assignments)}
         RETURN e
         """
 

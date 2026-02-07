@@ -686,7 +686,12 @@ async def add_custom_server(
         discovered_tools: list[dict[str, Any]] = []
         try:
             from src.api.v1.mcp import get_connection_manager
-            from src.components.mcp.models import MCPServer, MCPServerConnection, ServerStatus, TransportType
+            from src.components.mcp.models import (
+                MCPServer,
+                MCPServerConnection,
+                ServerStatus,
+                TransportType,
+            )
 
             manager = get_connection_manager()
 

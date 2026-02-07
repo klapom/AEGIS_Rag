@@ -53,7 +53,14 @@ TEST_SAMPLES = [
         "id": "microsoft_sample",
         "text": "Microsoft was founded by Bill Gates and Paul Allen in 1975 in Albuquerque, New Mexico. The company later moved its headquarters to Redmond, Washington.",
         "domain": "organizational",
-        "expected_entities": ["Microsoft", "Bill Gates", "Paul Allen", "1975", "Albuquerque, New Mexico", "Redmond, Washington"],
+        "expected_entities": [
+            "Microsoft",
+            "Bill Gates",
+            "Paul Allen",
+            "1975",
+            "Albuquerque, New Mexico",
+            "Redmond, Washington",
+        ],
         "expected_relations": [
             ("Bill Gates", "Microsoft", "FOUNDED"),
             ("Paul Allen", "Microsoft", "FOUNDED"),
@@ -78,7 +85,17 @@ TEST_SAMPLES = [
         "id": "einstein_sample",
         "text": "Albert Einstein was born in Ulm, Germany in 1879. He developed the theory of relativity while working at the Swiss Patent Office in Bern. In 1921, he received the Nobel Prize in Physics.",
         "domain": "scientific",
-        "expected_entities": ["Albert Einstein", "Ulm", "Germany", "1879", "theory of relativity", "Swiss Patent Office", "Bern", "1921", "Nobel Prize in Physics"],
+        "expected_entities": [
+            "Albert Einstein",
+            "Ulm",
+            "Germany",
+            "1879",
+            "theory of relativity",
+            "Swiss Patent Office",
+            "Bern",
+            "1921",
+            "Nobel Prize in Physics",
+        ],
         "expected_relations": [
             ("Albert Einstein", "Ulm", "BORN_IN"),
             ("Albert Einstein", "Germany", "BORN_IN"),
@@ -111,6 +128,7 @@ def calculate_entity_f1(extracted: list, expected: list) -> float:
 
 def calculate_relation_f1(extracted: list, expected: list) -> float:
     """Calculate F1 score for relation extraction."""
+
     def normalize_rel(source, target, rel_type):
         return (source.lower(), target.lower(), rel_type.upper().replace(" ", "_")[:20])
 
@@ -169,7 +187,9 @@ async def evaluate_sample(
         "er_ratio": er_ratio,
         "latency_ms": latency_ms,
         "entities": [{"name": e.name, "type": e.type} for e in entities],
-        "relations": [{"source": r.source, "target": r.target, "type": r.type} for r in relationships],
+        "relations": [
+            {"source": r.source, "target": r.target, "type": r.type} for r in relationships
+        ],
     }
 
 
@@ -206,16 +226,18 @@ async def run_evaluation():
 
         except Exception as e:
             print(f"  ❌ Error: {e}")
-            results.append({
-                "sample_id": sample["id"],
-                "error": str(e),
-                "entity_count": 0,
-                "relation_count": 0,
-                "entity_f1": 0.0,
-                "relation_f1": 0.0,
-                "er_ratio": 0.0,
-                "latency_ms": 0.0,
-            })
+            results.append(
+                {
+                    "sample_id": sample["id"],
+                    "error": str(e),
+                    "entity_count": 0,
+                    "relation_count": 0,
+                    "entity_f1": 0.0,
+                    "relation_f1": 0.0,
+                    "er_ratio": 0.0,
+                    "latency_ms": 0.0,
+                }
+            )
 
     # Calculate aggregates
     print("\n" + "=" * 80)
@@ -241,7 +263,11 @@ async def run_evaluation():
         print(f"| Total Entities | {total_entities} |")
         print(f"| Total Relations | {total_relations} |")
         print(f"| Latency P50 | {median(latencies):.0f}ms |")
-        print(f"| Latency P95 | {sorted(latencies)[int(len(latencies) * 0.95)]:.0f}ms |" if len(latencies) >= 3 else f"| Latency Avg | {mean(latencies):.0f}ms |")
+        print(
+            f"| Latency P95 | {sorted(latencies)[int(len(latencies) * 0.95)]:.0f}ms |"
+            if len(latencies) >= 3
+            else f"| Latency Avg | {mean(latencies):.0f}ms |"
+        )
 
     # Save results
     output_dir = Path("logs/dspy_pipeline_eval")
@@ -252,21 +278,26 @@ async def run_evaluation():
     output_file = output_dir / f"eval_{mode_suffix}_{timestamp}.json"
 
     with open(output_file, "w") as f:
-        json.dump({
-            "mode": mode,
-            "timestamp": datetime.now().isoformat(),
-            "samples": len(TEST_SAMPLES),
-            "successful": len(successful),
-            "aggregate": {
-                "avg_entity_f1": avg_entity_f1 if successful else 0.0,
-                "avg_relation_f1": avg_relation_f1 if successful else 0.0,
-                "avg_er_ratio": avg_er_ratio if successful else 0.0,
-                "total_entities": total_entities if successful else 0,
-                "total_relations": total_relations if successful else 0,
-                "latency_p50_ms": median(latencies) if successful else 0,
+        json.dump(
+            {
+                "mode": mode,
+                "timestamp": datetime.now().isoformat(),
+                "samples": len(TEST_SAMPLES),
+                "successful": len(successful),
+                "aggregate": {
+                    "avg_entity_f1": avg_entity_f1 if successful else 0.0,
+                    "avg_relation_f1": avg_relation_f1 if successful else 0.0,
+                    "avg_er_ratio": avg_er_ratio if successful else 0.0,
+                    "total_entities": total_entities if successful else 0,
+                    "total_relations": total_relations if successful else 0,
+                    "latency_p50_ms": median(latencies) if successful else 0,
+                },
+                "results": results,
             },
-            "results": results,
-        }, f, indent=2, default=str)
+            f,
+            indent=2,
+            default=str,
+        )
 
     print(f"\n📁 Results saved: {output_file}")
     print()

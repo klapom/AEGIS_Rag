@@ -347,15 +347,11 @@ class TestIntentMatching:
             [0.76, 0.24, 0.0],
         ]
 
-        matches = skill_registry.match_intent(
-            "unrelated query", similarity_threshold=0.75
-        )
+        matches = skill_registry.match_intent("unrelated query", similarity_threshold=0.75)
         assert len(matches) == 0
 
     @patch("src.agents.skills.registry.get_embedding_service")
-    def test_match_intent_handles_multi_vector_backend(
-        self, mock_get_embedding, skill_registry
-    ):
+    def test_match_intent_handles_multi_vector_backend(self, mock_get_embedding, skill_registry):
         """Test intent matching with multi-vector backend (flag-embedding)."""
         # Mock embedding service
         mock_service = MagicMock()
@@ -374,9 +370,7 @@ class TestIntentMatching:
             {"dense": [0.15, 0.65, 0.2], "sparse": {9: 0.18}},
         ]
 
-        matches = skill_registry.match_intent(
-            "verify this answer", similarity_threshold=0.75
-        )
+        matches = skill_registry.match_intent("verify this answer", similarity_threshold=0.75)
         assert "reflection" in matches
 
 

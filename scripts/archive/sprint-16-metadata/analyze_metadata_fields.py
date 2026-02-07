@@ -184,7 +184,7 @@ def main():
     print("=" * 80)
     print(f"Original metadata size: {total_metadata_size} bytes")
     print(f"After cleanup (estimated): {keep_size} bytes")
-    print(f"Reduction: {remove_size} bytes ({(remove_size/total_metadata_size)*100:.1f}%)")
+    print(f"Reduction: {remove_size} bytes ({(remove_size / total_metadata_size) * 100:.1f}%)")
     print(f"Fits in 512 token chunk: {'YES' if keep_size < 400 else 'NO (still too large)'}")
     print("=" * 80)
 

@@ -1106,9 +1106,7 @@ def test_train_domain_allows_retraining_completed(client, mock_domain_repository
     response = client.post(
         "/admin/domains/tech_docs/train",
         json={
-            "samples": [
-                {"text": f"Sample {i}", "entities": [f"Entity{i}"]} for i in range(1, 6)
-            ]
+            "samples": [{"text": f"Sample {i}", "entities": [f"Entity{i}"]} for i in range(1, 6)]
         },
     )
 
@@ -1130,9 +1128,7 @@ def test_train_domain_prevents_concurrent_training(client, mock_domain_repositor
     response = client.post(
         "/admin/domains/tech_docs/train",
         json={
-            "samples": [
-                {"text": f"Sample {i}", "entities": [f"Entity{i}"]} for i in range(1, 6)
-            ]
+            "samples": [{"text": f"Sample {i}", "entities": [f"Entity{i}"]} for i in range(1, 6)]
         },
     )
 
@@ -1148,9 +1144,7 @@ def sample_training_dataset():
         {
             "text": "FastAPI is a modern web framework for building APIs with Python 3.6+",
             "entities": ["FastAPI", "web framework", "Python 3.6+"],
-            "relations": [
-                {"subject": "FastAPI", "predicate": "is_a", "object": "web framework"}
-            ],
+            "relations": [{"subject": "FastAPI", "predicate": "is_a", "object": "web framework"}],
         },
         {
             "text": "Pydantic provides data validation using Python type annotations",

@@ -111,9 +111,9 @@ class AuditEvent:
     action: str
     outcome: str  # "success", "failure", "pending"
     metadata: Dict[str, Any] = field(default_factory=dict)
-    context_hash: Optional[str] = None
-    output_hash: Optional[str] = None
-    previous_hash: Optional[str] = None
+    context_hash: str | None = None
+    output_hash: str | None = None
+    previous_hash: str | None = None
     event_hash: str = ""
 
     def __post_init__(self):
@@ -217,7 +217,7 @@ class AuditTrailManager:
         """
         self.storage = storage
         self.retention_days = retention_days
-        self._last_hash: Optional[str] = None
+        self._last_hash: str | None = None
 
     async def log(
         self,
@@ -226,9 +226,9 @@ class AuditTrailManager:
         action: str,
         outcome: str,
         actor_type: str = "agent",
-        metadata: Optional[Dict[str, Any]] = None,
-        context: Optional[Any] = None,
-        output: Optional[Any] = None,
+        metadata: Dict[str, Any] | None = None,
+        context: Any | None = None,
+        output: Any | None = None,
     ) -> AuditEvent:
         """Log audit event with cryptographic integrity.
 
@@ -293,8 +293,8 @@ class AuditTrailManager:
 
     async def verify_integrity(
         self,
-        start_time: Optional[datetime] = None,
-        end_time: Optional[datetime] = None,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
     ) -> Tuple[bool, List[str]]:
         """Verify cryptographic integrity of audit trail.
 

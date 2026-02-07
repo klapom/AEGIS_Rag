@@ -74,8 +74,20 @@ def test_classify_clara_empty_text():
 def test_fast_return_with_candidates():
     """Test fast_return returns top candidate."""
     candidates: list[DomainCandidate] = [
-        {"domain_id": "medical", "confidence": 0.94, "reasoning": None, "matched_entity_types": [], "matched_intent": None},
-        {"domain_id": "research", "confidence": 0.73, "reasoning": None, "matched_entity_types": [], "matched_intent": None},
+        {
+            "domain_id": "medical",
+            "confidence": 0.94,
+            "reasoning": None,
+            "matched_entity_types": [],
+            "matched_intent": None,
+        },
+        {
+            "domain_id": "research",
+            "confidence": 0.73,
+            "reasoning": None,
+            "matched_entity_types": [],
+            "matched_intent": None,
+        },
     ]
 
     state: DomainClassificationState = {
@@ -124,7 +136,13 @@ def test_fast_return_no_candidates():
 def test_llm_verify_top_k_success():
     """Test LLM verification enriches candidates."""
     candidates: list[DomainCandidate] = [
-        {"domain_id": "medical", "confidence": 0.75, "reasoning": None, "matched_entity_types": [], "matched_intent": None},
+        {
+            "domain_id": "medical",
+            "confidence": 0.75,
+            "reasoning": None,
+            "matched_entity_types": [],
+            "matched_intent": None,
+        },
     ]
 
     state: DomainClassificationState = {
@@ -173,7 +191,13 @@ def test_llm_verify_handles_no_candidates():
 def test_llm_fallback_low_confidence():
     """Test LLM fallback for very low confidence."""
     candidates: list[DomainCandidate] = [
-        {"domain_id": "technical", "confidence": 0.35, "reasoning": None, "matched_entity_types": [], "matched_intent": None},
+        {
+            "domain_id": "technical",
+            "confidence": 0.35,
+            "reasoning": None,
+            "matched_entity_types": [],
+            "matched_intent": None,
+        },
     ]
 
     state: DomainClassificationState = {
@@ -197,7 +221,13 @@ def test_llm_fallback_low_confidence():
 def test_llm_fallback_medium_low_confidence():
     """Test LLM fallback boosts medium-low confidence."""
     candidates: list[DomainCandidate] = [
-        {"domain_id": "technical", "confidence": 0.55, "reasoning": None, "matched_entity_types": [], "matched_intent": None},
+        {
+            "domain_id": "technical",
+            "confidence": 0.55,
+            "reasoning": None,
+            "matched_entity_types": [],
+            "matched_intent": None,
+        },
     ]
 
     state: DomainClassificationState = {
@@ -325,7 +355,13 @@ async def test_graph_execution_high_confidence():
         mock_clara.return_value = {
             **initial_state,
             "candidates": [
-                {"domain_id": "medical", "confidence": 0.92, "reasoning": None, "matched_entity_types": [], "matched_intent": None},
+                {
+                    "domain_id": "medical",
+                    "confidence": 0.92,
+                    "reasoning": None,
+                    "matched_entity_types": [],
+                    "matched_intent": None,
+                },
             ],
             "max_confidence": 0.92,
             "latency_ms": 35.0,
@@ -356,7 +392,13 @@ async def test_graph_execution_medium_confidence():
         mock_clara.return_value = {
             **initial_state,
             "candidates": [
-                {"domain_id": "technical", "confidence": 0.70, "reasoning": None, "matched_entity_types": [], "matched_intent": None},
+                {
+                    "domain_id": "technical",
+                    "confidence": 0.70,
+                    "reasoning": None,
+                    "matched_entity_types": [],
+                    "matched_intent": None,
+                },
             ],
             "max_confidence": 0.70,
             "latency_ms": 40.0,
@@ -387,7 +429,13 @@ async def test_graph_execution_low_confidence():
         mock_clara.return_value = {
             **initial_state,
             "candidates": [
-                {"domain_id": "general", "confidence": 0.40, "reasoning": None, "matched_entity_types": [], "matched_intent": None},
+                {
+                    "domain_id": "general",
+                    "confidence": 0.40,
+                    "reasoning": None,
+                    "matched_entity_types": [],
+                    "matched_intent": None,
+                },
             ],
             "max_confidence": 0.40,
             "latency_ms": 38.0,

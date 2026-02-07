@@ -6,6 +6,7 @@ Tests chunk sizes: 500, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 10000
 
 The text is a concatenation of Wikipedia-style information about various topics.
 """
+
 import argparse
 import json
 import time
@@ -61,6 +62,7 @@ NVIDIA Corporation is an American multinational corporation and technology compa
 NVIDIA was founded on January 1993 by Jensen Huang, a Taiwanese-American electrical engineer who had been the director of CoreWare at LSI Logic and a microprocessor designer at AMD, together with Chris Malachowsky and Curtis Priem, both former engineers of Sun Microsystems. The company initially focused on developing graphics chips for the PC gaming market, where it has grown to become a major force in the industry.
 """
 
+
 def chunk_text(text: str, chunk_size: int, overlap: int = 0) -> list[str]:
     """Split text into chunks of approximately chunk_size characters."""
     if len(text) <= chunk_size:
@@ -73,7 +75,7 @@ def chunk_text(text: str, chunk_size: int, overlap: int = 0) -> list[str]:
         # Try to break at sentence boundary
         if end < len(text):
             # Look for sentence end near chunk boundary
-            for boundary in ['. ', '.\n', '? ', '! ']:
+            for boundary in [". ", ".\n", "? ", "! "]:
                 last_boundary = text.rfind(boundary, start + chunk_size // 2, end + 100)
                 if last_boundary != -1:
                     end = last_boundary + len(boundary)
@@ -127,6 +129,7 @@ JSON Output:"""
 def parse_json_array(text: str) -> list | None:
     """Try to extract a JSON array from text."""
     import re
+
     text = text.strip()
 
     # Direct parse
@@ -138,7 +141,7 @@ def parse_json_array(text: str) -> list | None:
         pass
 
     # Find JSON array
-    match = re.search(r'\[[\s\S]*\]', text)
+    match = re.search(r"\[[\s\S]*\]", text)
     if match:
         try:
             data = json.loads(match.group())
@@ -148,9 +151,9 @@ def parse_json_array(text: str) -> list | None:
             pass
 
     # Remove markdown code blocks
-    text = re.sub(r'```json\s*', '', text)
-    text = re.sub(r'```\s*', '', text)
-    match = re.search(r'\[[\s\S]*\]', text)
+    text = re.sub(r"```json\s*", "", text)
+    text = re.sub(r"```\s*", "", text)
+    match = re.search(r"\[[\s\S]*\]", text)
     if match:
         try:
             data = json.loads(match.group())
@@ -173,7 +176,7 @@ def extract_from_chunk(model: str, chunk: str, chunk_id: int, timeout: int = 180
         "relation_time": 0,
         "tokens_in": 0,
         "tokens_out": 0,
-        "error": None
+        "error": None,
     }
 
     # Entity extraction
@@ -188,9 +191,9 @@ def extract_from_chunk(model: str, chunk: str, chunk_id: int, timeout: int = 180
                 "model": model,
                 "prompt": prompt,
                 "stream": False,
-                "options": {"temperature": 0.1, "num_predict": 4096}
+                "options": {"temperature": 0.1, "num_predict": 4096},
             },
-            timeout=timeout
+            timeout=timeout,
         )
 
         if response.status_code != 200:
@@ -221,9 +224,9 @@ def extract_from_chunk(model: str, chunk: str, chunk_id: int, timeout: int = 180
                 "model": model,
                 "prompt": prompt,
                 "stream": False,
-                "options": {"temperature": 0.1, "num_predict": 4096}
+                "options": {"temperature": 0.1, "num_predict": 4096},
             },
-            timeout=timeout
+            timeout=timeout,
         )
 
         if response.status_code == 200:
@@ -264,9 +267,11 @@ def benchmark_chunk_size(model: str, text: str, chunk_size: int) -> dict:
         total_tokens_in += result["tokens_in"]
         total_tokens_out += result["tokens_out"]
 
-        print(f"    Chunk {i+1}/{len(chunks)}: {len(result['entities'])} entities, "
-              f"{len(result['relations'])} relations, "
-              f"{result['entity_time'] + result['relation_time']:.1f}s")
+        print(
+            f"    Chunk {i + 1}/{len(chunks)}: {len(result['entities'])} entities, "
+            f"{len(result['relations'])} relations, "
+            f"{result['entity_time'] + result['relation_time']:.1f}s"
+        )
 
     # Deduplicate entities by name
     unique_entities = {}
@@ -286,15 +291,18 @@ def benchmark_chunk_size(model: str, text: str, chunk_size: int) -> dict:
         "tokens_out": total_tokens_out,
         "avg_time_per_chunk": total_time / len(chunks) if chunks else 0,
         "entities_per_1k_chars": len(unique_entities) / (len(text) / 1000),
-        "chunk_results": chunk_results
+        "chunk_results": chunk_results,
     }
 
 
 def main():
     parser = argparse.ArgumentParser(description="Valid Chunk-Size Benchmark")
     parser.add_argument("--model", default="gemma3:4b", help="Model to benchmark")
-    parser.add_argument("--chunk-sizes", default="500,1000,1500,2000,2500,3000,3500,4000,10000",
-                       help="Comma-separated chunk sizes")
+    parser.add_argument(
+        "--chunk-sizes",
+        default="500,1000,1500,2000,2500,3000,3500,4000,10000",
+        help="Comma-separated chunk sizes",
+    )
     args = parser.parse_args()
 
     chunk_sizes = [int(x) for x in args.chunk_sizes.split(",")]
@@ -318,27 +326,35 @@ def main():
     print("\n" + "=" * 90)
     print("BENCHMARK SUMMARY")
     print("=" * 90)
-    print(f"\n{'Chunk Size':<12} {'Chunks':<8} {'Entities':<10} {'Unique':<8} {'Relations':<10} "
-          f"{'Time (s)':<10} {'Tok In':<10} {'Tok Out':<10}")
+    print(
+        f"\n{'Chunk Size':<12} {'Chunks':<8} {'Entities':<10} {'Unique':<8} {'Relations':<10} "
+        f"{'Time (s)':<10} {'Tok In':<10} {'Tok Out':<10}"
+    )
     print("-" * 90)
 
     for r in results:
-        print(f"{r['chunk_size']:<12} {r['num_chunks']:<8} {r['total_entities']:<10} "
-              f"{r['unique_entities']:<8} {r['total_relations']:<10} {r['total_time']:<10.1f} "
-              f"{r['tokens_in']:<10} {r['tokens_out']:<10}")
+        print(
+            f"{r['chunk_size']:<12} {r['num_chunks']:<8} {r['total_entities']:<10} "
+            f"{r['unique_entities']:<8} {r['total_relations']:<10} {r['total_time']:<10.1f} "
+            f"{r['tokens_in']:<10} {r['tokens_out']:<10}"
+        )
 
     print("-" * 90)
 
     # Save results
     output_file = f"reports/benchmark_valid_chunking_{args.model.replace(':', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
     with open(output_file, "w") as f:
-        json.dump({
-            "timestamp": datetime.now().isoformat(),
-            "model": args.model,
-            "text_length": len(text),
-            "chunk_sizes": chunk_sizes,
-            "results": results
-        }, f, indent=2)
+        json.dump(
+            {
+                "timestamp": datetime.now().isoformat(),
+                "model": args.model,
+                "text_length": len(text),
+                "chunk_sizes": chunk_sizes,
+                "results": results,
+            },
+            f,
+            indent=2,
+        )
 
     print(f"\nResults saved to: {output_file}")
 

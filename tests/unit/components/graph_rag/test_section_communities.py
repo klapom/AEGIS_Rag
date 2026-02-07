@@ -486,7 +486,9 @@ async def test_reference_edges_no_matches(mock_neo4j_client, sample_sections):
 
 
 @pytest.mark.asyncio
-async def test_community_detection_with_resolution_parameter(mock_neo4j_client, sample_section_nodes):
+async def test_community_detection_with_resolution_parameter(
+    mock_neo4j_client, sample_section_nodes
+):
     """Test community detection with different resolution values."""
     graph = SectionGraph(
         nodes=sample_section_nodes,
@@ -529,7 +531,16 @@ async def test_end_to_end_workflow(mock_neo4j_client, sample_sections):
     mock_neo4j_client.execute_read.side_effect = [
         sample_sections,  # build_section_graph
         [{"id": "comm_1", "size": 2, "density": 0.8, "matching_sections": 2, "headings": []}],
-        [{"id": "section_1", "heading": "Test", "content": "Test", "level": 1, "doc_id": "doc_1", "page_no": 1}],
+        [
+            {
+                "id": "section_1",
+                "heading": "Test",
+                "content": "Test",
+                "level": 1,
+                "doc_id": "doc_1",
+                "page_no": 1,
+            }
+        ],
     ]
     mock_neo4j_client.execute_write.return_value = [{"relationships_created": 2}]
 

@@ -609,7 +609,8 @@ async def insert_prechunked_documents(
 
     for relation in all_relations:
         is_valid, reason = hygiene_service.validate_relation(
-            relation, require_evidence=False  # Don't require evidence for initial extraction
+            relation,
+            require_evidence=False,  # Don't require evidence for initial extraction
         )
         if is_valid:
             validated_relations.append(relation)

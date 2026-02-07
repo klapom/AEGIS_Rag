@@ -294,7 +294,7 @@ class TestTrainingProgressTracker:
         for i in range(len(phases) - 1):
             current_end = weights[phases[i]][1]
             next_start = weights[phases[i + 1]][0]
-            assert current_end == next_start, f"Gap between {phases[i]} and {phases[i+1]}"
+            assert current_end == next_start, f"Gap between {phases[i]} and {phases[i + 1]}"
 
     def test_multiple_phase_transitions(self):
         """Test complete workflow with multiple phase transitions."""
@@ -382,9 +382,9 @@ class TestTrainingProgressTracker:
         for i in range(len(tracker._events) - 1):
             current_progress = tracker._events[i].progress_percent
             next_progress = tracker._events[i + 1].progress_percent
-            assert (
-                next_progress >= current_progress
-            ), f"Progress decreased from {current_progress} to {next_progress}"
+            assert next_progress >= current_progress, (
+                f"Progress decreased from {current_progress} to {next_progress}"
+            )
 
     def test_timestamp_progression(self):
         """Test event timestamps are in chronological order."""

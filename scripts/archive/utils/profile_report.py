@@ -160,9 +160,7 @@ class BottleneckAnalyzer:
         report.append("")
         report.append("| Metric | Value | Target | Status |")
         report.append("|--------|-------|--------|--------|")
-        report.append(
-            f"| Mean   | {pipeline['statistics']['mean_ms']:.1f}ms | - | - |"
-        )
+        report.append(f"| Mean   | {pipeline['statistics']['mean_ms']:.1f}ms | - | - |")
         report.append(
             f"| p50    | {pipeline['statistics']['p50_ms']:.1f}ms | <500ms | "
             f"{'PASS' if pipeline['statistics']['p50_ms'] < 500 else 'FAIL'} |"
@@ -175,12 +173,8 @@ class BottleneckAnalyzer:
             f"| p99    | {pipeline['statistics']['p99_ms']:.1f}ms | <1500ms | "
             f"{'PASS' if pipeline['statistics']['p99_ms'] < 1500 else 'FAIL'} |"
         )
-        report.append(
-            f"| Min    | {pipeline['statistics']['min_ms']:.1f}ms | - | - |"
-        )
-        report.append(
-            f"| Max    | {pipeline['statistics']['max_ms']:.1f}ms | - | - |"
-        )
+        report.append(f"| Min    | {pipeline['statistics']['min_ms']:.1f}ms | - | - |")
+        report.append(f"| Max    | {pipeline['statistics']['max_ms']:.1f}ms | - | - |")
         report.append("")
 
         # Bottleneck Analysis
@@ -189,9 +183,7 @@ class BottleneckAnalyzer:
         report.append("### Bottleneck Frequency (out of 100 queries)")
         report.append("")
 
-        bottlenecks = sorted(
-            pipeline["bottleneck_frequency"].items(), key=lambda x: -x[1]
-        )
+        bottlenecks = sorted(pipeline["bottleneck_frequency"].items(), key=lambda x: -x[1])
 
         report.append("| Stage | Frequency | Percentage |")
         report.append("|-------|-----------|------------|")
@@ -209,9 +201,13 @@ class BottleneckAnalyzer:
             if "generation" in stage.lower():
                 report.append("   - **Cause:** LLM generation is I/O bound")
                 report.append("   - **Recommendation:** Implement streaming to reduce TTFT")
-                report.append("   - **Recommendation:** Use smaller, faster models for simple queries")
+                report.append(
+                    "   - **Recommendation:** Use smaller, faster models for simple queries"
+                )
             elif "retrieval" in stage.lower():
-                report.append("   - **Cause:** 4-way hybrid search combines vector, BM25, and graph")
+                report.append(
+                    "   - **Cause:** 4-way hybrid search combines vector, BM25, and graph"
+                )
                 report.append("   - **Recommendation:** Cache frequent queries")
                 report.append("   - **Recommendation:** Optimize graph query execution plans")
             elif "rerank" in stage.lower():
@@ -220,7 +216,9 @@ class BottleneckAnalyzer:
                 report.append("   - **Recommendation:** Batch reranking with larger batch sizes")
             elif "intent" in stage.lower():
                 report.append("   - **Cause:** SetFit model inference overhead")
-                report.append("   - **Recommendation:** Increase cache size for intent classifications")
+                report.append(
+                    "   - **Recommendation:** Increase cache size for intent classifications"
+                )
 
             report.append("")
 
@@ -239,8 +237,10 @@ class BottleneckAnalyzer:
             f"| Average Delta | {memory['average_delta_mb']:.1f}MB | <512MB | "
             f"{'PASS' if memory['average_delta_mb'] < 512 else 'FAIL'} |"
         )
-        report.append(f"| Max Peak | {memory['max_peak_mb']:.1f}MB | <512MB | "
-            f"{'PASS' if memory['max_peak_mb'] < 512 else 'FAIL'} |")
+        report.append(
+            f"| Max Peak | {memory['max_peak_mb']:.1f}MB | <512MB | "
+            f"{'PASS' if memory['max_peak_mb'] < 512 else 'FAIL'} |"
+        )
         report.append("")
 
         # Memory Leak Detection
@@ -249,9 +249,7 @@ class BottleneckAnalyzer:
             report.append("### Memory Leak Detection")
             report.append("")
             report.append(f"- **Iterations:** {leak['iterations']}")
-            report.append(
-                f"- **Growth Rate:** {leak['slope_mb_per_iteration']:.3f} MB/iteration"
-            )
+            report.append(f"- **Growth Rate:** {leak['slope_mb_per_iteration']:.3f} MB/iteration")
             report.append(f"- **Total Growth:** {leak['total_growth_mb']:.1f} MB")
             report.append(f"- **Leak Detected:** {leak['leak_detected']}")
 

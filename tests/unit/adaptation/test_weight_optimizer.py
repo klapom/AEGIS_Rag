@@ -238,9 +238,10 @@ class TestWeightOptimization:
         assert 0.0 <= weights.keyword_weight <= 1.0
         assert 0.0 <= weights.recency_weight <= 1.0
         # Weights should sum to 1.0
-        assert abs(
-            weights.semantic_weight + weights.keyword_weight + weights.recency_weight - 1.0
-        ) < 0.01
+        assert (
+            abs(weights.semantic_weight + weights.keyword_weight + weights.recency_weight - 1.0)
+            < 0.01
+        )
         assert 0.0 <= weights.ndcg_at_5 <= 1.0
 
     def test_optimize_weights_fine_grid(self, sample_training_pairs):
@@ -474,5 +475,7 @@ class TestWeightSerialization:
 
         assert weights_dict["intent"] == "factual"
         assert weights_dict["semantic_weight"] == 0.75
-        assert weights_dict["ndcg_at_5"] == pytest.approx(0.8925, abs=0.0001)  # Rounded to 4 decimals
+        assert weights_dict["ndcg_at_5"] == pytest.approx(
+            0.8925, abs=0.0001
+        )  # Rounded to 4 decimals
         assert weights_dict["num_training_pairs"] == 100

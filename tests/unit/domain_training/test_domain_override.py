@@ -71,7 +71,9 @@ class TestDomainOverrideService:
     """Test suite for DomainOverrideService."""
 
     @pytest.mark.asyncio
-    async def test_override_document_domain_success(self, service, mock_domain_repository, mock_transaction):
+    async def test_override_document_domain_success(
+        self, service, mock_domain_repository, mock_transaction
+    ):
         """Test successful domain override with audit logging."""
         # Setup
         document_id = "doc_abc123"
@@ -196,9 +198,7 @@ class TestDomainOverrideService:
             )
 
     @pytest.mark.asyncio
-    async def test_override_document_domain_invalid_document(
-        self, service, mock_domain_repository
-    ):
+    async def test_override_document_domain_invalid_document(self, service, mock_domain_repository):
         """Test domain override with non-existent document."""
         # Setup
         document_id = "nonexistent_doc"
@@ -407,12 +407,8 @@ class TestSingletonPattern:
     def test_get_domain_override_service_singleton(self):
         """Test that get_domain_override_service returns same instance."""
         with (
-            patch(
-                "src.components.domain_training.domain_override_service.get_neo4j_client"
-            ),
-            patch(
-                "src.components.domain_training.domain_override_service.get_domain_repository"
-            ),
+            patch("src.components.domain_training.domain_override_service.get_neo4j_client"),
+            patch("src.components.domain_training.domain_override_service.get_domain_repository"),
         ):
             service1 = get_domain_override_service()
             service2 = get_domain_override_service()

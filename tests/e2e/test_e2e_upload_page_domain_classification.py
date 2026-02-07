@@ -178,7 +178,6 @@ class TestUploadPageDomainClassification:
                             break
 
                     if domain_found:
-
                         # Look for confidence score/badge
                         try:
                             confidence_element = page.get_by_text(

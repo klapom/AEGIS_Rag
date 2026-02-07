@@ -109,9 +109,9 @@ async def test_full_pipeline_single_document_e2e(lightrag_wrapper, cleanup_datab
         # Check :base entities
         entity_result = await session.run("MATCH (e:base) RETURN count(e) as count")
         entity_record = await entity_result.single()
-        assert (
-            entity_record["count"] >= 4
-        ), "Should have at least 4 entities (Klaus Pommer, AEGIS RAG, Ollama, LightRAG, Neo4j)"
+        assert entity_record["count"] >= 4, (
+            "Should have at least 4 entities (Klaus Pommer, AEGIS RAG, Ollama, LightRAG, Neo4j)"
+        )
 
         # Check MENTIONED_IN relationships
         mention_result = await session.run(
@@ -142,9 +142,9 @@ async def test_full_pipeline_single_document_e2e(lightrag_wrapper, cleanup_datab
 
         # Verify chunk text contains the entity
         for record in provenance_records:
-            assert (
-                "AEGIS RAG" in record["chunk_text"] or "AEGIS" in record["chunk_text"]
-            ), "Chunk text should contain 'AEGIS RAG'"
+            assert "AEGIS RAG" in record["chunk_text"] or "AEGIS" in record["chunk_text"], (
+                "Chunk text should contain 'AEGIS RAG'"
+            )
 
     await driver.close()
 
@@ -386,9 +386,9 @@ async def test_integration_with_lightrag_query_e2e(lightrag_wrapper, cleanup_dat
 
     # Assert
     assert query_result.answer is not None, "LightRAG query should return an answer"
-    assert (
-        "LangGraph" in query_result.answer or "langgraph" in query_result.answer.lower()
-    ), "Answer should mention LangGraph"
+    assert "LangGraph" in query_result.answer or "langgraph" in query_result.answer.lower(), (
+        "Answer should mention LangGraph"
+    )
 
     # Verify provenance still works
     driver = AsyncGraphDatabase.driver(

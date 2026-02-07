@@ -229,7 +229,7 @@ class TrainingDataAugmenter:
         # Format examples for prompt (use first 5 seed samples)
         examples_text = "\n\n".join(
             [
-                f"Example {i+1}:\nText: {s['text'][:500]}...\n"
+                f"Example {i + 1}:\nText: {s['text'][:500]}...\n"
                 f"Entities: {s['entities']}\n"
                 f"Relations: {s.get('relations', [])}"
                 for i, s in enumerate(seed_samples[:5])

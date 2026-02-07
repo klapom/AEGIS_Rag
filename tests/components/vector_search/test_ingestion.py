@@ -38,7 +38,6 @@ def test_ingestion_pipeline_init_default():
         patch("src.components.vector_search.ingestion.QdrantClientWrapper"),
         patch("src.components.vector_search.ingestion.UnifiedEmbeddingService"),
     ):
-
         pipeline = DocumentIngestionPipeline()
 
         assert pipeline.chunk_size == 512, "Default chunk size should be 512"
@@ -269,7 +268,6 @@ async def test_index_documents_success(
         patch("src.components.vector_search.ingestion.SimpleDirectoryReader") as mock_reader,
         patch.object(DocumentIngestionPipeline, "chunk_documents") as mock_chunk,
     ):
-
         mock_reader.return_value.load_data.return_value = mock_llama_documents
         mock_chunk.return_value = mock_llama_nodes
 
@@ -425,7 +423,6 @@ async def test_index_documents_large_batch(mock_qdrant_client, mock_embedding_se
         patch("src.components.vector_search.ingestion.SimpleDirectoryReader") as mock_reader,
         patch.object(DocumentIngestionPipeline, "chunk_documents") as mock_chunk,
     ):
-
         mock_reader.return_value.load_data.return_value = documents
         mock_chunk.return_value = nodes
 

@@ -76,9 +76,9 @@ class ChunkLogger:
         self.chunk_stats.append(stats)
 
         with open(self.log_file, "a", encoding="utf-8") as f:
-            f.write(f"\n{'='*100}\n")
+            f.write(f"\n{'=' * 100}\n")
             f.write(f"CHUNK #{chunk_id}\n")
-            f.write(f"{'='*100}\n")
+            f.write(f"{'=' * 100}\n")
             f.write(f"Size: {char_count} chars, {token_count} tokens\n")
             if metadata:
                 f.write(f"Metadata: {json.dumps(metadata, indent=2)}\n")
@@ -101,9 +101,9 @@ class ChunkLogger:
         self.llm_calls.append(call_info)
 
         with open(self.log_file, "a", encoding="utf-8") as f:
-            f.write(f"\n{'='*100}\n")
+            f.write(f"\n{'=' * 100}\n")
             f.write(f"LLM CALL: {call_type}\n")
-            f.write(f"{'='*100}\n")
+            f.write(f"{'=' * 100}\n")
             f.write(f"Prompt Tokens: {prompt_tokens}\n")
             f.write(f"Response Tokens: {response_tokens}\n")
             f.write(f"Total Tokens: {prompt_tokens + response_tokens}\n")
@@ -123,9 +123,9 @@ class ChunkLogger:
     def log_summary(self):
         """Write summary statistics at end of file."""
         with open(self.log_file, "a", encoding="utf-8") as f:
-            f.write(f"\n\n{'='*100}\n")
+            f.write(f"\n\n{'=' * 100}\n")
             f.write("SUMMARY STATISTICS\n")
-            f.write(f"{'='*100}\n\n")
+            f.write(f"{'=' * 100}\n\n")
 
             # Chunk statistics
             if self.chunk_stats:
@@ -160,7 +160,7 @@ class ChunkLogger:
                 f.write(f"  Total Prompt Tokens: {total_prompt_tokens:,}\n")
                 f.write(f"  Total Response Tokens: {total_response_tokens:,}\n")
                 f.write(f"  Total LLM Tokens: {total_llm_tokens:,}\n")
-                f.write(f"  Avg Tokens/Call: {total_llm_tokens/total_calls:.1f}\n")
+                f.write(f"  Avg Tokens/Call: {total_llm_tokens / total_calls:.1f}\n")
                 f.write("\n")
 
                 # Cost estimation (rough, based on typical prices)
@@ -169,7 +169,7 @@ class ChunkLogger:
                 f.write(f"  Estimated Cost (at $0.50/1M tokens): ${cost_estimate:.4f}\n")
                 f.write("\n")
 
-            f.write(f"{'='*100}\n")
+            f.write(f"{'=' * 100}\n")
 
 
 async def main():
@@ -269,13 +269,13 @@ async def main():
         print("\n[4/4] Writing summary to log file...")
         chunk_logger.log_summary()
 
-        print(f"\n{'='*80}")
+        print(f"\n{'=' * 80}")
         print("ANALYSIS COMPLETE")
-        print(f"{'='*80}")
+        print(f"{'=' * 80}")
         print(f"Log File: {log_file}")
         print(f"Pages Processed: {len(documents)}")
         print(f"Total Time: {elapsed_time:.1f}s")
-        print(f"Avg Time/Page: {elapsed_time/len(documents):.1f}s")
+        print(f"Avg Time/Page: {elapsed_time / len(documents):.1f}s")
 
         # Quick summary
         print("\nCHUNK SUMMARY:")
@@ -288,7 +288,7 @@ async def main():
         print(f"  Avg Chunk Size: {avg_chars:.1f} chars, {avg_tokens:.1f} tokens")
         print(f"  Total Size: {total_chars:,} chars, {total_tokens:,} tokens")
 
-        print(f"\n{'='*80}")
+        print(f"\n{'=' * 80}")
 
     except Exception as e:
         print(f"\n[ERROR] {e}")

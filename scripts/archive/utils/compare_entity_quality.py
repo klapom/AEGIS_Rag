@@ -30,12 +30,14 @@ def extract_with_spacy(text: str) -> list[dict]:
     seen = set()
     for ent in doc.ents:
         if ent.text.lower() not in seen:
-            entities.append({
-                "name": ent.text,
-                "type": ent.label_,
-                "start": ent.start_char,
-                "end": ent.end_char,
-            })
+            entities.append(
+                {
+                    "name": ent.text,
+                    "type": ent.label_,
+                    "start": ent.start_char,
+                    "end": ent.end_char,
+                }
+            )
             seen.add(ent.text.lower())
     return entities
 
@@ -80,7 +82,7 @@ def parse_json_response(response: str) -> list[dict]:
     end_idx = response.rfind("]")
 
     if start_idx != -1 and end_idx != -1:
-        json_str = response[start_idx:end_idx + 1]
+        json_str = response[start_idx : end_idx + 1]
         json_str = json_str.replace(",]", "]").replace(",\n]", "]")
         try:
             result = json.loads(json_str)
@@ -91,7 +93,8 @@ def parse_json_response(response: str) -> list[dict]:
 
     # Fallback: extract individual objects
     import re
-    objects = re.findall(r'\{[^{}]+\}', response)
+
+    objects = re.findall(r"\{[^{}]+\}", response)
     results = []
     for obj_str in objects:
         try:
@@ -132,7 +135,7 @@ def categorize_entity_type(entity_type: str) -> str:
 
 async def compare_file(file_path: Path):
     """Compare SpaCy vs LLM entities for a single file."""
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print(f"File: {file_path.name}")
     print("=" * 80)
 
@@ -153,12 +156,10 @@ async def compare_file(file_path: Path):
 
     # Normalize types for comparison
     spacy_normalized = {
-        (e["name"].lower(), categorize_entity_type(e["type"]))
-        for e in spacy_entities
+        (e["name"].lower(), categorize_entity_type(e["type"])) for e in spacy_entities
     }
     llm_normalized = {
-        (e.get("name", "").lower(), categorize_entity_type(e.get("type", "")))
-        for e in llm_entities
+        (e.get("name", "").lower(), categorize_entity_type(e.get("type", ""))) for e in llm_entities
     }
 
     # Find overlaps and differences
@@ -197,9 +198,15 @@ async def compare_file(file_path: Path):
     print("\n" + "-" * 80)
     print("OVERLAP ANALYSIS:")
     print("-" * 80)
-    print(f"  Names found by BOTH:       {len(names_both):3} ({', '.join(sorted(names_both)[:5])}...)")
-    print(f"  Names ONLY in SpaCy:       {len(names_spacy_only):3} ({', '.join(sorted(names_spacy_only)[:5])}...)")
-    print(f"  Names ONLY in LLM:         {len(names_llm_only):3} ({', '.join(sorted(names_llm_only)[:5])}...)")
+    print(
+        f"  Names found by BOTH:       {len(names_both):3} ({', '.join(sorted(names_both)[:5])}...)"
+    )
+    print(
+        f"  Names ONLY in SpaCy:       {len(names_spacy_only):3} ({', '.join(sorted(names_spacy_only)[:5])}...)"
+    )
+    print(
+        f"  Names ONLY in LLM:         {len(names_llm_only):3} ({', '.join(sorted(names_llm_only)[:5])}...)"
+    )
 
     print("\n" + "-" * 80)
     print("TYPE DISTRIBUTION:")
@@ -219,7 +226,7 @@ async def compare_file(file_path: Path):
 
     all_types = sorted(set(spacy_types.keys()) | set(llm_types.keys()))
     print(f"  {'Type':<15} {'SpaCy':>8} {'LLM':>8}")
-    print(f"  {'-'*31}")
+    print(f"  {'-' * 31}")
     for t in all_types:
         print(f"  {t:<15} {spacy_types.get(t, 0):>8} {llm_types.get(t, 0):>8}")
 
@@ -275,7 +282,7 @@ async def main():
     total_llm_only = sum(r["llm_only"] for r in results)
 
     print(f"\n  {'Metric':<25} {'Value':>10}")
-    print(f"  {'-'*35}")
+    print(f"  {'-' * 35}")
     print(f"  {'SpaCy Total Entities':<25} {total_spacy:>10}")
     print(f"  {'LLM Total Entities':<25} {total_llm:>10}")
     print(f"  {'Overlap (same names)':<25} {total_overlap:>10}")

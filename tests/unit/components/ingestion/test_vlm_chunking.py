@@ -440,9 +440,7 @@ def test_merge_sections_with_image_annotations() -> None:
         token_count=400,
         metadata={"source": "test.pdf", "file_type": "pdf"},
     )
-    section1.image_annotations = [
-        {"picture_ref": "#/pictures/0", "bbox": {}, "iou_score": 0.8}
-    ]
+    section1.image_annotations = [{"picture_ref": "#/pictures/0", "bbox": {}, "iou_score": 0.8}]
 
     section2 = SectionMetadata(
         heading="Section 2",
@@ -453,9 +451,7 @@ def test_merge_sections_with_image_annotations() -> None:
         token_count=400,
         metadata={"source": "test.pdf", "file_type": "pdf"},
     )
-    section2.image_annotations = [
-        {"picture_ref": "#/pictures/1", "bbox": {}, "iou_score": 0.9}
-    ]
+    section2.image_annotations = [{"picture_ref": "#/pictures/1", "bbox": {}, "iou_score": 0.9}]
 
     chunk = _merge_sections([section1, section2])
 
@@ -507,9 +503,7 @@ def test_create_chunk_with_image_annotations() -> None:
         token_count=1500,
         metadata={"source": "test.pdf", "file_type": "pdf"},
     )
-    section.image_annotations = [
-        {"picture_ref": "#/pictures/0", "bbox": {}, "iou_score": 0.85}
-    ]
+    section.image_annotations = [{"picture_ref": "#/pictures/0", "bbox": {}, "iou_score": 0.85}]
 
     chunk = _create_chunk(section)
 

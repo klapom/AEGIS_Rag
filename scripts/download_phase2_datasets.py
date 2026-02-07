@@ -50,7 +50,7 @@ def download_t2ragbench(num_samples: int = 150) -> list[dict[str, Any]]:
             answer = row.get("answer", "")
 
             # Create document content (table + question context)
-            doc_content = f"""# Financial Document {i+1}
+            doc_content = f"""# Financial Document {i + 1}
 
 ## Question
 {question}
@@ -62,15 +62,17 @@ def download_t2ragbench(num_samples: int = 150) -> list[dict[str, Any]]:
 {answer}
 """
 
-            samples.append({
-                "id": f"t2rag_{i:04d}",
-                "question": question,
-                "ground_truth": str(answer),
-                "context": doc_content,
-                "table_raw": table_context,
-                "source": "t2ragbench",
-                "doc_type": "financial_table",
-            })
+            samples.append(
+                {
+                    "id": f"t2rag_{i:04d}",
+                    "question": question,
+                    "ground_truth": str(answer),
+                    "context": doc_content,
+                    "table_raw": table_context,
+                    "source": "t2ragbench",
+                    "doc_type": "financial_table",
+                }
+            )
 
         logger.info(f"Downloaded {len(samples)} T2-RAGBench samples")
         return samples
@@ -96,7 +98,7 @@ def download_mbpp(num_samples: int = 150) -> list[dict[str, Any]]:
 
             task_id = row.get("task_id", i)
             prompt = row.get("text", "")  # The question/description
-            code = row.get("code", "")    # The solution code
+            code = row.get("code", "")  # The solution code
             test_list = row.get("test_list", [])
 
             # Create document content (code + description)
@@ -115,16 +117,18 @@ def download_mbpp(num_samples: int = 150) -> list[dict[str, Any]]:
 {test_cases_str}
 """
 
-            samples.append({
-                "id": f"mbpp_{i:04d}",
-                "question": prompt,
-                "ground_truth": code,
-                "context": doc_content,
-                "code_raw": code,
-                "test_cases": test_list,
-                "source": "mbpp",
-                "doc_type": "python_code",
-            })
+            samples.append(
+                {
+                    "id": f"mbpp_{i:04d}",
+                    "question": prompt,
+                    "ground_truth": code,
+                    "context": doc_content,
+                    "code_raw": code,
+                    "test_cases": test_list,
+                    "source": "mbpp",
+                    "doc_type": "python_code",
+                }
+            )
 
         logger.info(f"Downloaded {len(samples)} MBPP samples")
         return samples

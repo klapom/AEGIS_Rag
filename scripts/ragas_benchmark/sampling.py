@@ -30,7 +30,7 @@ def stratified_sample(
     pool: List[NormalizedSample],
     doc_type_quotas: Dict[str, int],
     qtype_quotas: Dict[str, Dict[str, int]],
-    seed: int = 42
+    seed: int = 42,
 ) -> List[NormalizedSample]:
     """
     Sample from pool respecting quotas.
@@ -93,8 +93,7 @@ def stratified_sample(
 
             # Get all remaining samples for this doc_type
             remaining = _get_remaining_samples(
-                grouped.get(doc_type, {}),
-                set(s.id for s in doc_samples)
+                grouped.get(doc_type, {}), set(s.id for s in doc_samples)
             )
 
             if remaining:
@@ -119,18 +118,14 @@ def stratified_sample(
     return unique_samples
 
 
-def _group_samples(
-    pool: List[NormalizedSample]
-) -> Dict[str, Dict[str, List[NormalizedSample]]]:
+def _group_samples(pool: List[NormalizedSample]) -> Dict[str, Dict[str, List[NormalizedSample]]]:
     """
     Group samples by doc_type and question_type.
 
     Returns:
         Nested dict: {doc_type: {question_type: [samples]}}
     """
-    grouped: Dict[str, Dict[str, List[NormalizedSample]]] = defaultdict(
-        lambda: defaultdict(list)
-    )
+    grouped: Dict[str, Dict[str, List[NormalizedSample]]] = defaultdict(lambda: defaultdict(list))
 
     for sample in pool:
         grouped[sample.doc_type][sample.question_type].append(sample)
@@ -139,8 +134,7 @@ def _group_samples(
 
 
 def _get_remaining_samples(
-    doc_groups: Dict[str, List[NormalizedSample]],
-    excluded_ids: Set[str]
+    doc_groups: Dict[str, List[NormalizedSample]], excluded_ids: Set[str]
 ) -> List[NormalizedSample]:
     """
     Get all samples not in excluded set.
@@ -182,11 +176,7 @@ def classify_question_type(question: str, doc_type: str = "clean_text") -> str:
     return DEFAULT_QUESTION_TYPE
 
 
-def assign_difficulty(
-    doc_type: str,
-    question_type: str,
-    rng: Optional[random.Random] = None
-) -> str:
+def assign_difficulty(doc_type: str, question_type: str, rng: random.Random | None = None) -> str:
     """
     Assign difficulty based on doc_type, question_type, and randomness.
 
@@ -242,9 +232,7 @@ def assign_difficulty(
 
 
 def rebalance_difficulty(
-    samples: List[NormalizedSample],
-    target_distribution: Dict[str, float],
-    seed: int = 42
+    samples: List[NormalizedSample], target_distribution: Dict[str, float], seed: int = 42
 ) -> List[NormalizedSample]:
     """
     Rebalance difficulty distribution of samples.
@@ -264,10 +252,7 @@ def rebalance_difficulty(
 
     # Calculate target counts
     total = len(samples)
-    target_counts = {
-        diff: int(total * pct)
-        for diff, pct in target_distribution.items()
-    }
+    target_counts = {diff: int(total * pct) for diff, pct in target_distribution.items()}
 
     # Adjust for rounding
     assigned = sum(target_counts.values())
@@ -302,7 +287,7 @@ def validate_distribution(
     samples: List[NormalizedSample],
     doc_type_quotas: Dict[str, int],
     qtype_quotas: Dict[str, Dict[str, int]],
-    tolerance_pct: float = 5.0
+    tolerance_pct: float = 5.0,
 ) -> tuple[bool, str]:
     """
     Validate sample distribution matches quotas.
@@ -331,8 +316,7 @@ def validate_distribution(
         if deviation > tolerance_pct:
             is_valid = False
             messages.append(
-                f"Doc type '{doc_type}': {actual} (target: {target}, "
-                f"deviation: {deviation:.1f}%)"
+                f"Doc type '{doc_type}': {actual} (target: {target}, deviation: {deviation:.1f}%)"
             )
 
     # Check question_type quotas

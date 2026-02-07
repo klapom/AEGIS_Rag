@@ -67,7 +67,12 @@ def create_mock_texts(num_texts: int) -> list[dict]:
                     "prov": [
                         {
                             "page_no": i // 10 + 1,
-                            "bbox": {"l": 50, "t": 100 + (i % 10) * 50, "r": 670, "b": 150 + (i % 10) * 50},
+                            "bbox": {
+                                "l": 50,
+                                "t": 100 + (i % 10) * 50,
+                                "r": 670,
+                                "b": 150 + (i % 10) * 50,
+                            },
                         }
                     ],
                 }
@@ -187,7 +192,9 @@ def main():
         if baseline_duration <= target_min_ms:
             print(f"   Exceeded target! ({baseline_duration:.2f}ms vs. {target_min_ms}ms target)")
     else:
-        print(f"\n⚠️  WARNING: Target not met ({baseline_duration:.2f}ms vs. {target_max_ms}ms target)")
+        print(
+            f"\n⚠️  WARNING: Target not met ({baseline_duration:.2f}ms vs. {target_max_ms}ms target)"
+        )
 
     # Performance characteristics
     print("\nPerformance Scaling:")

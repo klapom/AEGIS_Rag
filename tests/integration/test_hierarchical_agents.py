@@ -100,7 +100,9 @@ def mock_llm():
     async def mock_invoke(prompt: str):
         response = MagicMock()
         if "research" in prompt.lower():
-            response.content = "Research findings: Quantum computing companies are: IBM, Google, IonQ, Rigetti."
+            response.content = (
+                "Research findings: Quantum computing companies are: IBM, Google, IonQ, Rigetti."
+            )
         elif "web_search" in prompt.lower():
             response.content = "Web search results: 5 sources found about quantum computing market."
         elif "analysis" in prompt.lower():
@@ -121,7 +123,9 @@ def mock_skill_manager():
     manager = AsyncMock()
     manager.activate = AsyncMock(return_value=None)
     manager.deactivate = AsyncMock(return_value=None)
-    manager.get_skill = AsyncMock(return_value={"name": "test_skill", "instructions": "Test instructions"})
+    manager.get_skill = AsyncMock(
+        return_value={"name": "test_skill", "instructions": "Test instructions"}
+    )
     manager._loaded_content = {
         "retrieval": "Retrieve documents from knowledge base",
         "web_search": "Search the web for information",
@@ -280,7 +284,9 @@ async def mock_redis_memory():
     # Use a simple dict-based in-memory implementation for testing
     memory_store = {}
 
-    async def mock_write(key: str, value, scope: MemoryScope, owner_skill: str, ttl_seconds=None, allowed_skills=None):
+    async def mock_write(
+        key: str, value, scope: MemoryScope, owner_skill: str, ttl_seconds=None, allowed_skills=None
+    ):
         """Mock memory write operation."""
         namespace_key = f"{scope.value}:{owner_skill}:{key}"
         memory_store[namespace_key] = {
@@ -292,7 +298,9 @@ async def mock_redis_memory():
         }
         return namespace_key
 
-    async def mock_read(key: str, scope: MemoryScope, owner_skill: str, requesting_skill: str = None):
+    async def mock_read(
+        key: str, scope: MemoryScope, owner_skill: str, requesting_skill: str = None
+    ):
         """Mock memory read operation."""
         namespace_key = f"{scope.value}:{owner_skill}:{key}"
         if namespace_key in memory_store:
@@ -395,7 +403,9 @@ class TestHierarchicalAgentIntegration:
         assert len(result.sub_tasks) > 0  # Should have decomposed task
 
     @pytest.mark.asyncio
-    async def test_manager_delegates_to_workers(self, test_research_manager, test_retrieval_worker, test_web_search_worker):
+    async def test_manager_delegates_to_workers(
+        self, test_research_manager, test_retrieval_worker, test_web_search_worker
+    ):
         """Test Manager delegates sub-tasks to Workers.
 
         Verifies:
@@ -647,7 +657,13 @@ class TestHierarchicalAgentIntegration:
         task = SkillTask(
             id="task_e2e_workflow",
             description="Full workflow: Research quantum computing, analyze findings, synthesize report",
-            required_skills=["web_search", "retrieval", "graph_query", "validation", "summarization"],
+            required_skills=[
+                "web_search",
+                "retrieval",
+                "graph_query",
+                "validation",
+                "summarization",
+            ],
             context_budget=15000,  # High budget for full workflow
             priority=10,
         )
@@ -667,7 +683,9 @@ class TestContextBudgeting:
     """Test context token budgeting and allocation."""
 
     @pytest.mark.asyncio
-    async def test_context_budget_distribution(self, test_executive, test_research_manager, test_retrieval_worker):
+    async def test_context_budget_distribution(
+        self, test_executive, test_research_manager, test_retrieval_worker
+    ):
         """Test context budget flows down hierarchy.
 
         Verifies:
@@ -695,7 +713,9 @@ class TestContextBudgeting:
         assert task.context_budget == initial_budget
 
     @pytest.mark.asyncio
-    async def test_context_budget_respect_max_tokens(self, test_research_manager, test_retrieval_worker):
+    async def test_context_budget_respect_max_tokens(
+        self, test_research_manager, test_retrieval_worker
+    ):
         """Test max context budget constraint (150K tokens).
 
         Verifies:
@@ -724,7 +744,9 @@ class TestErrorHandling:
     """Test error handling in hierarchical agents."""
 
     @pytest.mark.asyncio
-    async def test_worker_task_failure_handling(self, test_research_manager, test_retrieval_worker, mock_llm):
+    async def test_worker_task_failure_handling(
+        self, test_research_manager, test_retrieval_worker, mock_llm
+    ):
         """Test worker task failure is properly reported.
 
         Verifies:
@@ -752,7 +774,9 @@ class TestErrorHandling:
         assert "failed" in result.result.lower()
 
     @pytest.mark.asyncio
-    async def test_manager_partial_failure_handling(self, test_research_manager, test_retrieval_worker, test_web_search_worker):
+    async def test_manager_partial_failure_handling(
+        self, test_research_manager, test_retrieval_worker, test_web_search_worker
+    ):
         """Test manager handles partial worker failures.
 
         Verifies:
@@ -781,7 +805,9 @@ class TestConcurrentExecution:
     """Test concurrent task execution in hierarchy."""
 
     @pytest.mark.asyncio
-    async def test_parallel_worker_execution(self, test_research_manager, test_retrieval_worker, test_web_search_worker):
+    async def test_parallel_worker_execution(
+        self, test_research_manager, test_retrieval_worker, test_web_search_worker
+    ):
         """Test workers execute tasks in parallel.
 
         Verifies:
@@ -838,7 +864,9 @@ class TestSkillActivationDeactivation:
     """Test skill lifecycle during task execution."""
 
     @pytest.mark.asyncio
-    async def test_worker_activates_skills_on_task_receive(self, test_retrieval_worker, mock_skill_manager):
+    async def test_worker_activates_skills_on_task_receive(
+        self, test_retrieval_worker, mock_skill_manager
+    ):
         """Test worker activates skills when receiving task.
 
         Verifies:
@@ -861,7 +889,9 @@ class TestSkillActivationDeactivation:
         mock_skill_manager.deactivate.assert_called()
 
     @pytest.mark.asyncio
-    async def test_skill_deactivation_on_completion(self, test_web_search_worker, mock_skill_manager):
+    async def test_skill_deactivation_on_completion(
+        self, test_web_search_worker, mock_skill_manager
+    ):
         """Test skills are deactivated after task completion.
 
         Verifies:
@@ -916,7 +946,13 @@ class TestPerformance:
         assert elapsed < 2.0  # Should complete in <2 seconds
 
     @pytest.mark.asyncio
-    async def test_many_subtasks_execution(self, test_research_manager, test_retrieval_worker, test_web_search_worker, test_graph_query_worker):
+    async def test_many_subtasks_execution(
+        self,
+        test_research_manager,
+        test_retrieval_worker,
+        test_web_search_worker,
+        test_graph_query_worker,
+    ):
         """Test manager handling many sub-tasks.
 
         Verifies:

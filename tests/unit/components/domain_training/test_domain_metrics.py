@@ -61,7 +61,10 @@ def test_narrative_benchmark(narrative_benchmark):
     assert narrative_benchmark.domain_type == "narrative"
     assert narrative_benchmark.relations_per_entity_min == 1.5
     assert narrative_benchmark.relations_per_entity_max == 3.0
-    assert narrative_benchmark.relations_per_entity_min > DOMAIN_CONNECTIVITY_BENCHMARKS["factual"].relations_per_entity_max
+    assert (
+        narrative_benchmark.relations_per_entity_min
+        > DOMAIN_CONNECTIVITY_BENCHMARKS["factual"].relations_per_entity_max
+    )
 
 
 def test_benchmark_ranges_valid():
@@ -164,7 +167,9 @@ async def test_evaluate_connectivity_below_benchmark():
         assert metrics.within_benchmark is False
         assert metrics.benchmark_status == "below"
         assert any("below benchmark" in rec.lower() for rec in metrics.recommendations)
-        assert any("improve" in rec.lower() or "consider" in rec.lower() for rec in metrics.recommendations)
+        assert any(
+            "improve" in rec.lower() or "consider" in rec.lower() for rec in metrics.recommendations
+        )
 
 
 @pytest.mark.asyncio
@@ -193,7 +198,10 @@ async def test_evaluate_connectivity_above_benchmark():
         assert metrics.within_benchmark is False
         assert metrics.benchmark_status == "above"
         assert any("above benchmark" in rec.lower() for rec in metrics.recommendations)
-        assert any("over-extraction" in rec.lower() or "tightening" in rec.lower() for rec in metrics.recommendations)
+        assert any(
+            "over-extraction" in rec.lower() or "tightening" in rec.lower()
+            for rec in metrics.recommendations
+        )
 
 
 # ============================================================================
@@ -296,7 +304,10 @@ async def test_recommendations_below_benchmark():
         assert metrics.within_benchmark is False
         assert any("⚠️" in rec for rec in metrics.recommendations)
         assert any("below benchmark" in rec.lower() for rec in metrics.recommendations)
-        assert any("consider improving" in rec.lower() or "dspy" in rec.lower() for rec in metrics.recommendations)
+        assert any(
+            "consider improving" in rec.lower() or "dspy" in rec.lower()
+            for rec in metrics.recommendations
+        )
 
 
 # ============================================================================

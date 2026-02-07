@@ -230,7 +230,7 @@ async def test_batch_processing_real(sample_documents):
         assert all(isinstance(r, DoclingParsedDocument) for r in results)
 
         print(f"[TEST] Batch processed in {batch_duration:.2f}s")
-        print(f"[TEST] Avg time per doc: {batch_duration/len(batch_files):.2f}s")
+        print(f"[TEST] Avg time per doc: {batch_duration / len(batch_files):.2f}s")
 
 
 # =============================================================================
@@ -373,7 +373,7 @@ async def test_gpu_memory_usage_monitoring(sample_documents):
             await client.parse_document(sample_documents["batch_files"][0])
             current_memory = get_gpu_memory_mb()
             memory_readings.append(current_memory)
-            print(f"[GPU] After parse {i+1}: {current_memory}MB")
+            print(f"[GPU] After parse {i + 1}: {current_memory}MB")
             await asyncio.sleep(1)  # Brief pause
 
         # Check for memory leak (memory should not grow unbounded)

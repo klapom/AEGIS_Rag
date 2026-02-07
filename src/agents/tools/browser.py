@@ -460,7 +460,7 @@ class BrowserTool:
             #     }
             # )
 
-            screenshot_path = filename or f"/tmp/screenshot_{int(time.time())}.png"
+            screenshot_path = filename or f"/tmp/screenshot_{int(time.time())}.png"  # nosec B108
 
             result_data = {
                 "path": screenshot_path,

@@ -146,7 +146,7 @@ class BundleInstaller:
     - Track bundle status
     """
 
-    def __init__(self, bundles_dir: Optional[Path] = None):
+    def __init__(self, bundles_dir: Path | None = None):
         """Initialize bundle installer.
 
         Args:
@@ -397,7 +397,7 @@ class BundleInstaller:
 
 
 # Global installer singleton
-_global_installer: Optional[BundleInstaller] = None
+_global_installer: BundleInstaller | None = None
 
 
 def get_bundle_installer() -> BundleInstaller:

@@ -14,12 +14,12 @@ from pathlib import Path
 
 BASE_URL = "http://localhost:8000/api/v1"
 
+
 async def main():
     async with httpx.AsyncClient(timeout=120.0) as client:
         print("🔐 Step 1: Login...")
         login_response = await client.post(
-            f"{BASE_URL}/auth/login",
-            json={"username": "admin", "password": "admin123"}
+            f"{BASE_URL}/auth/login", json={"username": "admin", "password": "admin123"}
         )
         token = login_response.json()["access_token"]
         headers = {"Authorization": f"Bearer {token}"}
@@ -52,7 +52,7 @@ Key Features:
                 f"{BASE_URL}/retrieval/upload",
                 headers=headers,
                 files={"file": ("test_bge_m3.txt", f, "text/plain")},
-                data={"namespace": "test_ragas"}
+                data={"namespace": "test_ragas"},
             )
 
         if upload_response.status_code == 200:
@@ -75,8 +75,8 @@ Key Features:
             json={
                 "query": "BGE-M3 embedding model",
                 "top_k": 5,
-                "allowed_namespaces": ["test_ragas"]
-            }
+                "allowed_namespaces": ["test_ragas"],
+            },
         )
 
         if search_response.status_code == 200:
@@ -125,6 +125,7 @@ Key Features:
         else:
             print(f"❌ Search failed: {search_response.status_code}")
             print(f"   {search_response.text}")
+
 
 if __name__ == "__main__":
     asyncio.run(main())

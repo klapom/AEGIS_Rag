@@ -587,9 +587,9 @@ def validate_training_dataset(dataset_path: Path) -> bool:
         # Validate each sample
         for i, sample in enumerate(samples):
             if "text" not in sample:
-                raise ValueError(f"Sample {i+1} missing 'text' field")
+                raise ValueError(f"Sample {i + 1} missing 'text' field")
             if "entities" not in sample or not isinstance(sample["entities"], list):
-                raise ValueError(f"Sample {i+1} missing or invalid 'entities' field")
+                raise ValueError(f"Sample {i + 1} missing or invalid 'entities' field")
 
         return True
 

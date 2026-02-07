@@ -528,7 +528,6 @@ async def extract_parallel(
 # =============================================================================
 
 if __name__ == "__main__":
-
     test_text = """Arthur's Magazine (1844-1846) was an American literary periodical published
     in Philadelphia in the 19th century. First for Women is a woman's magazine
     published by Bauer Media Group in the USA. The Oberoi family is an Indian

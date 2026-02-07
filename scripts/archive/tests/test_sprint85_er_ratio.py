@@ -164,13 +164,15 @@ async def run_test():
                 # Normalize status (success = completed)
                 normalized_status = "completed" if status == "success" else status
 
-                results.append({
-                    "file": file_path.name,
-                    "status": normalized_status,
-                    "entities": entities,
-                    "relations": relations,
-                    "er_ratio": relations / entities if entities > 0 else 0,
-                })
+                results.append(
+                    {
+                        "file": file_path.name,
+                        "status": normalized_status,
+                        "entities": entities,
+                        "relations": relations,
+                        "er_ratio": relations / entities if entities > 0 else 0,
+                    }
+                )
 
             except Exception as e:
                 print(f"  ERROR: {e}")
@@ -183,8 +185,16 @@ async def run_test():
 
         for r in results:
             er = r.get("er_ratio", 0)
-            status_icon = "✅" if r["status"] == "completed" and er >= 1.0 else "⚠️" if r["status"] == "completed" else "❌"
-            print(f"{status_icon} {r['file']}: E={r.get('entities', 0)}, R={r.get('relations', 0)}, ER={er:.2f}")
+            status_icon = (
+                "✅"
+                if r["status"] == "completed" and er >= 1.0
+                else "⚠️"
+                if r["status"] == "completed"
+                else "❌"
+            )
+            print(
+                f"{status_icon} {r['file']}: E={r.get('entities', 0)}, R={r.get('relations', 0)}, ER={er:.2f}"
+            )
 
         print()
         print("-" * 60)

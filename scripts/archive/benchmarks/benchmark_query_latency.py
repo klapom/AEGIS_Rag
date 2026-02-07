@@ -359,7 +359,9 @@ async def main():
     print(f"  Exact Hits:       {cache_stats['hits_exact']}")
     print(f"  Semantic Hits:    {cache_stats['hits_semantic']}")
     print(f"  Misses:           {cache_stats['misses']}")
-    print(f"  Cache Size:       {cache_stats['exact_cache_size']} / {cache_stats['exact_cache_maxsize']}")
+    print(
+        f"  Cache Size:       {cache_stats['exact_cache_size']} / {cache_stats['exact_cache_maxsize']}"
+    )
 
 
 if __name__ == "__main__":

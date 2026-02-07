@@ -50,9 +50,7 @@ class TestHybridExtractionService:
         with pytest.raises(ValueError, match="Unsupported language: zh"):
             hybrid_service._load_spacy_model("zh")
 
-    def test_load_spacy_model_import_error(
-        self, hybrid_service: HybridExtractionService
-    ) -> None:
+    def test_load_spacy_model_import_error(self, hybrid_service: HybridExtractionService) -> None:
         """Test _load_spacy_model raises ImportError if SpaCy not installed."""
         with patch("builtins.__import__", side_effect=ImportError("No module named 'spacy'")):
             with pytest.raises(ImportError, match="SpaCy is required"):

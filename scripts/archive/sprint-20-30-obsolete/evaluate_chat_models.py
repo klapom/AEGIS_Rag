@@ -130,7 +130,9 @@ async def generate_answer(
     """
     # Build prompt with context
     if context:
-        context_text = "\n\n".join([f"[Context {i+1}]\n{ctx}" for i, ctx in enumerate(context[:3])])
+        context_text = "\n\n".join(
+            [f"[Context {i + 1}]\n{ctx}" for i, ctx in enumerate(context[:3])]
+        )
         system_prompt = (
             f"You are a helpful assistant specialized in VBScript and Automation. "
             f"Answer the following question based on the provided context. "
@@ -272,9 +274,9 @@ async def evaluate_single_question(
 
 async def evaluate_model(model: str, questions: list[dict]) -> list[dict]:
     """Evaluate model on all test questions."""
-    console.print(f"\n[bold cyan]{'='*60}[/bold cyan]")
+    console.print(f"\n[bold cyan]{'=' * 60}[/bold cyan]")
     console.print(f"[bold cyan]Evaluating Model: {model}[/bold cyan]")
-    console.print(f"[bold cyan]{'='*60}[/bold cyan]")
+    console.print(f"[bold cyan]{'=' * 60}[/bold cyan]")
 
     results = []
 
@@ -321,9 +323,9 @@ def calculate_aggregate_metrics(results: list[dict]) -> dict:
 
 def print_summary_table(all_results: dict[str, list[dict]]):
     """Print comparison table of all models."""
-    console.print(f"\n[bold cyan]{'='*60}[/bold cyan]")
+    console.print(f"\n[bold cyan]{'=' * 60}[/bold cyan]")
     console.print("[bold cyan]BENCHMARK SUMMARY[/bold cyan]")
-    console.print(f"[bold cyan]{'='*60}[/bold cyan]\n")
+    console.print(f"[bold cyan]{'=' * 60}[/bold cyan]\n")
 
     table = Table(show_header=True, header_style="bold magenta")
     table.add_column("Model", style="cyan")

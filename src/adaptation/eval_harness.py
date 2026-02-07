@@ -164,7 +164,7 @@ class EvalHarness:
         for check, threshold in self.thresholds.items():
             if not 0.0 <= threshold <= 1.0:
                 raise ValueError(
-                    f"Threshold for {check.value} must be between 0.0 and 1.0, " f"got {threshold}"
+                    f"Threshold for {check.value} must be between 0.0 and 1.0, got {threshold}"
                 )
 
         self.logger.info(

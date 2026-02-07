@@ -32,12 +32,12 @@ async def test_context_length(context: str, length: int, prompt, llm):
         result = Verification.model_validate_json(response.content)
         return True, result.verdict, len(response.content)
     except Exception as e:
-        return False, None, len(response.content) if 'response' in locals() else 0
+        return False, None, len(response.content) if "response" in locals() else 0
 
 
 async def main():
     print("🔍 Finding Context #3 Length Threshold for qwen2.5:7b")
-    print("="*80)
+    print("=" * 80)
 
     # Create LLM
     llm = ChatOllama(
@@ -72,9 +72,9 @@ async def main():
 
     # Test different lengths
     test_lengths = [
-        1000,   # Very short
-        2500,   # ~Context #1 size
-        5000,   # Short
+        1000,  # Very short
+        2500,  # ~Context #1 size
+        5000,  # Short
         10000,  # Medium
         15000,  # ~Context #2 size
         20000,  # Large
@@ -83,25 +83,20 @@ async def main():
         len(context3),  # Full context
     ]
 
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print(f"Testing {len(test_lengths)} different context lengths")
-    print(f"{'='*80}\n")
+    print(f"{'=' * 80}\n")
 
     results_table = []
 
     for length in test_lengths:
         print(f"⏳ Testing {length:,} chars...", end=" ", flush=True)
 
-        success, verdict, response_len = await test_context_length(
-            context3, length, prompt, llm
-        )
+        success, verdict, response_len = await test_context_length(context3, length, prompt, llm)
 
-        results_table.append({
-            'length': length,
-            'success': success,
-            'verdict': verdict,
-            'response_len': response_len
-        })
+        results_table.append(
+            {"length": length, "success": success, "verdict": verdict, "response_len": response_len}
+        )
 
         if success:
             print(f"✅ SUCCESS (verdict={verdict}, response={response_len} chars)")
@@ -110,20 +105,20 @@ async def main():
             # Don't break - continue testing to find pattern
 
     # Summary
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print("📊 SUMMARY")
-    print(f"{'='*80}\n")
+    print(f"{'=' * 80}\n")
 
     print(f"{'Length':<12} {'Status':<10} {'Verdict':<10} {'Response Len':<15}")
     print("-" * 50)
 
     for r in results_table:
-        status = "✅ SUCCESS" if r['success'] else "❌ FAILED"
-        verdict = str(r['verdict']) if r['verdict'] is not None else "N/A"
+        status = "✅ SUCCESS" if r["success"] else "❌ FAILED"
+        verdict = str(r["verdict"]) if r["verdict"] is not None else "N/A"
         print(f"{r['length']:>10,}  {status:<10} {verdict:<10} {r['response_len']:>10,}")
 
     # Find threshold
-    failures = [r for r in results_table if not r['success']]
+    failures = [r for r in results_table if not r["success"]]
     if failures:
         first_failure = failures[0]
         print(f"\n🔴 First failure at: {first_failure['length']:,} characters")
@@ -132,14 +127,16 @@ async def main():
         if len(results_table) > 0:
             last_success = None
             for r in results_table:
-                if r['success']:
+                if r["success"]:
                     last_success = r
                 else:
                     break
 
             if last_success:
                 print(f"✅ Last success at: {last_success['length']:,} characters")
-                print(f"\n💡 Threshold appears to be between {last_success['length']:,} and {first_failure['length']:,} chars")
+                print(
+                    f"\n💡 Threshold appears to be between {last_success['length']:,} and {first_failure['length']:,} chars"
+                )
     else:
         print("\n✅ All tests passed! Context #3 should work.")
 

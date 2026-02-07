@@ -3,6 +3,7 @@
 Quick Model Sanity Test for Entity Extraction
 Tests if a model can produce valid JSON entity extraction output.
 """
+
 import json
 import sys
 import time
@@ -67,9 +68,9 @@ def test_model(model_name: str, timeout: int = 120) -> dict:
         "sample_relations": [],
     }
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Testing: {model_name}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     # Test entity extraction
     print("  [1/2] Testing entity extraction...")
@@ -85,9 +86,9 @@ def test_model(model_name: str, timeout: int = 120) -> dict:
                 "options": {
                     "temperature": 0.1,
                     "num_predict": 2048,
-                }
+                },
             },
-            timeout=timeout
+            timeout=timeout,
         )
 
         if response.status_code != 200:
@@ -135,17 +136,14 @@ def test_model(model_name: str, timeout: int = 120) -> dict:
             "http://localhost:11434/api/generate",
             json={
                 "model": model_name,
-                "prompt": RELATION_PROMPT.format(
-                    text=TEST_TEXT,
-                    entities=", ".join(entity_names)
-                ),
+                "prompt": RELATION_PROMPT.format(text=TEST_TEXT, entities=", ".join(entity_names)),
                 "stream": False,
                 "options": {
                     "temperature": 0.1,
                     "num_predict": 2048,
-                }
+                },
             },
-            timeout=timeout
+            timeout=timeout,
         )
 
         if response.status_code != 200:
@@ -202,7 +200,7 @@ def parse_json_array(text: str) -> list | None:
     import re
 
     # Look for [...] pattern
-    match = re.search(r'\[[\s\S]*\]', text)
+    match = re.search(r"\[[\s\S]*\]", text)
     if match:
         try:
             data = json.loads(match.group())
@@ -213,11 +211,11 @@ def parse_json_array(text: str) -> list | None:
 
     # Try to fix common issues
     # Remove markdown code blocks
-    text = re.sub(r'```json\s*', '', text)
-    text = re.sub(r'```\s*', '', text)
+    text = re.sub(r"```json\s*", "", text)
+    text = re.sub(r"```\s*", "", text)
 
     # Try again after cleanup
-    match = re.search(r'\[[\s\S]*\]', text)
+    match = re.search(r"\[[\s\S]*\]", text)
     if match:
         try:
             data = json.loads(match.group())
@@ -237,8 +235,9 @@ def check_model_available(model_name: str) -> bool:
             models = response.json().get("models", [])
             model_names = [m.get("name", "") for m in models]
             # Check both exact match and base name match
-            return (model_name in model_names or
-                    any(model_name in n or n.startswith(model_name.split(":")[0]) for n in model_names))
+            return model_name in model_names or any(
+                model_name in n or n.startswith(model_name.split(":")[0]) for n in model_names
+            )
     except:
         pass
     return False
@@ -261,9 +260,9 @@ def main():
     if len(sys.argv) > 1:
         MODELS_TO_TEST = sys.argv[1:]
 
-    print("="*60)
+    print("=" * 60)
     print("QUICK MODEL SANITY TEST FOR ENTITY EXTRACTION")
-    print("="*60)
+    print("=" * 60)
     print(f"Test text: {len(TEST_TEXT)} characters")
     print(f"Models to test: {len(MODELS_TO_TEST)}")
 
@@ -291,21 +290,25 @@ def main():
         results.append(result)
 
     # Summary
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("SUMMARY")
-    print("="*60)
+    print("=" * 60)
     print(f"{'Model':<30} {'Status':<15} {'Entities':<10} {'Relations':<10} {'Time':<10}")
-    print("-"*75)
+    print("-" * 75)
 
     working_models = []
     for r in results:
-        status_emoji = "✅" if r["status"] == "success" else "⚠️" if "partial" in r["status"] else "❌"
-        print(f"{r['model']:<30} {status_emoji} {r['status']:<12} {r['entities_extracted']:<10} {r['relations_extracted']:<10} {r['total_time_seconds']:<10.1f}s")
+        status_emoji = (
+            "✅" if r["status"] == "success" else "⚠️" if "partial" in r["status"] else "❌"
+        )
+        print(
+            f"{r['model']:<30} {status_emoji} {r['status']:<12} {r['entities_extracted']:<10} {r['relations_extracted']:<10} {r['total_time_seconds']:<10.1f}s"
+        )
 
         if r["status"] in ["success", "partial_success"] and r["entities_extracted"] > 0:
             working_models.append(r["model"])
 
-    print("-"*75)
+    print("-" * 75)
     print(f"\nWorking models for full benchmark: {working_models}")
 
     if not_available:
@@ -314,13 +317,17 @@ def main():
     # Save results
     output_file = f"reports/model_sanity_test_{time.strftime('%Y%m%d_%H%M%S')}.json"
     with open(output_file, "w") as f:
-        json.dump({
-            "timestamp": time.strftime("%Y%m%d_%H%M%S"),
-            "test_text_length": len(TEST_TEXT),
-            "results": results,
-            "working_models": working_models,
-            "not_available": not_available,
-        }, f, indent=2)
+        json.dump(
+            {
+                "timestamp": time.strftime("%Y%m%d_%H%M%S"),
+                "test_text_length": len(TEST_TEXT),
+                "results": results,
+                "working_models": working_models,
+                "not_available": not_available,
+            },
+            f,
+            indent=2,
+        )
     print(f"\nResults saved to: {output_file}")
 
     return working_models

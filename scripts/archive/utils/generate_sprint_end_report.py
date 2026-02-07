@@ -28,7 +28,7 @@ def generate_report(args) -> str:
     report = f"""# Sprint {sprint_number} - Code Quality Report
 
 **Generated:** {date}
-**Status:** {'🟢 PASSED' if _check_thresholds(args) else '🔴 FAILED'}
+**Status:** {"🟢 PASSED" if _check_thresholds(args) else "🔴 FAILED"}
 
 ---
 

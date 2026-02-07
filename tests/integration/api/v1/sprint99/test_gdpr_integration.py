@@ -36,13 +36,9 @@ class TestConsentLifecycleIntegration:
             "created_at": datetime.now(UTC).isoformat(),
         }
 
-        with patch(
-            "src.components.gdpr.get_consent_manager"
-        ) as mock_manager:
+        with patch("src.components.gdpr.get_consent_manager") as mock_manager:
             # Create consent
-            mock_manager.return_value.create_consent = AsyncMock(
-                return_value=created_consent
-            )
+            mock_manager.return_value.create_consent = AsyncMock(return_value=created_consent)
 
             create_response = integration_test_client.post(
                 "/api/v1/gdpr/consent",
@@ -52,9 +48,7 @@ class TestConsentLifecycleIntegration:
             assert create_response.status_code == 201
 
             # List consents
-            mock_manager.return_value.list_consents = AsyncMock(
-                return_value=[created_consent]
-            )
+            mock_manager.return_value.list_consents = AsyncMock(return_value=[created_consent])
 
             list_response = integration_test_client.get(
                 "/api/v1/gdpr/consents",
@@ -64,17 +58,11 @@ class TestConsentLifecycleIntegration:
             data = list_response.json()
             assert len(data["items"]) >= 1
 
-    def test_renew_and_withdraw_consent_flow(
-        self, integration_test_client, admin_auth_headers
-    ):
+    def test_renew_and_withdraw_consent_flow(self, integration_test_client, admin_auth_headers):
         """Test renewing and withdrawing consent."""
-        with patch(
-            "src.components.gdpr.get_consent_manager"
-        ) as mock_manager:
+        with patch("src.components.gdpr.get_consent_manager") as mock_manager:
             # Renew consent
-            mock_manager.return_value.update_consent = AsyncMock(
-                return_value={"status": "renewed"}
-            )
+            mock_manager.return_value.update_consent = AsyncMock(return_value={"status": "renewed"})
 
             renew_response = integration_test_client.put(
                 "/api/v1/gdpr/consent/consent_123",
@@ -98,13 +86,9 @@ class TestConsentLifecycleIntegration:
             )
             assert withdraw_response.status_code == 200
 
-    def test_filter_consents_by_legal_basis_flow(
-        self, integration_test_client, admin_auth_headers
-    ):
+    def test_filter_consents_by_legal_basis_flow(self, integration_test_client, admin_auth_headers):
         """Test filtering consents by legal basis."""
-        with patch(
-            "src.components.gdpr.get_consent_manager"
-        ) as mock_manager:
+        with patch("src.components.gdpr.get_consent_manager") as mock_manager:
             # Filter by consent basis
             mock_manager.return_value.list_consents = AsyncMock(return_value=[])
 
@@ -142,13 +126,9 @@ class TestDataSubjectRightsIntegration:
             "created_at": datetime.now(UTC).isoformat(),
         }
 
-        with patch(
-            "src.components.gdpr.get_rights_handler"
-        ) as mock_handler:
+        with patch("src.components.gdpr.get_rights_handler") as mock_handler:
             # Create request
-            mock_handler.return_value.create_request = AsyncMock(
-                return_value=created_request
-            )
+            mock_handler.return_value.create_request = AsyncMock(return_value=created_request)
 
             create_response = integration_test_client.post(
                 "/api/v1/gdpr/request",
@@ -172,11 +152,16 @@ class TestDataSubjectRightsIntegration:
         self, integration_test_client, admin_auth_headers, data_subject_request_flow_data
     ):
         """Test all 6 data subject request types."""
-        request_types = ["access", "erasure", "rectification", "portability", "restriction", "objection"]
+        request_types = [
+            "access",
+            "erasure",
+            "rectification",
+            "portability",
+            "restriction",
+            "objection",
+        ]
 
-        with patch(
-            "src.components.gdpr.get_rights_handler"
-        ) as mock_handler:
+        with patch("src.components.gdpr.get_rights_handler") as mock_handler:
             for req_type in request_types:
                 mock_handler.return_value.create_request = AsyncMock(
                     return_value={"id": f"request_{req_type}", "request_type": req_type}
@@ -193,13 +178,9 @@ class TestDataSubjectRightsIntegration:
                 )
                 assert response.status_code == 201
 
-    def test_reject_request_with_reason_flow(
-        self, integration_test_client, admin_auth_headers
-    ):
+    def test_reject_request_with_reason_flow(self, integration_test_client, admin_auth_headers):
         """Test rejecting data subject request with reason."""
-        with patch(
-            "src.components.gdpr.get_rights_handler"
-        ) as mock_handler:
+        with patch("src.components.gdpr.get_rights_handler") as mock_handler:
             mock_handler.return_value.reject_request = AsyncMock(
                 return_value={"status": "rejected", "reason": "Duplicate request"}
             )
@@ -215,9 +196,7 @@ class TestDataSubjectRightsIntegration:
 class TestProcessingActivityIntegration:
     """Processing activity logging (GDPR Art. 30) integration tests."""
 
-    def test_list_processing_activities_flow(
-        self, integration_test_client, admin_auth_headers
-    ):
+    def test_list_processing_activities_flow(self, integration_test_client, admin_auth_headers):
         """Test listing all processing activities."""
         activities = [
             {
@@ -234,12 +213,8 @@ class TestProcessingActivityIntegration:
             },
         ]
 
-        with patch(
-            "src.components.gdpr.get_activity_logger"
-        ) as mock_logger:
-            mock_logger.return_value.list_activities = AsyncMock(
-                return_value=activities
-            )
+        with patch("src.components.gdpr.get_activity_logger") as mock_logger:
+            mock_logger.return_value.list_activities = AsyncMock(return_value=activities)
 
             response = integration_test_client.get(
                 "/api/v1/gdpr/processing-activities",
@@ -253,9 +228,7 @@ class TestProcessingActivityIntegration:
 class TestPIIDetectionIntegration:
     """PII detection and redaction integration tests."""
 
-    def test_get_and_update_pii_settings_flow(
-        self, integration_test_client, admin_auth_headers
-    ):
+    def test_get_and_update_pii_settings_flow(self, integration_test_client, admin_auth_headers):
         """Test retrieving and updating PII detection settings."""
         current_settings = {
             "detection_enabled": True,
@@ -269,13 +242,9 @@ class TestPIIDetectionIntegration:
             "detection_threshold": 0.9,
         }
 
-        with patch(
-            "src.components.gdpr.get_pii_settings"
-        ) as mock_settings:
+        with patch("src.components.gdpr.get_pii_settings") as mock_settings:
             # Get current settings
-            mock_settings.return_value.get_settings = AsyncMock(
-                return_value=current_settings
-            )
+            mock_settings.return_value.get_settings = AsyncMock(return_value=current_settings)
 
             get_response = integration_test_client.get(
                 "/api/v1/gdpr/pii-settings",
@@ -284,9 +253,7 @@ class TestPIIDetectionIntegration:
             assert get_response.status_code == 200
 
             # Update settings
-            mock_settings.return_value.update_settings = AsyncMock(
-                return_value=updated_settings
-            )
+            mock_settings.return_value.update_settings = AsyncMock(return_value=updated_settings)
 
             update_response = integration_test_client.put(
                 "/api/v1/gdpr/pii-settings",
@@ -318,12 +285,8 @@ class TestGDPRCompliance30DayDeadlineIntegration:
             "deadline": (datetime.now(UTC) + timedelta(days=30)).isoformat(),
         }
 
-        with patch(
-            "src.components.gdpr.get_rights_handler"
-        ) as mock_handler:
-            mock_handler.return_value.create_request = AsyncMock(
-                return_value=created_request
-            )
+        with patch("src.components.gdpr.get_rights_handler") as mock_handler:
+            mock_handler.return_value.create_request = AsyncMock(return_value=created_request)
 
             response = integration_test_client.post(
                 "/api/v1/gdpr/request",

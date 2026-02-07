@@ -50,9 +50,7 @@ def mock_acompletion_json_response():
     """Mock JSON response for relation extraction."""
     response = MagicMock()
     response.choices = [MagicMock()]
-    response.choices[
-        0
-    ].message.content = """
+    response.choices[0].message.content = """
 {
     "relations": [
         {
@@ -292,9 +290,7 @@ class TestRelationExtractorIntegration:
             # Test markdown code block removal
             response = MagicMock()
             response.choices = [MagicMock()]
-            response.choices[
-                0
-            ].message.content = """```json
+            response.choices[0].message.content = """```json
 {
     "relations": [
         {"source": "Alex", "target": "TechCorp", "description": "works at", "strength": 9}
@@ -421,9 +417,7 @@ class TestQueryDecomposerIntegration:
         with patch("src.components.llm_proxy.aegis_llm_proxy.acompletion") as mock_acomp:
             response = MagicMock()
             response.choices = [MagicMock()]
-            response.choices[
-                0
-            ].message.content = """1. What is vector search?
+            response.choices[0].message.content = """1. What is vector search?
 2. How does BM25 work?"""
             response.usage = MagicMock()
             response.usage.total_tokens = 50
@@ -448,9 +442,7 @@ class TestQueryDecomposerIntegration:
         with patch("src.components.llm_proxy.aegis_llm_proxy.acompletion") as mock_acomp:
             response = MagicMock()
             response.choices = [MagicMock()]
-            response.choices[
-                0
-            ].message.content = """1. What algorithm is used in Qdrant?
+            response.choices[0].message.content = """1. What algorithm is used in Qdrant?
 2. Who developed that algorithm?"""
             response.usage = MagicMock()
             response.usage.total_tokens = 60
@@ -480,9 +472,7 @@ class TestQueryDecomposerIntegration:
             # Mock decomposition response
             decompose_response = MagicMock()
             decompose_response.choices = [MagicMock()]
-            decompose_response.choices[
-                0
-            ].message.content = """1. What is vector search?
+            decompose_response.choices[0].message.content = """1. What is vector search?
 2. How does BM25 work?"""
             decompose_response.usage = MagicMock()
             decompose_response.usage.total_tokens = 50

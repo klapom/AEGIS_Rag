@@ -302,4 +302,3 @@ All documentation files are in the project root:
 **Testing:** Ready for immediate execution
 
 All tests expected to pass within 45-60 seconds.
-

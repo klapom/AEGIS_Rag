@@ -39,7 +39,10 @@ class TestDomainBatchIngestionEndpoint:
             return_value=mock_repo,
         ):
             # Mock batch service to prevent actual processing
-            from src.components.domain_training import BatchIngestionService, reset_batch_ingestion_service
+            from src.components.domain_training import (
+                BatchIngestionService,
+                reset_batch_ingestion_service,
+            )
 
             reset_batch_ingestion_service()
             service = BatchIngestionService()
@@ -211,7 +214,10 @@ class TestBatchStatusEndpoint:
 
     async def test_get_batch_status_success(self, async_client: AsyncClient):
         """Test successful batch status retrieval."""
-        from src.components.domain_training import BatchIngestionService, reset_batch_ingestion_service
+        from src.components.domain_training import (
+            BatchIngestionService,
+            reset_batch_ingestion_service,
+        )
 
         reset_batch_ingestion_service()
         service = BatchIngestionService()
@@ -313,26 +319,34 @@ class TestBatchStatusEndpoint:
 
     async def test_get_batch_status_not_found(self, async_client: AsyncClient):
         """Test batch status returns 404 for unknown batch."""
-        from src.components.domain_training import BatchIngestionService, reset_batch_ingestion_service
+        from src.components.domain_training import (
+            BatchIngestionService,
+            reset_batch_ingestion_service,
+        )
 
         reset_batch_ingestion_service()
         service = BatchIngestionService()
 
-        with patch.object(service, "get_batch_status", return_value=None):
-            with patch(
+        with (
+            patch.object(service, "get_batch_status", return_value=None),
+            patch(
                 "src.api.v1.domain_training.get_batch_ingestion_service",
                 return_value=service,
-            ):
-                response = await async_client.get(
-                    "/api/v1/admin/domains/tech_docs/ingest-batch/nonexistent_batch/status"
-                )
+            ),
+        ):
+            response = await async_client.get(
+                "/api/v1/admin/domains/tech_docs/ingest-batch/nonexistent_batch/status"
+            )
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
         assert "not found" in response.json()["detail"].lower()
 
     async def test_get_batch_status_domain_mismatch(self, async_client: AsyncClient):
         """Test batch status validates domain name."""
-        from src.components.domain_training import BatchIngestionService, reset_batch_ingestion_service
+        from src.components.domain_training import (
+            BatchIngestionService,
+            reset_batch_ingestion_service,
+        )
 
         reset_batch_ingestion_service()
         service = BatchIngestionService()
@@ -380,7 +394,10 @@ class TestBatchIngestionWorkflow:
             "src.api.v1.domain_training.get_domain_repository",
             return_value=mock_repo,
         ):
-            from src.components.domain_training import BatchIngestionService, reset_batch_ingestion_service
+            from src.components.domain_training import (
+                BatchIngestionService,
+                reset_batch_ingestion_service,
+            )
 
             reset_batch_ingestion_service()
             service = BatchIngestionService()

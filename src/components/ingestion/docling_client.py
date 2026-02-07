@@ -448,7 +448,7 @@ class DoclingClient:
         # Fall back to docker commands (for local development on host)
         try:
             # Check if container already running
-            check_result = subprocess.run(
+            check_result = subprocess.run(  # nosec B603 B607 — internal docker mgmt
                 ["docker", "ps", "--filter", "name=aegis-docling", "--format", "{{.Names}}"],
                 capture_output=True,
                 text=True,
@@ -465,7 +465,7 @@ class DoclingClient:
 
             # Start Docker Compose service with "ingestion" profile
             # Sprint 21: Docling service uses profile to avoid always-on GPU usage
-            result = subprocess.run(
+            result = subprocess.run(  # nosec B603 B607 — internal docker mgmt
                 ["docker", "compose", "--profile", "ingestion", "up", "-d", "docling"],
                 check=True,
                 capture_output=True,
@@ -525,7 +525,7 @@ class DoclingClient:
 
         # Try to stop via docker commands (only works on host, not in containers)
         try:
-            result = subprocess.run(
+            result = subprocess.run(  # nosec B603 B607 — internal docker mgmt
                 ["docker", "compose", "stop", "docling"],
                 check=True,
                 capture_output=True,
@@ -851,7 +851,7 @@ class DoclingClient:
             )
             raise IngestionError(
                 str(file_path),
-                f"Docling .txt parse timeout after {elapsed/1000:.1f}s (file: {file_path.name})",
+                f"Docling .txt parse timeout after {elapsed / 1000:.1f}s (file: {file_path.name})",
             ) from e
         except Exception as e:
             logger.error(
@@ -1159,7 +1159,7 @@ class DoclingClient:
             )
             raise IngestionError(
                 str(file_path),
-                f"Docling parse timeout after {elapsed/1000:.1f}s (file: {file_path.name})",
+                f"Docling parse timeout after {elapsed / 1000:.1f}s (file: {file_path.name})",
             ) from e
         except Exception as e:
             logger.error(

@@ -52,14 +52,15 @@ def sample_state():
 async def test_domain_classification_auto_when_not_set(sample_state):
     """Test that domain is auto-classified when not set in state."""
     # Mock dependencies
-    with patch(
-        "src.components.domain_training.domain_classifier.get_domain_classifier"
-    ) as mock_get_classifier, patch(
-        "src.components.domain_training.domain_seeder.get_active_domains"
-    ) as mock_get_active, patch(
-        "src.components.ingestion.nodes.graph_extraction.get_lightrag_wrapper_async"
-    ) as mock_lightrag:
-
+    with (
+        patch(
+            "src.components.domain_training.domain_classifier.get_domain_classifier"
+        ) as mock_get_classifier,
+        patch("src.components.domain_training.domain_seeder.get_active_domains") as mock_get_active,
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.get_lightrag_wrapper_async"
+        ) as mock_lightrag,
+    ):
         # Setup classifier mock
         mock_classifier = MagicMock()
         mock_classifier.is_loaded.return_value = False
@@ -85,9 +86,7 @@ async def test_domain_classification_auto_when_not_set(sample_state):
         mock_lightrag.return_value = mock_lightrag_instance
 
         # Mock Neo4j client for chunk queries
-        with patch(
-            "src.components.graph_rag.neo4j_client.get_neo4j_client"
-        ) as mock_neo4j:
+        with patch("src.components.graph_rag.neo4j_client.get_neo4j_client") as mock_neo4j:
             mock_neo4j_client = AsyncMock()
             mock_neo4j_client.execute_read = AsyncMock(return_value=[])
             mock_neo4j_client.create_section_nodes = AsyncMock(
@@ -129,12 +128,14 @@ async def test_domain_classification_skip_when_provided(sample_state):
     # Set domain in state
     sample_state["domain_id"] = "entertainment"
 
-    with patch(
-        "src.components.domain_training.domain_classifier.get_domain_classifier"
-    ) as mock_get_classifier, patch(
-        "src.components.ingestion.nodes.graph_extraction.get_lightrag_wrapper_async"
-    ) as mock_lightrag:
-
+    with (
+        patch(
+            "src.components.domain_training.domain_classifier.get_domain_classifier"
+        ) as mock_get_classifier,
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.get_lightrag_wrapper_async"
+        ) as mock_lightrag,
+    ):
         mock_lightrag_instance = AsyncMock()
         mock_lightrag_instance.insert_prechunked_documents = AsyncMock(
             return_value={"stats": {"total_entities": 5, "total_relations": 3}}
@@ -142,9 +143,7 @@ async def test_domain_classification_skip_when_provided(sample_state):
         mock_lightrag.return_value = mock_lightrag_instance
 
         # Mock Neo4j client
-        with patch(
-            "src.components.graph_rag.neo4j_client.get_neo4j_client"
-        ) as mock_neo4j:
+        with patch("src.components.graph_rag.neo4j_client.get_neo4j_client") as mock_neo4j:
             mock_neo4j_client = AsyncMock()
             mock_neo4j_client.execute_read = AsyncMock(return_value=[])
             mock_neo4j_client.create_section_nodes = AsyncMock(
@@ -179,12 +178,14 @@ async def test_domain_classification_skip_when_provided(sample_state):
 @pytest.mark.asyncio
 async def test_domain_classification_fallback_on_error(sample_state):
     """Test that extraction continues when classification fails."""
-    with patch(
-        "src.components.domain_training.domain_classifier.get_domain_classifier"
-    ) as mock_get_classifier, patch(
-        "src.components.ingestion.nodes.graph_extraction.get_lightrag_wrapper_async"
-    ) as mock_lightrag:
-
+    with (
+        patch(
+            "src.components.domain_training.domain_classifier.get_domain_classifier"
+        ) as mock_get_classifier,
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.get_lightrag_wrapper_async"
+        ) as mock_lightrag,
+    ):
         # Setup classifier to raise error
         mock_classifier = MagicMock()
         mock_classifier.is_loaded.return_value = False
@@ -199,9 +200,7 @@ async def test_domain_classification_fallback_on_error(sample_state):
         mock_lightrag.return_value = mock_lightrag_instance
 
         # Mock Neo4j client
-        with patch(
-            "src.components.graph_rag.neo4j_client.get_neo4j_client"
-        ) as mock_neo4j:
+        with patch("src.components.graph_rag.neo4j_client.get_neo4j_client") as mock_neo4j:
             mock_neo4j_client = AsyncMock()
             mock_neo4j_client.execute_read = AsyncMock(return_value=[])
             mock_neo4j_client.create_section_nodes = AsyncMock(
@@ -233,14 +232,15 @@ async def test_domain_classification_fallback_on_error(sample_state):
 @pytest.mark.asyncio
 async def test_domain_classification_inactive_domain_skipped(sample_state):
     """Test that inactive domains are not used."""
-    with patch(
-        "src.components.domain_training.domain_classifier.get_domain_classifier"
-    ) as mock_get_classifier, patch(
-        "src.components.domain_training.domain_seeder.get_active_domains"
-    ) as mock_get_active, patch(
-        "src.components.ingestion.nodes.graph_extraction.get_lightrag_wrapper_async"
-    ) as mock_lightrag:
-
+    with (
+        patch(
+            "src.components.domain_training.domain_classifier.get_domain_classifier"
+        ) as mock_get_classifier,
+        patch("src.components.domain_training.domain_seeder.get_active_domains") as mock_get_active,
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.get_lightrag_wrapper_async"
+        ) as mock_lightrag,
+    ):
         # Setup classifier to return inactive domain
         mock_classifier = MagicMock()
         mock_classifier.is_loaded.return_value = False
@@ -261,9 +261,7 @@ async def test_domain_classification_inactive_domain_skipped(sample_state):
         mock_lightrag.return_value = mock_lightrag_instance
 
         # Mock Neo4j client
-        with patch(
-            "src.components.graph_rag.neo4j_client.get_neo4j_client"
-        ) as mock_neo4j:
+        with patch("src.components.graph_rag.neo4j_client.get_neo4j_client") as mock_neo4j:
             mock_neo4j_client = AsyncMock()
             mock_neo4j_client.execute_read = AsyncMock(return_value=[])
             mock_neo4j_client.create_section_nodes = AsyncMock(

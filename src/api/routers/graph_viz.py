@@ -158,7 +158,7 @@ async def export_graph(request: GraphExportRequest) -> dict[str, Any]:
         # Query nodes - entities
         node_query = f"""
         MATCH (n:base)
-        {f'WHERE {type_condition}' if type_condition else ''}
+        {f"WHERE {type_condition}" if type_condition else ""}
         RETURN n
         LIMIT {request.max_nodes}
         """
@@ -168,7 +168,7 @@ async def export_graph(request: GraphExportRequest) -> dict[str, Any]:
         co_occurs_condition = type_condition.replace("n.", "e1.") if type_condition else ""
         edge_query = f"""
         MATCH (e1:base)-[:MENTIONED_IN]->(c:chunk)<-[:MENTIONED_IN]-(e2:base)
-        WHERE id(e1) < id(e2) {f'AND {co_occurs_condition}' if co_occurs_condition else ''}
+        WHERE id(e1) < id(e2) {f"AND {co_occurs_condition}" if co_occurs_condition else ""}
         WITH e1, e2, count(c) as shared_chunks
         RETURN e1, e2, shared_chunks
         LIMIT 500
@@ -177,7 +177,7 @@ async def export_graph(request: GraphExportRequest) -> dict[str, Any]:
         # Query MENTIONED_IN relationships (entity -> chunk)
         mentioned_query = f"""
         MATCH (n:base)-[r:MENTIONED_IN]->(c:chunk)
-        {f'WHERE {type_condition}' if type_condition else ''}
+        {f"WHERE {type_condition}" if type_condition else ""}
         RETURN n, r, c
         LIMIT 500
         """

@@ -23,12 +23,8 @@ class TestMessageBusEndpoints:
         self, admin_test_client, sample_agent_message, auth_headers
     ):
         """Test listing agent messages from MessageBus."""
-        with patch(
-            "src.components.multi_agent.get_message_bus"
-        ) as mock_bus:
-            mock_bus.return_value.list_messages = AsyncMock(
-                return_value=[sample_agent_message]
-            )
+        with patch("src.components.multi_agent.get_message_bus") as mock_bus:
+            mock_bus.return_value.list_messages = AsyncMock(return_value=[sample_agent_message])
 
             response = admin_test_client.get(
                 "/api/v1/agents/messages",
@@ -42,9 +38,7 @@ class TestMessageBusEndpoints:
 
     def test_list_messages_filter_by_type(self, admin_test_client, auth_headers):
         """Test filtering messages by type."""
-        with patch(
-            "src.components.multi_agent.get_message_bus"
-        ) as mock_bus:
+        with patch("src.components.multi_agent.get_message_bus") as mock_bus:
             mock_bus.return_value.list_messages = AsyncMock(return_value=[])
 
             response = admin_test_client.get(
@@ -56,9 +50,7 @@ class TestMessageBusEndpoints:
 
     def test_list_messages_filter_by_agent(self, admin_test_client, auth_headers):
         """Test filtering messages by agent."""
-        with patch(
-            "src.components.multi_agent.get_message_bus"
-        ) as mock_bus:
+        with patch("src.components.multi_agent.get_message_bus") as mock_bus:
             mock_bus.return_value.list_messages = AsyncMock(return_value=[])
 
             response = admin_test_client.get(
@@ -70,9 +62,7 @@ class TestMessageBusEndpoints:
 
     def test_list_messages_filter_by_time_range(self, admin_test_client, auth_headers):
         """Test filtering messages by time range."""
-        with patch(
-            "src.components.multi_agent.get_message_bus"
-        ) as mock_bus:
+        with patch("src.components.multi_agent.get_message_bus") as mock_bus:
             mock_bus.return_value.list_messages = AsyncMock(return_value=[])
 
             end_time = datetime.now(UTC)
@@ -87,9 +77,7 @@ class TestMessageBusEndpoints:
 
     def test_list_messages_pagination(self, admin_test_client, auth_headers):
         """Test message list pagination."""
-        with patch(
-            "src.components.multi_agent.get_message_bus"
-        ) as mock_bus:
+        with patch("src.components.multi_agent.get_message_bus") as mock_bus:
             mock_bus.return_value.list_messages = AsyncMock(return_value=[])
 
             response = admin_test_client.get(
@@ -106,12 +94,8 @@ class TestMessageBusEndpoints:
         self, admin_test_client, sample_agent_message, auth_headers
     ):
         """Test retrieving full message details."""
-        with patch(
-            "src.components.multi_agent.get_message_bus"
-        ) as mock_bus:
-            mock_bus.return_value.get_message = AsyncMock(
-                return_value=sample_agent_message
-            )
+        with patch("src.components.multi_agent.get_message_bus") as mock_bus:
+            mock_bus.return_value.get_message = AsyncMock(return_value=sample_agent_message)
 
             response = admin_test_client.get(
                 f"/api/v1/agents/messages/{sample_agent_message['id']}",
@@ -122,9 +106,7 @@ class TestMessageBusEndpoints:
 
     def test_get_message_not_found(self, admin_test_client, auth_headers):
         """Test retrieving non-existent message."""
-        with patch(
-            "src.components.multi_agent.get_message_bus"
-        ) as mock_bus:
+        with patch("src.components.multi_agent.get_message_bus") as mock_bus:
             mock_bus.return_value.get_message = AsyncMock(return_value=None)
 
             response = admin_test_client.get(
@@ -146,9 +128,7 @@ class TestBlackboardEndpoints:
 
     def test_get_all_namespaces_success(self, admin_test_client, auth_headers):
         """Test retrieving all blackboard namespaces."""
-        with patch(
-            "src.components.multi_agent.get_blackboard"
-        ) as mock_board:
+        with patch("src.components.multi_agent.get_blackboard") as mock_board:
             mock_board.return_value.get_all_namespaces = AsyncMock(
                 return_value=["namespace_1", "namespace_2", "namespace_3"]
             )
@@ -165,9 +145,7 @@ class TestBlackboardEndpoints:
 
     def test_get_all_namespaces_empty(self, admin_test_client, auth_headers):
         """Test when no blackboard namespaces exist."""
-        with patch(
-            "src.components.multi_agent.get_blackboard"
-        ) as mock_board:
+        with patch("src.components.multi_agent.get_blackboard") as mock_board:
             mock_board.return_value.get_all_namespaces = AsyncMock(return_value=[])
 
             response = admin_test_client.get(
@@ -183,9 +161,7 @@ class TestBlackboardEndpoints:
         self, admin_test_client, sample_blackboard_state, auth_headers
     ):
         """Test retrieving specific namespace state."""
-        with patch(
-            "src.components.multi_agent.get_blackboard"
-        ) as mock_board:
+        with patch("src.components.multi_agent.get_blackboard") as mock_board:
             mock_board.return_value.get_namespace = AsyncMock(
                 return_value=sample_blackboard_state["data"]
             )
@@ -201,9 +177,7 @@ class TestBlackboardEndpoints:
 
     def test_get_namespace_not_found(self, admin_test_client, auth_headers):
         """Test retrieving non-existent namespace."""
-        with patch(
-            "src.components.multi_agent.get_blackboard"
-        ) as mock_board:
+        with patch("src.components.multi_agent.get_blackboard") as mock_board:
             mock_board.return_value.get_namespace = AsyncMock(return_value=None)
 
             response = admin_test_client.get(
@@ -243,16 +217,12 @@ class TestActiveOrchestrationEndpoints:
             data = response.json()
             assert "items" in data
 
-    def test_list_active_orchestrations_filter_by_status(
-        self, admin_test_client, auth_headers
-    ):
+    def test_list_active_orchestrations_filter_by_status(self, admin_test_client, auth_headers):
         """Test filtering orchestrations by status."""
         with patch(
             "src.components.skill_orchestration.get_skill_orchestrator"
         ) as mock_orchestrator:
-            mock_orchestrator.return_value.list_active_orchestrations = AsyncMock(
-                return_value=[]
-            )
+            mock_orchestrator.return_value.list_active_orchestrations = AsyncMock(return_value=[])
 
             response = admin_test_client.get(
                 "/api/v1/orchestration/active?status=running",
@@ -266,9 +236,7 @@ class TestActiveOrchestrationEndpoints:
         with patch(
             "src.components.skill_orchestration.get_skill_orchestrator"
         ) as mock_orchestrator:
-            mock_orchestrator.return_value.list_active_orchestrations = AsyncMock(
-                return_value=[]
-            )
+            mock_orchestrator.return_value.list_active_orchestrations = AsyncMock(return_value=[])
 
             response = admin_test_client.get(
                 "/api/v1/orchestration/active",
@@ -363,12 +331,8 @@ class TestAgentHierarchyEndpoint:
         self, admin_test_client, sample_hierarchy_tree, auth_headers
     ):
         """Test retrieving agent hierarchy tree."""
-        with patch(
-            "src.components.hierarchical_agents.get_agent_hierarchy"
-        ) as mock_hierarchy:
-            mock_hierarchy.return_value.get_tree = AsyncMock(
-                return_value=sample_hierarchy_tree
-            )
+        with patch("src.components.hierarchical_agents.get_agent_hierarchy") as mock_hierarchy:
+            mock_hierarchy.return_value.get_tree = AsyncMock(return_value=sample_hierarchy_tree)
 
             response = admin_test_client.get(
                 "/api/v1/agents/hierarchy",
@@ -384,12 +348,8 @@ class TestAgentHierarchyEndpoint:
         self, admin_test_client, sample_hierarchy_tree, auth_headers
     ):
         """Test hierarchy tree is in D3.js compatible format."""
-        with patch(
-            "src.components.hierarchical_agents.get_agent_hierarchy"
-        ) as mock_hierarchy:
-            mock_hierarchy.return_value.get_tree = AsyncMock(
-                return_value=sample_hierarchy_tree
-            )
+        with patch("src.components.hierarchical_agents.get_agent_hierarchy") as mock_hierarchy:
+            mock_hierarchy.return_value.get_tree = AsyncMock(return_value=sample_hierarchy_tree)
 
             response = admin_test_client.get(
                 "/api/v1/agents/hierarchy",
@@ -404,9 +364,7 @@ class TestAgentHierarchyEndpoint:
 
     def test_hierarchy_tree_nested_structure(self, admin_test_client, auth_headers):
         """Test hierarchy tree respects nesting (Executive→Manager→Worker)."""
-        with patch(
-            "src.components.hierarchical_agents.get_agent_hierarchy"
-        ) as mock_hierarchy:
+        with patch("src.components.hierarchical_agents.get_agent_hierarchy") as mock_hierarchy:
             mock_hierarchy.return_value.get_tree = AsyncMock(
                 return_value={
                     "level": "executive",
@@ -432,13 +390,9 @@ class TestAgentHierarchyEndpoint:
 class TestAgentDetailsEndpoints:
     """Tests for agent details endpoints."""
 
-    def test_get_agent_details_success(
-        self, admin_test_client, sample_agent_details, auth_headers
-    ):
+    def test_get_agent_details_success(self, admin_test_client, sample_agent_details, auth_headers):
         """Test retrieving agent details."""
-        with patch(
-            "src.components.hierarchical_agents.get_agent_hierarchy"
-        ) as mock_hierarchy:
+        with patch("src.components.hierarchical_agents.get_agent_hierarchy") as mock_hierarchy:
             mock_hierarchy.return_value.get_agent_details = AsyncMock(
                 return_value=sample_agent_details
             )
@@ -456,9 +410,7 @@ class TestAgentDetailsEndpoints:
 
     def test_get_agent_details_offline_agent(self, admin_test_client, auth_headers):
         """Test details for offline agent."""
-        with patch(
-            "src.components.hierarchical_agents.get_agent_hierarchy"
-        ) as mock_hierarchy:
+        with patch("src.components.hierarchical_agents.get_agent_hierarchy") as mock_hierarchy:
             mock_hierarchy.return_value.get_agent_details = AsyncMock(
                 return_value={"agent_id": "agent_1", "status": "offline"}
             )
@@ -474,9 +426,7 @@ class TestAgentDetailsEndpoints:
 
     def test_get_agent_details_not_found(self, admin_test_client, auth_headers):
         """Test retrieving non-existent agent."""
-        with patch(
-            "src.components.hierarchical_agents.get_agent_hierarchy"
-        ) as mock_hierarchy:
+        with patch("src.components.hierarchical_agents.get_agent_hierarchy") as mock_hierarchy:
             mock_hierarchy.return_value.get_agent_details = AsyncMock(return_value=None)
 
             response = admin_test_client.get(
@@ -488,9 +438,7 @@ class TestAgentDetailsEndpoints:
 
     def test_get_agent_current_tasks_success(self, admin_test_client, auth_headers):
         """Test retrieving agent's current tasks."""
-        with patch(
-            "src.components.hierarchical_agents.get_agent_hierarchy"
-        ) as mock_hierarchy:
+        with patch("src.components.hierarchical_agents.get_agent_hierarchy") as mock_hierarchy:
             mock_hierarchy.return_value.get_current_tasks = AsyncMock(
                 return_value=[
                     {"task_id": "task_1", "status": "running"},
@@ -510,9 +458,7 @@ class TestAgentDetailsEndpoints:
 
     def test_get_agent_current_tasks_empty(self, admin_test_client, auth_headers):
         """Test agent with no current tasks."""
-        with patch(
-            "src.components.hierarchical_agents.get_agent_hierarchy"
-        ) as mock_hierarchy:
+        with patch("src.components.hierarchical_agents.get_agent_hierarchy") as mock_hierarchy:
             mock_hierarchy.return_value.get_current_tasks = AsyncMock(return_value=[])
 
             response = admin_test_client.get(
@@ -538,9 +484,7 @@ class TestTaskDelegationChainEndpoint:
         self, admin_test_client, sample_task_delegation_chain, auth_headers
     ):
         """Test retrieving task delegation chain."""
-        with patch(
-            "src.components.hierarchical_agents.get_agent_hierarchy"
-        ) as mock_hierarchy:
+        with patch("src.components.hierarchical_agents.get_agent_hierarchy") as mock_hierarchy:
             mock_hierarchy.return_value.get_delegation_chain = AsyncMock(
                 return_value=sample_task_delegation_chain
             )
@@ -557,9 +501,7 @@ class TestTaskDelegationChainEndpoint:
 
     def test_delegation_chain_shows_hop_sequence(self, admin_test_client, auth_headers):
         """Test delegation chain shows proper hop sequence."""
-        with patch(
-            "src.components.hierarchical_agents.get_agent_hierarchy"
-        ) as mock_hierarchy:
+        with patch("src.components.hierarchical_agents.get_agent_hierarchy") as mock_hierarchy:
             mock_hierarchy.return_value.get_delegation_chain = AsyncMock(
                 return_value={
                     "task_id": "task_123",
@@ -585,9 +527,7 @@ class TestTaskDelegationChainEndpoint:
 
     def test_get_delegation_chain_not_found(self, admin_test_client, auth_headers):
         """Test retrieving delegation chain for non-existent task."""
-        with patch(
-            "src.components.hierarchical_agents.get_agent_hierarchy"
-        ) as mock_hierarchy:
+        with patch("src.components.hierarchical_agents.get_agent_hierarchy") as mock_hierarchy:
             mock_hierarchy.return_value.get_delegation_chain = AsyncMock(return_value=None)
 
             response = admin_test_client.get(

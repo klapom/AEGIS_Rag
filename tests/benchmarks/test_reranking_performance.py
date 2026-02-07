@@ -41,7 +41,7 @@ def test_reranking_latency_20_docs():
     speedup = llm_baseline / elapsed_ms
 
     print(f"\n📊 Reranking 20 docs: {elapsed_ms:.1f}ms")
-    print(f"   Per-document: {elapsed_ms/20:.1f}ms")
+    print(f"   Per-document: {elapsed_ms / 20:.1f}ms")
     print(f"   LLM baseline: {llm_baseline}ms")
     print(f"   Speedup vs LLM: {speedup:.1f}x")
     print(f"   Top-10 returned: {len(result)} docs")
@@ -106,7 +106,7 @@ def test_reranking_throughput():
 
     qps = num_queries / elapsed
     print(f"\n📊 Throughput: {qps:.2f} QPS ({num_queries} queries in {elapsed:.2f}s)")
-    print(f"   Per-query latency: {(elapsed/num_queries)*1000:.1f}ms")
+    print(f"   Per-query latency: {(elapsed / num_queries) * 1000:.1f}ms")
 
     # Target: >2 QPS on CPU (GPU provides 8.3 QPS)
     assert qps >= 2.0, f"Throughput too low: {qps:.2f} QPS (target: >=2 QPS)"

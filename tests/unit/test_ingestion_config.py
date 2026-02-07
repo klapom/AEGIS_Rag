@@ -52,9 +52,9 @@ def test_docling_config_injection__custom_config__correct_initialization():
     # Assert: Config injected correctly
     assert client.base_url == custom_base_url, "base_url not injected"
     assert client.timeout_seconds == custom_timeout, "timeout_seconds not injected"
-    assert (
-        client.health_check_interval_seconds == custom_health_check_interval
-    ), "health_check_interval_seconds not injected"
+    assert client.health_check_interval_seconds == custom_health_check_interval, (
+        "health_check_interval_seconds not injected"
+    )
 
     # Assert: Client initialized
     assert client.client is None, "HTTP client should be lazy-initialized"
@@ -111,9 +111,9 @@ def test_embedding_service_config__bge_m3__correct_model_and_dimensions():
     assert service.cache.max_size == cache_max_size, "Cache max size not set"
 
     # Assert: Correct dimensions
-    assert (
-        service.embedding_dim == expected_dim
-    ), f"BGE-M3 should be {expected_dim}-dim, got {service.embedding_dim}"
+    assert service.embedding_dim == expected_dim, (
+        f"BGE-M3 should be {expected_dim}-dim, got {service.embedding_dim}"
+    )
 
 
 def test_embedding_service_config__custom_cache_size__applied_correctly():
@@ -136,9 +136,9 @@ def test_embedding_service_config__custom_cache_size__applied_correctly():
     )
 
     # Assert: Cache size set
-    assert (
-        service.cache.max_size == custom_cache_size
-    ), f"Expected cache_max_size={custom_cache_size}, got {service.cache.max_size}"
+    assert service.cache.max_size == custom_cache_size, (
+        f"Expected cache_max_size={custom_cache_size}, got {service.cache.max_size}"
+    )
 
 
 # =============================================================================

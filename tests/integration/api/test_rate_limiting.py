@@ -33,7 +33,7 @@ def test_rate_limit__within_limit__requests_succeed(client):
     # Make 5 requests (well below limit)
     for i in range(5):
         response = client.get("/api/v1/health")
-        assert response.status_code == 200, f"Request {i+1} failed with {response.status_code}"
+        assert response.status_code == 200, f"Request {i + 1} failed with {response.status_code}"
 
         # Note: slowapi only adds headers on rate-limited endpoints
         # The /health endpoint may not have explicit rate limit decorator

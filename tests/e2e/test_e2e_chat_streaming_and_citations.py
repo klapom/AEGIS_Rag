@@ -516,7 +516,7 @@ These models use transformer architecture with billions of parameters.
 
         # Alternative: Check if previous message is still visible
         user_messages = page.locator(
-            '[data-role="user"], ' ".message-user, " '[data-testid="user-message"]'
+            '[data-role="user"], .message-user, [data-testid="user-message"]'
         )
 
         message_count = await user_messages.count()
@@ -586,7 +586,7 @@ These models use transformer architecture with billions of parameters.
 
         # Step 4: Wait for response to appear
         response_area = page.locator(
-            ".prose, " '[data-role="assistant"], ' ".response, " "[data-streaming]"
+            '.prose, [data-role="assistant"], .response, [data-streaming]'
         ).last
 
         await expect(response_area).to_be_visible(timeout=60000)
@@ -610,14 +610,14 @@ These models use transformer architecture with billions of parameters.
 
         # Step 6: Check for citations
         citations = page.locator(
-            '[data-testid="source-card"], ' "[data-citation], " ".citation, " ".source-card"
+            '[data-testid="source-card"], [data-citation], .citation, .source-card'
         )
         citation_count = await citations.count()
         print(f"[STEP 6] Found {citation_count} citation(s)")
 
         # Step 7: Check for follow-up questions
         follow_ups = page.locator(
-            '[data-testid="follow-up-questions"] button, ' ".follow-up-questions button"
+            '[data-testid="follow-up-questions"] button, .follow-up-questions button'
         )
         followup_count = await follow_ups.count()
         print(f"[STEP 7] Found {followup_count} follow-up question(s)")

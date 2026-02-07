@@ -141,9 +141,9 @@ class TestEntityTypeAliases:
     def test_all_aliases_map_to_universal_types(self):
         """All entity type aliases must map to one of the 15 universal types."""
         for alias, universal_type in ENTITY_TYPE_ALIASES.items():
-            assert (
-                universal_type in UNIVERSAL_ENTITY_TYPES
-            ), f"Alias '{alias}' maps to invalid type '{universal_type}'"
+            assert universal_type in UNIVERSAL_ENTITY_TYPES, (
+                f"Alias '{alias}' maps to invalid type '{universal_type}'"
+            )
 
     def test_organization_aliases(self):
         """Test all organization-related aliases."""
@@ -170,9 +170,9 @@ class TestRelationTypeAliases:
     def test_all_aliases_map_to_universal_types(self):
         """All relation type aliases must map to one of the 21 universal types."""
         for alias, universal_type in RELATION_TYPE_ALIASES.items():
-            assert (
-                universal_type in UNIVERSAL_RELATION_TYPES
-            ), f"Alias '{alias}' maps to invalid type '{universal_type}'"
+            assert universal_type in UNIVERSAL_RELATION_TYPES, (
+                f"Alias '{alias}' maps to invalid type '{universal_type}'"
+            )
 
     def test_legacy_aliases(self):
         """Test legacy relation type aliases."""
@@ -195,9 +195,9 @@ class TestKGHygieneValidation:
         from src.components.graph_rag.kg_hygiene import VALID_RELATION_TYPES
 
         for rel_type in UNIVERSAL_RELATION_TYPES:
-            assert (
-                rel_type in VALID_RELATION_TYPES
-            ), f"Universal type '{rel_type}' missing from VALID_RELATION_TYPES"
+            assert rel_type in VALID_RELATION_TYPES, (
+                f"Universal type '{rel_type}' missing from VALID_RELATION_TYPES"
+            )
 
     def test_legacy_types_still_valid(self):
         """Legacy relation types should still be valid for backward compatibility."""
@@ -205,6 +205,6 @@ class TestKGHygieneValidation:
 
         legacy_types = ["RELATES_TO", "USED_BY", "EXTENDS"]
         for legacy_type in legacy_types:
-            assert (
-                legacy_type in VALID_RELATION_TYPES
-            ), f"Legacy type '{legacy_type}' should remain valid"
+            assert legacy_type in VALID_RELATION_TYPES, (
+                f"Legacy type '{legacy_type}' should remain valid"
+            )

@@ -92,7 +92,7 @@ def create_handoff_tool(
     def handoff_tool(task_description: str, **kwargs: Any) -> str:
         f"""Delegate task to {target_agent_name}.
 
-        This agent specializes in: {', '.join(capabilities)}
+        This agent specializes in: {", ".join(capabilities)}
 
         Args:
             task_description: Description of task to delegate

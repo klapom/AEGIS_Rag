@@ -253,9 +253,9 @@ time series forecasting, and reinforcement learning applications.
             top_text = top_result.get("text", top_result.get("chunk_text", ""))
 
             # Verify it contains the exact technical terms
-            assert "Python" in top_text and (
-                "3.12" in top_text or "asyncio" in top_text
-            ), f"BM25 top result should contain exact query terms, got: {top_text[:100]}"
+            assert "Python" in top_text and ("3.12" in top_text or "asyncio" in top_text), (
+                f"BM25 top result should contain exact query terms, got: {top_text[:100]}"
+            )
             print("✓ BM25 correctly retrieved document with exact terms")
 
         # =====================================================================
@@ -278,9 +278,9 @@ time series forecasting, and reinforcement learning applications.
         if bm25_results2:
             top_result = bm25_results2[0]
             top_text = top_result.get("text", top_result.get("chunk_text", ""))
-            assert (
-                "2.15" in top_text or "TensorFlow" in top_text
-            ), "BM25 should find document with specific version number"
+            assert "2.15" in top_text or "TensorFlow" in top_text, (
+                "BM25 should find document with specific version number"
+            )
             print("✓ BM25 excels at unique identifier queries")
 
         print("\n✅ BM25 Exact Match Quality - PASSED")
@@ -341,9 +341,9 @@ time series forecasting, and reinforcement learning applications.
                 ):
                     relevant_count += 1
 
-            assert (
-                relevant_count >= 2
-            ), f"Expected at least 2/3 top vector results to be semantically relevant, got {relevant_count}"
+            assert relevant_count >= 2, (
+                f"Expected at least 2/3 top vector results to be semantically relevant, got {relevant_count}"
+            )
             print(f"✓ Vector search found {relevant_count}/3 semantically relevant results")
 
         # =====================================================================
@@ -413,10 +413,10 @@ time series forecasting, and reinforcement learning applications.
 
         print(f"\n✓ Hybrid Query: '{query}'")
         print(f"  Results: {len(hybrid_results)}")
-        print(f"  Response time: {elapsed*1000:.2f}ms")
+        print(f"  Response time: {elapsed * 1000:.2f}ms")
 
         # Validate response time (should be < 500ms for hybrid)
-        assert elapsed < 1.0, f"Hybrid search too slow: {elapsed*1000:.2f}ms"
+        assert elapsed < 1.0, f"Hybrid search too slow: {elapsed * 1000:.2f}ms"
 
         # Hybrid should return results from multiple documents
         if len(hybrid_results) >= 3:
@@ -431,9 +431,9 @@ time series forecasting, and reinforcement learning applications.
                 "machine learning" in t.lower() or "learning" in t.lower() for t in texts
             )
 
-            assert (
-                has_technical and has_conceptual
-            ), "Hybrid search should balance technical keywords and conceptual meaning"
+            assert has_technical and has_conceptual, (
+                "Hybrid search should balance technical keywords and conceptual meaning"
+            )
             print("✓ Hybrid search provides balanced results (technical + conceptual)")
 
             # RRF should promote relevant results from both retrieval methods
@@ -484,10 +484,10 @@ time series forecasting, and reinforcement learning applications.
                 )
                 monotonic_ratio = monotonic_count / (len(scores) - 1)
 
-                assert (
-                    monotonic_ratio >= 0.7
-                ), f"Expected mostly monotonic scores, got ratio: {monotonic_ratio:.2f}"
-                print(f"✓ Score monotonicity: {monotonic_ratio*100:.1f}%")
+                assert monotonic_ratio >= 0.7, (
+                    f"Expected mostly monotonic scores, got ratio: {monotonic_ratio:.2f}"
+                )
+                print(f"✓ Score monotonicity: {monotonic_ratio * 100:.1f}%")
 
             # Check diversity: top 5 results should not be all identical
             texts = [r.get("text", r.get("chunk_text", ""))[:100] for r in results[:5]]
@@ -506,9 +506,9 @@ time series forecasting, and reinforcement learning applications.
                 )
             )
 
-            assert (
-                relevant_top3 >= 2
-            ), f"Expected at least 2/3 top results relevant, got {relevant_top3}"
+            assert relevant_top3 >= 2, (
+                f"Expected at least 2/3 top results relevant, got {relevant_top3}"
+            )
             print(f"✓ Relevance in top-3: {relevant_top3}/3")
 
         print("\n✅ Retrieval Ranking Quality - PASSED")

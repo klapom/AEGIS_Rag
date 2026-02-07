@@ -403,7 +403,7 @@ class RAGASEvaluator:
             Generated answer
         """
         # Build prompt with contexts
-        context_text = "\n\n".join([f"[{i+1}] {ctx}" for i, ctx in enumerate(contexts)])
+        context_text = "\n\n".join([f"[{i + 1}] {ctx}" for i, ctx in enumerate(contexts)])
         prompt = f"""Answer the following question based on the provided contexts.
 
 Question: {query}

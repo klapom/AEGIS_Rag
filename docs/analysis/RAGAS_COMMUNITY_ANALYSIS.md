@@ -36,12 +36,12 @@
 **Summary Length:** 547 characters  
 
 **Summary:**
-> The community centers on film-related entities and their connections to people, 
-> universities, production and distribution companies, suggesting a media industry 
-> network focused on content creation and dissemination. Key relationships link films 
-> to individuals in creative roles, academic institutions for talent development, and 
-> corporate partners involved in production and distribution. This structure reflects 
-> a collaborative ecosystem within the entertainment sector, integrating artistic, 
+> The community centers on film-related entities and their connections to people,
+> universities, production and distribution companies, suggesting a media industry
+> network focused on content creation and dissemination. Key relationships link films
+> to individuals in creative roles, academic institutions for talent development, and
+> corporate partners involved in production and distribution. This structure reflects
+> a collaborative ecosystem within the entertainment sector, integrating artistic,
 > educational, and commercial dimensions of filmmaking.
 
 **LLM Used:** nemotron-no-think:latest  
@@ -80,11 +80,11 @@
 
 ### Namespace Distribution
 
-**Note:** Communities span multiple namespaces since entities from different 
-documents can be linked through shared relationships (e.g., same person mentioned 
+**Note:** Communities span multiple namespaces since entities from different
+documents can be linked through shared relationships (e.g., same person mentioned
 in multiple RAGAS files).
 
-**Expected Behavior:** Cross-namespace communities are normal and desired for 
+**Expected Behavior:** Cross-namespace communities are normal and desired for
 knowledge integration.
 
 ---

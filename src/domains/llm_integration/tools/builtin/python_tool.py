@@ -150,7 +150,7 @@ async def _execute_python_code(code: str) -> dict[str, Any]:
         restricted_locals: dict[str, Any] = {}
 
         # Execute code
-        exec(code, restricted_globals, restricted_locals)
+        exec(code, restricted_globals, restricted_locals)  # nosec B102 — sandboxed execution
 
         # Get captured output
         stdout_output = sys.stdout.getvalue()
@@ -299,7 +299,7 @@ async def _execute_with_globals(
     sys.stderr = StringIO()
 
     try:
-        exec(code, globals_dict)
+        exec(code, globals_dict)  # nosec B102 — sandboxed execution
 
         stdout_output = sys.stdout.getvalue()
         stderr_output = sys.stderr.getvalue()

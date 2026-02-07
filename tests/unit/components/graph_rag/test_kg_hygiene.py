@@ -133,9 +133,7 @@ class TestKGHygieneService:
         assert not is_valid
         assert "Self-loop" in reason
 
-    def test_validate_relation_self_loop_case_insensitive(
-        self, service: KGHygieneService
-    ) -> None:
+    def test_validate_relation_self_loop_case_insensitive(self, service: KGHygieneService) -> None:
         """Test self-loop detection is case-insensitive."""
         relation = {
             "source": "Machine Learning",
@@ -148,9 +146,7 @@ class TestKGHygieneService:
         assert not is_valid
         assert "Self-loop" in reason
 
-    def test_validate_relation_missing_evidence(
-        self, service: KGHygieneService
-    ) -> None:
+    def test_validate_relation_missing_evidence(self, service: KGHygieneService) -> None:
         """Test detecting missing evidence when required."""
         relation = {
             "source": "Entity1",
@@ -168,9 +164,7 @@ class TestKGHygieneService:
         is_valid, reason = service.validate_relation(relation, require_evidence=False)
         assert is_valid
 
-    def test_validate_relation_with_graph_relationship(
-        self, service: KGHygieneService
-    ) -> None:
+    def test_validate_relation_with_graph_relationship(self, service: KGHygieneService) -> None:
         """Test validating GraphRelationship object."""
         relation = GraphRelationship(
             id="rel_001",

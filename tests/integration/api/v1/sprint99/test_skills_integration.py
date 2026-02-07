@@ -30,15 +30,9 @@ class TestSkillLifecycleIntegration:
             "timeout": 30,
         }
 
-        with patch(
-            "src.components.skill_registry.get_skill_registry"
-        ) as mock_registry:
-            mock_registry.return_value.create_skill = AsyncMock(
-                return_value=skill_lifecycle_data
-            )
-            mock_registry.return_value.list_skills = AsyncMock(
-                return_value=[skill_lifecycle_data]
-            )
+        with patch("src.components.skill_registry.get_skill_registry") as mock_registry:
+            mock_registry.return_value.create_skill = AsyncMock(return_value=skill_lifecycle_data)
+            mock_registry.return_value.list_skills = AsyncMock(return_value=[skill_lifecycle_data])
 
             # Create skill
             create_response = integration_test_client.post(
@@ -67,15 +61,9 @@ class TestSkillLifecycleIntegration:
             "timeout": 30,
         }
 
-        with patch(
-            "src.components.skill_registry.get_skill_registry"
-        ) as mock_registry:
-            mock_registry.return_value.get_skill = AsyncMock(
-                return_value=skill_lifecycle_data
-            )
-            mock_registry.return_value.get_config = AsyncMock(
-                return_value=skill_config
-            )
+        with patch("src.components.skill_registry.get_skill_registry") as mock_registry:
+            mock_registry.return_value.get_skill = AsyncMock(return_value=skill_lifecycle_data)
+            mock_registry.return_value.get_config = AsyncMock(return_value=skill_config)
 
             # Get skill details
             details_response = integration_test_client.get(
@@ -91,17 +79,11 @@ class TestSkillLifecycleIntegration:
             )
             assert config_response.status_code == 200
 
-    def test_update_skill_activation_flow(
-        self, integration_test_client, admin_auth_headers
-    ):
+    def test_update_skill_activation_flow(self, integration_test_client, admin_auth_headers):
         """Test activating and deactivating a skill."""
-        with patch(
-            "src.components.skill_registry.get_skill_registry"
-        ) as mock_registry:
+        with patch("src.components.skill_registry.get_skill_registry") as mock_registry:
             # Simulate activation
-            mock_registry.return_value.update_skill = AsyncMock(
-                return_value={"status": "active"}
-            )
+            mock_registry.return_value.update_skill = AsyncMock(return_value={"status": "active"})
 
             activate_response = integration_test_client.put(
                 "/api/v1/skills/document_analyzer",
@@ -111,9 +93,7 @@ class TestSkillLifecycleIntegration:
             assert activate_response.status_code == 200
 
             # Simulate deactivation
-            mock_registry.return_value.update_skill = AsyncMock(
-                return_value={"status": "inactive"}
-            )
+            mock_registry.return_value.update_skill = AsyncMock(return_value={"status": "inactive"})
 
             deactivate_response = integration_test_client.put(
                 "/api/v1/skills/document_analyzer",
@@ -122,9 +102,7 @@ class TestSkillLifecycleIntegration:
             )
             assert deactivate_response.status_code == 200
 
-    def test_update_and_verify_config_flow(
-        self, integration_test_client, admin_auth_headers
-    ):
+    def test_update_and_verify_config_flow(self, integration_test_client, admin_auth_headers):
         """Test updating config and verifying changes."""
         updated_config = {
             "model": "qwen3:32b",
@@ -132,15 +110,9 @@ class TestSkillLifecycleIntegration:
             "max_tokens": 2000,
         }
 
-        with patch(
-            "src.components.skill_registry.get_skill_registry"
-        ) as mock_registry:
-            mock_registry.return_value.update_config = AsyncMock(
-                return_value=updated_config
-            )
-            mock_registry.return_value.get_config = AsyncMock(
-                return_value=updated_config
-            )
+        with patch("src.components.skill_registry.get_skill_registry") as mock_registry:
+            mock_registry.return_value.update_config = AsyncMock(return_value=updated_config)
+            mock_registry.return_value.get_config = AsyncMock(return_value=updated_config)
 
             # Update config
             update_response = integration_test_client.put(
@@ -158,13 +130,9 @@ class TestSkillLifecycleIntegration:
             assert verify_response.status_code == 200
             assert verify_response.json()["timeout"] == 45
 
-    def test_delete_skill_flow(
-        self, integration_test_client, admin_auth_headers
-    ):
+    def test_delete_skill_flow(self, integration_test_client, admin_auth_headers):
         """Test deleting a skill."""
-        with patch(
-            "src.components.skill_registry.get_skill_registry"
-        ) as mock_registry:
+        with patch("src.components.skill_registry.get_skill_registry") as mock_registry:
             mock_registry.return_value.delete_skill = AsyncMock(return_value=True)
 
             response = integration_test_client.delete(
@@ -186,12 +154,8 @@ class TestToolAuthorizationIntegration:
             "access_level": "standard",
         }
 
-        with patch(
-            "src.components.tool_composition.get_tool_composer"
-        ) as mock_composer:
-            mock_composer.return_value.authorize_tool = AsyncMock(
-                return_value=tool_auth_data
-            )
+        with patch("src.components.tool_composition.get_tool_composer") as mock_composer:
+            mock_composer.return_value.authorize_tool = AsyncMock(return_value=tool_auth_data)
 
             response = integration_test_client.post(
                 "/api/v1/skills/document_analyzer/tools",
@@ -206,9 +170,7 @@ class TestToolAuthorizationIntegration:
         """Test listing tools and removing authorization."""
         tools = tool_authorization_flow_data["tools"]
 
-        with patch(
-            "src.components.tool_composition.get_tool_composer"
-        ) as mock_composer:
+        with patch("src.components.tool_composition.get_tool_composer") as mock_composer:
             # List tools
             mock_composer.return_value.list_tools = AsyncMock(return_value=tools)
 
@@ -229,13 +191,9 @@ class TestToolAuthorizationIntegration:
             )
             assert remove_response.status_code == 200
 
-    def test_concurrent_tool_updates(
-        self, integration_test_client, admin_auth_headers
-    ):
+    def test_concurrent_tool_updates(self, integration_test_client, admin_auth_headers):
         """Test handling concurrent tool authorization updates."""
-        with patch(
-            "src.components.tool_composition.get_tool_composer"
-        ) as mock_composer:
+        with patch("src.components.tool_composition.get_tool_composer") as mock_composer:
             mock_composer.return_value.authorize_tool = AsyncMock(
                 return_value={"tool_id": "tool_1"}
             )
@@ -260,9 +218,7 @@ class TestToolAuthorizationIntegration:
 class TestSkillMetricsIntegration:
     """Skill metrics retrieval integration tests."""
 
-    def test_get_metrics_after_skill_operations(
-        self, integration_test_client, admin_auth_headers
-    ):
+    def test_get_metrics_after_skill_operations(self, integration_test_client, admin_auth_headers):
         """Test retrieving metrics after skill operations."""
         metrics_data = {
             "invocations": 100,
@@ -270,12 +226,8 @@ class TestSkillMetricsIntegration:
             "avg_latency_ms": 245,
         }
 
-        with patch(
-            "src.components.skill_lifecycle.get_skill_lifecycle_api"
-        ) as mock_lifecycle:
-            mock_lifecycle.return_value.get_metrics = AsyncMock(
-                return_value=metrics_data
-            )
+        with patch("src.components.skill_lifecycle.get_skill_lifecycle_api") as mock_lifecycle:
+            mock_lifecycle.return_value.get_metrics = AsyncMock(return_value=metrics_data)
 
             response = integration_test_client.get(
                 "/api/v1/skills/document_analyzer/metrics",
@@ -285,9 +237,7 @@ class TestSkillMetricsIntegration:
             data = response.json()
             assert data["invocations"] == 100
 
-    def test_get_activation_history_timeline(
-        self, integration_test_client, admin_auth_headers
-    ):
+    def test_get_activation_history_timeline(self, integration_test_client, admin_auth_headers):
         """Test retrieving skill activation history."""
         history_data = {
             "events": [
@@ -298,9 +248,7 @@ class TestSkillMetricsIntegration:
             ]
         }
 
-        with patch(
-            "src.components.skill_lifecycle.get_skill_lifecycle_api"
-        ) as mock_lifecycle:
+        with patch("src.components.skill_lifecycle.get_skill_lifecycle_api") as mock_lifecycle:
             mock_lifecycle.return_value.get_activation_history = AsyncMock(
                 return_value=history_data
             )
@@ -317,9 +265,7 @@ class TestSkillMetricsIntegration:
 class TestSkillPermissionIntegration:
     """Skill API permission enforcement integration tests."""
 
-    def test_unauthorized_skill_operations_rejected(
-        self, integration_test_client
-    ):
+    def test_unauthorized_skill_operations_rejected(self, integration_test_client):
         """Test that unauthorized requests are rejected."""
         # No auth headers
         response = integration_test_client.get("/api/v1/skills")

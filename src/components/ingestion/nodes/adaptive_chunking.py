@@ -424,7 +424,7 @@ def _split_large_section(
     try:
         from transformers import AutoTokenizer
 
-        tokenizer = AutoTokenizer.from_pretrained("BAAI/bge-m3")
+        tokenizer = AutoTokenizer.from_pretrained("BAAI/bge-m3")  # nosec B615
     except Exception as e:
         logger.error("failed_to_load_tokenizer", error=str(e))
         # Fallback: approximate split by characters (4 chars/token)
@@ -729,7 +729,7 @@ async def chunking_node(state: IngestionState) -> IngestionState:
             try:
                 from transformers import AutoTokenizer
 
-                tokenizer = AutoTokenizer.from_pretrained("BAAI/bge-m3")
+                tokenizer = AutoTokenizer.from_pretrained("BAAI/bge-m3")  # nosec B615
                 tokens = tokenizer.encode(doc_text.strip(), add_special_tokens=False)
                 token_count = len(tokens)
             except Exception:

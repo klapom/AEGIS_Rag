@@ -43,7 +43,7 @@ class CertificationCheck(BaseModel):
     check_name: str
     category: Literal["gdpr", "security", "audit", "explainability"]
     passed: bool
-    details: Optional[str] = None
+    details: str | None = None
 
 
 class SkillCertification(BaseModel):
@@ -53,10 +53,10 @@ class SkillCertification(BaseModel):
     version: str
     level: Literal["uncertified", "basic", "standard", "enterprise"]
     status: Literal["valid", "expiring_soon", "expired", "pending"]
-    valid_until: Optional[str] = None
+    valid_until: str | None = None
     last_validated: str
     checks: List[CertificationCheck]
-    issues: Optional[List[str]] = None
+    issues: List[str] | None = None
 
 
 class ValidationReport(BaseModel):
@@ -104,7 +104,7 @@ def _generate_mock_skill_certifications() -> List[SkillCertification]:
     for i in range(3):
         certifications.append(
             SkillCertification(
-                skill_name=f"enterprise_skill_{i+1}",
+                skill_name=f"enterprise_skill_{i + 1}",
                 version="2.1.0",
                 level="enterprise",
                 status="valid",
@@ -144,7 +144,7 @@ def _generate_mock_skill_certifications() -> List[SkillCertification]:
     for i in range(4):
         certifications.append(
             SkillCertification(
-                skill_name=f"standard_skill_{i+1}",
+                skill_name=f"standard_skill_{i + 1}",
                 version="1.5.2",
                 level="standard",
                 status="valid",
@@ -182,7 +182,7 @@ def _generate_mock_skill_certifications() -> List[SkillCertification]:
         days_until_expiry = 25 if i < 2 else 60  # First 2 expire soon
         certifications.append(
             SkillCertification(
-                skill_name=f"basic_skill_{i+1}",
+                skill_name=f"basic_skill_{i + 1}",
                 version="1.0.0",
                 level="basic",
                 status="expiring_soon" if i < 2 else "valid",
@@ -221,7 +221,7 @@ def _generate_mock_skill_certifications() -> List[SkillCertification]:
     for i in range(3):
         certifications.append(
             SkillCertification(
-                skill_name=f"uncertified_skill_{i+1}",
+                skill_name=f"uncertified_skill_{i + 1}",
                 version="0.9.0",
                 level="uncertified",
                 status="pending",
@@ -262,7 +262,7 @@ def _generate_mock_skill_certifications() -> List[SkillCertification]:
     for i in range(2):
         certifications.append(
             SkillCertification(
-                skill_name=f"expired_skill_{i+1}",
+                skill_name=f"expired_skill_{i + 1}",
                 version="0.8.0",
                 level="basic",
                 status="expired",
@@ -345,10 +345,10 @@ async def get_certification_overview() -> CertificationOverview:
 
 @router.get("/skills", response_model=List[SkillCertification])
 async def get_skill_certifications(
-    level: Optional[Literal["uncertified", "basic", "standard", "enterprise"]] = Query(
+    level: Literal["uncertified", "basic", "standard", "enterprise"] | None = Query(
         None, description="Filter by certification level"
     ),
-    status: Optional[Literal["valid", "expiring_soon", "expired", "pending"]] = Query(
+    status: Literal["valid", "expiring_soon", "expired", "pending"] | None = Query(
         None, description="Filter by certification status"
     ),
 ) -> List[SkillCertification]:
@@ -398,7 +398,7 @@ async def get_skill_certifications(
 
 @router.get("/expiring", response_model=List[SkillCertification])
 async def get_expiring_certifications(
-    days: int = Query(30, ge=1, le=365, description="Days threshold for expiration warning")
+    days: int = Query(30, ge=1, le=365, description="Days threshold for expiration warning"),
 ) -> List[SkillCertification]:
     """
     Get skills with certifications expiring within specified days.
@@ -528,12 +528,11 @@ async def get_skill_validation_report(skill_name: str) -> ValidationReport:
                 )
             elif check.category == "security":
                 recommendations.append(
-                    "Add security controls: input validation, rate limiting, "
-                    "authentication checks"
+                    "Add security controls: input validation, rate limiting, authentication checks"
                 )
             elif check.category == "audit":
                 recommendations.append(
-                    "Implement 7-year audit trail with SHA-256 chaining " "(EU AI Act Article 12)"
+                    "Implement 7-year audit trail with SHA-256 chaining (EU AI Act Article 12)"
                 )
             elif check.category == "explainability":
                 recommendations.append(
@@ -552,7 +551,7 @@ async def get_skill_validation_report(skill_name: str) -> ValidationReport:
         )
     elif skill_cert.level == "standard":
         recommendations.append(
-            "Upgrade to enterprise: Implement all explainability levels " "and ISO 27001 controls"
+            "Upgrade to enterprise: Implement all explainability levels and ISO 27001 controls"
         )
 
     return ValidationReport(

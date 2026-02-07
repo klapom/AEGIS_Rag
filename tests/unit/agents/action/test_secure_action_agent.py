@@ -240,9 +240,7 @@ class TestSecureActionAgent:
     @pytest.mark.asyncio
     async def test_read_file_path_traversal(self, action_config, mock_sandbox_backend):
         """Test file read with path traversal attempt."""
-        mock_sandbox_backend.read_file.side_effect = ValueError(
-            "Path traversal attempt blocked"
-        )
+        mock_sandbox_backend.read_file.side_effect = ValueError("Path traversal attempt blocked")
 
         agent = SecureActionAgent(config=action_config, sandbox_backend=mock_sandbox_backend)
 

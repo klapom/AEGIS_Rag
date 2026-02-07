@@ -20,10 +20,10 @@ async def test_model_extended(model_name: str, context: str) -> dict:
     Returns:
         dict with test results
     """
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print(f"🔍 Testing Model: {model_name}")
     print(f"   Context Window: 16384 tokens (~65K chars theoretical)")
-    print(f"{'='*80}\n")
+    print(f"{'=' * 80}\n")
 
     # Create LLM with extended context
     try:
@@ -37,7 +37,7 @@ async def test_model_extended(model_name: str, context: str) -> dict:
         )
     except Exception as e:
         print(f"❌ Failed to initialize model: {e}")
-        return {'model': model_name, 'works': False, 'error': str(e)}
+        return {"model": model_name, "works": False, "error": str(e)}
 
     # Create prompt
     prompt = ContextPrecisionPrompt()
@@ -68,7 +68,11 @@ async def test_model_extended(model_name: str, context: str) -> dict:
         # Calculate token estimate
         prompt_tokens = len(prompt_str) // 4  # Rough estimate
 
-        print(f"  Testing {length:>6,} chars ({prompt_tokens:>5,} tokens est.)...", end=" ", flush=True)
+        print(
+            f"  Testing {length:>6,} chars ({prompt_tokens:>5,} tokens est.)...",
+            end=" ",
+            flush=True,
+        )
 
         try:
             start = time.perf_counter()
@@ -78,34 +82,38 @@ async def test_model_extended(model_name: str, context: str) -> dict:
             # Try to parse
             result = Verification.model_validate_json(response.content)
 
-            results.append({
-                'length': length,
-                'success': True,
-                'latency_ms': latency,
-                'verdict': result.verdict,
-                'tokens_est': prompt_tokens
-            })
+            results.append(
+                {
+                    "length": length,
+                    "success": True,
+                    "latency_ms": latency,
+                    "verdict": result.verdict,
+                    "tokens_est": prompt_tokens,
+                }
+            )
             latencies.append(latency)
 
             print(f"✅ SUCCESS ({latency:.0f}ms, verdict={result.verdict})")
 
         except Exception as e:
             error_msg = str(e)[:80]
-            results.append({
-                'length': length,
-                'success': False,
-                'latency_ms': 0,
-                'error': error_msg,
-                'tokens_est': prompt_tokens
-            })
+            results.append(
+                {
+                    "length": length,
+                    "success": False,
+                    "latency_ms": 0,
+                    "error": error_msg,
+                    "tokens_est": prompt_tokens,
+                }
+            )
             print(f"❌ FAILED ({error_msg}...)")
 
     # Calculate metrics
-    successes = [r for r in results if r['success']]
+    successes = [r for r in results if r["success"]]
     success_rate = len(successes) / len(results)
 
     if successes:
-        threshold = max(r['length'] for r in successes)
+        threshold = max(r["length"] for r in successes)
         avg_latency = sum(latencies) / len(latencies) if latencies else 0
         works = True
     else:
@@ -114,24 +122,24 @@ async def test_model_extended(model_name: str, context: str) -> dict:
         works = False
 
     print(f"\n  📊 Summary:")
-    print(f"     Success Rate: {success_rate*100:.0f}% ({len(successes)}/{len(results)})")
+    print(f"     Success Rate: {success_rate * 100:.0f}% ({len(successes)}/{len(results)})")
     print(f"     Max Working Length: {threshold:,} chars")
     if avg_latency > 0:
         print(f"     Avg Latency: {avg_latency:.0f}ms")
 
     return {
-        'model': model_name,
-        'threshold': threshold,
-        'avg_latency_ms': avg_latency,
-        'success_rate': success_rate,
-        'works': works,
-        'results': results
+        "model": model_name,
+        "threshold": threshold,
+        "avg_latency_ms": avg_latency,
+        "success_rate": success_rate,
+        "works": works,
+        "results": results,
     }
 
 
 async def main():
     print("🔍 Extended Context Window Test (16K tokens)")
-    print("="*80)
+    print("=" * 80)
     print("\nConfiguration:")
     print("  OLLAMA_NUM_CTX: 16384 tokens (~65K chars)")
     print("  num_predict:    512 tokens (reduced from 2048)")
@@ -170,9 +178,9 @@ async def main():
     models = ["qwen3:8b", "gpt-oss:20b"]
 
     # Run tests
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("TESTING WITH EXTENDED CONTEXT WINDOW")
-    print("="*80)
+    print("=" * 80)
 
     test_results = []
     for model in models:
@@ -181,48 +189,56 @@ async def main():
         await asyncio.sleep(2)
 
     # Summary
-    print("\n\n" + "="*80)
+    print("\n\n" + "=" * 80)
     print("📊 FINAL RESULTS")
-    print("="*80)
+    print("=" * 80)
     print(f"\n{'Model':<20} {'Max Length':<15} {'Avg Latency':<15} {'Success Rate':<15}")
     print("-" * 70)
 
-    for r in sorted(test_results, key=lambda x: x['threshold'], reverse=True):
-        status = "✅" if r['works'] else "❌"
-        print(f"{status} {r['model']:<18} {r['threshold']:>6,} chars    {r['avg_latency_ms']:>6.0f}ms         {r['success_rate']*100:>4.0f}%")
+    for r in sorted(test_results, key=lambda x: x["threshold"], reverse=True):
+        status = "✅" if r["works"] else "❌"
+        print(
+            f"{status} {r['model']:<18} {r['threshold']:>6,} chars    {r['avg_latency_ms']:>6.0f}ms         {r['success_rate'] * 100:>4.0f}%"
+        )
 
     # Detailed breakdown
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("📈 Detailed Results by Context Length")
-    print("="*80)
+    print("=" * 80)
 
     for r in test_results:
-        if r['works']:
+        if r["works"]:
             print(f"\n{r['model']}:")
-            for test in r['results']:
-                status = "✅" if test['success'] else "❌"
-                tokens = test.get('tokens_est', 0)
-                if test['success']:
-                    print(f"  {status} {test['length']:>6,} chars ({tokens:>5,} tokens) - {test['latency_ms']:.0f}ms")
+            for test in r["results"]:
+                status = "✅" if test["success"] else "❌"
+                tokens = test.get("tokens_est", 0)
+                if test["success"]:
+                    print(
+                        f"  {status} {test['length']:>6,} chars ({tokens:>5,} tokens) - {test['latency_ms']:.0f}ms"
+                    )
                 else:
-                    print(f"  {status} {test['length']:>6,} chars ({tokens:>5,} tokens) - {test.get('error', 'Unknown')[:50]}")
+                    print(
+                        f"  {status} {test['length']:>6,} chars ({tokens:>5,} tokens) - {test.get('error', 'Unknown')[:50]}"
+                    )
 
     # Comparison with previous test
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("📊 Improvement vs Previous Test (8K context window)")
-    print("="*80)
+    print("=" * 80)
     print("\n  Previous (8K):  Max 20,000 chars")
     for r in test_results:
-        if r['threshold'] > 20000:
-            improvement = r['threshold'] - 20000
+        if r["threshold"] > 20000:
+            improvement = r["threshold"] - 20000
             pct_increase = (improvement / 20000) * 100
-            print(f"  {r['model']:<20} Max {r['threshold']:,} chars (+{improvement:,} / +{pct_increase:.0f}%)")
+            print(
+                f"  {r['model']:<20} Max {r['threshold']:,} chars (+{improvement:,} / +{pct_increase:.0f}%)"
+            )
         else:
             print(f"  {r['model']:<20} Max {r['threshold']:,} chars (NO IMPROVEMENT)")
 
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("✅ Extended Context Window Test Complete!")
-    print("="*80)
+    print("=" * 80)
 
 
 if __name__ == "__main__":

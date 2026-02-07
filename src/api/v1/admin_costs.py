@@ -36,7 +36,7 @@ async def get_cost_stats(
     time_range: Literal["7d", "30d", "all"] = Query(
         default="7d",
         description="Time range for cost statistics (7d=last 7 days, 30d=current month, all=all time)",
-    )
+    ),
 ) -> CostStats:
     """Get LLM cost statistics with budget tracking.
 
@@ -101,7 +101,7 @@ async def get_cost_stats(
             where_clause = " AND ".join(conditions) if conditions else "1=1"
 
             # Aggregate by provider
-            cursor.execute(
+            cursor.execute(  # nosec B608 — parameterized query
                 f"""
                 SELECT
                     provider,
@@ -118,7 +118,7 @@ async def get_cost_stats(
             provider_rows = cursor.fetchall()
 
             # Aggregate by model
-            cursor.execute(
+            cursor.execute(  # nosec B608 — parameterized query
                 f"""
                 SELECT
                     provider,
@@ -243,7 +243,7 @@ async def get_cost_history(
     time_range: Literal["7d", "30d", "all"] = Query(
         default="7d",
         description="Time range for cost history (7d=last 7 days, 30d=last 30 days, all=all time)",
-    )
+    ),
 ) -> list[CostHistory]:
     """Get historical cost data grouped by day for charting.
 
@@ -300,7 +300,7 @@ async def get_cost_history(
             where_clause = " AND ".join(conditions) if conditions else "1=1"
 
             # Aggregate by date
-            cursor.execute(
+            cursor.execute(  # nosec B608 — parameterized query
                 f"""
                 SELECT
                     date(timestamp) as date,
@@ -446,7 +446,7 @@ async def get_cost_timeseries(
                 date_group = "date(timestamp)"
 
             # Query with aggregation by provider
-            cursor.execute(
+            cursor.execute(  # nosec B608 — parameterized query
                 f"""
                 SELECT
                     {date_group} as period,

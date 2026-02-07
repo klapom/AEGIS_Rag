@@ -46,8 +46,8 @@ TEST_QUESTIONS = [
         "ground_truth": "Arthur's Magazine",
         "contexts": [
             "Arthur's Magazine (1844–1846) was an American literary periodical published in Philadelphia in the 19th century.",
-            "First for Women is a woman's magazine published by Bauer Media Group in the USA."
-        ]
+            "First for Women is a woman's magazine published by Bauer Media Group in the USA.",
+        ],
     },
     {
         "question": "Musician and satirist Allie Goertz wrote a song about the 'The Simpsons' character Milhouse, who Matt Groening named after who?",
@@ -55,8 +55,8 @@ TEST_QUESTIONS = [
         "contexts": [
             'Allison Beth "Allie" Goertz (born March 2, 1991) is an American musician.',
             "Goertz is known for her satirical songs based on various pop culture topics.",
-            'Milhouse Mussolini van Houten is a fictional character featured in the animated television series "The Simpsons", voiced by Pamela Hayden, and created by Matt Groening who named the character after President Richard Nixon\'s middle name.'
-        ]
+            'Milhouse Mussolini van Houten is a fictional character featured in the animated television series "The Simpsons", voiced by Pamela Hayden, and created by Matt Groening who named the character after President Richard Nixon\'s middle name.',
+        ],
     },
 ]
 
@@ -65,9 +65,9 @@ async def debug_embedding(query: str) -> list[float]:
     """Debug: Generate embedding for query."""
     from src.components.shared.embedding_service import get_embedding_service
 
-    console.print("\n" + "="*80)
+    console.print("\n" + "=" * 80)
     console.print(Panel("[bold cyan]STEP 1: Query Embedding[/bold cyan]"))
-    console.print("="*80)
+    console.print("=" * 80)
 
     console.print(f"[yellow]Query:[/yellow] {query}")
     console.print(f"[yellow]Query length:[/yellow] {len(query)} chars")
@@ -79,7 +79,7 @@ async def debug_embedding(query: str) -> list[float]:
     console.print(f"  - Model: {embedding_service.model_name}")
     console.print(f"  - Dimension: {len(embedding)}")
     console.print(f"  - First 5 values: {[round(x, 4) for x in embedding[:5]]}")
-    console.print(f"  - L2 norm: {sum(x**2 for x in embedding)**0.5:.4f}")
+    console.print(f"  - L2 norm: {sum(x**2 for x in embedding) ** 0.5:.4f}")
 
     return embedding
 
@@ -88,9 +88,9 @@ async def debug_intent_classification(query: str) -> dict:
     """Debug: Intent classification."""
     from src.components.retrieval.intent_classifier import IntentClassifier
 
-    console.print("\n" + "="*80)
+    console.print("\n" + "=" * 80)
     console.print(Panel("[bold cyan]STEP 2: Intent Classification[/bold cyan]"))
-    console.print("="*80)
+    console.print("=" * 80)
 
     classifier = IntentClassifier()
     result = await classifier.classify(query)
@@ -115,9 +115,9 @@ async def debug_four_way_search(query: str, namespace: str = "eval_hotpotqa") ->
     """Debug: Full 4-way hybrid search."""
     from src.components.retrieval.four_way_hybrid_search import FourWayHybridSearch
 
-    console.print("\n" + "="*80)
+    console.print("\n" + "=" * 80)
     console.print(Panel("[bold cyan]STEP 3: 4-Way Hybrid Search[/bold cyan]"))
-    console.print("="*80)
+    console.print("=" * 80)
 
     search = FourWayHybridSearch()
 
@@ -127,10 +127,7 @@ async def debug_four_way_search(query: str, namespace: str = "eval_hotpotqa") ->
 
     # Call search (returns dict, not dataclass)
     results = await search.search(
-        query=query,
-        allowed_namespaces=[namespace],
-        top_k=5,
-        use_reranking=True
+        query=query, allowed_namespaces=[namespace], top_k=5, use_reranking=True
     )
 
     console.print("\n[green]✓ Search completed[/green]")
@@ -176,7 +173,7 @@ async def debug_four_way_search(query: str, namespace: str = "eval_hotpotqa") ->
             str(i),
             f"{rrf_score:.4f}" if rrf_score else "N/A",
             f"{rerank_score:.4f}" if rerank_score else "N/A",
-            content_preview + "..."
+            content_preview + "...",
         )
 
     console.print(table)
@@ -196,14 +193,14 @@ async def debug_llm_answer(query: str, contexts: list[str]) -> str:
     from src.components.llm_proxy.aegis_llm_proxy import AegisLLMProxy
     from src.components.llm_proxy.models import LLMTask, TaskType
 
-    console.print("\n" + "="*80)
+    console.print("\n" + "=" * 80)
     console.print(Panel("[bold cyan]STEP 4: LLM Answer Generation[/bold cyan]"))
-    console.print("="*80)
+    console.print("=" * 80)
 
     llm = AegisLLMProxy()
 
     # Build prompt
-    context_text = "\n\n".join(f"Context {i+1}: {c}" for i, c in enumerate(contexts))
+    context_text = "\n\n".join(f"Context {i + 1}: {c}" for i, c in enumerate(contexts))
 
     prompt = f"""Based on the following contexts, answer the question concisely.
 
@@ -232,8 +229,12 @@ Answer:"""
     console.print("\n[green]✓ LLM Response:[/green]")
     console.print(f"  - Provider: {response.provider}")
     console.print(f"  - Model: {response.model}")
-    console.print(f"  - Latency: {response.latency_ms:.0f}ms" if response.latency_ms else "  - Latency: N/A")
-    console.print(f"  - Tokens: {response.tokens_used} (in: {response.tokens_input}, out: {response.tokens_output})")
+    console.print(
+        f"  - Latency: {response.latency_ms:.0f}ms" if response.latency_ms else "  - Latency: N/A"
+    )
+    console.print(
+        f"  - Tokens: {response.tokens_used} (in: {response.tokens_input}, out: {response.tokens_output})"
+    )
     console.print(f"  - Cost: ${response.cost_usd:.6f}")
     console.print(Panel(response.content, title="LLM Answer", border_style="green"))
 
@@ -248,15 +249,17 @@ async def run_full_debug(question_idx: int = 0):
     ground_truth = question_data["ground_truth"]
     expected_contexts = question_data["contexts"]
 
-    console.print("\n" + "#"*80)
-    console.print(Panel(
-        f"[bold green]DEBUGGING QUERY #{question_idx + 1}[/bold green]\n\n"
-        f"[yellow]Question:[/yellow] {query}\n\n"
-        f"[yellow]Expected Answer:[/yellow] {ground_truth}",
-        title="Debug Session",
-        border_style="green"
-    ))
-    console.print("#"*80)
+    console.print("\n" + "#" * 80)
+    console.print(
+        Panel(
+            f"[bold green]DEBUGGING QUERY #{question_idx + 1}[/bold green]\n\n"
+            f"[yellow]Question:[/yellow] {query}\n\n"
+            f"[yellow]Expected Answer:[/yellow] {ground_truth}",
+            title="Debug Session",
+            border_style="green",
+        )
+    )
+    console.print("#" * 80)
 
     # Step 1: Embedding
     embedding = await debug_embedding(query)
@@ -278,9 +281,9 @@ async def run_full_debug(question_idx: int = 0):
     answer = await debug_llm_answer(query, retrieved_contexts)
 
     # Final Summary
-    console.print("\n" + "="*80)
+    console.print("\n" + "=" * 80)
     console.print(Panel("[bold cyan]SUMMARY[/bold cyan]"))
-    console.print("="*80)
+    console.print("=" * 80)
 
     console.print(f"[yellow]Question:[/yellow] {query}")
     console.print(f"[yellow]Ground Truth:[/yellow] {ground_truth}")
@@ -309,19 +312,15 @@ async def main():
     import argparse
 
     parser = argparse.ArgumentParser(description="Debug single query data flow")
-    parser.add_argument("--question", "-q", type=int, default=0,
-                        help="Question index (0 or 1)")
-    parser.add_argument("--custom", "-c", type=str, default=None,
-                        help="Custom question to test")
+    parser.add_argument("--question", "-q", type=int, default=0, help="Question index (0 or 1)")
+    parser.add_argument("--custom", "-c", type=str, default=None, help="Custom question to test")
     args = parser.parse_args()
 
     if args.custom:
         # Add custom question
-        TEST_QUESTIONS.insert(0, {
-            "question": args.custom,
-            "ground_truth": "Unknown",
-            "contexts": []
-        })
+        TEST_QUESTIONS.insert(
+            0, {"question": args.custom, "ground_truth": "Unknown", "contexts": []}
+        )
         await run_full_debug(0)
     else:
         await run_full_debug(args.question)

@@ -122,6 +122,7 @@ class TestExportManifest:
 
             # Read and verify
             import csv
+
             with open(output_path) as f:
                 reader = csv.DictReader(f)
                 rows = list(reader)
@@ -201,9 +202,9 @@ class TestVerifyJsonl:
 
     def test_verify_invalid_json(self):
         """Test verification of file with invalid JSON."""
-        with tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False, mode='w') as f:
+        with tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False, mode="w") as f:
             f.write('{"valid": "json"}\n')
-            f.write('invalid json line\n')
+            f.write("invalid json line\n")
             f.write('{"another": "valid"}\n')
             output_path = f.name
 

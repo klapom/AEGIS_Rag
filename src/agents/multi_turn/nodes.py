@@ -76,7 +76,7 @@ Given the following conversation history and current query, generate an enhanced
 Conversation History:
 {conversation_context}
 
-Current Query: {state['current_query']}
+Current Query: {state["current_query"]}
 
 Enhanced Query (single line, no explanation):"""
 

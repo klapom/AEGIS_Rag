@@ -87,9 +87,9 @@ async def main():
 
         # Display results
         print("\n[4/4] Results:")
-        print(f"\n{'='*80}")
+        print(f"\n{'=' * 80}")
         print(f"EXTRACTED ENTITIES ({len(entities)})")
-        print(f"{'='*80}")
+        print(f"{'=' * 80}")
 
         # Group by type
         entities_by_type = {}
@@ -109,9 +109,9 @@ async def main():
             if len(ents) > 5:
                 print(f"  ... and {len(ents) - 5} more")
 
-        print(f"\n{'='*80}")
+        print(f"\n{'=' * 80}")
         print(f"EXTRACTED RELATIONS ({len(relations)})")
-        print(f"{'='*80}")
+        print(f"{'=' * 80}")
 
         for i, rel in enumerate(relations[:10], 1):  # Show first 10 relations
             source = rel.get("source", "?")
@@ -126,20 +126,20 @@ async def main():
             print(f"  ... and {len(relations) - 10} more")
 
         # Performance summary
-        print(f"\n{'='*80}")
+        print(f"\n{'=' * 80}")
         print("PERFORMANCE SUMMARY")
-        print(f"{'='*80}")
+        print(f"{'=' * 80}")
         print(f"Pipeline: {getattr(settings, 'extraction_pipeline', 'three_phase')}")
         print(f"Extraction Time: {elapsed_time:.1f}s")
         print(f"Text Length: {len(text)} chars")
         print(f"Entities Extracted: {len(entities)}")
         print(f"Relations Extracted: {len(relations)}")
-        print(f"Speed: {len(text)/elapsed_time:.0f} chars/sec")
+        print(f"Speed: {len(text) / elapsed_time:.0f} chars/sec")
 
         # Quality assessment
-        print(f"\n{'='*80}")
+        print(f"\n{'=' * 80}")
         print("QUALITY ASSESSMENT")
-        print(f"{'='*80}")
+        print(f"{'=' * 80}")
 
         if len(entities) > 0:
             # Count numbers/generic concepts
@@ -159,7 +159,7 @@ async def main():
             tech_count = sum(1 for e in entities if e.get("entity_type") == "TECHNOLOGY")
 
             print(
-                f"Generic Numbers/Concepts: {generic_count} ({generic_count/len(entities)*100:.1f}%)"
+                f"Generic Numbers/Concepts: {generic_count} ({generic_count / len(entities) * 100:.1f}%)"
             )
             print(f"Organizations: {org_count}")
             print(f"Products: {product_count}")
@@ -172,9 +172,9 @@ async def main():
         else:
             print("⚠️  NO ENTITIES EXTRACTED (text too short or no entities found)")
 
-        print(f"\n{'='*80}")
+        print(f"\n{'=' * 80}")
         print("TEST COMPLETE")
-        print(f"{'='*80}")
+        print(f"{'=' * 80}")
 
     except Exception as e:
         print(f"\n[ERROR] {e}")

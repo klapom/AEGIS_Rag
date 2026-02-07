@@ -23,5 +23,5 @@ for i, t in enumerate(data["texts"][:30]):
 print("\n=== Suche nach 'Theory' ===")
 for i, t in enumerate(data["texts"]):
     if "Theory" in t.get("text", ""):
-        print(f"[{i}] label={t.get('label')} text=\"{t.get('text')}\"")
+        print(f'[{i}] label={t.get("label")} text="{t.get("text")}"')
         print(f"     parent={t.get('parent')}")

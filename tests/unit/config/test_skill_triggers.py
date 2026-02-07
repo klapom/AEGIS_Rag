@@ -351,12 +351,20 @@ class TestPatternTriggers:
         """Test that search patterns map to appropriate skills."""
         patterns = skill_triggers_config["pattern_triggers"]
         # Find patterns with "suche" (German search) or "search" (English)
-        search_patterns = [p for p in patterns if "suche" in p["pattern"].lower() or "search" in p["pattern"].lower()]
+        search_patterns = [
+            p
+            for p in patterns
+            if "suche" in p["pattern"].lower() or "search" in p["pattern"].lower()
+        ]
 
         # Search patterns should map to either retrieval or web_search skills
         for search_pattern in search_patterns:
-            has_search_skill = "retrieval" in search_pattern["skills"] or "web_search" in search_pattern["skills"]
-            assert has_search_skill, f"Search pattern missing retrieval/web_search: {search_pattern}"
+            has_search_skill = (
+                "retrieval" in search_pattern["skills"] or "web_search" in search_pattern["skills"]
+            )
+            assert has_search_skill, (
+                f"Search pattern missing retrieval/web_search: {search_pattern}"
+            )
 
 
 # ============================================================================
@@ -381,7 +389,15 @@ class TestKeywordTriggers:
         """Test English keywords are defined."""
         keywords = skill_triggers_config["keyword_triggers"]
 
-        english_keywords = {"analyze", "summarize", "remember", "calculate", "graph", "plan", "recent"}
+        english_keywords = {
+            "analyze",
+            "summarize",
+            "remember",
+            "calculate",
+            "graph",
+            "plan",
+            "recent",
+        }
 
         for kw in english_keywords:
             assert kw in keywords, f"Missing English keyword: {kw}"
@@ -637,7 +653,9 @@ class TestConfigurationConsistency:
 
         # Dict keys are already unique by definition, but check for case issues
         keywords_lower = [k.lower() for k in keywords.keys()]
-        assert len(keywords_lower) == len(set(keywords_lower)), "Duplicate keywords found (case-insensitive)"
+        assert len(keywords_lower) == len(set(keywords_lower)), (
+            "Duplicate keywords found (case-insensitive)"
+        )
 
     def test_pattern_priorities_meaningful(self, skill_triggers_config):
         """Test pattern priorities are consistently used."""

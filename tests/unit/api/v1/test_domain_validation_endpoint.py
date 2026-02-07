@@ -227,13 +227,21 @@ class TestValidateDomainEndpoint:
                     "name": "entity_type_coverage",
                     "status": "fail",
                     "message": "Only 0/5 entity types have samples",
-                    "details": {"covered": 0, "total": 5, "missing": ["Person", "Org", "Loc", "Med", "Dose"]},
+                    "details": {
+                        "covered": 0,
+                        "total": 5,
+                        "missing": ["Person", "Org", "Loc", "Med", "Dose"],
+                    },
                 },
                 {
                     "name": "relation_type_coverage",
                     "status": "fail",
                     "message": "Only 0/4 relation types have samples",
-                    "details": {"covered": 0, "total": 4, "missing": ["TREATS", "DIAGNOSES", "PRESCRIBES", "RELATED_TO"]},
+                    "details": {
+                        "covered": 0,
+                        "total": 4,
+                        "missing": ["TREATS", "DIAGNOSES", "PRESCRIBES", "RELATED_TO"],
+                    },
                 },
                 {
                     "name": "mentioned_in_relations",
@@ -341,7 +349,8 @@ class TestValidateDomainEndpoint:
                     "message": "50 samples",
                     "details": {"count": 50},
                 }
-            ] * 7,  # 7 checks
+            ]
+            * 7,  # 7 checks
             "issues": [],
             "recommendations": [],
         }
@@ -361,9 +370,7 @@ class TestValidationResponseSchema:
             "domain_name": "medical",
             "validation_status": "pass",
             "health_score": 85,
-            "checks": [
-                {"name": "test", "status": "pass", "message": "OK", "details": {}}
-            ],
+            "checks": [{"name": "test", "status": "pass", "message": "OK", "details": {}}],
             "issues": [],
             "recommendations": [],
         }
@@ -539,9 +546,7 @@ class TestMentionedInCheck:
         data = response.json()
 
         # Verify provenance issue exists
-        provenance_issue = next(
-            (i for i in data["issues"] if i["category"] == "provenance"), None
-        )
+        provenance_issue = next((i for i in data["issues"] if i["category"] == "provenance"), None)
         assert provenance_issue is not None
         assert provenance_issue["severity"] == "error"
         assert "MENTIONED_IN" in provenance_issue["message"]

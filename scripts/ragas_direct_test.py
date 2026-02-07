@@ -30,8 +30,8 @@ async def main():
             question="What is BGE-M3?",
             ground_truth="BGE-M3 is a 1024-dimensional multilingual embedding model used in AEGIS RAG.",
             contexts=[],  # Will be retrieved
-            answer="",    # Will be generated
-            metadata={"intent": "factual", "domain": "embeddings", "difficulty": "easy"}
+            answer="",  # Will be generated
+            metadata={"intent": "factual", "domain": "embeddings", "difficulty": "easy"},
         )
     ]
 
@@ -57,6 +57,7 @@ async def main():
     except Exception as e:
         print(f"❌ Evaluation failed: {e}")
         import traceback
+
         traceback.print_exc()
 
 

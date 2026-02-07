@@ -1298,4 +1298,3 @@ All 3 bugs were TypeScript compilation errors that blocked CI/CD pipeline:
 3. `/home/admin/projects/aegisrag/AEGIS_Rag/frontend/src/components/charts/TokenUsageChart.tsx` (1 line)
 
 ---
-

@@ -325,7 +325,7 @@ group09-long-context.spec.ts
 await page.route('**/api/v1/chat/**', async (route) => {
   // Simulate network latency
   await new Promise(r => setTimeout(r, latencyMs));
-  
+
   // Return realistic response
   await route.fulfill({
     status: 200,

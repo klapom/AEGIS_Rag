@@ -20,14 +20,15 @@ class TestDetectDomainEndpoint:
     @pytest.mark.asyncio
     async def test_detect_domain_from_text_sample(self):
         """Test domain detection from text sample."""
-        with patch(
-            "src.components.domain_training.get_domain_classifier"
-        ) as mock_get_classifier, patch(
-            "src.components.domain_training.domain_seeder.get_active_domains"
-        ) as mock_get_active, patch(
-            "src.components.domain_training.domain_seeder._load_seed_domains"
-        ) as mock_load_catalog:
-
+        with (
+            patch("src.components.domain_training.get_domain_classifier") as mock_get_classifier,
+            patch(
+                "src.components.domain_training.domain_seeder.get_active_domains"
+            ) as mock_get_active,
+            patch(
+                "src.components.domain_training.domain_seeder._load_seed_domains"
+            ) as mock_load_catalog,
+        ):
             # Mock classifier
             mock_classifier = MagicMock()
             mock_classifier.is_loaded.return_value = True
@@ -56,16 +57,15 @@ class TestDetectDomainEndpoint:
 
             # This is a mock test - in real integration test we'd use TestClient
             # Verify the expected behavior
-            assert mock_classifier.classify_document.return_value[0]["domain"] == "computer_science_it"
+            assert (
+                mock_classifier.classify_document.return_value[0]["domain"] == "computer_science_it"
+            )
             assert len(mock_classifier.classify_document.return_value) == 3
 
     @pytest.mark.asyncio
     async def test_detect_domain_from_file(self):
         """Test domain detection from uploaded file."""
-        with patch(
-            "src.components.domain_training.get_domain_classifier"
-        ) as mock_get_classifier:
-
+        with patch("src.components.domain_training.get_domain_classifier") as mock_get_classifier:
             mock_classifier = MagicMock()
             mock_classifier.is_loaded.return_value = True
             mock_classifier.classify_document.return_value = [
@@ -90,12 +90,12 @@ class TestDetectDomainEndpoint:
     @pytest.mark.asyncio
     async def test_detect_domain_filters_by_active_domains(self):
         """Test that inactive domains are filtered out."""
-        with patch(
-            "src.components.domain_training.get_domain_classifier"
-        ) as mock_get_classifier, patch(
-            "src.components.domain_training.domain_seeder.get_active_domains"
-        ) as mock_get_active:
-
+        with (
+            patch("src.components.domain_training.get_domain_classifier") as mock_get_classifier,
+            patch(
+                "src.components.domain_training.domain_seeder.get_active_domains"
+            ) as mock_get_active,
+        ):
             # Classifier returns 3 domains
             mock_classifier = MagicMock()
             mock_classifier.is_loaded.return_value = True
@@ -122,10 +122,7 @@ class TestDetectDomainEndpoint:
     @pytest.mark.asyncio
     async def test_detect_domain_returns_enriched_results(self):
         """Test that detect-domain returns domain names not just IDs."""
-        with patch(
-            "src.components.domain_training.domain_seeder._load_seed_domains"
-        ) as mock_load:
-
+        with patch("src.components.domain_training.domain_seeder._load_seed_domains") as mock_load:
             mock_load.return_value = {
                 "domains": [
                     {
@@ -171,7 +168,6 @@ class TestUploadWithDomain:
         with patch(
             "src.components.domain_training.domain_classifier.get_domain_classifier"
         ) as mock_get_classifier:
-
             # When domain_id is None, classifier should detect it
             domain_id = None
 
@@ -227,12 +223,12 @@ class TestDeploymentProfileEndpoint:
     @pytest.mark.asyncio
     async def test_get_deployment_profile_returns_current(self):
         """Test GET /admin/deployment-profile returns current profile."""
-        with patch(
-            "src.components.domain_training.domain_seeder._get_redis_client"
-        ) as mock_get_redis, patch(
-            "src.components.domain_training.domain_seeder._load_seed_domains"
-        ) as mock_load:
-
+        with (
+            patch(
+                "src.components.domain_training.domain_seeder._get_redis_client"
+            ) as mock_get_redis,
+            patch("src.components.domain_training.domain_seeder._load_seed_domains") as mock_load,
+        ):
             mock_redis = AsyncMock()
             mock_redis.get.return_value = "pharma_company"
             mock_get_redis.return_value = mock_redis
@@ -257,7 +253,6 @@ class TestDeploymentProfileEndpoint:
         with patch(
             "src.components.domain_training.domain_seeder._get_redis_client"
         ) as mock_get_redis:
-
             mock_redis = AsyncMock()
             mock_redis.get.return_value = None  # No profile set
             mock_get_redis.return_value = mock_redis
@@ -269,12 +264,14 @@ class TestDeploymentProfileEndpoint:
     @pytest.mark.asyncio
     async def test_put_deployment_profile_updates_redis(self):
         """Test PUT /admin/deployment-profile updates Redis."""
-        with patch(
-            "src.components.domain_training.domain_seeder._get_redis_client"
-        ) as mock_get_redis, patch(
-            "src.components.domain_training.domain_seeder.set_deployment_profile"
-        ) as mock_set_profile:
-
+        with (
+            patch(
+                "src.components.domain_training.domain_seeder._get_redis_client"
+            ) as mock_get_redis,
+            patch(
+                "src.components.domain_training.domain_seeder.set_deployment_profile"
+            ) as mock_set_profile,
+        ):
             mock_redis = AsyncMock()
             mock_get_redis.return_value = mock_redis
             mock_set_profile.return_value = None
@@ -289,13 +286,8 @@ class TestDeploymentProfileEndpoint:
     @pytest.mark.asyncio
     async def test_put_deployment_profile_validates_profile_exists(self):
         """Test PUT validates that profile exists in catalog."""
-        with patch(
-            "src.components.domain_training.domain_seeder._load_seed_domains"
-        ) as mock_load:
-
-            mock_load.return_value = {
-                "deployment_profiles": {"pharma_company": [], "law_firm": []}
-            }
+        with patch("src.components.domain_training.domain_seeder._load_seed_domains") as mock_load:
+            mock_load.return_value = {"deployment_profiles": {"pharma_company": [], "law_firm": []}}
 
             catalog = mock_load.return_value
             valid_profiles = list(catalog["deployment_profiles"].keys())
@@ -310,10 +302,7 @@ class TestDeploymentProfileEndpoint:
     @pytest.mark.asyncio
     async def test_put_deployment_profile_returns_active_domains(self):
         """Test PUT returns list of now-active domains."""
-        with patch(
-            "src.components.domain_training.domain_seeder._load_seed_domains"
-        ) as mock_load:
-
+        with patch("src.components.domain_training.domain_seeder._load_seed_domains") as mock_load:
             mock_load.return_value = {
                 "deployment_profiles": {
                     "pharma_company": [
@@ -324,9 +313,7 @@ class TestDeploymentProfileEndpoint:
                 }
             }
 
-            profile_config = mock_load.return_value["deployment_profiles"][
-                "pharma_company"
-            ]
+            profile_config = mock_load.return_value["deployment_profiles"]["pharma_company"]
 
             assert len(profile_config) == 3
             assert "medicine_health" in profile_config
@@ -338,10 +325,7 @@ class TestDomainsListEndpoint:
     @pytest.mark.asyncio
     async def test_get_domains_returns_35_domains(self):
         """Test GET /admin/domains returns all 35 domains."""
-        with patch(
-            "src.components.domain_training.domain_seeder._load_seed_domains"
-        ) as mock_load:
-
+        with patch("src.components.domain_training.domain_seeder._load_seed_domains") as mock_load:
             # Mock 35 domains
             domains = [
                 {
@@ -360,10 +344,7 @@ class TestDomainsListEndpoint:
     @pytest.mark.asyncio
     async def test_get_domains_returns_metadata(self):
         """Test GET /admin/domains returns full domain metadata."""
-        with patch(
-            "src.components.domain_training.domain_seeder._load_seed_domains"
-        ) as mock_load:
-
+        with patch("src.components.domain_training.domain_seeder._load_seed_domains") as mock_load:
             mock_load.return_value = {
                 "domains": [
                     {
@@ -386,10 +367,7 @@ class TestDomainsListEndpoint:
     @pytest.mark.asyncio
     async def test_get_domains_includes_status(self):
         """Test that GET /admin/domains includes domain status."""
-        with patch(
-            "src.components.domain_training.domain_seeder._load_seed_domains"
-        ) as mock_load:
-
+        with patch("src.components.domain_training.domain_seeder._load_seed_domains") as mock_load:
             mock_load.return_value = {
                 "domains": [
                     {
@@ -414,10 +392,7 @@ class TestDomainsListEndpoint:
     @pytest.mark.asyncio
     async def test_get_domains_includes_keywords(self):
         """Test that domains include keyword information."""
-        with patch(
-            "src.components.domain_training.domain_seeder._load_seed_domains"
-        ) as mock_load:
-
+        with patch("src.components.domain_training.domain_seeder._load_seed_domains") as mock_load:
             mock_load.return_value = {
                 "domains": [
                     {
@@ -461,10 +436,7 @@ class TestDomainEndpointIntegration:
     @pytest.mark.asyncio
     async def test_workflow_list_domains_select_profile_upload(self):
         """Test workflow: list domains -> select profile -> filter by profile."""
-        with patch(
-            "src.components.domain_training.domain_seeder._load_seed_domains"
-        ) as mock_load:
-
+        with patch("src.components.domain_training.domain_seeder._load_seed_domains") as mock_load:
             mock_load.return_value = {
                 "domains": [
                     {"domain_id": "law", "name": "Law"},

@@ -52,7 +52,7 @@ class ResourceLimits:
     read_only: bool = True
     """Make filesystem read-only (default: True)"""
 
-    allowed_paths: list[str] = field(default_factory=lambda: ["/tmp"])
+    allowed_paths: list[str] = field(default_factory=lambda: ["/tmp"])  # nosec B108
     """List of paths that can be written to"""
 
     # Additional Docker options

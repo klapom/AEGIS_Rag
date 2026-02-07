@@ -108,10 +108,10 @@ class SkillListRequest(BaseModel):
 
     page: int = Field(1, ge=1, description="Page number (1-indexed)")
     page_size: int = Field(20, ge=10, le=100, description="Items per page")
-    status: Optional[SkillStatus] = Field(None, description="Filter by status")
-    category: Optional[SkillCategory] = Field(None, description="Filter by category")
-    tags: Optional[str] = Field(None, description="Filter by tags (comma-separated)")
-    search: Optional[str] = Field(None, description="Full-text search query")
+    status: SkillStatus | None = Field(None, description="Filter by status")
+    category: SkillCategory | None = Field(None, description="Filter by category")
+    tags: str | None = Field(None, description="Filter by tags (comma-separated)")
+    search: str | None = Field(None, description="Full-text search query")
 
 
 class SkillCreateRequest(BaseModel):
@@ -148,7 +148,7 @@ class SkillCreateRequest(BaseModel):
     version: str = Field("1.0.0", pattern=r"^\d+\.\d+\.\d+$", description="Semantic version")
     tags: List[str] = Field(default_factory=list, description="List of tags")
     skill_md: str = Field(..., min_length=10, description="SKILL.md content (required)")
-    config_yaml: Optional[str] = Field(None, description="Optional config.yaml content")
+    config_yaml: str | None = Field(None, description="Optional config.yaml content")
 
     @field_validator("name")
     @classmethod
@@ -177,9 +177,9 @@ class SkillUpdateRequest(BaseModel):
         ... )
     """
 
-    description: Optional[str] = Field(None, min_length=1, max_length=500)
-    tags: Optional[List[str]] = Field(None, description="Updated tags")
-    status: Optional[SkillStatus] = Field(None, description="Updated status")
+    description: str | None = Field(None, min_length=1, max_length=500)
+    tags: List[str] | None = Field(None, description="Updated tags")
+    status: SkillStatus | None = Field(None, description="Updated status")
 
 
 class SkillConfigUpdateRequest(BaseModel):
@@ -328,9 +328,9 @@ class SkillLifecycleInfo(BaseModel):
     """
 
     state: SkillStatus
-    loaded_at: Optional[datetime] = None
-    activated_at: Optional[datetime] = None
-    last_used: Optional[datetime] = None
+    loaded_at: datetime | None = None
+    activated_at: datetime | None = None
+    last_used: datetime | None = None
     invocation_count: int = 0
 
 
@@ -380,7 +380,7 @@ class SkillDetailResponse(BaseModel):
     status: SkillStatus
     tags: List[str]
     skill_md: str
-    config_yaml: Optional[str]
+    config_yaml: str | None
     tools: List[ToolAuthorization]
     lifecycle: SkillLifecycleInfo
     created_at: datetime
@@ -569,8 +569,8 @@ class ErrorResponse(BaseModel):
 
     error: str
     message: str
-    field: Optional[str] = None
-    code: Optional[str] = None
+    field: str | None = None
+    code: str | None = None
 
 
 class ConfigValidationRequest(BaseModel):
@@ -636,8 +636,8 @@ class SkillExecuteRequest(BaseModel):
     parameters: Dict[str, Any] = Field(
         default_factory=dict, description="Skill execution parameters"
     )
-    timeout: Optional[int] = Field(30, ge=1, le=300, description="Execution timeout (1-300s)")
-    context: Optional[Dict[str, Any]] = Field(
+    timeout: int | None = Field(30, ge=1, le=300, description="Execution timeout (1-300s)")
+    context: Dict[str, Any] | None = Field(
         default_factory=dict, description="Optional execution context"
     )
 
@@ -670,8 +670,8 @@ class SkillExecuteResponse(BaseModel):
 
     skill_name: str
     status: str = Field(..., description="Execution status (success/error/timeout)")
-    result: Optional[Any] = Field(None, description="Execution result")
-    error: Optional[str] = Field(None, description="Error message if failed")
+    result: Any | None = Field(None, description="Execution result")
+    error: str | None = Field(None, description="Error message if failed")
     executed_at: datetime
     execution_time: float = Field(..., description="Execution duration in seconds")
 

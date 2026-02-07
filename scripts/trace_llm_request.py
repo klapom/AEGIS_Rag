@@ -49,23 +49,25 @@ async def trace_chat_request():
 
     overall_start = time.time()
 
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print(f"LLM REQUEST TRACE - Sprint 113 Performance Analysis")
-    print(f"{'='*80}")
+    print(f"{'=' * 80}")
     print(f"[{timestamp()}] START: Query = '{TEST_QUERY}'")
     print(f"[{timestamp()}] Session ID: {SESSION_ID}")
-    print(f"{'='*80}\n")
+    print(f"{'=' * 80}\n")
 
     async with httpx.AsyncClient(timeout=180.0) as client:
         # Phase 1: API Request Start
         phase1_start = time.time()
         print(f"[{timestamp()}] PHASE 1: Sending HTTP POST to /api/v1/chat/")
 
-        trace_data["phases"].append({
-            "name": "HTTP Request Start",
-            "timestamp": timestamp(),
-            "elapsed_ms": 0,
-        })
+        trace_data["phases"].append(
+            {
+                "name": "HTTP Request Start",
+                "timestamp": timestamp(),
+                "elapsed_ms": 0,
+            }
+        )
 
         try:
             response = await client.post(
@@ -78,15 +80,19 @@ async def trace_chat_request():
             )
 
             phase1_elapsed = elapsed_ms(phase1_start)
-            print(f"[{timestamp()}] PHASE 1 COMPLETE: HTTP Response received ({phase1_elapsed:.0f}ms)")
+            print(
+                f"[{timestamp()}] PHASE 1 COMPLETE: HTTP Response received ({phase1_elapsed:.0f}ms)"
+            )
             print(f"              Status: {response.status_code}")
 
-            trace_data["phases"].append({
-                "name": "HTTP Response Received",
-                "timestamp": timestamp(),
-                "elapsed_ms": phase1_elapsed,
-                "status_code": response.status_code,
-            })
+            trace_data["phases"].append(
+                {
+                    "name": "HTTP Response Received",
+                    "timestamp": timestamp(),
+                    "elapsed_ms": phase1_elapsed,
+                    "status_code": response.status_code,
+                }
+            )
 
             if response.status_code != 200:
                 print(f"[{timestamp()}] ERROR: Non-200 response")
@@ -105,9 +111,9 @@ async def trace_chat_request():
             coord_meta = metadata.get("coordinator", {})
 
             # Extract all timing information
-            print(f"\n{'='*80}")
+            print(f"\n{'=' * 80}")
             print(f"DETAILED TIMING BREAKDOWN")
-            print(f"{'='*80}")
+            print(f"{'=' * 80}")
 
             # Search phase
             search_latency = search_meta.get("latency_ms", "N/A")
@@ -177,9 +183,9 @@ async def trace_chat_request():
 
             # Overall summary
             overall_elapsed = elapsed_ms(overall_start)
-            print(f"\n{'='*80}")
+            print(f"\n{'=' * 80}")
             print(f"SUMMARY")
-            print(f"{'='*80}")
+            print(f"{'=' * 80}")
             print(f"  HTTP Round-Trip: {phase1_elapsed:.0f}ms")
             print(f"  Search Latency: {search_latency}ms")
             print(f"  Graph Latency: {graph_latency}ms")
@@ -196,25 +202,39 @@ async def trace_chat_request():
                 # Estimate LLM time (coordinator - search - graph)
                 llm_time = coord_ms - search_ms - graph_ms
 
-                print(f"  Search: {search_ms:.0f}ms ({search_ms/coord_ms*100:.1f}%)" if coord_ms > 0 else "  Search: N/A")
-                print(f"  Graph: {graph_ms:.0f}ms ({graph_ms/coord_ms*100:.1f}%)" if coord_ms > 0 else "  Graph: N/A")
-                print(f"  LLM Generation (estimated): {llm_time:.0f}ms ({llm_time/coord_ms*100:.1f}%)" if coord_ms > 0 else "  LLM: N/A")
+                print(
+                    f"  Search: {search_ms:.0f}ms ({search_ms / coord_ms * 100:.1f}%)"
+                    if coord_ms > 0
+                    else "  Search: N/A"
+                )
+                print(
+                    f"  Graph: {graph_ms:.0f}ms ({graph_ms / coord_ms * 100:.1f}%)"
+                    if coord_ms > 0
+                    else "  Graph: N/A"
+                )
+                print(
+                    f"  LLM Generation (estimated): {llm_time:.0f}ms ({llm_time / coord_ms * 100:.1f}%)"
+                    if coord_ms > 0
+                    else "  LLM: N/A"
+                )
 
             except (ValueError, TypeError):
                 print("  Unable to calculate breakdown (missing data)")
 
             # Store trace data
-            trace_data["phases"].append({
-                "name": "Response Analysis Complete",
-                "timestamp": timestamp(),
-                "elapsed_ms": overall_elapsed,
-                "metadata": {
-                    "search_latency_ms": search_latency,
-                    "graph_latency_ms": graph_latency,
-                    "coordinator_latency_ms": coord_latency,
-                    "answer_length": len(answer),
-                },
-            })
+            trace_data["phases"].append(
+                {
+                    "name": "Response Analysis Complete",
+                    "timestamp": timestamp(),
+                    "elapsed_ms": overall_elapsed,
+                    "metadata": {
+                        "search_latency_ms": search_latency,
+                        "graph_latency_ms": graph_latency,
+                        "coordinator_latency_ms": coord_latency,
+                        "answer_length": len(answer),
+                    },
+                }
+            )
 
             trace_data["end_time"] = timestamp()
             trace_data["total_elapsed_ms"] = overall_elapsed
@@ -237,9 +257,9 @@ async def trace_chat_request():
 
 async def check_api_logs():
     """Fetch recent API logs for LLM-related entries."""
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print(f"CHECKING API LOGS FOR LLM ACTIVITY")
-    print(f"{'='*80}\n")
+    print(f"{'=' * 80}\n")
 
     import subprocess
 
@@ -254,9 +274,18 @@ async def check_api_logs():
 
     # Filter for LLM-related entries
     llm_keywords = [
-        "llm_request", "routing_decision", "streaming", "provider",
-        "ollama", "generate", "acompletion", "token", "cost",
-        "cache_hit", "cache_miss", "phase_event",
+        "llm_request",
+        "routing_decision",
+        "streaming",
+        "provider",
+        "ollama",
+        "generate",
+        "acompletion",
+        "token",
+        "cost",
+        "cache_hit",
+        "cache_miss",
+        "phase_event",
     ]
 
     print(f"LLM-related log entries (last 100 lines):\n")
@@ -269,24 +298,24 @@ async def check_api_logs():
 
 async def main():
     """Main entry point."""
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("Sprint 113: LLM Request Performance Trace")
-    print("="*80)
+    print("=" * 80)
     print(f"Timestamp: {timestamp()}")
     print(f"API Base: {API_BASE}")
-    print("="*80 + "\n")
+    print("=" * 80 + "\n")
 
     # Run trace
     result = await trace_chat_request()
 
     if result:
-        print("\n" + "="*80)
+        print("\n" + "=" * 80)
         print("TRACE COMPLETE - See timing breakdown above")
-        print("="*80 + "\n")
+        print("=" * 80 + "\n")
     else:
-        print("\n" + "="*80)
+        print("\n" + "=" * 80)
         print("TRACE FAILED - Check API logs")
-        print("="*80 + "\n")
+        print("=" * 80 + "\n")
 
     # Show API logs
     await check_api_logs()

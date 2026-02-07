@@ -340,7 +340,9 @@ async def store_relates_to_relationships(
                         "target": r["target"],
                         "description": r.get("description", ""),
                         "strength": r.get("strength", 5),
-                        "relation_type": r.get("type") or r.get("relation_type") or r.get("relation", "RELATES_TO"),
+                        "relation_type": r.get("type")
+                        or r.get("relation_type")
+                        or r.get("relation", "RELATES_TO"),
                     }
                     for r in relations
                 ],

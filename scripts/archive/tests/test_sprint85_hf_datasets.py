@@ -91,9 +91,9 @@ async def test_dataset(
     config: dict,
 ) -> dict:
     """Test a single dataset and return results."""
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Dataset: {config['description']}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     # Find files
     data_path = BASE_PATH / config["path"]
@@ -139,25 +139,29 @@ async def test_dataset(
                 total_entities += entities
                 total_relations += relations
 
-            results.append({
-                "file": file_path.name,
-                "size_bytes": file_size,
-                "entities": entities,
-                "relations": relations,
-                "er_ratio": er_ratio,
-            })
+            results.append(
+                {
+                    "file": file_path.name,
+                    "size_bytes": file_size,
+                    "entities": entities,
+                    "relations": relations,
+                    "er_ratio": er_ratio,
+                }
+            )
 
         except Exception as e:
             print(f"  ERROR: {e}")
-            results.append({
-                "file": file_path.name,
-                "error": str(e),
-            })
+            results.append(
+                {
+                    "file": file_path.name,
+                    "error": str(e),
+                }
+            )
 
     # Calculate summary
     overall_er = total_relations / total_entities if total_entities > 0 else 0
 
-    print(f"\n{'-'*60}")
+    print(f"\n{'-' * 60}")
     print(f"SUMMARY: {config['description']}")
     print(f"  Total Entities: {total_entities}")
     print(f"  Total Relations: {total_relations}")

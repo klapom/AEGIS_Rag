@@ -63,7 +63,7 @@ def fetch_hotpotqa_questions(
                 "text_length": sum(len(c) for c in supporting_contexts[:3]),
                 "level": example.get("level", "unknown"),
                 "type": example.get("type", "unknown"),
-            }
+            },
         }
 
         questions.append(question_entry)
@@ -104,12 +104,22 @@ def create_context_files(questions: list[dict], output_dir: Path) -> None:
 
 def main():
     parser = argparse.ArgumentParser(description="Fetch HotpotQA questions for RAGAS evaluation")
-    parser.add_argument("--num-questions", type=int, default=10, help="Number of questions to fetch")
+    parser.add_argument(
+        "--num-questions", type=int, default=10, help="Number of questions to fetch"
+    )
     parser.add_argument("--start-index", type=int, default=5, help="Starting index (skip existing)")
-    parser.add_argument("--output", type=str, default="data/evaluation/ragas_hotpotqa_extended.jsonl",
-                        help="Output JSONL file path")
-    parser.add_argument("--context-dir", type=str, default="data/evaluation/hotpotqa_contexts",
-                        help="Directory for context .txt files")
+    parser.add_argument(
+        "--output",
+        type=str,
+        default="data/evaluation/ragas_hotpotqa_extended.jsonl",
+        help="Output JSONL file path",
+    )
+    parser.add_argument(
+        "--context-dir",
+        type=str,
+        default="data/evaluation/hotpotqa_contexts",
+        help="Directory for context .txt files",
+    )
     parser.add_argument("--split", type=str, default="validation", help="Dataset split")
 
     args = parser.parse_args()

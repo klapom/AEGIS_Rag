@@ -63,7 +63,6 @@ def test_qdrant_client_lazy_initialization():
         patch("src.components.vector_search.qdrant_client.QdrantClient") as mock_sync,
         patch("src.components.vector_search.qdrant_client.AsyncQdrantClient") as mock_async,
     ):
-
         client = QdrantClientWrapper()
 
         # Clients should not be created yet

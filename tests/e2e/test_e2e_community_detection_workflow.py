@@ -166,7 +166,7 @@ class TestCommunityDetectionWorkflow:
 
         # Check for graph viewer component
         graph_viewer = page.locator(
-            '[data-testid="graph-viewer"], ' ".graph-viewer, " "canvas, " 'svg[class*="graph"]'
+            '[data-testid="graph-viewer"], .graph-viewer, canvas, svg[class*="graph"]'
         )
 
         try:
@@ -177,7 +177,7 @@ class TestCommunityDetectionWorkflow:
 
         # Check for statistics section
         stats_section = page.locator(
-            '[data-testid="entity-type-stats"], ' '[data-testid="graph-statistics"]'
+            '[data-testid="entity-type-stats"], [data-testid="graph-statistics"]'
         )
 
         try:
@@ -221,9 +221,7 @@ class TestCommunityDetectionWorkflow:
             return
 
         # Look for community selector (dropdown or list)
-        community_selector = page.locator(
-            "#community-select, " '[aria-label*="community"], ' "select"
-        )
+        community_selector = page.locator('#community-select, [aria-label*="community"], select')
 
         if await community_selector.count() > 0:
             print("[TEST] Community selector found")
@@ -270,7 +268,7 @@ class TestCommunityDetectionWorkflow:
         await asyncio.sleep(3)
 
         # Find community selector
-        community_select = page.locator("#community-select, " 'select[aria-label*="community"]')
+        community_select = page.locator('#community-select, select[aria-label*="community"]')
 
         if await community_select.count() > 0:
             # Get options
@@ -285,7 +283,7 @@ class TestCommunityDetectionWorkflow:
                 await asyncio.sleep(1)
 
                 # Check for community info display
-                community_info = page.locator(".bg-purple-50, " '[data-testid="community-info"]')
+                community_info = page.locator('.bg-purple-50, [data-testid="community-info"]')
 
                 try:
                     await expect(community_info.first).to_be_visible(timeout=5000)
@@ -348,7 +346,7 @@ class TestCommunityDetectionWorkflow:
 
                     # Wait for documents modal
                     documents_modal = page.locator(
-                        '[role="dialog"], ' '[aria-modal="true"], ' ".community-documents-modal"
+                        '[role="dialog"], [aria-modal="true"], .community-documents-modal'
                     )
 
                     try:
@@ -357,7 +355,7 @@ class TestCommunityDetectionWorkflow:
 
                         # Check for document cards
                         doc_cards = documents_modal.locator(
-                            '[role="button"], ' ".document-card, " '[data-testid^="document-card-"]'
+                            '[role="button"], .document-card, [data-testid^="document-card-"]'
                         )
 
                         doc_count = await doc_cards.count()
@@ -639,6 +637,6 @@ class TestCommunityDetectionWorkflow:
         print(f"  - Statistics found: {stats_found}")
 
         # At least some community features should be available
-        assert (
-            community_section_visible or selector_found or stats_found
-        ), "At least one community feature should be available"
+        assert community_section_visible or selector_found or stats_found, (
+            "At least one community feature should be available"
+        )

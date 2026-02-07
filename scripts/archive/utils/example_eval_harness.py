@@ -93,7 +93,9 @@ Check out this [link]().
     print("-" * 80)
     print("Example 3: Poor citation coverage")
     print("-" * 80)
-    uncited_answer = "RAG is a technique. It combines retrieval and generation. Some say it works well."
+    uncited_answer = (
+        "RAG is a technique. It combines retrieval and generation. Some say it works well."
+    )
     sources_ex3 = [{"chunk_id": "c1", "text": "RAG definition"}]
 
     print(f"Answer: {uncited_answer}")
@@ -102,7 +104,9 @@ Check out this [link]().
     result = await harness._check_citation_coverage(uncited_answer, sources_ex3)
     status = "✓ PASS" if result.passed else "✗ FAIL"
     print(f"  {status} Citation Coverage: {result.score:.2f}")
-    print(f"  Sentences: {result.details['sentences_with_citations']}/{result.details['total_sentences']} cited")
+    print(
+        f"  Sentences: {result.details['sentences_with_citations']}/{result.details['total_sentences']} cited"
+    )
     print(f"  Warnings: {result.details['warnings']}")
     print()
 

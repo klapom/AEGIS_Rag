@@ -84,9 +84,9 @@ class TestChatEndpoint:
                 )
 
                 # Assertions
-                assert (
-                    response.status_code == 200
-                ), f"Expected 200, got {response.status_code}: {response.text}"
+                assert response.status_code == 200, (
+                    f"Expected 200, got {response.status_code}: {response.text}"
+                )
                 data = response.json()
 
                 assert "answer" in data
@@ -121,9 +121,9 @@ class TestChatEndpoint:
             # Send request WITHOUT session_id
             response = await async_client.post("/api/v1/chat/", json={"query": SAMPLE_QUERY})
 
-            assert (
-                response.status_code == 200
-            ), f"Expected 200, got {response.status_code}: {response.text}"
+            assert response.status_code == 200, (
+                f"Expected 200, got {response.status_code}: {response.text}"
+            )
             data = response.json()
 
             # Should have auto-generated session_id (UUID format)
@@ -148,9 +148,9 @@ class TestChatEndpoint:
                 "/api/v1/chat/", json={"query": SAMPLE_QUERY, "include_sources": True}
             )
 
-            assert (
-                response.status_code == 200
-            ), f"Expected 200, got {response.status_code}: {response.text}"
+            assert response.status_code == 200, (
+                f"Expected 200, got {response.status_code}: {response.text}"
+            )
             data = response.json()
 
             assert "sources" in data
@@ -185,9 +185,9 @@ class TestChatEndpoint:
                 "/api/v1/chat/", json={"query": SAMPLE_QUERY, "include_sources": False}
             )
 
-            assert (
-                response.status_code == 200
-            ), f"Expected 200, got {response.status_code}: {response.text}"
+            assert response.status_code == 200, (
+                f"Expected 200, got {response.status_code}: {response.text}"
+            )
             data = response.json()
 
             assert "sources" in data
@@ -212,9 +212,9 @@ class TestChatEndpoint:
                 "/api/v1/chat/", json={"query": SAMPLE_QUERY, "intent": "graph"}
             )
 
-            assert (
-                response.status_code == 200
-            ), f"Expected 200, got {response.status_code}: {response.text}"
+            assert response.status_code == 200, (
+                f"Expected 200, got {response.status_code}: {response.text}"
+            )
             data = response.json()
 
             assert data["intent"] == "graph"
@@ -273,9 +273,9 @@ class TestChatEndpoint:
 
             response = await async_client.post("/api/v1/chat/", json={"query": SAMPLE_QUERY})
 
-            assert (
-                response.status_code == 200
-            ), f"Expected 200, got {response.status_code}: {response.text}"
+            assert response.status_code == 200, (
+                f"Expected 200, got {response.status_code}: {response.text}"
+            )
             data = response.json()
             assert data["answer"] == "This is the answer from messages"
 
@@ -297,9 +297,9 @@ class TestChatEndpoint:
 
             response = await async_client.post("/api/v1/chat/", json={"query": SAMPLE_QUERY})
 
-            assert (
-                response.status_code == 200
-            ), f"Expected 200, got {response.status_code}: {response.text}"
+            assert response.status_code == 200, (
+                f"Expected 200, got {response.status_code}: {response.text}"
+            )
             data = response.json()
 
             # Should have fallback message

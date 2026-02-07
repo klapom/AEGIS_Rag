@@ -99,7 +99,7 @@ def main():
     for i, s in enumerate(sections[:20]):
         text_preview = s.text[:40].replace("\n", " ") if s.text else "(empty)"
         source = s.metadata.get("heading_source", "?")
-        print(f"  [{i+1:3d}] L{s.level} '{s.heading[:40]}' -> '{text_preview}...' ({source})")
+        print(f"  [{i + 1:3d}] L{s.level} '{s.heading[:40]}' -> '{text_preview}...' ({source})")
 
     # Test 4: Compare with PPTX (which has labels)
     print("\n" + "=" * 70)
@@ -130,7 +130,7 @@ def main():
         print("\nFirst 10 PPTX sections:")
         for i, s in enumerate(pptx_sections[:10]):
             source = s.metadata.get("heading_source", "?")
-            print(f"  [{i+1:3d}] L{s.level} '{s.heading[:50]}' ({source})")
+            print(f"  [{i + 1:3d}] L{s.level} '{s.heading[:50]}' ({source})")
 
     # Summary
     print("\n" + "=" * 70)
@@ -144,7 +144,7 @@ DOCX Section Extraction Results:
 - Sections extracted: {len(sections)}
 - Sections with text: {sum(1 for s in sections if s.text.strip())}
 
-STATUS: {"SUCCESS" if len(sections) > 0 else "FAILED"} - DOCX heading detection {'working' if len(sections) > 0 else 'not working'}!
+STATUS: {"SUCCESS" if len(sections) > 0 else "FAILED"} - DOCX heading detection {"working" if len(sections) > 0 else "not working"}!
 """
     )
 

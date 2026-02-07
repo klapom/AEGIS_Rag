@@ -54,7 +54,8 @@ async def test_generate_conversation_title_fallback():
     """Test that fallback works when LLM fails."""
     # Simulate error by using empty strings (will trigger fallback)
     title = await generate_conversation_title(
-        query="What is RAG?", answer=""  # Empty answer should still generate fallback
+        query="What is RAG?",
+        answer="",  # Empty answer should still generate fallback
     )
 
     assert title is not None

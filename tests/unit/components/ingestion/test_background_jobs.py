@@ -56,12 +56,14 @@ class TestBackgroundJobQueueInitialization:
 
     async def test_initialize_connection_failure(self, job_queue):
         """Test Redis connection failure."""
-        with patch(
-            "redis.asyncio.Redis.from_url",
-            side_effect=RedisError("Connection failed"),
+        with (
+            patch(
+                "redis.asyncio.Redis.from_url",
+                side_effect=RedisError("Connection failed"),
+            ),
+            pytest.raises(MemoryError, match="Failed to connect to Redis"),
         ):
-            with pytest.raises(MemoryError, match="Failed to connect to Redis"):
-                await job_queue.initialize()
+            await job_queue.initialize()
 
     async def test_initialize_idempotent(self, job_queue, mock_redis):
         """Test initialize is idempotent (doesn't reconnect if already connected)."""

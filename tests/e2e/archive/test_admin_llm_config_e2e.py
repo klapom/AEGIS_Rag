@@ -151,9 +151,9 @@ class TestAdminLLMConfigE2E:
 
                 assert isinstance(config, list), "Config should be a list"
                 assert len(config) == 6, "Config should have 6 use cases"
-                assert any(
-                    c["useCase"] == "intent_classification" for c in config
-                ), "intent_classification should be in config"
+                assert any(c["useCase"] == "intent_classification" for c in config), (
+                    "intent_classification should be in config"
+                )
 
             finally:
                 await context.close()
@@ -194,9 +194,9 @@ class TestAdminLLMConfigE2E:
                 reloaded_dropdown = page.locator('[data-testid="model-dropdown-entity_extraction"]')
                 selected_value = await reloaded_dropdown.input_value()
 
-                assert (
-                    selected_value == target_model
-                ), f"Expected {target_model}, got {selected_value}"
+                assert selected_value == target_model, (
+                    f"Expected {target_model}, got {selected_value}"
+                )
 
             finally:
                 await context.close()
@@ -303,9 +303,9 @@ class TestAdminLLMConfigE2E:
                 for use_case, expected_model in use_cases_to_change:
                     found = next((c for c in config if c["useCase"] == use_case), None)
                     assert found is not None, f"{use_case} not in config"
-                    assert (
-                        found["modelId"] == expected_model
-                    ), f"Expected {expected_model}, got {found['modelId']}"
+                    assert found["modelId"] == expected_model, (
+                        f"Expected {expected_model}, got {found['modelId']}"
+                    )
 
             finally:
                 await context.close()
@@ -331,9 +331,9 @@ class TestAdminLLMConfigE2E:
                     await sidebar_link.click()
 
                     # Should navigate to /admin/llm-config
-                    assert (
-                        "/admin/llm-config" in page.url
-                    ), f"Expected navigation to /admin/llm-config, got {page.url}"
+                    assert "/admin/llm-config" in page.url, (
+                        f"Expected navigation to /admin/llm-config, got {page.url}"
+                    )
 
                     # Page should load
                     llm_config_page = page.locator('[data-testid="llm-config-page"]')
@@ -456,9 +456,9 @@ class TestVLMIntegrationE2E:
                     reloaded_dropdown = page.locator('[data-testid="model-dropdown-vision_vlm"]')
                     reloaded_value = await reloaded_dropdown.input_value()
 
-                    assert (
-                        reloaded_value == saved_value
-                    ), f"VLM selection not persisted: {saved_value} != {reloaded_value}"
+                    assert reloaded_value == saved_value, (
+                        f"VLM selection not persisted: {saved_value} != {reloaded_value}"
+                    )
 
             finally:
                 await context.close()

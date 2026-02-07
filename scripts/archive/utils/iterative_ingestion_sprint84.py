@@ -68,9 +68,9 @@ class IterativeIngestionMonitor:
 
     def upload_file(self, file_path: str) -> Dict:
         """Upload single file via Frontend API."""
-        print(f"\n{'='*80}")
+        print(f"\n{'=' * 80}")
         print(f"📤 UPLOADING: {Path(file_path).name}")
-        print(f"{'='*80}")
+        print(f"{'=' * 80}")
 
         with open(file_path, "rb") as f:
             files = {"file": (Path(file_path).name, f, "text/plain")}
@@ -100,13 +100,15 @@ class IterativeIngestionMonitor:
                 print(f"   Entities: {result.get('neo4j_entities')}")
                 print(f"   Relations: {result.get('neo4j_relationships')}")
 
-                self.uploaded_files.append({
-                    "file": Path(file_path).name,
-                    "chunks": result.get("chunks_created"),
-                    "entities": result.get("neo4j_entities"),
-                    "relations": result.get("neo4j_relationships"),
-                    "elapsed_s": elapsed,
-                })
+                self.uploaded_files.append(
+                    {
+                        "file": Path(file_path).name,
+                        "chunks": result.get("chunks_created"),
+                        "entities": result.get("neo4j_entities"),
+                        "relations": result.get("neo4j_relationships"),
+                        "elapsed_s": elapsed,
+                    }
+                )
 
                 return {"success": True, "result": result, "elapsed_s": elapsed}
 
@@ -189,7 +191,10 @@ class IterativeIngestionMonitor:
                 print(f"   Rank 1/2 models too weak! Cascade tuning required.")
                 return {"success": False, "error": "rank3_fallback_rate_high"}
 
-            return {"success": True, "ranks": {"rank1": rank1_count, "rank2": rank2_count, "rank3": rank3_count}}
+            return {
+                "success": True,
+                "ranks": {"rank1": rank1_count, "rank2": rank2_count, "rank3": rank3_count},
+            }
 
         except Exception as e:
             print(f"   ⚠️ Could not check logs: {e}")
@@ -197,11 +202,11 @@ class IterativeIngestionMonitor:
 
     def run_iteration(self, files: List[str]) -> Dict:
         """Run single iteration with error monitoring."""
-        print(f"\n{'#'*80}")
+        print(f"\n{'#' * 80}")
         print(f"# ITERATION 1: {len(files)} files")
         print(f"# Namespace: {self.namespace}")
         print(f"# Domain: {self.domain}")
-        print(f"{'#'*80}")
+        print(f"{'#' * 80}")
 
         for i, file_path in enumerate(files, 1):
             print(f"\n[{i}/{len(files)}] Processing: {Path(file_path).name}")
@@ -210,22 +215,26 @@ class IterativeIngestionMonitor:
             upload_result = self.upload_file(file_path)
             if not upload_result["success"]:
                 print(f"\n🔴 STOP: Upload failed!")
-                self.errors.append({
-                    "file": Path(file_path).name,
-                    "stage": "upload",
-                    "error": upload_result["error"],
-                })
+                self.errors.append(
+                    {
+                        "file": Path(file_path).name,
+                        "stage": "upload",
+                        "error": upload_result["error"],
+                    }
+                )
                 return {"success": False, "stage": "upload", "file": Path(file_path).name}
 
             # 2. Check extraction quality (using upload response data)
             quality_result = self.check_extraction_quality(upload_result["result"])
             if not quality_result["success"]:
                 print(f"\n🔴 STOP: Extraction quality failed!")
-                self.errors.append({
-                    "file": Path(file_path).name,
-                    "stage": "extraction",
-                    "error": quality_result["error"],
-                })
+                self.errors.append(
+                    {
+                        "file": Path(file_path).name,
+                        "stage": "extraction",
+                        "error": quality_result["error"],
+                    }
+                )
                 return {"success": False, "stage": "extraction", "file": Path(file_path).name}
 
             # 3. Check cascade logs (every 2 files)
@@ -233,31 +242,35 @@ class IterativeIngestionMonitor:
                 cascade_result = self.check_cascade_logs()
                 if cascade_result and not cascade_result.get("success"):
                     print(f"\n🔴 STOP: Cascade rank issues!")
-                    self.errors.append({
-                        "file": Path(file_path).name,
-                        "stage": "cascade",
-                        "error": cascade_result["error"],
-                    })
+                    self.errors.append(
+                        {
+                            "file": Path(file_path).name,
+                            "stage": "cascade",
+                            "error": cascade_result["error"],
+                        }
+                    )
                     return {"success": False, "stage": "cascade", "file": Path(file_path).name}
 
-        print(f"\n{'='*80}")
+        print(f"\n{'=' * 80}")
         print(f"✅ ITERATION 1 COMPLETE: {len(files)} files uploaded successfully!")
-        print(f"{'='*80}")
+        print(f"{'=' * 80}")
 
         return {"success": True, "files_uploaded": len(files)}
 
     def print_summary(self):
         """Print iteration summary."""
-        print(f"\n{'#'*80}")
+        print(f"\n{'#' * 80}")
         print(f"# ITERATION 1 SUMMARY")
-        print(f"{'#'*80}")
+        print(f"{'#' * 80}")
         print(f"Files uploaded: {len(self.uploaded_files)}")
         print(f"Errors: {len(self.errors)}")
 
         if self.uploaded_files:
             print(f"\n✅ Uploaded Files:")
             for f in self.uploaded_files:
-                print(f"   - {f['file']}: {f['chunks']} chunks, {f['entities']} entities, {f['relations']} relations ({f['elapsed_s']:.2f}s)")
+                print(
+                    f"   - {f['file']}: {f['chunks']} chunks, {f['entities']} entities, {f['relations']} relations ({f['elapsed_s']:.2f}s)"
+                )
 
         if self.errors:
             print(f"\n❌ Errors:")
@@ -292,6 +305,7 @@ def main():
     except Exception as e:
         print(f"\n\n🔴 CRITICAL ERROR: {e}")
         import traceback
+
         traceback.print_exc()
         monitor.print_summary()
         sys.exit(1)

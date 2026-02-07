@@ -105,9 +105,7 @@ class DeleteResponse(BaseModel):
     affected_relations: int = Field(
         0, description="Number of relationships deleted (cascade delete)"
     )
-    audit_logged: bool = Field(
-        True, description="Whether deletion was logged for GDPR compliance"
-    )
+    audit_logged: bool = Field(True, description="Whether deletion was logged for GDPR compliance")
 
 
 class RelationListRequest(BaseModel):
@@ -266,9 +264,7 @@ async def list_entities(request: EntityListRequest) -> EntityListResponse:
             params["search"] = request.search
 
         if request.entity_type:
-            where_clauses.append(
-                "any(lbl IN labels(e) WHERE lbl <> 'base' AND lbl = $entity_type)"
-            )
+            where_clauses.append("any(lbl IN labels(e) WHERE lbl <> 'base' AND lbl = $entity_type)")
             params["entity_type"] = request.entity_type
 
         if request.namespace_id:
@@ -388,7 +384,10 @@ async def list_entities(request: EntityListRequest) -> EntityListResponse:
     ```
     """,
     responses={
-        200: {"description": "Successfully retrieved entity details", "model": EntityDetailResponse},
+        200: {
+            "description": "Successfully retrieved entity details",
+            "model": EntityDetailResponse,
+        },
         404: {"description": "Entity not found"},
         500: {"description": "Neo4j query execution failed"},
     },

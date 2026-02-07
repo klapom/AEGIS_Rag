@@ -80,11 +80,7 @@ class UnanswerableGenerator:
 
         new_question = prefix + question
 
-        return self._create_unanswerable(
-            sample,
-            new_question,
-            method="temporal_shift"
-        )
+        return self._create_unanswerable(sample, new_question, method="temporal_shift")
 
     def entity_swap(self, sample: NormalizedSample) -> NormalizedSample:
         """
@@ -108,11 +104,7 @@ class UnanswerableGenerator:
         # Try to identify and replace the main entity
         new_question = self._replace_entity(sample.question, fake_entity)
 
-        return self._create_unanswerable(
-            sample,
-            new_question,
-            method="entity_swap"
-        )
+        return self._create_unanswerable(sample, new_question, method="entity_swap")
 
     def negation(self, sample: NormalizedSample) -> NormalizedSample:
         """
@@ -144,11 +136,7 @@ class UnanswerableGenerator:
 
         new_question = self.rng.choice(negation_templates)
 
-        return self._create_unanswerable(
-            sample,
-            new_question,
-            method="negation"
-        )
+        return self._create_unanswerable(sample, new_question, method="negation")
 
     def cross_domain(self, sample: NormalizedSample) -> NormalizedSample:
         """
@@ -174,17 +162,13 @@ class UnanswerableGenerator:
         template = self.rng.choice(CROSS_DOMAIN_TEMPLATES)
         new_question = template.format(entity=entity)
 
-        return self._create_unanswerable(
-            sample,
-            new_question,
-            method="cross_domain"
-        )
+        return self._create_unanswerable(sample, new_question, method="cross_domain")
 
     def generate_batch(
         self,
         samples: List[NormalizedSample],
         target_count: int = 50,
-        method_distribution: Optional[Dict[str, float]] = None
+        method_distribution: Dict[str, float] | None = None,
     ) -> List[NormalizedSample]:
         """
         Generate target_count unanswerables from pool.
@@ -257,17 +241,13 @@ class UnanswerableGenerator:
                 self.method_counts[method] += 1
 
         logger.info(
-            f"Generated {len(unanswerables)} unanswerables "
-            f"(distribution: {self.method_counts})"
+            f"Generated {len(unanswerables)} unanswerables (distribution: {self.method_counts})"
         )
 
         return unanswerables
 
     def _create_unanswerable(
-        self,
-        original: NormalizedSample,
-        new_question: str,
-        method: str
+        self, original: NormalizedSample, new_question: str, method: str
     ) -> NormalizedSample:
         """
         Create unanswerable variant with proper metadata.
@@ -313,7 +293,7 @@ class UnanswerableGenerator:
         """
         # Find capitalized words/phrases (potential entities)
         # Pattern: sequence of capitalized words
-        entity_pattern = r'([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)'
+        entity_pattern = r"([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)"
         matches = re.findall(entity_pattern, question)
 
         if matches:
@@ -338,14 +318,14 @@ class UnanswerableGenerator:
         """
         # Remove question words
         cleaned = re.sub(
-            r'^(what|when|where|who|which|how|why|is|are|was|were|do|does|did)\s+',
-            '',
+            r"^(what|when|where|who|which|how|why|is|are|was|were|do|does|did)\s+",
+            "",
             question.lower(),
-            flags=re.IGNORECASE
+            flags=re.IGNORECASE,
         )
 
         # Try to find capitalized entity
-        entity_pattern = r'([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)'
+        entity_pattern = r"([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)"
         matches = re.findall(entity_pattern, question)
         if matches:
             return max(matches, key=len)

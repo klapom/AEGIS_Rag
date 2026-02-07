@@ -426,4 +426,3 @@ npm run build
 ---
 
 **Nächster Schritt:** Graph Communities Integration (2 SP) → dann E2E Testing (25 SP)
-

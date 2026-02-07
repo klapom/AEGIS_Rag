@@ -327,7 +327,7 @@ class ContextBudgetManager:
                         utilization=budget.utilization,
                     )
 
-    def get_budget(self, skill_name: str) -> Optional[SkillContextBudget]:
+    def get_budget(self, skill_name: str) -> SkillContextBudget | None:
         """Get budget for skill.
 
         Args:

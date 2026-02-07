@@ -304,10 +304,12 @@ class TestSkillAwareTools:
         """Test browser_navigate with injected state."""
         state = {"_skill_name": "web_research"}
 
-        result = await browser_navigate.ainvoke({
-            "url": "https://example.com",
-            "state": state,
-        })
+        result = await browser_navigate.ainvoke(
+            {
+                "url": "https://example.com",
+                "state": state,
+            }
+        )
 
         assert result["success"] is True
         # Skill name should be logged but not affect result
@@ -315,20 +317,24 @@ class TestSkillAwareTools:
     @pytest.mark.asyncio
     async def test_browser_navigate_timeout(self):
         """Test browser_navigate with custom timeout."""
-        result = await browser_navigate.ainvoke({
-            "url": "https://example.com",
-            "timeout": 5.0,
-        })
+        result = await browser_navigate.ainvoke(
+            {
+                "url": "https://example.com",
+                "timeout": 5.0,
+            }
+        )
 
         assert result["success"] is True
 
     @pytest.mark.asyncio
     async def test_browser_click_tool(self):
         """Test browser_click tool function."""
-        result = await browser_click.ainvoke({
-            "selector": "button.submit",
-            "element_description": "Submit button",
-        })
+        result = await browser_click.ainvoke(
+            {
+                "selector": "button.submit",
+                "element_description": "Submit button",
+            }
+        )
 
         assert result["success"] is True
         assert result["clicked"] is True
@@ -338,22 +344,26 @@ class TestSkillAwareTools:
     @pytest.mark.asyncio
     async def test_browser_click_with_button(self):
         """Test browser_click with button option."""
-        result = await browser_click.ainvoke({
-            "selector": "#link",
-            "element_description": "Link",
-            "button": "right",
-        })
+        result = await browser_click.ainvoke(
+            {
+                "selector": "#link",
+                "element_description": "Link",
+                "button": "right",
+            }
+        )
 
         assert result["success"] is True
 
     @pytest.mark.asyncio
     async def test_browser_type_text_tool(self):
         """Test browser_type_text tool function."""
-        result = await browser_type_text.ainvoke({
-            "selector": "input#search",
-            "element_description": "Search input",
-            "text": "test query",
-        })
+        result = await browser_type_text.ainvoke(
+            {
+                "selector": "input#search",
+                "element_description": "Search input",
+                "text": "test query",
+            }
+        )
 
         assert result["success"] is True
         assert result["typed"] is True
@@ -362,12 +372,14 @@ class TestSkillAwareTools:
     @pytest.mark.asyncio
     async def test_browser_type_text_with_submit(self):
         """Test browser_type_text with submit flag."""
-        result = await browser_type_text.ainvoke({
-            "selector": "input#search",
-            "element_description": "Search input",
-            "text": "query",
-            "submit": True,
-        })
+        result = await browser_type_text.ainvoke(
+            {
+                "selector": "input#search",
+                "element_description": "Search input",
+                "text": "query",
+                "submit": True,
+            }
+        )
 
         assert result["success"] is True
         assert result["submitted"] is True
@@ -433,8 +445,8 @@ class TestToolRegistry:
         # Verify all are StructuredTools (from @tool decorator)
         for tool_name, tool_func in tools.items():
             # StructuredTool objects have ainvoke method
-            assert hasattr(tool_func, 'ainvoke'), f"{tool_name} is not a valid LangChain tool"
-            assert hasattr(tool_func, 'name'), f"{tool_name} has no name attribute"
+            assert hasattr(tool_func, "ainvoke"), f"{tool_name} is not a valid LangChain tool"
+            assert hasattr(tool_func, "name"), f"{tool_name} has no name attribute"
 
 
 # =============================================================================
@@ -452,7 +464,7 @@ class TestErrorHandling:
 
         # Simulate error by patching internal method
         with (
-            patch.object(browser_tool, 'navigate', side_effect=Exception("Network error")),
+            patch.object(browser_tool, "navigate", side_effect=Exception("Network error")),
             contextlib.suppress(Exception),
         ):
             await browser_tool.navigate("https://invalid.url")

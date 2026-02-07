@@ -3,6 +3,7 @@
 Naming Convention Checker
 Validates Python code against AEGIS RAG naming conventions.
 """
+
 import re
 import sys
 from pathlib import Path

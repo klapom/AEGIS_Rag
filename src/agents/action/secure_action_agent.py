@@ -60,7 +60,7 @@ class ActionConfig:
 
     sandbox_timeout: int = 30
     max_retries: int = 3
-    workspace_path: str = "/tmp/aegis-workspace"
+    workspace_path: str = "/tmp/aegis-workspace"  # nosec B108
     retry_delay: float = 1.0
     repo_path: str = "/home/admin/projects/aegisrag/AEGIS_Rag"
     enable_reward_loop: bool = True

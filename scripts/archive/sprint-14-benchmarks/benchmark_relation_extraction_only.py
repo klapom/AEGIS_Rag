@@ -310,29 +310,29 @@ def test_relation_extraction(model: str, test_case: dict, client: Client, log_pa
 
         # Log Results
         log_content = f"""
-{'='*80}
-MODEL: {model} | TEST CASE {test_case['id']}: {test_case['name']}
-{'='*80}
+{"=" * 80}
+MODEL: {model} | TEST CASE {test_case["id"]}: {test_case["name"]}
+{"=" * 80}
 
-Expected Relations: {test_case['expected_relations']}
-Found Relations: {results['relations_found']} (filtered {len(relations) - len(valid_relations)} null targets)
-Extraction Time: {results['extraction_time']:.2f}s
-Accuracy: {results['relation_accuracy']:.1f}%
-Status: {results['status']}
+Expected Relations: {test_case["expected_relations"]}
+Found Relations: {results["relations_found"]} (filtered {len(relations) - len(valid_relations)} null targets)
+Extraction Time: {results["extraction_time"]:.2f}s
+Accuracy: {results["relation_accuracy"]:.1f}%
+Status: {results["status"]}
 
-{'='*80}
-ENTITY LIST ({len(test_case['entities'])} entities):
-{'='*80}
-{', '.join(test_case['entities'])}
+{"=" * 80}
+ENTITY LIST ({len(test_case["entities"])} entities):
+{"=" * 80}
+{", ".join(test_case["entities"])}
 
-{'='*80}
+{"=" * 80}
 RAW LLM RESPONSE:
-{'='*80}
+{"=" * 80}
 {raw_relation_response}
 
-{'='*80}
+{"=" * 80}
 PARSED RELATIONS ({len(valid_relations)} valid):
-{'='*80}
+{"=" * 80}
 {json.dumps(valid_relations, indent=2)}
 
 """
@@ -351,14 +351,14 @@ PARSED RELATIONS ({len(valid_relations)} valid):
         with open(log_path, "a", encoding="utf-8") as f:
             f.write(
                 f"""
-{'='*80}
-MODEL: {model} | TEST CASE {test_case['id']}: {test_case['name']} [ERROR]
-{'='*80}
+{"=" * 80}
+MODEL: {model} | TEST CASE {test_case["id"]}: {test_case["name"]} [ERROR]
+{"=" * 80}
 Error: {e}
 
 Full Traceback:
 {error_details}
-{'='*80}
+{"=" * 80}
 """
             )
 
@@ -368,9 +368,9 @@ Full Traceback:
 def main():
     """Main benchmark execution."""
     print(
-        f"""{'='*80}
+        f"""{"=" * 80}
      Relation Extraction Benchmark - All Models
-{'='*80}
+{"=" * 80}
 
 Setup:
   - NO entity extraction phase
@@ -395,9 +395,9 @@ Setup:
     # Write log header
     with open(log_path, "w", encoding="utf-8") as f:
         f.write(
-            f"""{'='*80}
+            f"""{"=" * 80}
 RELATION EXTRACTION BENCHMARK - ALL MODELS
-{'='*80}
+{"=" * 80}
 
 Models Tested: {len(MODELS_TO_TEST)}
 Test Cases: {len(TEST_CASES)}
@@ -405,9 +405,9 @@ Context Window: 16384
 Start Time: {datetime.now().isoformat()}
 
 Models:
-{chr(10).join(f'  - {m}' for m in MODELS_TO_TEST)}
+{chr(10).join(f"  - {m}" for m in MODELS_TO_TEST)}
 
-{'='*80}
+{"=" * 80}
 
 """
         )
@@ -417,9 +417,9 @@ Models:
     for model_idx, model in enumerate(MODELS_TO_TEST, 1):
         model_short = model.split("/")[-1] if "/" in model else model
 
-        print(f"\n{'='*80}")
+        print(f"\n{'=' * 80}")
         print(f"[{model_idx}/{len(MODELS_TO_TEST)}] MODEL: {model_short}")
-        print(f"{'='*80}")
+        print(f"{'=' * 80}")
 
         # Warmup
         print("\n[WARMUP] Loading model (not measured)...", end=" ", flush=True)
@@ -452,12 +452,12 @@ Models:
     # ========================================================================
     # SUMMARY
     # ========================================================================
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print("SUMMARY: RELATION EXTRACTION BENCHMARK")
-    print(f"{'='*80}\n")
+    print(f"{'=' * 80}\n")
 
     print(f"{'Model':<40} {'Avg Accuracy':<15} {'Avg Time':<12} {'Status':<8}")
-    print(f"{'-'*40} {'-'*15} {'-'*12} {'-'*8}")
+    print(f"{'-' * 40} {'-' * 15} {'-' * 12} {'-' * 8}")
 
     for model in MODELS_TO_TEST:
         model_results = [r for r in all_results if r["model"] == model]
@@ -480,10 +480,10 @@ Models:
     with open(output_file, "w", encoding="utf-8") as f:
         json.dump(all_results, f, indent=2)
 
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print(f"[OK] Detailed results saved to: {output_file}")
     print(f"[OK] Detailed logs saved to: {log_dir}/")
-    print(f"{'='*80}")
+    print(f"{'=' * 80}")
 
 
 if __name__ == "__main__":

@@ -44,7 +44,9 @@ async def test_ragas_context_precision(ragas_evaluator, aegis_ragas_benchmark_sa
     This test uses the full 20-sample AEGIS dataset and evaluates
     retrieval quality across all domains (retrieval, graph, memory, etc.)
     """
-    logger.info("starting_ragas_context_precision_test", num_samples=len(aegis_ragas_benchmark_samples))
+    logger.info(
+        "starting_ragas_context_precision_test", num_samples=len(aegis_ragas_benchmark_samples)
+    )
 
     # Run RAGAS evaluation
     results = await ragas_evaluator.evaluate_rag_pipeline(
@@ -97,7 +99,9 @@ async def test_ragas_context_recall(ragas_evaluator, aegis_ragas_benchmark_sampl
     This tests if the retrieval system finds all relevant information
     needed to answer the question correctly.
     """
-    logger.info("starting_ragas_context_recall_test", num_samples=len(aegis_ragas_benchmark_samples))
+    logger.info(
+        "starting_ragas_context_recall_test", num_samples=len(aegis_ragas_benchmark_samples)
+    )
 
     # Run RAGAS evaluation
     results = await ragas_evaluator.evaluate_rag_pipeline(
@@ -177,7 +181,9 @@ async def test_ragas_answer_relevancy(ragas_evaluator, aegis_ragas_benchmark_sam
     This tests if the generated answer actually answers what was asked,
     rather than providing tangential or unrelated information.
     """
-    logger.info("starting_ragas_answer_relevancy_test", num_samples=len(aegis_ragas_benchmark_samples))
+    logger.info(
+        "starting_ragas_answer_relevancy_test", num_samples=len(aegis_ragas_benchmark_samples)
+    )
 
     # Run RAGAS evaluation
     results = await ragas_evaluator.evaluate_rag_pipeline(

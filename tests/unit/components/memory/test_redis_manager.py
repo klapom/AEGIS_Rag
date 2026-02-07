@@ -421,7 +421,7 @@ class TestEvictionPolicies:
                 {
                     "value": f"value{i}",
                     "access_count": i % 3,
-                    "created_at": f"2024-01-0{i+1}T00:00:00",
+                    "created_at": f"2024-01-0{i + 1}T00:00:00",
                 }
             )
             for i in range(10)

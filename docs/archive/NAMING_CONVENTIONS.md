@@ -85,10 +85,10 @@ class Agent:
     def __init__(self):
         self._internal_state = {}  # Protected (convention)
         self.__private_data = []   # Name mangling (rare)
-    
+
     def public_method(self):
         pass
-    
+
     def _internal_helper(self):
         pass
 ```
@@ -209,21 +209,21 @@ def reciprocal_rank_fusion(
 ) -> List[Document]:
     """
     Combine multiple ranked document lists using Reciprocal Rank Fusion.
-    
+
     RRF assigns a score to each document based on its rank in each list,
     with the formula: score = sum(1 / (k + rank_i)) for all lists.
-    
+
     Args:
         result_lists: List of ranked document lists to combine.
         k: Constant for RRF formula (default 60, from original paper).
         weights: Optional weights for each list (must sum to 1.0).
-        
+
     Returns:
         Fused list of documents sorted by combined RRF score.
-        
+
     Raises:
         ValueError: If result_lists is empty or weights don't sum to 1.0.
-        
+
     Example:
         >>> vector_results = [doc1, doc2, doc3]
         >>> bm25_results = [doc2, doc1, doc4]
@@ -291,23 +291,23 @@ from pydantic import Field, SecretStr
 
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
-    
+
     # LLM Configuration
     openai_api_key: SecretStr
     anthropic_api_key: SecretStr
     model_name: str = "gpt-4o"
     temperature: float = Field(default=0.7, ge=0.0, le=2.0)
-    
+
     # Qdrant Configuration
     qdrant_host: str = "localhost"
     qdrant_port: int = 6333
     qdrant_collection: str = "documents"
-    
+
     # Neo4j Configuration
     neo4j_uri: str = "bolt://localhost:7687"
     neo4j_user: str = "neo4j"
     neo4j_password: SecretStr
-    
+
     class Config:
         env_file = ".env"
         case_sensitive = False
@@ -358,7 +358,7 @@ class QueryResponse(BaseModel):
     answer: str
     sources: List[Source]
     metadata: QueryMetadata
-    
+
 class Source(BaseModel):
     """Document source with citation."""
     doc_id: str
@@ -604,7 +604,7 @@ from pydantic import validator, constr
 
 class QueryInput(BaseModel):
     query: constr(min_length=1, max_length=1000)
-    
+
     @validator('query')
     def sanitize_query(cls, v):
         # Remove potential injection patterns

@@ -197,7 +197,13 @@ class TestGetDocuments:
 
         # Setup mock - include points with missing data
         points = [
-            Point({"document_id": "doc_1", "document_path": "/path/doc1.pdf", "ingestion_timestamp": 1704106800.0}),
+            Point(
+                {
+                    "document_id": "doc_1",
+                    "document_path": "/path/doc1.pdf",
+                    "ingestion_timestamp": 1704106800.0,
+                }
+            ),
             Point({}),  # Missing all fields
             Point({"document_id": "doc_2"}),  # Missing document_path
             Point({"document_path": "/path/doc3.pdf"}),  # Missing document_id

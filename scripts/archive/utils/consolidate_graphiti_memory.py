@@ -78,7 +78,9 @@ async def consolidate_memory(ttl_days: int, dry_run: bool = False, force: bool =
         RETURN count(e) as old_episodes
         """
 
-        result = await neo4j_client.execute_read(count_query, {"cutoff_timestamp": cutoff_timestamp})
+        result = await neo4j_client.execute_read(
+            count_query, {"cutoff_timestamp": cutoff_timestamp}
+        )
         old_episodes_count = result[0]["old_episodes"] if result else 0
 
         logger.info("graphiti_old_episodes_found", count=old_episodes_count)
@@ -105,7 +107,9 @@ async def consolidate_memory(ttl_days: int, dry_run: bool = False, force: bool =
                 episodes_to_delete=old_episodes_count,
                 cutoff_date=cutoff_date.isoformat(),
             )
-            print(f"\nDRY RUN: Would delete {old_episodes_count} episodes older than {ttl_days} days")
+            print(
+                f"\nDRY RUN: Would delete {old_episodes_count} episodes older than {ttl_days} days"
+            )
             print(f"Cutoff date: {cutoff_date.isoformat()}")
             return
 
@@ -118,7 +122,9 @@ async def consolidate_memory(ttl_days: int, dry_run: bool = False, force: bool =
         """
 
         logger.info("graphiti_deleting_old_episodes", count=old_episodes_count)
-        result = await neo4j_client.execute_write(delete_query, {"cutoff_timestamp": cutoff_timestamp})
+        result = await neo4j_client.execute_write(
+            delete_query, {"cutoff_timestamp": cutoff_timestamp}
+        )
         deleted_count = result[0]["deleted"] if result else 0
 
         logger.info("graphiti_old_episodes_deleted", count=deleted_count)

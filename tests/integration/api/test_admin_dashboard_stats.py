@@ -97,9 +97,9 @@ class TestDashboardStatsIntegration:
                 min_expected = total_chunks * expected_mb_per_chunk * 0.5  # 50% tolerance
                 max_expected = total_chunks * expected_mb_per_chunk * 2.0  # 200% tolerance
 
-                assert (
-                    min_expected <= storage_mb <= max_expected
-                ), f"Storage {storage_mb}MB outside expected range [{min_expected:.2f}, {max_expected:.2f}] for {total_chunks} chunks"
+                assert min_expected <= storage_mb <= max_expected, (
+                    f"Storage {storage_mb}MB outside expected range [{min_expected:.2f}, {max_expected:.2f}] for {total_chunks} chunks"
+                )
 
     @pytest.mark.asyncio
     async def test_dashboard_stats_multiple_calls(self):
@@ -135,6 +135,4 @@ class TestDashboardStatsIntegration:
             assert response.status_code == 200
 
             # Should respond within 2 seconds (querying 3 databases)
-            assert (
-                elapsed_time < 2.0
-            ), f"Dashboard stats took {elapsed_time:.2f}s (expected <2s)"
+            assert elapsed_time < 2.0, f"Dashboard stats took {elapsed_time:.2f}s (expected <2s)"

@@ -398,9 +398,9 @@ class TestHybridSearchE2E:
 
         # Verify results differ between queries
         all_results = [r for results in results_by_query.values() for r in results]
-        assert (
-            len({r["text"][:50] for r in all_results}) > 1
-        ), "Different queries should return different docs"
+        assert len({r["text"][:50] for r in all_results}) > 1, (
+            "Different queries should return different docs"
+        )
 
         logger.info("Multiple BM25 queries tested successfully")
 

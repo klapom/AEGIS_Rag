@@ -231,7 +231,9 @@ async def run_dspy_optimization(
                 from src.components.llm_config import LLMUseCase, get_llm_config_service
 
                 config_service = get_llm_config_service()
-                llm_model = await config_service.get_model_for_use_case(LLMUseCase.ENTITY_EXTRACTION)
+                llm_model = await config_service.get_model_for_use_case(
+                    LLMUseCase.ENTITY_EXTRACTION
+                )
                 logger.info(
                     "using_default_llm_model_for_new_domain",
                     domain=domain_name,
@@ -244,7 +246,9 @@ async def run_dspy_optimization(
             new_domain_config = {
                 "name": domain_name,
                 "llm_model": llm_model,
-                "description": passed_domain_config.get("description", f"Domain {domain_name}") if passed_domain_config else f"Domain {domain_name}",
+                "description": passed_domain_config.get("description", f"Domain {domain_name}")
+                if passed_domain_config
+                else f"Domain {domain_name}",
             }
             # Sprint 124: Preserve entity_types and relation_types if provided
             if passed_domain_config:

@@ -353,9 +353,9 @@ async def test_no_retention_limit():
     manager = VersionManager(neo4j_client=client, retention_count=0)
 
     # Verify retention_count is 0
-    assert (
-        manager.retention_count == 0
-    ), f"Expected retention_count=0, got {manager.retention_count}"
+    assert manager.retention_count == 0, (
+        f"Expected retention_count=0, got {manager.retention_count}"
+    )
 
     # Call _enforce_retention - should return early with 0
     deleted = await manager._enforce_retention("test_entity")

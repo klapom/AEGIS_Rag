@@ -137,7 +137,7 @@ class DockerSandbox:
 
             # Add /tmp as writable if read_only is True
             if self.read_only:
-                container_config["tmpfs"] = {"/tmp": "rw,size=100m"}
+                container_config["tmpfs"] = {"/tmp": "rw,size=100m"}  # nosec B108
 
             # Run container
             container = client.containers.run(**container_config)

@@ -283,7 +283,7 @@ Feature 46.5:
   POST /api/v1/admin/domains/discover
     - File analysis and domain suggestion
     - Mock scenarios: Success (200), Error (500), Timeout (500ms delay)
-  
+
   POST /api/v1/admin/domains
     - Domain creation from suggestion
     - Mock scenarios: Success (201), Error (400, 500)
@@ -292,19 +292,19 @@ Feature 46.8:
   GET /api/v1/admin/dashboard/stats
     - Dashboard statistics
     - Mock response: {total_domains, active_domains, documents, embeddings, last_updated}
-  
+
   GET /api/v1/admin/domains
     - Domain list
     - Mock response: {domains: [...]}
-  
+
   GET /api/v1/admin/indexing/stats
     - Indexing statistics
     - Mock response: {documents_indexed, processing, chunks, speed}
-  
+
   GET /api/v1/admin/settings
     - System settings/configuration
     - Mock response: {embedding_model, chunk_size, enable_auto_discovery, ...}
-  
+
   GET /api/v1/admin/** (Catch-all)
     - Any other admin endpoint
     - Used for flexible error handling

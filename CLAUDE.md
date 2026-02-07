@@ -50,7 +50,7 @@ LLM & Embeddings:
   Fallback: Alibaba Cloud DashScope, OpenAI
   Embeddings: BGE-M3 via FlagEmbedding (1024-dim Dense + Sparse lexical) - Sprint 87
   Sparse Search: Learned lexical weights (replaces BM25) - Sprint 87
-  Reranking: Cross-encoder (top-k candidates) 
+  Reranking: Cross-encoder (top-k candidates)
 
 Ingestion:
   Parser: Docling CUDA (GPU-accelerated OCR) - ADR-027

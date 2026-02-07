@@ -145,7 +145,7 @@ class TestCacheFunctionality:
         graph = nx.Graph()
         graph.add_nodes_from([f"node_{i}" for i in range(50)])
         for i in range(0, 50, 2):
-            graph.add_edge(f"node_{i}", f"node_{i+1}")
+            graph.add_edge(f"node_{i}", f"node_{i + 1}")
 
         graph_hash = _hash_graph(graph, "louvain", 1.0)
         nodes_tuple = tuple(sorted(graph.nodes()))
@@ -171,7 +171,7 @@ class TestCacheFunctionality:
         graph = nx.Graph()
         graph.add_nodes_from([f"node_{i}" for i in range(100)])
         for i in range(0, 100, 2):
-            graph.add_edge(f"node_{i}", f"node_{i+1}")
+            graph.add_edge(f"node_{i}", f"node_{i + 1}")
 
         graph_hash = _hash_graph(graph, "louvain", 1.0)
         nodes_tuple = tuple(sorted(graph.nodes()))
@@ -224,9 +224,9 @@ class TestLargeGraphPerformance:
         execution_time = (time.perf_counter() - start_time) * 1000
 
         # Verify performance
-        assert (
-            execution_time < 2000
-        ), f"Community detection took {execution_time:.0f}ms, expected < 2000ms"
+        assert execution_time < 2000, (
+            f"Community detection took {execution_time:.0f}ms, expected < 2000ms"
+        )
 
         # Verify communities were detected
         assert len(communities) > 0
@@ -355,7 +355,9 @@ class TestPerformanceRegression:
         """Test that small graphs (< 100 nodes) complete quickly (< 100ms)."""
         # Create small graph data
         entities = [{"id": f"node_{i}"} for i in range(50)]
-        relationships = [{"source": f"node_{i}", "target": f"node_{i+1}"} for i in range(0, 49, 2)]
+        relationships = [
+            {"source": f"node_{i}", "target": f"node_{i + 1}"} for i in range(0, 49, 2)
+        ]
 
         mock_neo4j_client.execute_read.side_effect = [entities, relationships]
         mock_neo4j_client.execute_write.return_value = [{"updated_count": 50}]
@@ -377,7 +379,7 @@ class TestPerformanceRegression:
         entities = [{"id": f"node_{i}"} for i in range(num_nodes)]
         relationships = []
         for i in range(0, num_nodes - 1, 2):
-            relationships.append({"source": f"node_{i}", "target": f"node_{i+1}"})
+            relationships.append({"source": f"node_{i}", "target": f"node_{i + 1}"})
         for i in range(0, num_nodes, 10):
             for j in range(i + 10, min(i + 30, num_nodes)):
                 relationships.append({"source": f"node_{i}", "target": f"node_{j}"})

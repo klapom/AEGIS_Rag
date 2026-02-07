@@ -274,9 +274,7 @@ def example_parallel_execution():
         .add_step(
             "merge",
             "merge_results",
-            inputs={
-                "sources": ["$search_google", "$search_bing", "$search_wiki"]
-            },
+            inputs={"sources": ["$search_google", "$search_bing", "$search_wiki"]},
         )
         .set_output("merge")
         .build()
@@ -286,7 +284,7 @@ def example_parallel_execution():
     print(f"  Chain: {chain.id}")
     print(f"  Parallel Groups:")
     for i, group in enumerate(chain.parallel_groups):
-        print(f"    Group {i+1}: {group}")
+        print(f"    Group {i + 1}: {group}")
     print()
 
     return chain

@@ -108,9 +108,9 @@ def test_request_id_passthrough__existing_header__reuses_id(client: TestClient):
     response = client.get("/test", headers={"X-Request-ID": custom_id})
 
     # Verify the same ID is returned
-    assert (
-        response.headers["X-Request-ID"] == custom_id
-    ), f"Expected {custom_id}, got {response.headers['X-Request-ID']}"
+    assert response.headers["X-Request-ID"] == custom_id, (
+        f"Expected {custom_id}, got {response.headers['X-Request-ID']}"
+    )
 
 
 def test_request_id_in_response_header__always__returns_id(client: TestClient):

@@ -22,10 +22,7 @@ import logging
 from pathlib import Path
 from datetime import datetime
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -68,7 +65,7 @@ def prepare_ingestion(
 
     # Load samples
     samples = []
-    with open(input_path, 'r', encoding='utf-8') as f:
+    with open(input_path, encoding="utf-8") as f:
         for line in f:
             if line.strip():
                 samples.append(json.loads(line))
@@ -85,14 +82,14 @@ def prepare_ingestion(
     total_context_chars = 0
 
     for i, sample in enumerate(samples):
-        sample_id = sample['id']
-        question = sample['question']
-        ground_truth = sample['ground_truth']
-        contexts = sample['contexts']
-        answerable = sample.get('answerable', True)
-        doc_type = sample.get('doc_type', 'clean_text')
-        question_type = sample.get('question_type', 'lookup')
-        difficulty = sample.get('difficulty', 'D1')
+        sample_id = sample["id"]
+        question = sample["question"]
+        ground_truth = sample["ground_truth"]
+        contexts = sample["contexts"]
+        answerable = sample.get("answerable", True)
+        doc_type = sample.get("doc_type", "clean_text")
+        question_type = sample.get("question_type", "lookup")
+        difficulty = sample.get("difficulty", "D1")
 
         # Track stats
         if answerable:
@@ -119,7 +116,7 @@ def prepare_ingestion(
         filepath = output_path / filename
 
         # Write context file
-        with open(filepath, 'w', encoding='utf-8') as f:
+        with open(filepath, "w", encoding="utf-8") as f:
             f.write(combined_text)
 
         # Prepare question entry for RAGAS evaluation
@@ -133,7 +130,7 @@ def prepare_ingestion(
             "difficulty": difficulty,
             "source_document": filename,
             "namespace": namespace,
-            "metadata": sample.get('metadata', {})
+            "metadata": sample.get("metadata", {}),
         }
         questions_data.append(question_entry)
 
@@ -142,9 +139,9 @@ def prepare_ingestion(
 
     # Write questions JSONL
     questions_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(questions_path, 'w', encoding='utf-8') as f:
+    with open(questions_path, "w", encoding="utf-8") as f:
         for entry in questions_data:
-            f.write(json.dumps(entry, ensure_ascii=False) + '\n')
+            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
     # Summary
     print("\n" + "=" * 60)
@@ -192,30 +189,23 @@ def main():
         description="Prepare RAGAS Phase 1 dataset for Frontend API ingestion"
     )
     parser.add_argument(
-        "--input",
-        default="data/evaluation/ragas_phase1_500.jsonl",
-        help="Path to Phase 1 JSONL"
+        "--input", default="data/evaluation/ragas_phase1_500.jsonl", help="Path to Phase 1 JSONL"
     )
     parser.add_argument(
         "--output-dir",
         default="data/ragas_phase1_contexts",
-        help="Directory for .txt context files"
+        help="Directory for .txt context files",
     )
     parser.add_argument(
         "--questions-output",
         default="data/evaluation/ragas_phase1_questions.jsonl",
-        help="Path for questions-only JSONL"
+        help="Path for questions-only JSONL",
     )
     parser.add_argument(
-        "--namespace",
-        default="ragas_phase1",
-        help="Target namespace for ingestion"
+        "--namespace", default="ragas_phase1", help="Target namespace for ingestion"
     )
     parser.add_argument(
-        "--max-samples",
-        type=int,
-        default=-1,
-        help="Max samples to process (-1 for all)"
+        "--max-samples", type=int, default=-1, help="Max samples to process (-1 for all)"
     )
 
     args = parser.parse_args()

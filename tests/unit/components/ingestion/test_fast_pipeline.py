@@ -129,12 +129,8 @@ class TestFastUploadPipeline:
                 "src.components.ingestion.fast_pipeline.get_embedding_service"
             ) as mock_embedding_service,
             patch("src.components.ingestion.fast_pipeline.QdrantClientWrapper") as MockQdrant,
-            patch(
-                "src.components.ingestion.fast_pipeline.extract_entities_fast"
-            ) as mock_extract,
-            patch(
-                "src.components.ingestion.fast_pipeline.get_background_job_queue"
-            ) as mock_queue,
+            patch("src.components.ingestion.fast_pipeline.extract_entities_fast") as mock_extract,
+            patch("src.components.ingestion.fast_pipeline.get_background_job_queue") as mock_queue,
         ):
             # Mock Docling
             mock_docling = AsyncMock()
@@ -205,9 +201,7 @@ class TestFastUploadPipeline:
         """Test fast upload error handling marks status as failed."""
         with (
             patch("src.components.ingestion.fast_pipeline.DoclingClient") as MockDocling,
-            patch(
-                "src.components.ingestion.fast_pipeline.get_background_job_queue"
-            ) as mock_queue,
+            patch("src.components.ingestion.fast_pipeline.get_background_job_queue") as mock_queue,
         ):
             # Mock Docling to raise error
             mock_docling = AsyncMock()
@@ -244,12 +238,8 @@ class TestFastUploadPipeline:
                 "src.components.ingestion.fast_pipeline.get_embedding_service"
             ) as mock_embedding_service,
             patch("src.components.ingestion.fast_pipeline.QdrantClientWrapper") as MockQdrant,
-            patch(
-                "src.components.ingestion.fast_pipeline.extract_entities_fast"
-            ) as mock_extract,
-            patch(
-                "src.components.ingestion.fast_pipeline.get_background_job_queue"
-            ) as mock_queue,
+            patch("src.components.ingestion.fast_pipeline.extract_entities_fast") as mock_extract,
+            patch("src.components.ingestion.fast_pipeline.get_background_job_queue") as mock_queue,
         ):
             # Mock setup (simplified)
             mock_docling = AsyncMock()

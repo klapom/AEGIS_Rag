@@ -64,10 +64,12 @@ def convert_to_dataset(examples: list[dict]) -> Dataset:
         dataset_dict["text"].append(query)
         dataset_dict["label"].append(INTENT_LABELS[intent])
 
-    features = Features({
-        "text": Value("string"),
-        "label": ClassLabel(names=list(INTENT_LABELS.keys())),
-    })
+    features = Features(
+        {
+            "text": Value("string"),
+            "label": ClassLabel(names=list(INTENT_LABELS.keys())),
+        }
+    )
 
     dataset = Dataset.from_dict(dataset_dict, features=features)
     print(f"Dataset: {len(dataset)} examples")

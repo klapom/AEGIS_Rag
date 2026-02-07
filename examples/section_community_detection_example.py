@@ -93,8 +93,7 @@ async def example_compare_communities_across_sections():
     print(f"{'':20} {' '.join(f'{s[:10]:>10}' for s in sections)}")
     for section1 in sections:
         overlaps = [
-            str(comparison.community_overlap_matrix[section1][section2])
-            for section2 in sections
+            str(comparison.community_overlap_matrix[section1][section2]) for section2 in sections
         ]
         print(f"{section1:20} {' '.join(f'{o:>10}' for o in overlaps)}")
 
@@ -173,7 +172,9 @@ async def example_identify_thematic_clusters():
 
     for section in document_sections:
         result = await detector.detect_communities_in_section(
-            section_heading=section, algorithm="louvain", resolution=1.5  # Higher resolution
+            section_heading=section,
+            algorithm="louvain",
+            resolution=1.5,  # Higher resolution
         )
 
         for community in result.communities:

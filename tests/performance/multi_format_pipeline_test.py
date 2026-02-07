@@ -129,9 +129,9 @@ def analyze_json_structure(json_content: dict, format_name: str) -> dict:
 
 async def test_document(doc_path: Path, format_name: str, output_dir: Path) -> dict:
     """Test a single document through the Docling pipeline."""
-    print(f"\n{'='*70}")
+    print(f"\n{'=' * 70}")
     print(f"Testing {format_name.upper()}: {doc_path.name}")
-    print(f"{'='*70}")
+    print(f"{'=' * 70}")
 
     if not doc_path.exists():
         print(f"  ERROR: File not found: {doc_path}")
@@ -206,7 +206,7 @@ async def test_document(doc_path: Path, format_name: str, output_dir: Path) -> d
                 for i, s in enumerate(sections[:5]):
                     text_preview = s.text[:50].replace("\n", " ") if s.text else "(empty)"
                     print(
-                        f"    [{i+1}] L{s.level} p{s.page_no}: '{s.heading[:40]}' -> '{text_preview}...'"
+                        f"    [{i + 1}] L{s.level} p{s.page_no}: '{s.heading[:40]}' -> '{text_preview}...'"
                     )
             else:
                 print("  WARNING: No sections extracted!")

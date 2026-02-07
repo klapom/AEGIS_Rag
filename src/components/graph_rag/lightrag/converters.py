@@ -64,7 +64,8 @@ def chunk_text_with_metadata(
 
         # Generate chunk_id compatible with Qdrant
         chunk_hash = hashlib.md5(
-            f"{document_id}:{chunk_idx}:{chunk_text[:100]}".encode()
+            f"{document_id}:{chunk_idx}:{chunk_text[:100]}".encode(),
+            usedforsecurity=False,
         ).hexdigest()[:8]
         chunk_id = f"{document_id[:8]}-chunk-{chunk_idx}-{chunk_hash}"
 
@@ -255,7 +256,11 @@ def convert_relations_to_lightrag_format(
     lightrag_relations = []
     for relation in relations:
         # Sprint 125: Handle both old {source,target,type} and new S-P-O {subject,relation,object} formats
-        rel_type = relation.get("type") or relation.get("relation_type") or relation.get("relation", "RELATED_TO")
+        rel_type = (
+            relation.get("type")
+            or relation.get("relation_type")
+            or relation.get("relation", "RELATED_TO")
+        )
 
         # Sprint 30: Ensure source_id is never empty
         chunk_id = relation.get("chunk_id", "")

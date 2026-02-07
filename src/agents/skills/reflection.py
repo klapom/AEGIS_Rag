@@ -89,7 +89,7 @@ class ReflectionResult:
     critique: str
     score: float  # 0.0 - 1.0
     issues: List[str]
-    improved_answer: Optional[str] = None
+    improved_answer: str | None = None
     iteration: int = 0
 
 
@@ -255,7 +255,7 @@ Critique:
 {reflection.critique}
 
 Issues to fix:
-{chr(10).join(f'- {issue}' for issue in reflection.issues)}
+{chr(10).join(f"- {issue}" for issue in reflection.issues)}
 
 Write an improved answer that addresses all issues.
 Only use information from the provided contexts.
@@ -354,7 +354,7 @@ Improved Answer:"""
         Returns:
             Formatted contexts string
         """
-        return "\n\n".join(f"[{i+1}] {ctx}" for i, ctx in enumerate(contexts))
+        return "\n\n".join(f"[{i + 1}] {ctx}" for i, ctx in enumerate(contexts))
 
     def _parse_score(self, critique: str) -> float:
         """Parse confidence score from critique.

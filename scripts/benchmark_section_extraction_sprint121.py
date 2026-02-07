@@ -37,6 +37,7 @@ def benchmark_tokenizer_caching():
 
     # Reset tokenizer cache (force reload)
     import src.components.ingestion.section_extraction as section_extraction_module
+
     section_extraction_module._TOKENIZER = None
 
     # First call: Should load tokenizer from disk
@@ -78,8 +79,10 @@ def benchmark_parallel_tokenization():
     text_sizes = [50, 100, 150, 200]  # Number of text blocks
     text_templates = [
         "This is a short section with minimal content.",
-        "This section contains a moderate amount of text that might appear in a typical document paragraph. " * 5,
-        "This is a long section with extensive content that would be typical for a research paper or technical documentation. " * 10,
+        "This section contains a moderate amount of text that might appear in a typical document paragraph. "
+        * 5,
+        "This is a long section with extensive content that would be typical for a research paper or technical documentation. "
+        * 10,
         "Introduction\n\nThis document provides comprehensive coverage of the topic at hand. " * 8,
     ]
 
@@ -111,8 +114,7 @@ def benchmark_parallel_tokenization():
 
         # Verify correctness (counts should match)
         counts_match = all(
-            sequential_counts.get(idx) == parallel_counts.get(idx)
-            for idx in range(len(test_texts))
+            sequential_counts.get(idx) == parallel_counts.get(idx) for idx in range(len(test_texts))
         )
 
         speedup = sequential_time / parallel_time if parallel_time > 0 else 0
@@ -146,28 +148,34 @@ def print_summary(tokenizer_results, parallel_results):
     print(f"   - First call: {tokenizer_results['first_call_ms']:.2f} ms")
     print(f"   - Cached call: {tokenizer_results['cached_call_ms']:.2f} ms")
     print(f"   - Speedup: {tokenizer_results['speedup']:.1f}x")
-    print(f"   - Time saved: {tokenizer_results['first_call_ms'] - tokenizer_results['cached_call_ms']:.2f} ms per call")
+    print(
+        f"   - Time saved: {tokenizer_results['first_call_ms'] - tokenizer_results['cached_call_ms']:.2f} ms per call"
+    )
 
     print("\n2. PARALLEL TOKENIZATION (Feature 121.2b):")
     for result in parallel_results:
-        print(f"   - {result['text_count']} texts: {result['speedup']:.2f}x speedup "
-              f"({result['sequential_ms']:.1f}ms → {result['parallel_ms']:.1f}ms)")
+        print(
+            f"   - {result['text_count']} texts: {result['speedup']:.2f}x speedup "
+            f"({result['sequential_ms']:.1f}ms → {result['parallel_ms']:.1f}ms)"
+        )
 
     # Calculate average speedup across all text sizes
-    avg_speedup = sum(r['speedup'] for r in parallel_results) / len(parallel_results)
+    avg_speedup = sum(r["speedup"] for r in parallel_results) / len(parallel_results)
     print(f"\n   Average Speedup (50-200 texts): {avg_speedup:.2f}x")
 
     print("\n3. COMBINED IMPACT:")
     # Estimate total time saved for a typical document (100 texts)
-    result_100 = next((r for r in parallel_results if r['text_count'] == 100), None)
+    result_100 = next((r for r in parallel_results if r["text_count"] == 100), None)
     if result_100:
-        tokenizer_savings = tokenizer_results['first_call_ms'] - tokenizer_results['cached_call_ms']
-        parallel_savings = result_100['sequential_ms'] - result_100['parallel_ms']
+        tokenizer_savings = tokenizer_results["first_call_ms"] - tokenizer_results["cached_call_ms"]
+        parallel_savings = result_100["sequential_ms"] - result_100["parallel_ms"]
         total_savings = tokenizer_savings + parallel_savings
         print(f"   - Tokenizer cache: {tokenizer_savings:.0f} ms saved")
         print(f"   - Parallel tokenization: {parallel_savings:.0f} ms saved")
         print(f"   - Total time saved (100 texts): {total_savings:.0f} ms")
-        print(f"   - Overall speedup: {(result_100['sequential_ms'] + tokenizer_results['first_call_ms']) / (result_100['parallel_ms'] + tokenizer_results['cached_call_ms']):.2f}x")
+        print(
+            f"   - Overall speedup: {(result_100['sequential_ms'] + tokenizer_results['first_call_ms']) / (result_100['parallel_ms'] + tokenizer_results['cached_call_ms']):.2f}x"
+        )
 
     print("\n4. SPRINT 121 METRICS UPDATE:")
     print(f"   - Tokenizer Cache Speedup: {tokenizer_results['speedup']:.1f}x")
@@ -199,6 +207,7 @@ def main():
     except Exception as e:
         print(f"\nERROR: Benchmark failed: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
 

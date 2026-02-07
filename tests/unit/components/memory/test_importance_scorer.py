@@ -210,7 +210,11 @@ class TestImportanceScorer:
             {"content": "Machine learning"},
         ]
 
-        fact = {"content": "Python machine learning", "created_at": datetime.now(UTC).isoformat(), "metadata": {}}
+        fact = {
+            "content": "Python machine learning",
+            "created_at": datetime.now(UTC).isoformat(),
+            "metadata": {},
+        }
 
         score = await scorer.score_fact(fact, existing_facts=existing_facts)
 

@@ -120,9 +120,7 @@ class TestIntentTrainer:
         assert trainer.INTENT_LABELS["factual"] == 0
         assert trainer.LABEL_TO_INTENT[0] == "factual"
 
-    def test_load_training_data_success(
-        self, trainer: IntentTrainer, jsonl_file: Path
-    ) -> None:
+    def test_load_training_data_success(self, trainer: IntentTrainer, jsonl_file: Path) -> None:
         """Test successful loading of training data."""
         examples = trainer._load_training_data(jsonl_file)
 
@@ -135,9 +133,7 @@ class TestIntentTrainer:
         with pytest.raises(FileNotFoundError):
             trainer._load_training_data("nonexistent.jsonl")
 
-    def test_load_training_data_invalid_jsonl(
-        self, trainer: IntentTrainer, tmp_path: Path
-    ) -> None:
+    def test_load_training_data_invalid_jsonl(self, trainer: IntentTrainer, tmp_path: Path) -> None:
         """Test handling of invalid JSONL format."""
         file_path = tmp_path / "invalid.jsonl"
         with file_path.open("w") as f:
@@ -178,9 +174,7 @@ class TestIntentTrainer:
         # Should only have 1 valid example
         assert len(dataset) == 1
 
-    def test_split_dataset(
-        self, trainer: IntentTrainer, sample_training_data: list[dict]
-    ) -> None:
+    def test_split_dataset(self, trainer: IntentTrainer, sample_training_data: list[dict]) -> None:
         """Test dataset splitting."""
         dataset = trainer._convert_to_dataset(sample_training_data)
         split_dataset = trainer._split_dataset(dataset)
@@ -235,18 +229,14 @@ class TestIntentTrainer:
         assert "per_class_f1" in metrics
         assert "quality_gates_passed" in metrics
 
-    def test_train_insufficient_data(
-        self, trainer: IntentTrainer, tmp_path: Path
-    ) -> None:
+    def test_train_insufficient_data(self, trainer: IntentTrainer, tmp_path: Path) -> None:
         """Test error with insufficient training data."""
         # Create file with only 50 examples (< 100 minimum)
         small_file = tmp_path / "small.jsonl"
         with small_file.open("w") as f:
             for i in range(50):
                 f.write(
-                    json.dumps(
-                        {"query": f"query {i}", "intent": "factual", "confidence": 0.9}
-                    )
+                    json.dumps({"query": f"query {i}", "intent": "factual", "confidence": 0.9})
                     + "\n"
                 )
 
@@ -279,9 +269,7 @@ class TestIntentTrainer:
         assert all(f1 == 1.0 for f1 in metrics["per_class_f1"].values())
 
     @patch("src.adaptation.intent_trainer.SetFitModel")
-    def test_evaluate_low_accuracy(
-        self, mock_setfit_model: Mock, trainer: IntentTrainer
-    ) -> None:
+    def test_evaluate_low_accuracy(self, mock_setfit_model: Mock, trainer: IntentTrainer) -> None:
         """Test quality gate failure with low accuracy."""
         # Create mock model with poor predictions
         mock_model = MagicMock()

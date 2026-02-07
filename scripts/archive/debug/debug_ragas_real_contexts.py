@@ -15,7 +15,7 @@ from ragas.metrics._context_precision import ContextPrecisionPrompt, QAC, Verifi
 
 async def main():
     print("🔍 Testing Context Precision with REAL RAG contexts")
-    print("="*80)
+    print("=" * 80)
 
     # Create LLM
     llm = ChatOllama(
@@ -50,9 +50,9 @@ async def main():
 
     # Test EACH context individually
     for i, context in enumerate(contexts, 1):
-        print(f"\n{'='*80}")
+        print(f"\n{'=' * 80}")
         print(f"📄 Testing Context {i}/{len(contexts)}")
-        print(f"{'='*80}")
+        print(f"{'=' * 80}")
         print(f"Length: {len(context)} chars")
         print(f"Preview: {context[:150]}...")
 
@@ -82,10 +82,12 @@ async def main():
             print(f"❌ FAILED: {e}")
             print(f"\n🔴 PROBLEMATIC CONTEXT FOUND: Context #{i}")
             print(f"Full context:\n{context}")
-            print(f"\nFull response:\n{response.content if 'response' in locals() else 'No response'}")
+            print(
+                f"\nFull response:\n{response.content if 'response' in locals() else 'No response'}"
+            )
             break
 
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print("✅ All contexts tested!")
 
 

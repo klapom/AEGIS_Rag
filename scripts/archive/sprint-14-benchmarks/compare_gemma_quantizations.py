@@ -22,9 +22,9 @@ IMPORTANT: Return ONLY the JSON array, no markdown, no explanations."""
 
 def test_model(model_name: str, client: Client) -> dict:
     """Test a single model."""
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Testing: {model_name}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     start = time.perf_counter()
     try:
@@ -99,11 +99,11 @@ Sprint 13 TD-31: Testing production-optimized Q4_K_M vs reference Q8_0
         time.sleep(1)
 
     # Print comparison
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("COMPARISON RESULTS")
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
     print(f"{'Quantization':<15} {'Size':<12} {'Entities':<12} {'Time (s)':<12} {'Status'}")
-    print(f"{'-'*15} {'-'*12} {'-'*12} {'-'*12} {'-'*10}")
+    print(f"{'-' * 15} {'-' * 12} {'-' * 12} {'-' * 12} {'-' * 10}")
 
     q8_result = results[0]
     q4_result = results[1]
@@ -122,9 +122,9 @@ Sprint 13 TD-31: Testing production-optimized Q4_K_M vs reference Q8_0
 
     # Performance analysis
     if q8_result["success"] and q4_result["success"]:
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print("PERFORMANCE ANALYSIS")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
 
         # Speed improvement
         speedup = (q8_result["time"] - q4_result["time"]) / q8_result["time"] * 100
@@ -148,9 +148,9 @@ Sprint 13 TD-31: Testing production-optimized Q4_K_M vs reference Q8_0
             print(f"  Q4_K_M: {q4_result['entity_count']} entities (diff: {diff:+d})")
 
         # Recommendation
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print("RECOMMENDATION")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
 
         if q4_result["entity_count"] >= q8_result["entity_count"]:
             print("\n[RECOMMENDED] Use Q4_K_M for production:")

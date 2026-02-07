@@ -25,11 +25,11 @@ class TestDomainDiscoveryAPI:
                 "Patient with Type 2 diabetes presenting with elevated glucose levels.",
                 "COVID-19 treatment protocols updated by WHO.",
                 "The stock price of AAPL increased 3% on strong earnings.",
-                "Tesla stock surged after announcing record deliveries."
+                "Tesla stock surged after announcing record deliveries.",
             ],
             "min_samples": 3,
             "max_samples": 10,
-            "suggested_count": 2
+            "suggested_count": 2,
         }
 
         response = client.post("/api/v1/admin/domains/discover", json=request_data)
@@ -74,10 +74,10 @@ class TestDomainDiscoveryAPI:
         request_data = {
             "sample_documents": [
                 "Document 1",
-                "Document 2"  # Only 2 documents, need 3
+                "Document 2",  # Only 2 documents, need 3
             ],
             "min_samples": 3,
-            "suggested_count": 1
+            "suggested_count": 1,
         }
 
         response = client.post("/api/v1/admin/domains/discover", json=request_data)
@@ -94,7 +94,7 @@ class TestDomainDiscoveryAPI:
             "sample_documents": [
                 "Document about medical treatments and patient care.",
                 "Discussion of clinical trials and medical research.",
-                "Healthcare policy and insurance coverage details."
+                "Healthcare policy and insurance coverage details.",
             ],
             # min_samples defaults to 3
             # max_samples defaults to 10
@@ -116,7 +116,7 @@ class TestDomainDiscoveryAPI:
             "sample_documents": [f"Document {i}" for i in range(15)],
             "min_samples": 3,
             "max_samples": 5,
-            "suggested_count": 2
+            "suggested_count": 2,
         }
 
         response = client.post("/api/v1/admin/domains/discover", json=request_data)
@@ -129,10 +129,7 @@ class TestDomainDiscoveryAPI:
 
     def test_discover_domains_empty_documents(self, client: TestClient):
         """Test error with empty document list."""
-        request_data = {
-            "sample_documents": [],
-            "suggested_count": 1
-        }
+        request_data = {"sample_documents": [], "suggested_count": 1}
 
         response = client.post("/api/v1/admin/domains/discover", json=request_data)
 
@@ -146,9 +143,9 @@ class TestDomainDiscoveryAPI:
                 "Technical documentation for software API endpoints.",
                 "Database schema design and SQL queries.",
                 "Cloud infrastructure deployment with Kubernetes.",
-                "Frontend React components and state management."
+                "Frontend React components and state management.",
             ],
-            "suggested_count": 2
+            "suggested_count": 2,
         }
 
         response = client.post("/api/v1/admin/domains/discover", json=request_data)
@@ -191,9 +188,9 @@ class TestDomainDiscoveryAPI:
             "sample_documents": [
                 "Document 1 with entities.",
                 "Document 2 with more entities.",
-                "Document 3 with relations."
+                "Document 3 with relations.",
             ],
-            "suggested_count": 1
+            "suggested_count": 1,
         }
 
         response = client.post("/api/v1/admin/domains/discover", json=request_data)
@@ -215,18 +212,16 @@ class TestDomainDiscoveryAPI:
                 # Medical cluster
                 "Patient diagnosed with diabetes and hypertension.",
                 "Treatment protocol for COVID-19 infection.",
-
                 # Finance cluster
                 "Apple stock price increased by 5% this quarter.",
                 "Tesla announces record earnings and stock buyback.",
-
                 # Legal cluster
                 "Contract agreement between parties for service delivery.",
-                "Terms and conditions for software license agreement."
+                "Terms and conditions for software license agreement.",
             ],
             "min_samples": 3,
             "max_samples": 10,
-            "suggested_count": 3  # Request 3 clusters
+            "suggested_count": 3,  # Request 3 clusters
         }
 
         response = client.post("/api/v1/admin/domains/discover", json=request_data)
@@ -249,9 +244,9 @@ class TestDomainDiscoveryAPI:
                 "Medical patient records and treatment plans.",
                 "Clinical trial results and pharmaceutical research.",
                 "Healthcare insurance claims and billing.",
-                "Financial statements and stock market analysis."
+                "Financial statements and stock market analysis.",
             ],
-            "suggested_count": 2
+            "suggested_count": 2,
         }
 
         response = client.post("/api/v1/admin/domains/discover", json=request_data)
@@ -279,12 +274,8 @@ class TestDomainDiscoveryEdgeCases:
     def test_discover_domains_very_short_documents(self, client: TestClient):
         """Test discovery with very short documents."""
         request_data = {
-            "sample_documents": [
-                "Short doc 1",
-                "Short doc 2",
-                "Short doc 3"
-            ],
-            "suggested_count": 1
+            "sample_documents": ["Short doc 1", "Short doc 2", "Short doc 3"],
+            "suggested_count": 1,
         }
 
         response = client.post("/api/v1/admin/domains/discover", json=request_data)
@@ -300,9 +291,9 @@ class TestDomainDiscoveryEdgeCases:
             "sample_documents": [
                 "Identical document text",
                 "Identical document text",
-                "Identical document text"
+                "Identical document text",
             ],
-            "suggested_count": 1
+            "suggested_count": 1,
         }
 
         response = client.post("/api/v1/admin/domains/discover", json=request_data)
@@ -320,9 +311,9 @@ class TestDomainDiscoveryEdgeCases:
             "sample_documents": [
                 "Document with émojis 🏥 and spëcial çharacters!",
                 "Text with #hashtags and @mentions",
-                "Content with URLs: https://example.com"
+                "Content with URLs: https://example.com",
             ],
-            "suggested_count": 1
+            "suggested_count": 1,
         }
 
         response = client.post("/api/v1/admin/domains/discover", json=request_data)
@@ -336,9 +327,9 @@ class TestDomainDiscoveryEdgeCases:
             "sample_documents": [
                 "English document about technology",
                 "Deutsches Dokument über Technologie",
-                "Document français sur la technologie"
+                "Document français sur la technologie",
             ],
-            "suggested_count": 1
+            "suggested_count": 1,
         }
 
         response = client.post("/api/v1/admin/domains/discover", json=request_data)
@@ -357,9 +348,9 @@ class TestDomainDiscoveryPerformance:
             "sample_documents": [
                 "Document 1 with technical content",
                 "Document 2 with business content",
-                "Document 3 with scientific content"
+                "Document 3 with scientific content",
             ],
-            "suggested_count": 1
+            "suggested_count": 1,
         }
 
         response = client.post("/api/v1/admin/domains/discover", json=request_data)

@@ -192,7 +192,7 @@ async def generic_exception_handler(request: Request, exc: Exception) -> JSONRes
         settings = get_settings()
         if settings.debug:
             error_details = {"error_type": type(exc).__name__, "error_message": str(exc)}
-    except Exception:
+    except Exception:  # nosec B110
         # If we can't load settings, don't expose details
         pass
 

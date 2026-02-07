@@ -127,9 +127,7 @@ class TestEntityCanonicalizerAsync:
         return EntityCanonicalizer(use_embeddings=False)
 
     @pytest.mark.asyncio
-    async def test_find_canonical_match_exact(
-        self, canonicalizer: EntityCanonicalizer
-    ) -> None:
+    async def test_find_canonical_match_exact(self, canonicalizer: EntityCanonicalizer) -> None:
         """Test exact match finding."""
         existing = [
             CanonicalEntity(
@@ -173,9 +171,7 @@ class TestEntityCanonicalizerAsync:
         assert match.canonical_id == "test"
 
     @pytest.mark.asyncio
-    async def test_canonicalize_entities_dedup(
-        self, canonicalizer: EntityCanonicalizer
-    ) -> None:
+    async def test_canonicalize_entities_dedup(self, canonicalizer: EntityCanonicalizer) -> None:
         """Test entity deduplication via canonicalization."""
         entities = [
             GraphEntity(id="1", name="Machine Learning", type="CONCEPT"),

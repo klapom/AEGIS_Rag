@@ -62,7 +62,7 @@ def get_spacy_nlp():
             # Download if not available
             import subprocess
 
-            subprocess.run(
+            subprocess.run(  # nosec B603 B607 — internal spacy model download
                 ["python", "-m", "spacy", "download", "en_core_web_sm"],
                 check=True,
             )

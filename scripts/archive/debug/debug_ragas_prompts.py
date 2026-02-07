@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 # Enable debug logging for RAGAS
 logging.basicConfig(
     level=logging.DEBUG,
-    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 
 # Intercept LangChain LLM calls
@@ -28,30 +28,28 @@ class DebugCallbackHandler(BaseCallbackHandler):
     def __init__(self):
         self.prompt_count = 0
 
-    def on_llm_start(
-        self, serialized: Dict[str, Any], prompts: List[str], **kwargs: Any
-    ) -> None:
+    def on_llm_start(self, serialized: Dict[str, Any], prompts: List[str], **kwargs: Any) -> None:
         """Log LLM prompts."""
         self.prompt_count += 1
-        print(f"\n{'='*80}")
+        print(f"\n{'=' * 80}")
         print(f"🔵 RAGAS PROMPT #{self.prompt_count}")
-        print(f"{'='*80}")
+        print(f"{'=' * 80}")
         for i, prompt in enumerate(prompts):
-            print(f"\n--- Prompt {i+1} ---")
+            print(f"\n--- Prompt {i + 1} ---")
             print(prompt)
-            print(f"--- End Prompt {i+1} ---\n")
+            print(f"--- End Prompt {i + 1} ---\n")
 
     def on_llm_end(self, response: Any, **kwargs: Any) -> None:
         """Log LLM responses."""
-        print(f"\n{'='*80}")
+        print(f"\n{'=' * 80}")
         print(f"🟢 RAGAS RESPONSE #{self.prompt_count}")
-        print(f"{'='*80}")
+        print(f"{'=' * 80}")
 
         # Extract text from response
-        if hasattr(response, 'generations'):
+        if hasattr(response, "generations"):
             for i, generation_list in enumerate(response.generations):
                 for j, generation in enumerate(generation_list):
-                    print(f"\n--- Generation {i+1}.{j+1} ---")
+                    print(f"\n--- Generation {i + 1}.{j + 1} ---")
                     print(generation.text)
                     print(f"--- End Generation ---\n")
         else:
@@ -59,9 +57,9 @@ class DebugCallbackHandler(BaseCallbackHandler):
 
     def on_llm_error(self, error: Exception, **kwargs: Any) -> None:
         """Log LLM errors."""
-        print(f"\n{'='*80}")
+        print(f"\n{'=' * 80}")
         print(f"🔴 RAGAS ERROR #{self.prompt_count}")
-        print(f"{'='*80}")
+        print(f"{'=' * 80}")
         print(f"Error: {error}")
 
 
@@ -106,23 +104,25 @@ async def main():
     try:
         # Run metric (will trigger callbacks)
         from ragas import evaluate
+
         result = evaluate(
             dataset=dataset,
             metrics=[metric],
             llm=llm,
         )
 
-        print(f"\n{'='*80}")
+        print(f"\n{'=' * 80}")
         print("✅ Evaluation succeeded!")
-        print(f"{'='*80}")
+        print(f"{'=' * 80}")
         print(f"Context Precision: {result['context_precision']}")
 
     except Exception as e:
-        print(f"\n{'='*80}")
+        print(f"\n{'=' * 80}")
         print("❌ Evaluation failed!")
-        print(f"{'='*80}")
+        print(f"{'=' * 80}")
         print(f"Error: {e}")
         import traceback
+
         traceback.print_exc()
 
 

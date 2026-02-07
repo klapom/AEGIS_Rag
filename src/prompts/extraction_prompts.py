@@ -696,9 +696,7 @@ def get_domain_enriched_extraction_prompts(
         sub_type_lines = []
         for sub_type in entity_sub_types:
             parent_type = entity_sub_type_mapping.get(sub_type, "CONCEPT")
-            sub_type_lines.append(
-                f"- `{sub_type}` (maps to `{parent_type}` in post-processing)"
-            )
+            sub_type_lines.append(f"- `{sub_type}` (maps to `{parent_type}` in post-processing)")
 
         sub_type_section = (
             f"\n\n**Domain-Specific Entity Types ({domain})**\n"
@@ -724,9 +722,7 @@ def get_domain_enriched_extraction_prompts(
         hint_section = (
             f"\n\n**Domain-Specific Relation Types ({domain})**\n"
             "Use these domain-specific relationship types DIRECTLY. They will be "
-            "automatically mapped to universal types in post-processing:\n\n"
-            + hint_lines
-            + "\n"
+            "automatically mapped to universal types in post-processing:\n\n" + hint_lines + "\n"
         )
 
         # Inject before "---S-P-O Triple Output Format---"

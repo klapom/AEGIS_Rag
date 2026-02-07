@@ -292,14 +292,18 @@ def sample_pdf(temp_dir: Path) -> Path:
     # Table
     story.append(Paragraph("Technology Comparison", heading_style))
     table = Table(TEST_CONTENT["table_data"])
-    table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.grey),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
-        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-        ("FONTSIZE", (0, 0), (-1, 0), 12),
-        ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
-        ("GRID", (0, 0), (-1, -1), 1, colors.black),
-    ]))
+    table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.grey),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                ("FONTSIZE", (0, 0), (-1, 0), 12),
+                ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
+                ("GRID", (0, 0), (-1, -1), 1, colors.black),
+            ]
+        )
+    )
     story.append(table)
 
     doc.build(story)
@@ -351,8 +355,14 @@ def query_neo4j_entities(namespace: str) -> dict[str, Any]:
 
     result = subprocess.run(
         [
-            "docker", "exec", "aegis-neo4j", "cypher-shell",
-            "-u", "neo4j", "-p", "aegis-rag-neo4j-password",
+            "docker",
+            "exec",
+            "aegis-neo4j",
+            "cypher-shell",
+            "-u",
+            "neo4j",
+            "-p",
+            "aegis-rag-neo4j-password",
             query,
         ],
         capture_output=True,
@@ -375,8 +385,14 @@ def query_neo4j_chunks(namespace: str) -> int:
 
     result = subprocess.run(
         [
-            "docker", "exec", "aegis-neo4j", "cypher-shell",
-            "-u", "neo4j", "-p", "aegis-rag-neo4j-password",
+            "docker",
+            "exec",
+            "aegis-neo4j",
+            "cypher-shell",
+            "-u",
+            "neo4j",
+            "-p",
+            "aegis-rag-neo4j-password",
             query,
         ],
         capture_output=True,
@@ -402,13 +418,16 @@ def query_neo4j_chunks(namespace: str) -> int:
 class TestMultiFormatIngestion:
     """Test suite for multi-format document ingestion."""
 
-    @pytest.mark.parametrize("format_name,fixture_name", [
-        ("csv", "sample_csv"),
-        ("docx", "sample_docx"),
-        ("xlsx", "sample_xlsx"),
-        ("pptx", "sample_pptx"),
-        ("pdf", "sample_pdf"),
-    ])
+    @pytest.mark.parametrize(
+        "format_name,fixture_name",
+        [
+            ("csv", "sample_csv"),
+            ("docx", "sample_docx"),
+            ("xlsx", "sample_xlsx"),
+            ("pptx", "sample_pptx"),
+            ("pdf", "sample_pdf"),
+        ],
+    )
     def test_format_upload_success(
         self,
         format_name: str,
@@ -432,9 +451,9 @@ class TestMultiFormatIngestion:
         assert result["response"] is not None, f"No response for {format_name}"
 
         # Log results
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"FORMAT: {format_name.upper()}")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
         print(f"File: {file_path.name}")
         print(f"Size: {file_path.stat().st_size} bytes")
         print(f"Duration: {result['duration']:.2f}s")
@@ -649,10 +668,12 @@ class TestEdgeCases:
 
 if __name__ == "__main__":
     """Run tests standalone for quick verification."""
-    pytest.main([
-        __file__,
-        "-v",
-        "-s",
-        "--tb=short",
-        "-x",  # Stop on first failure
-    ])
+    pytest.main(
+        [
+            __file__,
+            "-v",
+            "-s",
+            "--tb=short",
+            "-x",  # Stop on first failure
+        ]
+    )

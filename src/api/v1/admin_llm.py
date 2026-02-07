@@ -579,13 +579,13 @@ async def get_llm_engine_mode() -> LLMEngineModeResponse:
         async with httpx.AsyncClient(timeout=3.0) as client:
             resp = await client.get(f"{settings.vllm_base_url}/health")
             vllm_healthy = resp.status_code == 200
-    except Exception:
+    except Exception:  # nosec B110
         pass
     try:
         async with httpx.AsyncClient(timeout=3.0) as client:
             resp = await client.head(f"{settings.ollama_base_url}")
             ollama_healthy = resp.status_code == 200
-    except Exception:
+    except Exception:  # nosec B110
         pass
 
     return LLMEngineModeResponse(

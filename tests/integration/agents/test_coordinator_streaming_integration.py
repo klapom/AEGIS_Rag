@@ -175,9 +175,9 @@ async def test_full_streaming_workflow():
                 reasoning_complete = event["data"]
 
     # Verify phase events
-    assert (
-        len(events_received) >= 5
-    ), f"Expected at least 5 phase events, got {len(events_received)}"
+    assert len(events_received) >= 5, (
+        f"Expected at least 5 phase events, got {len(events_received)}"
+    )
 
     # Verify all phases completed successfully
     completed = [e for e in events_received if e["status"] == "completed"]

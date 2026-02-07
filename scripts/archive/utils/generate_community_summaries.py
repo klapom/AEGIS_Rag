@@ -192,7 +192,9 @@ async def generate_summaries_batch(
         batch = community_ids[i : i + batch_size]
         batch_start = time.time()
 
-        print(f"   Batch {i // batch_size + 1}/{(len(community_ids) + batch_size - 1) // batch_size}:")
+        print(
+            f"   Batch {i // batch_size + 1}/{(len(community_ids) + batch_size - 1) // batch_size}:"
+        )
 
         # Process batch sequentially (parallel would overwhelm LLM)
         for community_id in batch:
@@ -211,7 +213,9 @@ async def generate_summaries_batch(
 
                 # Progress indicator
                 progress_pct = (stats["summaries_generated"] / len(community_ids)) * 100
-                print(f"     ✓ Community {community_id}: {len(summary)} chars ({progress_pct:.1f}%)")
+                print(
+                    f"     ✓ Community {community_id}: {len(summary)} chars ({progress_pct:.1f}%)"
+                )
 
             except Exception as e:
                 logger.error(
@@ -229,7 +233,9 @@ async def generate_summaries_batch(
 
     stats["total_time_s"] = time.time() - start_time
     stats["avg_time_per_summary_s"] = (
-        stats["total_time_s"] / stats["summaries_generated"] if stats["summaries_generated"] > 0 else 0
+        stats["total_time_s"] / stats["summaries_generated"]
+        if stats["summaries_generated"] > 0
+        else 0
     )
 
     if failed_communities:

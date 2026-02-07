@@ -41,14 +41,14 @@ async def main():
                 "title": "RAG Paper",
                 "source": "rag_paper.pdf",
                 "score": 0.95,
-                "metadata": {"page": 1}
+                "metadata": {"page": 1},
             }
         ]
 
         sample_follow_ups = [
             "How does RAG improve answer accuracy?",
             "What are the limitations of RAG systems?",
-            "Can RAG handle multi-hop reasoning?"
+            "Can RAG handle multi-hop reasoning?",
         ]
 
         print("\n[3] Saving conversation with follow-up questions...")
@@ -58,7 +58,7 @@ async def main():
             assistant_message="RAG stands for Retrieval-Augmented Generation. It combines retrieval and generation to produce more accurate answers.",
             intent="factual",
             sources=sample_sources,
-            follow_up_questions=sample_follow_ups
+            follow_up_questions=sample_follow_ups,
         )
 
         if success:
@@ -68,10 +68,7 @@ async def main():
             return 1
 
         print("\n[4] Retrieving conversation from Redis...")
-        conversation = await redis.retrieve(
-            key=session_id,
-            namespace="conversation"
-        )
+        conversation = await redis.retrieve(key=session_id, namespace="conversation")
 
         if conversation is None:
             print("✗ FAILED: Conversation not found in Redis")
@@ -87,8 +84,12 @@ async def main():
         print("\n[5] Verifying conversation structure...")
         assert "messages" in conversation, "Missing 'messages' field"
         assert "follow_up_questions" in conversation, "Missing 'follow_up_questions' field"
-        assert len(conversation["messages"]) == 2, f"Expected 2 messages, got {len(conversation['messages'])}"
-        assert len(conversation["follow_up_questions"]) == 3, f"Expected 3 follow-ups, got {len(conversation['follow_up_questions'])}"
+        assert len(conversation["messages"]) == 2, (
+            f"Expected 2 messages, got {len(conversation['messages'])}"
+        )
+        assert len(conversation["follow_up_questions"]) == 3, (
+            f"Expected 3 follow-ups, got {len(conversation['follow_up_questions'])}"
+        )
 
         print(f"  Messages: {len(conversation['messages'])}")
         print(f"  Follow-up questions: {len(conversation['follow_up_questions'])}")
@@ -112,8 +113,12 @@ async def main():
             for i, question in enumerate(response.followup_questions, 1):
                 print(f"  {i}. {question}")
 
-            assert len(response.followup_questions) == 3, f"Expected 3 questions, got {len(response.followup_questions)}"
-            assert response.followup_questions == sample_follow_ups, "Questions from endpoint don't match"
+            assert len(response.followup_questions) == 3, (
+                f"Expected 3 questions, got {len(response.followup_questions)}"
+            )
+            assert response.followup_questions == sample_follow_ups, (
+                "Questions from endpoint don't match"
+            )
             print("✓ Endpoint verification passed")
 
         except Exception as e:
@@ -150,6 +155,7 @@ async def main():
     except Exception as e:
         print(f"\n✗ FAILED: {type(e).__name__}: {e}")
         import traceback
+
         traceback.print_exc()
         return 1
 

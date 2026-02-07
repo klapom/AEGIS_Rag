@@ -32,9 +32,7 @@ class TestExtractionServiceDomain:
 
     async def test_get_extraction_prompts_domain_not_found(self, extraction_service):
         """Test that generic prompts are returned when domain doesn't exist."""
-        with patch(
-            "src.components.domain_training.get_domain_repository"
-        ) as mock_repo:
+        with patch("src.components.domain_training.get_domain_repository") as mock_repo:
             mock_domain_repo = AsyncMock()
             mock_domain_repo.get_domain.return_value = None  # Domain not found
             mock_repo.return_value = mock_domain_repo
@@ -48,9 +46,7 @@ class TestExtractionServiceDomain:
 
     async def test_get_extraction_prompts_domain_no_custom_prompts(self, extraction_service):
         """Test fallback to generic when domain exists but has no custom prompts."""
-        with patch(
-            "src.components.domain_training.get_domain_repository"
-        ) as mock_repo:
+        with patch("src.components.domain_training.get_domain_repository") as mock_repo:
             mock_domain_repo = AsyncMock()
             # Domain exists but no entity_prompt/relation_prompt fields
             mock_domain_repo.get_domain.return_value = {
@@ -73,9 +69,7 @@ class TestExtractionServiceDomain:
         custom_entity_prompt = "Extract medical entities from: {text}"
         custom_relation_prompt = "Extract medical relations between: {entities} in {text}"
 
-        with patch(
-            "src.components.domain_training.get_domain_repository"
-        ) as mock_repo:
+        with patch("src.components.domain_training.get_domain_repository") as mock_repo:
             mock_domain_repo = AsyncMock()
             mock_domain_repo.get_domain.return_value = {
                 "name": "medical_reports",
@@ -95,9 +89,7 @@ class TestExtractionServiceDomain:
 
     async def test_get_extraction_prompts_error_fallback(self, extraction_service):
         """Test that generic prompts are used when domain lookup fails."""
-        with patch(
-            "src.components.domain_training.get_domain_repository"
-        ) as mock_repo:
+        with patch("src.components.domain_training.get_domain_repository") as mock_repo:
             mock_domain_repo = AsyncMock()
             mock_domain_repo.get_domain.side_effect = Exception("Redis connection failed")
             mock_repo.return_value = mock_domain_repo

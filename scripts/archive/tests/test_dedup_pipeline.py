@@ -43,12 +43,10 @@ async def main():
     selected_samples = samples[:5]
     print(f"\nUsing {len(selected_samples)} samples for more entities & duplicate chances")
     for i, s in enumerate(selected_samples):
-        print(f"  {i+1}. {s['question'][:60]}...")
+        print(f"  {i + 1}. {s['question'][:60]}...")
 
     # Combine all contexts from all samples
-    full_text = " ".join(
-        ctx for sample in selected_samples for ctx in sample["contexts"]
-    )
+    full_text = " ".join(ctx for sample in selected_samples for ctx in sample["contexts"])
     print(f"\nFull text ({len(full_text)} chars):")
     print(f"  {full_text[:200]}...")
 
@@ -58,11 +56,13 @@ async def main():
     for i in range(0, len(full_text), CHUNK_SIZE):
         chunk_text = full_text[i : i + CHUNK_SIZE]
         if chunk_text.strip():
-            chunks.append({
-                "chunk_id": f"test_chunk_{i // CHUNK_SIZE}",
-                "text": chunk_text,
-                "chunk_index": i // CHUNK_SIZE,
-            })
+            chunks.append(
+                {
+                    "chunk_id": f"test_chunk_{i // CHUNK_SIZE}",
+                    "text": chunk_text,
+                    "chunk_index": i // CHUNK_SIZE,
+                }
+            )
 
     print(f"\nChunked into {len(chunks)} chunks of ~{CHUNK_SIZE} chars each")
     for i, chunk in enumerate(chunks):
@@ -127,8 +127,7 @@ async def main():
     original_data = {
         "timestamp": timestamp,
         "samples_used": [
-            {"question": s["question"], "ground_truth": s["ground_truth"]}
-            for s in selected_samples
+            {"question": s["question"], "ground_truth": s["ground_truth"]} for s in selected_samples
         ],
         "chunk_size": CHUNK_SIZE,
         "chunks": chunks,

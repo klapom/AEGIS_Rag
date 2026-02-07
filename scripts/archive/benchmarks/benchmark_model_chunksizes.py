@@ -49,7 +49,7 @@ RAGAS_SAMPLES_SMALL = [
 RAGAS_SAMPLES = [
     {
         "id": "large_sample_1",
-        "text": " ".join(RAGAS_SAMPLES_SMALL)  # ~4000 chars
+        "text": " ".join(RAGAS_SAMPLES_SMALL),  # ~4000 chars
     }
 ]
 
@@ -100,13 +100,14 @@ JSON Output:"""
 # HELPER FUNCTIONS
 # =============================================================================
 
+
 def chunk_text_by_size(text: str, max_chars: int) -> list[str]:
     """Split text into chunks of approximately max_chars size."""
     if len(text) <= max_chars:
         return [text]
 
     chunks = []
-    paragraphs = text.split('\n\n')
+    paragraphs = text.split("\n\n")
     current_chunk = ""
 
     for para in paragraphs:
@@ -117,7 +118,7 @@ def chunk_text_by_size(text: str, max_chars: int) -> list[str]:
                 chunks.append(current_chunk.strip())
             if len(para) > max_chars:
                 # Split long paragraphs by sentences
-                sentences = para.replace('. ', '.\n').split('\n')
+                sentences = para.replace(". ", ".\n").split("\n")
                 current_chunk = ""
                 for sent in sentences:
                     if len(current_chunk) + len(sent) + 1 <= max_chars:
@@ -148,7 +149,7 @@ def parse_json_array(text: str) -> list | None:
         pass
 
     # Find JSON array
-    match = re.search(r'\[[\s\S]*\]', text)
+    match = re.search(r"\[[\s\S]*\]", text)
     if match:
         try:
             data = json.loads(match.group())
@@ -158,9 +159,9 @@ def parse_json_array(text: str) -> list | None:
             pass
 
     # Remove markdown code blocks
-    text = re.sub(r'```json\s*', '', text)
-    text = re.sub(r'```\s*', '', text)
-    match = re.search(r'\[[\s\S]*\]', text)
+    text = re.sub(r"```json\s*", "", text)
+    text = re.sub(r"```\s*", "", text)
+    match = re.search(r"\[[\s\S]*\]", text)
     if match:
         try:
             data = json.loads(match.group())
@@ -197,9 +198,9 @@ def extract_with_model(model: str, text: str, timeout: int = 300) -> dict:
                 "options": {
                     "temperature": 0.1,
                     "num_predict": 4096,
-                }
+                },
             },
-            timeout=timeout
+            timeout=timeout,
         )
 
         if response.status_code != 200:
@@ -232,17 +233,14 @@ def extract_with_model(model: str, text: str, timeout: int = 300) -> dict:
                 "http://localhost:11434/api/generate",
                 json={
                     "model": model,
-                    "prompt": RELATION_PROMPT.format(
-                        text=text,
-                        entities=", ".join(entity_names)
-                    ),
+                    "prompt": RELATION_PROMPT.format(text=text, entities=", ".join(entity_names)),
                     "stream": False,
                     "options": {
                         "temperature": 0.1,
                         "num_predict": 4096,
-                    }
+                    },
                 },
-                timeout=timeout
+                timeout=timeout,
             )
 
             if response.status_code == 200:
@@ -320,15 +318,15 @@ async def extract_parallel(text: str, timeout: int = 300) -> dict:
 
     # Aggregate times (parallel = max of both, not sum)
     result["entity_time_ms"] = max(
-        gemma_result.get("entity_time_ms", 0),
-        qwen_result.get("entity_time_ms", 0)
+        gemma_result.get("entity_time_ms", 0), qwen_result.get("entity_time_ms", 0)
     )
     result["relation_time_ms"] = max(
-        gemma_result.get("relation_time_ms", 0),
-        qwen_result.get("relation_time_ms", 0)
+        gemma_result.get("relation_time_ms", 0), qwen_result.get("relation_time_ms", 0)
     )
     result["total_time_ms"] = (time.time() - start_time) * 1000
-    result["tokens_output"] = gemma_result.get("tokens_output", 0) + qwen_result.get("tokens_output", 0)
+    result["tokens_output"] = gemma_result.get("tokens_output", 0) + qwen_result.get(
+        "tokens_output", 0
+    )
 
     return result
 
@@ -336,6 +334,7 @@ async def extract_parallel(text: str, timeout: int = 300) -> dict:
 # =============================================================================
 # BENCHMARK RUNNER
 # =============================================================================
+
 
 def run_benchmark_for_model(
     model: str,
@@ -352,9 +351,9 @@ def run_benchmark_for_model(
     }
 
     for chunk_size in chunk_sizes:
-        print(f"\n{'='*70}")
+        print(f"\n{'=' * 70}")
         print(f"Chunk Size: {chunk_size} chars | Model: {model}")
-        print(f"{'='*70}")
+        print(f"{'=' * 70}")
 
         chunk_result = {
             "chunk_size": chunk_size,
@@ -364,7 +363,7 @@ def run_benchmark_for_model(
                 "total_relations": 0,
                 "total_time_ms": 0,
                 "total_chunks": 0,
-            }
+            },
         }
 
         for sample in samples:
@@ -384,7 +383,7 @@ def run_benchmark_for_model(
                     "entities": 0,
                     "relations": 0,
                     "time_ms": 0,
-                }
+                },
             }
 
             for i, chunk in enumerate(chunks):
@@ -398,16 +397,20 @@ def run_benchmark_for_model(
                 num_relations = len(extraction.get("relations", []))
                 time_ms = extraction.get("total_time_ms", 0)
 
-                print(f"    Chunk {i}: {num_entities} entities, {num_relations} rels, {time_ms:.0f}ms")
+                print(
+                    f"    Chunk {i}: {num_entities} entities, {num_relations} rels, {time_ms:.0f}ms"
+                )
 
-                sample_result["chunks"].append({
-                    "chunk_index": i,
-                    "chunk_chars": len(chunk),
-                    "entities": num_entities,
-                    "relations": num_relations,
-                    "time_ms": time_ms,
-                    "error": extraction.get("error"),
-                })
+                sample_result["chunks"].append(
+                    {
+                        "chunk_index": i,
+                        "chunk_chars": len(chunk),
+                        "entities": num_entities,
+                        "relations": num_relations,
+                        "time_ms": time_ms,
+                        "error": extraction.get("error"),
+                    }
+                )
 
                 sample_result["sample_totals"]["entities"] += num_entities
                 sample_result["sample_totals"]["relations"] += num_relations
@@ -424,47 +427,54 @@ def run_benchmark_for_model(
         print(f"\n  CHUNK SIZE {chunk_size} TOTALS:")
         print(f"    Entities: {chunk_result['totals']['total_entities']}")
         print(f"    Relations: {chunk_result['totals']['total_relations']}")
-        print(f"    Time: {chunk_result['totals']['total_time_ms']/1000:.1f}s")
+        print(f"    Time: {chunk_result['totals']['total_time_ms'] / 1000:.1f}s")
 
     return results
 
 
 def print_summary(results: dict):
     """Print summary table of results."""
-    print("\n" + "="*90)
+    print("\n" + "=" * 90)
     print(f"BENCHMARK SUMMARY: {results['model']}")
-    print("="*90)
-    print(f"{'Chunk Size':>12} | {'Chunks':>8} | {'Entities':>10} | {'Relations':>10} | {'Time (s)':>12} | {'Ent/Chunk':>10}")
-    print("-"*90)
+    print("=" * 90)
+    print(
+        f"{'Chunk Size':>12} | {'Chunks':>8} | {'Entities':>10} | {'Relations':>10} | {'Time (s)':>12} | {'Ent/Chunk':>10}"
+    )
+    print("-" * 90)
 
     for cr in results["chunk_results"]:
         t = cr["totals"]
         ent_per_chunk = t["total_entities"] / t["total_chunks"] if t["total_chunks"] > 0 else 0
-        print(f"{cr['chunk_size']:>12} | {t['total_chunks']:>8} | {t['total_entities']:>10} | {t['total_relations']:>10} | {t['total_time_ms']/1000:>12.1f} | {ent_per_chunk:>10.1f}")
+        print(
+            f"{cr['chunk_size']:>12} | {t['total_chunks']:>8} | {t['total_entities']:>10} | {t['total_relations']:>10} | {t['total_time_ms'] / 1000:>12.1f} | {ent_per_chunk:>10.1f}"
+        )
 
-    print("-"*90)
+    print("-" * 90)
 
 
 def main():
     parser = argparse.ArgumentParser(description="Benchmark model with different chunk sizes")
-    parser.add_argument("--model", type=str, default="gemma3:4b",
-                       choices=["gemma3:4b", "qwen2.5:7b", "parallel"],
-                       help="Model to benchmark")
-    parser.add_argument("--samples", type=int, default=10,
-                       help="Number of samples to use (max 10)")
+    parser.add_argument(
+        "--model",
+        type=str,
+        default="gemma3:4b",
+        choices=["gemma3:4b", "qwen2.5:7b", "parallel"],
+        help="Model to benchmark",
+    )
+    parser.add_argument("--samples", type=int, default=10, help="Number of samples to use (max 10)")
     args = parser.parse_args()
 
     # Chunk sizes: 500-4000 (step 500) + 10000
     chunk_sizes = list(range(500, 4001, 500)) + [10000]
 
-    print("="*70)
+    print("=" * 70)
     print("MODEL CHUNK SIZE BENCHMARK")
-    print("="*70)
+    print("=" * 70)
     print(f"Model: {args.model}")
     print(f"Samples: {min(args.samples, 10)}")
     print(f"Chunk sizes: {chunk_sizes}")
 
-    samples = RAGAS_SAMPLES[:args.samples]
+    samples = RAGAS_SAMPLES[: args.samples]
 
     # Run benchmark
     results = run_benchmark_for_model(args.model, samples, chunk_sizes)

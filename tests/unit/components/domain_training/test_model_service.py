@@ -163,9 +163,7 @@ async def test_get_available_models_success(model_service, mock_ollama_response)
         mock_response.status_code = 200
         mock_response.json.return_value = mock_ollama_response
 
-        mock_client.return_value.__aenter__.return_value.get = AsyncMock(
-            return_value=mock_response
-        )
+        mock_client.return_value.__aenter__.return_value.get = AsyncMock(return_value=mock_response)
 
         models = await model_service.get_available_models()
 
@@ -207,9 +205,7 @@ async def test_get_available_models_http_error(model_service):
         mock_response.status_code = 500
         mock_response.text = "Internal Server Error"
 
-        mock_client.return_value.__aenter__.return_value.get = AsyncMock(
-            return_value=mock_response
-        )
+        mock_client.return_value.__aenter__.return_value.get = AsyncMock(return_value=mock_response)
 
         with pytest.raises(ExternalServiceError) as exc_info:
             await model_service.get_available_models()
@@ -295,9 +291,7 @@ async def test_validate_model_available_success(model_service, mock_ollama_respo
         mock_response.status_code = 200
         mock_response.json.return_value = mock_ollama_response
 
-        mock_client.return_value.__aenter__.return_value.get = AsyncMock(
-            return_value=mock_response
-        )
+        mock_client.return_value.__aenter__.return_value.get = AsyncMock(return_value=mock_response)
 
         is_available = await model_service.validate_model_available("nemotron3")
 
@@ -312,9 +306,7 @@ async def test_validate_model_available_with_latest_suffix(model_service, mock_o
         mock_response.status_code = 200
         mock_response.json.return_value = mock_ollama_response
 
-        mock_client.return_value.__aenter__.return_value.get = AsyncMock(
-            return_value=mock_response
-        )
+        mock_client.return_value.__aenter__.return_value.get = AsyncMock(return_value=mock_response)
 
         is_available = await model_service.validate_model_available("nemotron3:latest")
 
@@ -329,9 +321,7 @@ async def test_validate_model_not_available(model_service, mock_ollama_response)
         mock_response.status_code = 200
         mock_response.json.return_value = mock_ollama_response
 
-        mock_client.return_value.__aenter__.return_value.get = AsyncMock(
-            return_value=mock_response
-        )
+        mock_client.return_value.__aenter__.return_value.get = AsyncMock(return_value=mock_response)
 
         is_available = await model_service.validate_model_available("nonexistent:7b")
 

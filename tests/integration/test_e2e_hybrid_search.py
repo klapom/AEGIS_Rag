@@ -131,9 +131,9 @@ async def test_e2e_hybrid_search_complete_workflow(integration_hybrid_setup):
     top_text = result["results"][0]["text"].lower()
     # Accept multiple relevant terms (vector, database, rag, retrieval, semantic, search)
     relevant_terms = ["rag", "retrieval", "vector", "database", "semantic", "search"]
-    assert any(
-        term in top_text for term in relevant_terms
-    ), f"Top result should contain relevant terms. Got: {top_text[:100]}"
+    assert any(term in top_text for term in relevant_terms), (
+        f"Top result should contain relevant terms. Got: {top_text[:100]}"
+    )
 
 
 @pytest.mark.integration
@@ -282,9 +282,9 @@ async def test_e2e_hybrid_search_ranking_diversity(integration_hybrid_setup):
     assert "average_pairwise_overlap" in diversity
 
     # There should be some unique documents from each method
-    assert (
-        diversity["total_unique_documents"] >= diversity["common_documents"]
-    ), "Should have some unique documents"
+    assert diversity["total_unique_documents"] >= diversity["common_documents"], (
+        "Should have some unique documents"
+    )
 
 
 @pytest.mark.integration

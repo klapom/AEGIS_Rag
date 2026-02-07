@@ -47,9 +47,7 @@ class TestCLARAGranularityMapperInitialization:
         ]
 
         for query in test_queries:
-            matches = sum(
-                1 for pattern in mapper.fine_grained_factual if pattern.search(query)
-            )
+            matches = sum(1 for pattern in mapper.fine_grained_factual if pattern.search(query))
             assert matches > 0, f"Query '{query}' should match fine-grained patterns"
 
     def test_holistic_patterns_examples(self):
@@ -65,9 +63,7 @@ class TestCLARAGranularityMapperInitialization:
         ]
 
         for query in test_queries:
-            matches = sum(
-                1 for pattern in mapper.holistic_factual if pattern.search(query)
-            )
+            matches = sum(1 for pattern in mapper.holistic_factual if pattern.search(query))
             assert matches > 0, f"Query '{query}' should match holistic patterns"
 
 
@@ -104,9 +100,7 @@ class TestNavigationIntent:
         mock_classifier = AsyncMock()
         from src.components.retrieval.intent_classifier import CLARAIntent
 
-        mock_classifier.classify.return_value = MagicMock(
-            clara_intent=CLARAIntent.NAVIGATION
-        )
+        mock_classifier.classify.return_value = MagicMock(clara_intent=CLARAIntent.NAVIGATION)
         mapper._clara_classifier = mock_classifier
 
         _, confidence = await mapper.classify_granularity("Find the abstract")
@@ -125,14 +119,10 @@ class TestProceduralIntent:
         mock_classifier = AsyncMock()
         from src.components.retrieval.intent_classifier import CLARAIntent
 
-        mock_classifier.classify.return_value = MagicMock(
-            clara_intent=CLARAIntent.PROCEDURAL
-        )
+        mock_classifier.classify.return_value = MagicMock(clara_intent=CLARAIntent.PROCEDURAL)
         mapper._clara_classifier = mock_classifier
 
-        granularity, confidence = await mapper.classify_granularity(
-            "How do I implement BGE-M3?"
-        )
+        granularity, confidence = await mapper.classify_granularity("How do I implement BGE-M3?")
 
         assert granularity == "holistic"
         assert confidence == 0.90
@@ -145,9 +135,7 @@ class TestProceduralIntent:
         mock_classifier = AsyncMock()
         from src.components.retrieval.intent_classifier import CLARAIntent
 
-        mock_classifier.classify.return_value = MagicMock(
-            clara_intent=CLARAIntent.PROCEDURAL
-        )
+        mock_classifier.classify.return_value = MagicMock(clara_intent=CLARAIntent.PROCEDURAL)
         mapper._clara_classifier = mock_classifier
 
         queries = [
@@ -172,9 +160,7 @@ class TestComparisonIntent:
         mock_classifier = AsyncMock()
         from src.components.retrieval.intent_classifier import CLARAIntent
 
-        mock_classifier.classify.return_value = MagicMock(
-            clara_intent=CLARAIntent.COMPARISON
-        )
+        mock_classifier.classify.return_value = MagicMock(clara_intent=CLARAIntent.COMPARISON)
         mapper._clara_classifier = mock_classifier
 
         granularity, confidence = await mapper.classify_granularity(
@@ -196,9 +182,7 @@ class TestRecommendationIntent:
         mock_classifier = AsyncMock()
         from src.components.retrieval.intent_classifier import CLARAIntent
 
-        mock_classifier.classify.return_value = MagicMock(
-            clara_intent=CLARAIntent.RECOMMENDATION
-        )
+        mock_classifier.classify.return_value = MagicMock(clara_intent=CLARAIntent.RECOMMENDATION)
         mapper._clara_classifier = mock_classifier
 
         granularity, confidence = await mapper.classify_granularity(
@@ -220,9 +204,7 @@ class TestFactualIntentSubclassification:
         mock_classifier = AsyncMock()
         from src.components.retrieval.intent_classifier import CLARAIntent
 
-        mock_classifier.classify.return_value = MagicMock(
-            clara_intent=CLARAIntent.FACTUAL
-        )
+        mock_classifier.classify.return_value = MagicMock(clara_intent=CLARAIntent.FACTUAL)
         mapper._clara_classifier = mock_classifier
 
         granularity, confidence = await mapper.classify_granularity(
@@ -240,9 +222,7 @@ class TestFactualIntentSubclassification:
         mock_classifier = AsyncMock()
         from src.components.retrieval.intent_classifier import CLARAIntent
 
-        mock_classifier.classify.return_value = MagicMock(
-            clara_intent=CLARAIntent.FACTUAL
-        )
+        mock_classifier.classify.return_value = MagicMock(clara_intent=CLARAIntent.FACTUAL)
         mapper._clara_classifier = mock_classifier
 
         granularity, _ = await mapper.classify_granularity("Show Table 3")
@@ -257,9 +237,7 @@ class TestFactualIntentSubclassification:
         mock_classifier = AsyncMock()
         from src.components.retrieval.intent_classifier import CLARAIntent
 
-        mock_classifier.classify.return_value = MagicMock(
-            clara_intent=CLARAIntent.FACTUAL
-        )
+        mock_classifier.classify.return_value = MagicMock(clara_intent=CLARAIntent.FACTUAL)
         mapper._clara_classifier = mock_classifier
 
         granularity, _ = await mapper.classify_granularity("What does Figure 5 show?")
@@ -274,14 +252,10 @@ class TestFactualIntentSubclassification:
         mock_classifier = AsyncMock()
         from src.components.retrieval.intent_classifier import CLARAIntent
 
-        mock_classifier.classify.return_value = MagicMock(
-            clara_intent=CLARAIntent.FACTUAL
-        )
+        mock_classifier.classify.return_value = MagicMock(clara_intent=CLARAIntent.FACTUAL)
         mapper._clara_classifier = mock_classifier
 
-        granularity, _ = await mapper.classify_granularity(
-            "What is the definition of BGE-M3?"
-        )
+        granularity, _ = await mapper.classify_granularity("What is the definition of BGE-M3?")
 
         assert granularity == "fine-grained"
 
@@ -293,9 +267,7 @@ class TestFactualIntentSubclassification:
         mock_classifier = AsyncMock()
         from src.components.retrieval.intent_classifier import CLARAIntent
 
-        mock_classifier.classify.return_value = MagicMock(
-            clara_intent=CLARAIntent.FACTUAL
-        )
+        mock_classifier.classify.return_value = MagicMock(clara_intent=CLARAIntent.FACTUAL)
         mapper._clara_classifier = mock_classifier
 
         granularity, _ = await mapper.classify_granularity("Summarize the methodology")
@@ -310,9 +282,7 @@ class TestFactualIntentSubclassification:
         mock_classifier = AsyncMock()
         from src.components.retrieval.intent_classifier import CLARAIntent
 
-        mock_classifier.classify.return_value = MagicMock(
-            clara_intent=CLARAIntent.FACTUAL
-        )
+        mock_classifier.classify.return_value = MagicMock(clara_intent=CLARAIntent.FACTUAL)
         mapper._clara_classifier = mock_classifier
 
         granularity, _ = await mapper.classify_granularity("Explain the approach")
@@ -327,15 +297,11 @@ class TestFactualIntentSubclassification:
         mock_classifier = AsyncMock()
         from src.components.retrieval.intent_classifier import CLARAIntent
 
-        mock_classifier.classify.return_value = MagicMock(
-            clara_intent=CLARAIntent.FACTUAL
-        )
+        mock_classifier.classify.return_value = MagicMock(clara_intent=CLARAIntent.FACTUAL)
         mapper._clara_classifier = mock_classifier
 
         # Query that doesn't match any patterns
-        granularity, confidence = await mapper.classify_granularity(
-            "Tell me about the study"
-        )
+        granularity, confidence = await mapper.classify_granularity("Tell me about the study")
 
         assert granularity == "fine-grained"  # Default
         assert confidence == 0.60  # Low confidence
@@ -350,9 +316,7 @@ class TestHeuristicFallback:
         mapper = CLARAGranularityMapper()
         # Don't set _clara_classifier (simulate unavailable)
 
-        granularity, confidence = await mapper.classify_granularity(
-            "What is the exact p-value?"
-        )
+        granularity, confidence = await mapper.classify_granularity("What is the exact p-value?")
 
         assert granularity == "fine-grained"
         assert confidence == 0.70  # Heuristic confidence
@@ -363,9 +327,7 @@ class TestHeuristicFallback:
         mapper = CLARAGranularityMapper()
         # Don't set _clara_classifier
 
-        granularity, confidence = await mapper.classify_granularity(
-            "Summarize the main findings"
-        )
+        granularity, confidence = await mapper.classify_granularity("Summarize the main findings")
 
         assert granularity == "holistic"
         assert confidence == 0.70  # Heuristic confidence
@@ -391,9 +353,7 @@ class TestHeuristicFallback:
                     raise ImportError("C-LARA not available")
 
         # Call classify_granularity which will fall back to heuristic
-        granularity, confidence = await mapper.classify_granularity(
-            "What is the p-value?"
-        )
+        granularity, confidence = await mapper.classify_granularity("What is the p-value?")
 
         # Should use heuristic fallback (fine-grained pattern match)
         assert granularity == "fine-grained"
@@ -408,9 +368,7 @@ class TestHeuristicFallback:
         mock_classifier.classify.side_effect = RuntimeError("C-LARA error")
         mapper._clara_classifier = mock_classifier
 
-        granularity, confidence = await mapper.classify_granularity(
-            "What is the p-value?"
-        )
+        granularity, confidence = await mapper.classify_granularity("What is the p-value?")
 
         assert granularity == "fine-grained"
         assert confidence == 0.70  # Heuristic fallback
@@ -432,13 +390,9 @@ class TestPatternScoring:
         ]
 
         for query, should_match in queries_and_expected:
-            matches = sum(
-                1 for p in mapper.fine_grained_factual if p.search(query)
-            )
+            matches = sum(1 for p in mapper.fine_grained_factual if p.search(query))
             has_match = matches > 0
-            assert (
-                has_match == should_match
-            ), f"Query '{query}' match expectation failed"
+            assert has_match == should_match, f"Query '{query}' match expectation failed"
 
     def test_holistic_pattern_accuracy(self):
         """Test holistic patterns match appropriate queries."""
@@ -453,13 +407,9 @@ class TestPatternScoring:
         ]
 
         for query, should_match in queries_and_expected:
-            matches = sum(
-                1 for p in mapper.holistic_factual if p.search(query)
-            )
+            matches = sum(1 for p in mapper.holistic_factual if p.search(query))
             has_match = matches > 0
-            assert (
-                has_match == should_match
-            ), f"Query '{query}' match expectation failed"
+            assert has_match == should_match, f"Query '{query}' match expectation failed"
 
     def test_factual_scoring_logic(self):
         """Test factual sub-classification scoring logic."""
@@ -492,17 +442,13 @@ class TestConfidenceCalculation:
         from src.components.retrieval.intent_classifier import CLARAIntent
 
         # Test NAVIGATION (0.95)
-        mock_classifier.classify.return_value = MagicMock(
-            clara_intent=CLARAIntent.NAVIGATION
-        )
+        mock_classifier.classify.return_value = MagicMock(clara_intent=CLARAIntent.NAVIGATION)
         mapper._clara_classifier = mock_classifier
         _, conf = await mapper.classify_granularity("Find the section")
         assert conf == 0.95
 
         # Test PROCEDURAL (0.90)
-        mock_classifier.classify.return_value = MagicMock(
-            clara_intent=CLARAIntent.PROCEDURAL
-        )
+        mock_classifier.classify.return_value = MagicMock(clara_intent=CLARAIntent.PROCEDURAL)
         _, conf = await mapper.classify_granularity("How to implement")
         assert conf == 0.90
 
@@ -514,9 +460,7 @@ class TestConfidenceCalculation:
         mock_classifier = AsyncMock()
         from src.components.retrieval.intent_classifier import CLARAIntent
 
-        mock_classifier.classify.return_value = MagicMock(
-            clara_intent=CLARAIntent.FACTUAL
-        )
+        mock_classifier.classify.return_value = MagicMock(clara_intent=CLARAIntent.FACTUAL)
         mapper._clara_classifier = mock_classifier
 
         # Query with many matching patterns (high confidence)
@@ -607,7 +551,5 @@ class TestEdgeCases:
         mixed_query = "What Is The P-Value?"
 
         for query in [lower_query, upper_query, mixed_query]:
-            matches = sum(
-                1 for p in mapper.fine_grained_factual if p.search(query)
-            )
+            matches = sum(1 for p in mapper.fine_grained_factual if p.search(query))
             assert matches > 0, f"Pattern failed for: {query}"

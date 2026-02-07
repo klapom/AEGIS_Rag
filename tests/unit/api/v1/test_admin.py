@@ -87,7 +87,6 @@ class TestGetSystemStatsEndpoint:
                 "src.api.v1.admin.get_last_reindex_timestamp", new_callable=AsyncMock
             ) as mock_reindex,
         ):
-
             mock_reindex.return_value = None
 
             from src.api.main import app
@@ -412,13 +411,31 @@ class TestGetDashboardStatsEndpoint:
 
         # Mock Domains
         mock_domains_response = MagicMock()
-        mock_domains_response.domains = ["domain1", "domain2", "domain3", "domain4", "domain5", "domain6", "domain7", "domain8"]
+        mock_domains_response.domains = [
+            "domain1",
+            "domain2",
+            "domain3",
+            "domain4",
+            "domain5",
+            "domain6",
+            "domain7",
+            "domain8",
+        ]
 
         with (
-            patch("src.components.vector_search.qdrant_client.get_qdrant_client", return_value=mock_qdrant),
-            patch("src.components.graph_rag.neo4j_client.get_neo4j_client", return_value=mock_neo4j),
+            patch(
+                "src.components.vector_search.qdrant_client.get_qdrant_client",
+                return_value=mock_qdrant,
+            ),
+            patch(
+                "src.components.graph_rag.neo4j_client.get_neo4j_client", return_value=mock_neo4j
+            ),
             patch("src.core.namespace.NamespaceManager", return_value=mock_manager),
-            patch("src.api.v1.domain_training.list_domains", new_callable=AsyncMock, return_value=mock_domains_response),
+            patch(
+                "src.api.v1.domain_training.list_domains",
+                new_callable=AsyncMock,
+                return_value=mock_domains_response,
+            ),
         ):
             response = test_client.get("/api/v1/admin/dashboard/stats")
 
@@ -453,10 +470,19 @@ class TestGetDashboardStatsEndpoint:
         mock_domains_response.domains = []
 
         with (
-            patch("src.components.vector_search.qdrant_client.get_qdrant_client", return_value=mock_qdrant),
-            patch("src.components.graph_rag.neo4j_client.get_neo4j_client", return_value=mock_neo4j),
+            patch(
+                "src.components.vector_search.qdrant_client.get_qdrant_client",
+                return_value=mock_qdrant,
+            ),
+            patch(
+                "src.components.graph_rag.neo4j_client.get_neo4j_client", return_value=mock_neo4j
+            ),
             patch("src.core.namespace.NamespaceManager", return_value=mock_manager),
-            patch("src.api.v1.domain_training.list_domains", new_callable=AsyncMock, return_value=mock_domains_response),
+            patch(
+                "src.api.v1.domain_training.list_domains",
+                new_callable=AsyncMock,
+                return_value=mock_domains_response,
+            ),
         ):
             response = test_client.get("/api/v1/admin/dashboard/stats")
 
@@ -499,10 +525,19 @@ class TestGetDashboardStatsEndpoint:
         mock_domains_response.domains = ["domain1", "domain2"]
 
         with (
-            patch("src.components.vector_search.qdrant_client.get_qdrant_client", return_value=mock_qdrant),
-            patch("src.components.graph_rag.neo4j_client.get_neo4j_client", return_value=mock_neo4j),
+            patch(
+                "src.components.vector_search.qdrant_client.get_qdrant_client",
+                return_value=mock_qdrant,
+            ),
+            patch(
+                "src.components.graph_rag.neo4j_client.get_neo4j_client", return_value=mock_neo4j
+            ),
             patch("src.core.namespace.NamespaceManager", return_value=mock_manager),
-            patch("src.api.v1.domain_training.list_domains", new_callable=AsyncMock, return_value=mock_domains_response),
+            patch(
+                "src.api.v1.domain_training.list_domains",
+                new_callable=AsyncMock,
+                return_value=mock_domains_response,
+            ),
         ):
             response = test_client.get("/api/v1/admin/dashboard/stats")
 
@@ -546,10 +581,19 @@ class TestGetDashboardStatsEndpoint:
         mock_domains_response.domains = []
 
         with (
-            patch("src.components.vector_search.qdrant_client.get_qdrant_client", return_value=mock_qdrant),
-            patch("src.components.graph_rag.neo4j_client.get_neo4j_client", return_value=mock_neo4j),
+            patch(
+                "src.components.vector_search.qdrant_client.get_qdrant_client",
+                return_value=mock_qdrant,
+            ),
+            patch(
+                "src.components.graph_rag.neo4j_client.get_neo4j_client", return_value=mock_neo4j
+            ),
             patch("src.core.namespace.NamespaceManager", return_value=mock_manager),
-            patch("src.api.v1.domain_training.list_domains", new_callable=AsyncMock, return_value=mock_domains_response),
+            patch(
+                "src.api.v1.domain_training.list_domains",
+                new_callable=AsyncMock,
+                return_value=mock_domains_response,
+            ),
         ):
             response = test_client.get("/api/v1/admin/dashboard/stats")
 
@@ -577,10 +621,19 @@ class TestGetDashboardStatsEndpoint:
         mock_domains_response.domains = []
 
         with (
-            patch("src.components.vector_search.qdrant_client.get_qdrant_client", return_value=mock_qdrant),
-            patch("src.components.graph_rag.neo4j_client.get_neo4j_client", return_value=mock_neo4j),
+            patch(
+                "src.components.vector_search.qdrant_client.get_qdrant_client",
+                return_value=mock_qdrant,
+            ),
+            patch(
+                "src.components.graph_rag.neo4j_client.get_neo4j_client", return_value=mock_neo4j
+            ),
             patch("src.core.namespace.NamespaceManager", return_value=mock_manager),
-            patch("src.api.v1.domain_training.list_domains", new_callable=AsyncMock, return_value=mock_domains_response),
+            patch(
+                "src.api.v1.domain_training.list_domains",
+                new_callable=AsyncMock,
+                return_value=mock_domains_response,
+            ),
         ):
             response = test_client.get("/api/v1/admin/dashboard/stats")
 

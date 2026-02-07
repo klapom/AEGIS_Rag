@@ -173,9 +173,7 @@ class TestListAuditEvents:
         start_time = (datetime.utcnow() - timedelta(hours=1)).isoformat()
         end_time = (datetime.utcnow() + timedelta(hours=1)).isoformat()
 
-        response = client.get(
-            f"/api/v1/audit/events?start_time={start_time}&end_time={end_time}"
-        )
+        response = client.get(f"/api/v1/audit/events?start_time={start_time}&end_time={end_time}")
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -208,8 +206,7 @@ class TestGenerateAuditReport:
         end_time = (datetime.utcnow() + timedelta(hours=1)).isoformat()
 
         response = client.get(
-            f"/api/v1/audit/reports/gdpr_compliance"
-            f"?start_time={start_time}&end_time={end_time}"
+            f"/api/v1/audit/reports/gdpr_compliance?start_time={start_time}&end_time={end_time}"
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -243,8 +240,7 @@ class TestGenerateAuditReport:
         end_time = (datetime.utcnow() + timedelta(hours=1)).isoformat()
 
         response = client.get(
-            f"/api/v1/audit/reports/security_audit"
-            f"?start_time={start_time}&end_time={end_time}"
+            f"/api/v1/audit/reports/security_audit?start_time={start_time}&end_time={end_time}"
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -277,8 +273,7 @@ class TestGenerateAuditReport:
         end_time = (datetime.utcnow() + timedelta(hours=1)).isoformat()
 
         response = client.get(
-            f"/api/v1/audit/reports/skill_usage"
-            f"?start_time={start_time}&end_time={end_time}"
+            f"/api/v1/audit/reports/skill_usage?start_time={start_time}&end_time={end_time}"
         )
 
         assert response.status_code == status.HTTP_200_OK

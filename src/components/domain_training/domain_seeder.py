@@ -109,7 +109,7 @@ def _load_seed_domains() -> dict[str, Any]:
         raise FileNotFoundError(f"seed_domains.yaml not found at {SEED_DOMAINS_PATH}")
 
     try:
-        with open(SEED_DOMAINS_PATH, "r", encoding="utf-8") as f:
+        with open(SEED_DOMAINS_PATH, encoding="utf-8") as f:
             catalog = yaml.safe_load(f)
 
         logger.info(

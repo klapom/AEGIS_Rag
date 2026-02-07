@@ -27,12 +27,16 @@ async def test_get_overview():
         async with session.get(f"{BASE_URL}/api/v1/certification/overview") as resp:
             assert resp.status == 200, f"Expected 200, got {resp.status}"
             data = await resp.json()
-            print(f"   ✅ Overview: {data['enterprise_count']} enterprise, "
-                  f"{data['standard_count']} standard, "
-                  f"{data['basic_count']} basic, "
-                  f"{data['uncertified_count']} uncertified")
-            print(f"   ✅ Status: {data['expiring_soon_count']} expiring soon, "
-                  f"{data['expired_count']} expired")
+            print(
+                f"   ✅ Overview: {data['enterprise_count']} enterprise, "
+                f"{data['standard_count']} standard, "
+                f"{data['basic_count']} basic, "
+                f"{data['uncertified_count']} uncertified"
+            )
+            print(
+                f"   ✅ Status: {data['expiring_soon_count']} expiring soon, "
+                f"{data['expired_count']} expired"
+            )
             return data
 
 
@@ -47,9 +51,7 @@ async def test_get_skills():
             print(f"   ✅ Total skills: {len(data)}")
 
         # Test with level filter
-        async with session.get(
-            f"{BASE_URL}/api/v1/certification/skills?level=enterprise"
-        ) as resp:
+        async with session.get(f"{BASE_URL}/api/v1/certification/skills?level=enterprise") as resp:
             assert resp.status == 200, f"Expected 200, got {resp.status}"
             data = await resp.json()
             print(f"   ✅ Enterprise skills: {len(data)}")
@@ -62,9 +64,7 @@ async def test_get_skills():
             assert resp.status == 200, f"Expected 200, got {resp.status}"
             data = await resp.json()
             print(f"   ✅ Expiring soon: {len(data)}")
-            assert all(
-                s["status"] == "expiring_soon" for s in data
-            ), "Status filter failed"
+            assert all(s["status"] == "expiring_soon" for s in data), "Status filter failed"
 
         return data
 
@@ -80,9 +80,7 @@ async def test_get_expiring():
             print(f"   ✅ Expiring in 30 days: {len(data)}")
 
         # Test custom threshold (90 days)
-        async with session.get(
-            f"{BASE_URL}/api/v1/certification/expiring?days=90"
-        ) as resp:
+        async with session.get(f"{BASE_URL}/api/v1/certification/expiring?days=90") as resp:
             assert resp.status == 200, f"Expected 200, got {resp.status}"
             data = await resp.json()
             print(f"   ✅ Expiring in 90 days: {len(data)}")

@@ -99,9 +99,7 @@ class TestSPOExtraction:
 
     def test_spo_entity_name_length_subject(self):
         """Test subject name length enforcement."""
-        subject = validate_entity_name_length(
-            "Google Cloud Platform Division", max_words=4
-        )
+        subject = validate_entity_name_length("Google Cloud Platform Division", max_words=4)
 
         # Should truncate to 4 words
         assert len(subject.split()) <= 4
@@ -226,8 +224,8 @@ class TestSPOJsonSerialization:
         json_str = json.dumps(spo)
         parsed = json.loads(json_str)
 
-        assert 'Hello' in parsed["subject"]
-        assert 'Hello World' in parsed["object"]
+        assert "Hello" in parsed["subject"]
+        assert "Hello World" in parsed["object"]
 
     def test_spo_json_array_serialization(self):
         """Test serializing multiple S-P-O triples."""
@@ -262,9 +260,9 @@ class TestSPOKGHygiene:
     def test_valid_relation_types_includes_all_universal(self):
         """Test that VALID_RELATION_TYPES includes all universal types."""
         for universal_type in UNIVERSAL_RELATION_TYPES:
-            assert (
-                universal_type in VALID_RELATION_TYPES
-            ), f"Universal type '{universal_type}' missing from VALID_RELATION_TYPES"
+            assert universal_type in VALID_RELATION_TYPES, (
+                f"Universal type '{universal_type}' missing from VALID_RELATION_TYPES"
+            )
 
     def test_kg_hygiene_uses_type(self):
         """Test USES relation is valid in KG hygiene."""

@@ -32,7 +32,11 @@ import httpx
 import structlog
 from openai import AsyncOpenAI  # For Ollama OpenAI-compatible API (async needed for RAGAS)
 from pydantic import BaseModel, Field
-from ragas.embeddings.base import BaseRagasEmbeddings, BaseRagasEmbedding, embedding_factory  # RAGAS 0.4.2 base + factory
+from ragas.embeddings.base import (
+    BaseRagasEmbeddings,
+    BaseRagasEmbedding,
+    embedding_factory,
+)  # RAGAS 0.4.2 base + factory
 from ragas.llms import llm_factory  # RAGAS 0.4 unified LLM factory
 from sentence_transformers import SentenceTransformer  # For BGE-M3 embeddings
 from ragas.metrics.collections import (  # RAGAS 0.4.2 Collections metrics
@@ -131,6 +135,7 @@ class OllamaEmbeddings(BaseRagasEmbeddings):
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
         """Embed documents synchronously (fallback - not used by RAGAS 0.4.2)."""
         import requests
+
         embeddings = []
         for text in texts:
             response = requests.post(
@@ -145,6 +150,7 @@ class OllamaEmbeddings(BaseRagasEmbeddings):
     def embed_query(self, text: str) -> list[float]:
         """Embed query synchronously (fallback - not used by RAGAS 0.4.2)."""
         import requests
+
         response = requests.post(
             f"{self.base_url}/api/embeddings",
             json={"model": self.model, "prompt": text},
@@ -214,6 +220,7 @@ class ModernBGEM3Embeddings(BaseRagasEmbedding):
         """
         # SentenceTransformer is sync, but wrap for async compatibility
         import asyncio
+
         return await asyncio.to_thread(self.embed_text, text, **kwargs)
 
     def embed_texts(self, texts: list[str], **kwargs) -> list[list[float]]:
@@ -230,6 +237,7 @@ class ModernBGEM3Embeddings(BaseRagasEmbedding):
         Optional batch method - RAGAS provides default implementation.
         """
         import asyncio
+
         return await asyncio.to_thread(self.embed_texts, texts, **kwargs)
 
 
@@ -260,6 +268,7 @@ logger = structlog.get_logger(__name__)
 # RAGAS 0.4.2: Define result model for experiment
 class RAGASMetricsResult(BaseModel):
     """RAGAS evaluation metrics result."""
+
     context_precision: float = Field(description="Context precision score (0-1)")
     context_recall: float = Field(description="Context recall score (0-1)")
     faithfulness: float = Field(description="Faithfulness score (0-1)")
@@ -371,7 +380,7 @@ async def compute_single_metric(
         elapsed = time.time() - start_time
 
         # Extract score value
-        if hasattr(result, 'value'):
+        if hasattr(result, "value"):
             score = float(result.value)
         else:
             score = float(result)
@@ -381,29 +390,29 @@ async def compute_single_metric(
         logger.info(f"    [{metric_name}] ✓ Score: {score:.3f} in {elapsed:.1f}s")
 
         # RAG Tuning: Extract all available details from RAGAS result
-        if hasattr(result, 'reason') and result.reason:
+        if hasattr(result, "reason") and result.reason:
             details["reason"] = str(result.reason)
             reason_preview = str(result.reason)[:200]
             logger.info(f"    [{metric_name}] LLM Reason: {reason_preview}...")
 
-        if hasattr(result, 'statements') and result.statements:
+        if hasattr(result, "statements") and result.statements:
             details["statements"] = result.statements
             logger.info(f"    [{metric_name}] Statements analyzed: {len(result.statements)}")
 
-        if hasattr(result, 'verdicts') and result.verdicts:
+        if hasattr(result, "verdicts") and result.verdicts:
             details["verdicts"] = result.verdicts
             logger.info(f"    [{metric_name}] Verdicts: {result.verdicts}")
 
-        if hasattr(result, 'claims') and result.claims:
+        if hasattr(result, "claims") and result.claims:
             details["claims"] = result.claims
             logger.info(f"    [{metric_name}] Claims extracted: {len(result.claims)}")
 
         # RAG Tuning: Additional attributes that might be useful
-        if hasattr(result, 'questions_generated'):
+        if hasattr(result, "questions_generated"):
             details["questions_generated"] = result.questions_generated
-        if hasattr(result, 'context_precision_scores'):
+        if hasattr(result, "context_precision_scores"):
             details["per_context_scores"] = result.context_precision_scores
-        if hasattr(result, 'sentence_scores'):
+        if hasattr(result, "sentence_scores"):
             details["sentence_scores"] = result.sentence_scores
 
         return score, status, elapsed, details
@@ -646,7 +655,7 @@ async def run_ragas_evaluation(
         # Sprint 92: contexts may not be in dataset (retrieved from system instead)
         expected_contexts = q_data.get("contexts", [])
 
-        logger.info(f"\n[{i+1}/{len(questions_data)}] {question[:80]}...")
+        logger.info(f"\n[{i + 1}/{len(questions_data)}] {question[:80]}...")
 
         try:
             # Sprint 79 POC 79.10: If use_ground_truth flag set, skip API and use ground_truth
@@ -694,24 +703,28 @@ async def run_ragas_evaluation(
             # RAG Tuning: Log source details
             if response.get("source_metadata"):
                 for src in response["source_metadata"][:3]:  # Log first 3 sources
-                    logger.info(f"    - [{src.get('index', '?')}] {src.get('filename', 'unknown')[:40]} "
-                               f"(score: {src.get('score', 'N/A')}, len: {src.get('text_length', 0)})")
+                    logger.info(
+                        f"    - [{src.get('index', '?')}] {src.get('filename', 'unknown')[:40]} "
+                        f"(score: {src.get('score', 'N/A')}, len: {src.get('text_length', 0)})"
+                    )
 
         except Exception as e:
             logger.error(f"  ✗ Query failed: {e}")
             # Add failed result with empty answer
-            results.append({
-                "question": question,
-                "answer": "",
-                "contexts": [],
-                "ground_truth": ground_truth,
-                "expected_contexts": expected_contexts,
-                "mode": mode,
-                "query_time": 0,
-                "num_contexts_retrieved": 0,
-                "error": str(e),
-                "poc_mode": use_ground_truth,
-            })
+            results.append(
+                {
+                    "question": question,
+                    "answer": "",
+                    "contexts": [],
+                    "ground_truth": ground_truth,
+                    "expected_contexts": expected_contexts,
+                    "mode": mode,
+                    "query_time": 0,
+                    "num_contexts_retrieved": 0,
+                    "error": str(e),
+                    "poc_mode": use_ground_truth,
+                }
+            )
 
     total_query_time = time.time() - start_time
 
@@ -732,20 +745,32 @@ async def run_ragas_evaluation(
     try:
         # RAGAS 0.4.2: Compute metrics for each sample individually
         for i, result in enumerate(results):
-            logger.info(f"\n{'='*60}")
-            logger.info(f"Computing metrics for sample {i+1}/{len(results)}")
-            logger.info(f"{'='*60}")
+            logger.info(f"\n{'=' * 60}")
+            logger.info(f"Computing metrics for sample {i + 1}/{len(results)}")
+            logger.info(f"{'=' * 60}")
 
             # Log question, answer, ground truth for manual verification (min 300 chars)
-            q_truncated = result["question"][:300] + "..." if len(result["question"]) > 300 else result["question"]
-            a_truncated = result["answer"][:400] + "..." if len(result["answer"]) > 400 else result["answer"]
-            gt_truncated = result["ground_truth"][:400] + "..." if len(result["ground_truth"]) > 400 else result["ground_truth"]
+            q_truncated = (
+                result["question"][:300] + "..."
+                if len(result["question"]) > 300
+                else result["question"]
+            )
+            a_truncated = (
+                result["answer"][:400] + "..." if len(result["answer"]) > 400 else result["answer"]
+            )
+            gt_truncated = (
+                result["ground_truth"][:400] + "..."
+                if len(result["ground_truth"]) > 400
+                else result["ground_truth"]
+            )
 
             logger.info(f"  Q: {q_truncated}")
             logger.info(f"  A: {a_truncated}")
             logger.info(f"  GT: {gt_truncated}")
-            logger.info(f"  Contexts: {len(result['contexts'])} retrieved, "
-                       f"total {sum(len(c) for c in result['contexts'])} chars")
+            logger.info(
+                f"  Contexts: {len(result['contexts'])} retrieved, "
+                f"total {sum(len(c) for c in result['contexts'])} chars"
+            )
 
             sample_start = time.time()
             # RAG Tuning: Returns tuple of (metrics, rag_tuning_details)
@@ -765,10 +790,12 @@ async def run_ragas_evaluation(
             result["rag_tuning_details"] = rag_tuning_details  # RAG Tuning: Save details
 
             logger.info(f"  ✓ Metrics computed in {sample_time:.2f}s")
-            logger.info(f"  SCORES: CP={sample_metrics.context_precision:.3f} | "
-                       f"CR={sample_metrics.context_recall:.3f} | "
-                       f"F={sample_metrics.faithfulness:.3f} | "
-                       f"AR={sample_metrics.answer_relevancy:.3f}")
+            logger.info(
+                f"  SCORES: CP={sample_metrics.context_precision:.3f} | "
+                f"CR={sample_metrics.context_recall:.3f} | "
+                f"F={sample_metrics.faithfulness:.3f} | "
+                f"AR={sample_metrics.answer_relevancy:.3f}"
+            )
 
         metrics_total_time = time.time() - metrics_start_time
 
@@ -804,6 +831,7 @@ async def run_ragas_evaluation(
     except Exception as e:
         logger.error(f"RAGAS evaluation failed: {e}")
         import traceback
+
         traceback.print_exc()
         metrics = {
             "context_precision": 0.0,
@@ -835,7 +863,9 @@ async def run_ragas_evaluation(
             "timestamp": timestamp,
             "ragas_version": "0.4.2",
             "poc_mode": use_ground_truth,
-            "poc_description": "Sprint 79 POC 79.10: Using ground_truth as answer to prove RAGAS metrics work" if use_ground_truth else None,
+            "poc_description": "Sprint 79 POC 79.10: Using ground_truth as answer to prove RAGAS metrics work"
+            if use_ground_truth
+            else None,
         },
         "metrics": metrics,
         "per_question_results": results,
@@ -860,7 +890,9 @@ async def run_ragas_evaluation(
     logger.info(f"Query time: {total_query_time:.1f}s")
     logger.info(f"Metrics time: {metrics.get('total_time_seconds', 0):.1f}s")
     logger.info(f"Total time: {total_time:.1f}s")
-    logger.info(f"Avg time per question (query only): {total_query_time/len(questions_data):.2f}s")
+    logger.info(
+        f"Avg time per question (query only): {total_query_time / len(questions_data):.2f}s"
+    )
     logger.info(f"Avg time per sample (metrics): {metrics.get('avg_time_per_sample', 0):.2f}s")
     logger.info(f"\nMetrics:")
     logger.info(f"  Context Precision: {metrics['context_precision']:.4f}")
@@ -870,9 +902,15 @@ async def run_ragas_evaluation(
 
     if use_ground_truth:
         logger.info(f"\nPOC MODE INTERPRETATION:")
-        logger.info(f"  Context Precision/Recall are measuring retrieval quality against expected contexts")
-        logger.info(f"  Faithfulness measures: Is ground_truth faithful to retrieved contexts? (should be high)")
-        logger.info(f"  Answer Relevancy measures: Is ground_truth relevant to the question? (should be high)")
+        logger.info(
+            f"  Context Precision/Recall are measuring retrieval quality against expected contexts"
+        )
+        logger.info(
+            f"  Faithfulness measures: Is ground_truth faithful to retrieved contexts? (should be high)"
+        )
+        logger.info(
+            f"  Answer Relevancy measures: Is ground_truth relevant to the question? (should be high)"
+        )
         logger.info(f"\nExpected Results in POC mode:")
         logger.info(f"  - Faithfulness should be >0.5 (proves RAGAS can evaluate real answers)")
         logger.info(f"  - Answer Relevancy should be >0.5 (proves RAGAS can evaluate real answers)")
@@ -916,7 +954,7 @@ async def main():
         "--use-ground-truth",
         action="store_true",
         help="POC Mode (Sprint 79.10): Use ground_truth as answer instead of API response. "
-             "This proves RAGAS works when given real answers. Bypasses API queries.",
+        "This proves RAGAS works when given real answers. Bypasses API queries.",
     )
 
     args = parser.parse_args()

@@ -318,7 +318,9 @@ async def test_rerank_top_k_larger_than_docs(mock_ce_class, sample_documents):
 
     reranker = CrossEncoderReranker()
     results = await reranker.rerank(
-        query="test", documents=sample_documents, top_k=100  # More than 5 docs
+        query="test",
+        documents=sample_documents,
+        top_k=100,  # More than 5 docs
     )
 
     # Should return all documents

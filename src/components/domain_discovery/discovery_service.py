@@ -413,7 +413,7 @@ class DomainDiscoveryService:
 
         # Format documents for prompt
         docs_text = "\n\n---\n\n".join(
-            [f"Document {i+1}:\n{doc}" for i, doc in enumerate(truncated_docs)]
+            [f"Document {i + 1}:\n{doc}" for i, doc in enumerate(truncated_docs)]
         )
 
         prompt = DOMAIN_ANALYSIS_PROMPT.format(documents=docs_text)

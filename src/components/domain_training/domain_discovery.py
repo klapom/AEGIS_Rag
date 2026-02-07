@@ -169,7 +169,7 @@ class DomainDiscoveryService:
 
         # Format samples for prompt
         samples_text = "\n\n---\n\n".join(
-            [f"Document {i+1}:\n{text}" for i, text in enumerate(truncated)]
+            [f"Document {i + 1}:\n{text}" for i, text in enumerate(truncated)]
         )
 
         prompt = DISCOVERY_PROMPT.format(samples=samples_text)

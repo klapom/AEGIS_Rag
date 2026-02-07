@@ -226,7 +226,7 @@ class SkillRegistry:
         logger.info("skills_discovery_complete", count=len(self._available))
         return self._available
 
-    def _parse_skill_md(self, path: Path) -> Optional[SkillMetadata]:
+    def _parse_skill_md(self, path: Path) -> SkillMetadata | None:
         """Parse SKILL.md file for metadata.
 
         Expected format:
@@ -381,7 +381,7 @@ class SkillRegistry:
                 return parts[2].strip()
         return content
 
-    def _load_script(self, path: Path) -> Optional[Callable]:
+    def _load_script(self, path: Path) -> Callable | None:
         """Dynamically load a Python script.
 
         Looks for 'main' or 'run' function in the script.
@@ -447,7 +447,7 @@ class SkillRegistry:
                 # Try to end at sentence boundary
                 last_sentence = truncated.rfind(". ")
                 if last_sentence > max_chars * 0.6:
-                    truncated = truncated[:last_sentence + 1]
+                    truncated = truncated[: last_sentence + 1]
             instructions = truncated.strip() + "\n\n[Instructions truncated for efficiency]"
             logger.info(
                 "skill_instructions_truncated",
@@ -524,7 +524,7 @@ class SkillRegistry:
         """
         return list(self._active)
 
-    def get_metadata(self, name: str) -> Optional[SkillMetadata]:
+    def get_metadata(self, name: str) -> SkillMetadata | None:
         """Get metadata for a skill.
 
         Args:
@@ -646,10 +646,10 @@ class SkillRegistry:
 
 
 # Global registry instance
-_registry: Optional[SkillRegistry] = None
+_registry: SkillRegistry | None = None
 
 
-def get_skill_registry(skills_dir: Optional[Path] = None) -> SkillRegistry:
+def get_skill_registry(skills_dir: Path | None = None) -> SkillRegistry:
     """Get or create the global skill registry.
 
     Returns singleton instance for efficiency (shared cache, embeddings).

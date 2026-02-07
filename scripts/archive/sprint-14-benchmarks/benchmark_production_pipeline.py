@@ -116,9 +116,9 @@ async def benchmark_scenario(
     Returns:
         Benchmark results dict
     """
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print(f"SCENARIO: {scenario_config['name']}")
-    print(f"{'='*80}")
+    print(f"{'=' * 80}")
 
     text = scenario_config["sample_text"]
     word_count = len(text.split())
@@ -132,7 +132,7 @@ async def benchmark_scenario(
     # Benchmark runs
     results = []
     for i in range(iterations):
-        print(f"\nRun {i+1}/{iterations}...")
+        print(f"\nRun {i + 1}/{iterations}...")
 
         start = time.perf_counter()
         entities, relations = await extractor.extract(text, document_id=f"{scenario_name}_{i}")
@@ -194,9 +194,9 @@ async def benchmark_batch_processing(
     Returns:
         Benchmark results dict
     """
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print(f"BATCH PROCESSING: {batch_size} {doc_size} documents")
-    print(f"{'='*80}")
+    print(f"{'=' * 80}")
 
     text_template = TEST_SCENARIOS[doc_size]["sample_text"]
 

@@ -241,9 +241,7 @@ class TestExportResearch:
         research_id = start_response.json()["id"]
 
         # Export as markdown
-        response = client.get(
-            f"/api/v1/research/deep/{research_id}/export?format=markdown"
-        )
+        response = client.get(f"/api/v1/research/deep/{research_id}/export?format=markdown")
 
         assert response.status_code == 200
         assert response.headers["content-type"] == "text/markdown; charset=utf-8"

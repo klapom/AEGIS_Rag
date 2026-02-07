@@ -38,7 +38,7 @@ class DatasetLoader:
         samples = loader.load_dataset("hotpot_qa", max_samples=1000)
     """
 
-    def __init__(self, cache_dir: Optional[str] = None):
+    def __init__(self, cache_dir: str | None = None):
         """
         Initialize DatasetLoader.
 
@@ -68,10 +68,10 @@ class DatasetLoader:
     def load_dataset(
         self,
         name: str,
-        subset: Optional[str] = None,
+        subset: str | None = None,
         split: str = "train",
         max_samples: int = -1,
-        progress_callback: Optional[callable] = None
+        progress_callback: callable | None = None,
     ) -> List[NormalizedSample]:
         """
         Load dataset and normalize with appropriate adapter.
@@ -120,8 +120,7 @@ class DatasetLoader:
             samples = self._normalize_dataset(dataset, adapter, progress_callback)
 
             logger.info(
-                f"Loaded {len(samples)} samples from {hf_name} "
-                f"(dropped: {adapter.drop_count})"
+                f"Loaded {len(samples)} samples from {hf_name} (dropped: {adapter.drop_count})"
             )
 
             return samples
@@ -132,8 +131,8 @@ class DatasetLoader:
 
     def load_all_phase1(
         self,
-        max_per_dataset: Optional[Dict[str, int]] = None,
-        progress_callback: Optional[callable] = None
+        max_per_dataset: Dict[str, int] | None = None,
+        progress_callback: callable | None = None,
     ) -> Dict[str, List[NormalizedSample]]:
         """
         Load all Phase 1 datasets.
@@ -158,9 +157,7 @@ class DatasetLoader:
             max_samples = max_per_dataset.get(name, -1)
             try:
                 samples = self.load_dataset(
-                    name,
-                    max_samples=max_samples,
-                    progress_callback=progress_callback
+                    name, max_samples=max_samples, progress_callback=progress_callback
                 )
                 results[name] = samples
             except Exception as e:
@@ -169,7 +166,7 @@ class DatasetLoader:
 
         return results
 
-    def _get_adapter(self, name: str) -> Optional[DatasetAdapter]:
+    def _get_adapter(self, name: str) -> DatasetAdapter | None:
         """Get adapter for dataset name."""
         # Direct match
         if name in self.adapters:
@@ -182,12 +179,7 @@ class DatasetLoader:
 
         return None
 
-    def _load_hf_dataset(
-        self,
-        name: str,
-        subset: Optional[str],
-        split: str
-    ) -> Optional[Dataset]:
+    def _load_hf_dataset(self, name: str, subset: str | None, split: str) -> Dataset | None:
         """
         Load dataset from HuggingFace Hub.
 
@@ -221,10 +213,7 @@ class DatasetLoader:
             raise
 
     def _normalize_dataset(
-        self,
-        dataset: Dataset,
-        adapter: DatasetAdapter,
-        progress_callback: Optional[callable] = None
+        self, dataset: Dataset, adapter: DatasetAdapter, progress_callback: callable | None = None
     ) -> List[NormalizedSample]:
         """
         Normalize dataset using adapter.

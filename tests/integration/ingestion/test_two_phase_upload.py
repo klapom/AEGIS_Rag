@@ -125,9 +125,7 @@ class TestEndToEndTwoPhaseUpload:
         phase2_duration = (time.perf_counter() - start_time) * 1000
 
         # Verify Phase 2 performance (<60s = 60000ms)
-        assert (
-            phase2_duration < 60000
-        ), f"Phase 2 took {phase2_duration:.2f}ms (target: <60000ms)"
+        assert phase2_duration < 60000, f"Phase 2 took {phase2_duration:.2f}ms (target: <60000ms)"
 
         # Verify status after Phase 2
         status = await job_queue.get_status(document_id)
@@ -230,9 +228,9 @@ class TestConcurrentUploads:
 
         # Verify concurrent performance (should be faster than sequential)
         # Sequential would take ~15s (3 x 5s), concurrent should be closer to 5s
-        assert (
-            concurrent_duration < 10000
-        ), f"Concurrent uploads took {concurrent_duration:.2f}ms (expected: <10000ms)"
+        assert concurrent_duration < 10000, (
+            f"Concurrent uploads took {concurrent_duration:.2f}ms (expected: <10000ms)"
+        )
 
         # Cleanup
         for document_id in document_ids:

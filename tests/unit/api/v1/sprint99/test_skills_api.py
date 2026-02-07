@@ -109,6 +109,7 @@ def client(mock_registry, mock_lifecycle):
     with patch("src.api.v1.skills.get_registry", return_value=mock_registry):
         with patch("src.api.v1.skills.get_lifecycle", return_value=mock_lifecycle):
             from src.api.main import app
+
             return TestClient(app)
 
 
@@ -242,29 +243,28 @@ def test_create_skill_success(client, mock_registry):
     """Test creating a new skill."""
     mock_registry.get_metadata.return_value = None  # Skill doesn't exist
 
-    with patch("pathlib.Path.mkdir"):
-        with patch("pathlib.Path.write_text") as mock_write:
-            request_data = {
-                "name": "custom_skill",
-                "category": "tools",
-                "description": "Custom tool integration",
-                "author": "User",
-                "version": "1.0.0",
-                "tags": ["custom", "tools"],
-                "skill_md": "# Custom Skill\n\nInstructions..."
-            }
+    with patch("pathlib.Path.mkdir"), patch("pathlib.Path.write_text") as mock_write:
+        request_data = {
+            "name": "custom_skill",
+            "category": "tools",
+            "description": "Custom tool integration",
+            "author": "User",
+            "version": "1.0.0",
+            "tags": ["custom", "tools"],
+            "skill_md": "# Custom Skill\n\nInstructions...",
+        }
 
-            response = client.post("/api/v1/skills", json=request_data)
+        response = client.post("/api/v1/skills", json=request_data)
 
-            assert response.status_code == 201
-            data = response.json()
+        assert response.status_code == 201
+        data = response.json()
 
-            assert data["skill_name"] == "custom_skill"
-            assert data["status"] == "created"
-            assert "created_at" in data
+        assert data["skill_name"] == "custom_skill"
+        assert data["status"] == "created"
+        assert "created_at" in data
 
-            # Verify SKILL.md was written
-            mock_write.assert_called()
+        # Verify SKILL.md was written
+        mock_write.assert_called()
 
 
 def test_create_skill_duplicate(client, mock_registry):
@@ -283,7 +283,7 @@ def test_create_skill_duplicate(client, mock_registry):
         "category": "reasoning",
         "description": "Duplicate skill",
         "author": "User",
-        "skill_md": "# Reflection"
+        "skill_md": "# Reflection",
     }
 
     response = client.post("/api/v1/skills", json=request_data)
@@ -299,7 +299,7 @@ def test_create_skill_invalid_name(client):
         "category": "tools",
         "description": "Invalid skill",
         "author": "User",
-        "skill_md": "# Invalid"
+        "skill_md": "# Invalid",
     }
 
     response = client.post("/api/v1/skills", json=request_data)
@@ -319,7 +319,7 @@ def test_update_skill_success(client, mock_registry, mock_lifecycle):
             request_data = {
                 "description": "Updated description",
                 "tags": ["updated", "tags"],
-                "status": "active"
+                "status": "active",
             }
 
             response = client.put("/api/v1/skills/reflection", json=request_data)
@@ -352,18 +352,17 @@ def test_update_skill_not_found(client, mock_registry):
 
 def test_delete_skill_success(client, mock_registry, mock_lifecycle):
     """Test deleting a skill."""
-    with patch("pathlib.Path.exists", return_value=True):
-        with patch("shutil.rmtree") as mock_rmtree:
-            response = client.delete("/api/v1/skills/reflection")
+    with patch("pathlib.Path.exists", return_value=True), patch("shutil.rmtree") as mock_rmtree:
+        response = client.delete("/api/v1/skills/reflection")
 
-            assert response.status_code == 200
-            data = response.json()
+        assert response.status_code == 200
+        data = response.json()
 
-            assert data["skill_name"] == "reflection"
-            assert data["status"] == "deleted"
+        assert data["skill_name"] == "reflection"
+        assert data["status"] == "deleted"
 
-            # Verify directory was deleted
-            mock_rmtree.assert_called()
+        # Verify directory was deleted
+        mock_rmtree.assert_called()
 
 
 def test_delete_skill_not_found(client, mock_registry):
@@ -412,9 +411,7 @@ def test_get_skill_config_not_found(client, mock_registry):
 def test_update_skill_config_success(client, mock_registry):
     """Test updating skill config."""
     with patch("pathlib.Path.write_text") as mock_write:
-        request_data = {
-            "yaml_content": "max_iterations: 5\nthreshold: 0.9"
-        }
+        request_data = {"yaml_content": "max_iterations: 5\nthreshold: 0.9"}
 
         response = client.put("/api/v1/skills/reflection/config", json=request_data)
 
@@ -430,9 +427,7 @@ def test_update_skill_config_success(client, mock_registry):
 
 def test_update_skill_config_invalid_yaml(client, mock_registry):
     """Test updating config with invalid YAML."""
-    request_data = {
-        "yaml_content": "invalid: yaml: syntax:"
-    }
+    request_data = {"yaml_content": "invalid: yaml: syntax:"}
 
     response = client.put("/api/v1/skills/reflection/config", json=request_data)
 
@@ -477,7 +472,7 @@ def test_add_tool_authorization_success(client, mock_registry):
     request_data = {
         "tool_name": "browser",
         "access_level": "standard",
-        "permissions": ["read", "navigate"]
+        "permissions": ["read", "navigate"],
     }
 
     response = client.post("/api/v1/skills/reflection/tools", json=request_data)
@@ -495,11 +490,7 @@ def test_add_tool_authorization_not_found(client, mock_registry):
     """Test adding tool authorization to non-existent skill."""
     mock_registry.get_metadata.return_value = None
 
-    request_data = {
-        "tool_name": "browser",
-        "access_level": "standard",
-        "permissions": []
-    }
+    request_data = {"tool_name": "browser", "access_level": "standard", "permissions": []}
 
     response = client.post("/api/v1/skills/nonexistent/tools", json=request_data)
 
@@ -515,7 +506,6 @@ def test_map_lifecycle_state_to_status():
     """Test lifecycle state mapping."""
     from src.api.v1.skills import _map_lifecycle_state_to_status
     from src.agents.skills.lifecycle import SkillState
-    from src.api.models.skill_models import SkillStatus
 
     assert _map_lifecycle_state_to_status(SkillState.ACTIVE) == SkillStatus.ACTIVE
     assert _map_lifecycle_state_to_status(SkillState.LOADED) == SkillStatus.LOADED
@@ -525,7 +515,6 @@ def test_map_lifecycle_state_to_status():
 def test_extract_category():
     """Test category extraction from description."""
     from src.api.v1.skills import _extract_category
-    from src.api.models.skill_models import SkillCategory
 
     assert _extract_category("Vector search and retrieval") == SkillCategory.RETRIEVAL
     assert _extract_category("Reasoning and logic") == SkillCategory.REASONING
@@ -562,7 +551,7 @@ def test_create_skill_validation_errors(client):
         "description": "Test",
         "author": "User",
         "version": "invalid",  # Should be X.Y.Z
-        "skill_md": "# Test"
+        "skill_md": "# Test",
     }
     response = client.post("/api/v1/skills", json=request_data)
     assert response.status_code == 422

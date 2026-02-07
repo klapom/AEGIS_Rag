@@ -193,4 +193,4 @@ class CrossEncoderReranker:
 
     def __repr__(self) -> str:
         """String representation."""
-        return f"CrossEncoderReranker(" f"model={self.model_name}, " f"device={self.device})"
+        return f"CrossEncoderReranker(model={self.model_name}, device={self.device})"

@@ -52,7 +52,7 @@ class RAGBenchAdapter(DatasetAdapter):
             "contexts": "context OR documents",
         }
 
-    def adapt(self, record: Dict[str, Any], record_idx: int = 0) -> Optional[NormalizedSample]:
+    def adapt(self, record: Dict[str, Any], record_idx: int = 0) -> NormalizedSample | None:
         """
         Transform RAGBench record to NormalizedSample.
 
@@ -127,7 +127,7 @@ class RAGBenchAdapter(DatasetAdapter):
             self.record_drop("adaptation_error")
             return None
 
-    def _extract_answer(self, record: Dict[str, Any]) -> Optional[str]:
+    def _extract_answer(self, record: Dict[str, Any]) -> str | None:
         """
         Extract answer from record, handling multiple field names.
 

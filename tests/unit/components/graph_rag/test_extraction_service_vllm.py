@@ -26,11 +26,8 @@ class TestExtractionServiceVLLMIntegration:
     async def test_extraction_uses_vllm_when_enabled_healthy(self, extraction_service):
         """Test that extraction uses vLLM when enabled and healthy."""
         with patch.object(extraction_service, "llm_proxy") as mock_proxy:
-
             # Mock vLLM route
-            mock_proxy._route_task = AsyncMock(
-                return_value=("vllm", "extraction_high_concurrency")
-            )
+            mock_proxy._route_task = AsyncMock(return_value=("vllm", "extraction_high_concurrency"))
 
             # Mock vLLM response
             mock_response = MagicMock()
@@ -55,16 +52,11 @@ class TestExtractionServiceVLLMIntegration:
             assert reason == "extraction_high_concurrency"
 
     @pytest.mark.asyncio
-    async def test_extraction_fallback_to_ollama_when_vllm_unhealthy(
-        self, extraction_service
-    ):
+    async def test_extraction_fallback_to_ollama_when_vllm_unhealthy(self, extraction_service):
         """Test that extraction falls back to Ollama when vLLM is unhealthy."""
         with patch.object(extraction_service, "llm_proxy") as mock_proxy:
-
             # Mock Ollama fallback
-            mock_proxy._route_task = AsyncMock(
-                return_value=("local_ollama", "vllm_unavailable")
-            )
+            mock_proxy._route_task = AsyncMock(return_value=("local_ollama", "vllm_unavailable"))
 
             mock_response = MagicMock()
             mock_response.provider = "local_ollama"
@@ -87,7 +79,6 @@ class TestExtractionServiceVLLMIntegration:
     async def test_extraction_cost_calculation_vllm_zero(self, extraction_service):
         """Test that vLLM extraction cost is $0.00 (local deployment)."""
         with patch.object(extraction_service, "llm_proxy") as mock_proxy:
-
             mock_response = MagicMock()
             mock_response.provider = "vllm"
             mock_response.cost_usd = 0.0
@@ -114,12 +105,9 @@ class TestExtractionServiceVLLMIntegration:
         assert vllm_response.cost_usd == ollama_response.cost_usd
 
     @pytest.mark.asyncio
-    async def test_extraction_with_vllm_respects_data_classification(
-        self, extraction_service
-    ):
+    async def test_extraction_with_vllm_respects_data_classification(self, extraction_service):
         """Test that sensitive data never routes to vLLM, always uses Ollama."""
         with patch.object(extraction_service, "llm_proxy") as mock_proxy:
-
             from src.domains.llm_integration.models import DataClassification
 
             # PII task
@@ -143,7 +131,6 @@ class TestExtractionServiceVLLMIntegration:
     async def test_extraction_with_vllm_token_tracking(self, extraction_service):
         """Test that token usage is tracked for vLLM extraction."""
         with patch.object(extraction_service, "llm_proxy") as mock_proxy:
-
             mock_response = MagicMock()
             mock_response.provider = "vllm"
             mock_response.tokens_input = 150
@@ -161,11 +148,8 @@ class TestExtractionServiceVLLMIntegration:
     async def test_extraction_vllm_handles_large_prompts(self, extraction_service):
         """Test that vLLM extraction handles large prompts efficiently."""
         with patch.object(extraction_service, "llm_proxy") as mock_proxy:
-
             # Large prompt (multi-document extraction)
-            large_prompt = "Extract entities from 10 documents:\n" + (
-                "Document 1: " * 100
-            )
+            large_prompt = "Extract entities from 10 documents:\n" + ("Document 1: " * 100)
 
             task = LLMTask(
                 task_type=TaskType.EXTRACTION,
@@ -188,7 +172,6 @@ class TestExtractionServiceVLLMIntegration:
     async def test_extraction_vllm_parallel_requests(self, extraction_service):
         """Test that vLLM can handle parallel extraction requests efficiently."""
         with patch.object(extraction_service, "llm_proxy") as mock_proxy:
-
             # Mock multiple parallel extractions
             tasks = [
                 LLMTask(
@@ -231,10 +214,7 @@ class TestExtractionServicePromptSelectionWithVLLM:
     @pytest.mark.asyncio
     async def test_domain_prompts_used_with_vllm(self, extraction_service):
         """Test that domain-specific prompts are used with vLLM."""
-        with patch(
-            "src.components.domain_training.get_domain_repository"
-        ) as mock_repo:
-
+        with patch("src.components.domain_training.get_domain_repository") as mock_repo:
             # Domain has trained prompts
             mock_domain_repo = AsyncMock()
             mock_domain_repo.get_domain.return_value = {
@@ -253,15 +233,10 @@ class TestExtractionServicePromptSelectionWithVLLM:
             assert "treats" in relation_prompt
 
     @pytest.mark.asyncio
-    async def test_extraction_service_selects_vllm_for_entity_extraction(
-        self, extraction_service
-    ):
+    async def test_extraction_service_selects_vllm_for_entity_extraction(self, extraction_service):
         """Test that entity extraction task routes to vLLM."""
         with patch.object(extraction_service, "llm_proxy") as mock_proxy:
-
-            mock_proxy._route_task = AsyncMock(
-                return_value=("vllm", "extraction_high_concurrency")
-            )
+            mock_proxy._route_task = AsyncMock(return_value=("vllm", "extraction_high_concurrency"))
 
             task = LLMTask(
                 task_type=TaskType.EXTRACTION,
@@ -278,10 +253,7 @@ class TestExtractionServicePromptSelectionWithVLLM:
     ):
         """Test that relation extraction task routes to vLLM."""
         with patch.object(extraction_service, "llm_proxy") as mock_proxy:
-
-            mock_proxy._route_task = AsyncMock(
-                return_value=("vllm", "extraction_high_concurrency")
-            )
+            mock_proxy._route_task = AsyncMock(return_value=("vllm", "extraction_high_concurrency"))
 
             task = LLMTask(
                 task_type=TaskType.EXTRACTION,
@@ -305,7 +277,6 @@ class TestExtractionVLLMErrorHandling:
     async def test_extraction_handles_vllm_timeout(self, extraction_service):
         """Test extraction handles vLLM timeout gracefully."""
         with patch.object(extraction_service, "llm_proxy") as mock_proxy:
-
             # vLLM times out, should fallback to Ollama
             mock_proxy.chat = AsyncMock(side_effect=TimeoutError("vLLM request timeout"))
 
@@ -320,11 +291,8 @@ class TestExtractionVLLMErrorHandling:
     async def test_extraction_handles_vllm_connection_error(self, extraction_service):
         """Test extraction handles vLLM connection error."""
         with patch.object(extraction_service, "llm_proxy") as mock_proxy:
-
             # vLLM unavailable
-            mock_proxy.chat = AsyncMock(
-                side_effect=ConnectionError("Cannot connect to vLLM")
-            )
+            mock_proxy.chat = AsyncMock(side_effect=ConnectionError("Cannot connect to vLLM"))
 
             # Should handle gracefully
             assert ConnectionError is not None
@@ -333,7 +301,6 @@ class TestExtractionVLLMErrorHandling:
     async def test_extraction_retries_with_vllm(self, extraction_service):
         """Test that extraction retries vLLM on temporary failure."""
         with patch.object(extraction_service, "llm_proxy") as mock_proxy:
-
             # First call fails, second succeeds
             mock_response_success = MagicMock()
             mock_response_success.provider = "vllm"
@@ -364,7 +331,6 @@ class TestExtractionVLLMMetrics:
     async def test_vllm_extraction_metrics_collected(self, extraction_service):
         """Test that vLLM extraction metrics are collected."""
         with patch.object(extraction_service, "llm_proxy") as mock_proxy:
-
             mock_response = MagicMock()
             mock_response.provider = "vllm"
             mock_response.tokens_input = 100

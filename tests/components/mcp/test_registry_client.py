@@ -88,7 +88,10 @@ class TestMCPRegistryClient:
                     "transport": "stdio",
                     "command": "npx",
                     "args": ["@modelcontextprotocol/server-github"],
-                    "dependencies": {"npm": ["@modelcontextprotocol/server-github@^1.0.0"], "env": ["GITHUB_TOKEN"]},
+                    "dependencies": {
+                        "npm": ["@modelcontextprotocol/server-github@^1.0.0"],
+                        "env": ["GITHUB_TOKEN"],
+                    },
                     "version": "1.0.1",
                     "stars": 980,
                     "downloads": 8500,
@@ -153,17 +156,23 @@ class TestMCPRegistryClient:
 
         with patch.object(client._http_client, "get", return_value=mock_response):
             # Search by name
-            results = await client.search_servers("filesystem", "https://test-registry.com/servers.json")
+            results = await client.search_servers(
+                "filesystem", "https://test-registry.com/servers.json"
+            )
             assert len(results) == 1
             assert results[0].name == "Filesystem Server"
 
             # Search by tag
-            results = await client.search_servers("github", "https://test-registry.com/servers.json")
+            results = await client.search_servers(
+                "github", "https://test-registry.com/servers.json"
+            )
             assert len(results) == 1
             assert results[0].name == "GitHub Server"
 
             # Search with no results
-            results = await client.search_servers("nonexistent", "https://test-registry.com/servers.json")
+            results = await client.search_servers(
+                "nonexistent", "https://test-registry.com/servers.json"
+            )
             assert len(results) == 0
 
         await client.close()
@@ -181,16 +190,14 @@ class TestMCPRegistryClient:
         with patch.object(client._http_client, "get", return_value=mock_response):
             # Get existing server
             server = await client.get_server_details(
-                "@modelcontextprotocol/server-filesystem",
-                "https://test-registry.com/servers.json"
+                "@modelcontextprotocol/server-filesystem", "https://test-registry.com/servers.json"
             )
             assert server is not None
             assert server.name == "Filesystem Server"
 
             # Get non-existent server
             server = await client.get_server_details(
-                "nonexistent-server",
-                "https://test-registry.com/servers.json"
+                "nonexistent-server", "https://test-registry.com/servers.json"
             )
             assert server is None
 
@@ -242,14 +249,19 @@ class TestMCPRegistryClient:
 
         # Create config with server already installed
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
-            yaml.dump({
-                "servers": [{
-                    "name": "modelcontextprotocol-server-filesystem",
-                    "transport": "stdio",
-                    "command": "npx",
-                    "args": ["@modelcontextprotocol/server-filesystem"],
-                }]
-            }, f)
+            yaml.dump(
+                {
+                    "servers": [
+                        {
+                            "name": "modelcontextprotocol-server-filesystem",
+                            "transport": "stdio",
+                            "command": "npx",
+                            "args": ["@modelcontextprotocol/server-filesystem"],
+                        }
+                    ]
+                },
+                f,
+            )
             config_path = Path(f.name)
 
         try:

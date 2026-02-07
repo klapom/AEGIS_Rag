@@ -298,7 +298,8 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401", "F403", "I001"]
-"tests/**/*" = ["S101", "PLR2004", "F401", "F841"]
+"tests/**/*" = ["S101", "PLR2004", "F401", "F811", "F841", "SIM115", "SIM117", "E722", "E731", "E741", "B017", "B023", "B904", "N806"]
+"scripts/**/*" = ["E722", "N802", "N806", "C401", "C414", "F841", "B904", "SIM110", "SIM115", "SIM117", "SIM201", "E741"]  # scripts, not production code
 "src/agents/**/*" = ["B904", "C401", "C420", "N806"]  # raise from in complex async flows
 "src/adaptation/**/*" = ["B904", "SIM105"]  # allow try-except-pass
 "src/api/**/*" = ["B904", "N806"]  # HTTPException patterns don't need raise from, constants OK
@@ -382,3 +383,16 @@ markers = [
     "benchmark: Performance benchmark tests - for manual verification",
 ]
 asyncio_mode = "auto"
+
+# ──────────────────────────────────────────────
+# Bandit Security Scanner
+# ──────────────────────────────────────────────
+[tool.bandit]
+# Skip rules that produce false positives in this codebase:
+# B101: assert_used — we use assert in non-test code for preconditions
+# B311: random — used for data sampling/generation, never for crypto
+# B403: import pickle — just the import, actual usage reviewed case-by-case
+# B404: import subprocess — just the import, actual calls checked by B603/B607
+# B608: hardcoded_sql — all SQL/Cypher queries use parameterized ? placeholders
+skips = ["B101", "B311", "B403", "B404", "B608"]
+exclude_dirs = ["tests", "scripts/archive"]

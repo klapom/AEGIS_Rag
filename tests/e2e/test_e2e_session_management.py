@@ -73,7 +73,7 @@ class TestSessionManagement:
     async def _submit_query(self, page: Page, query: str) -> None:
         """Helper to submit a chat query."""
         chat_input = page.locator(
-            "textarea, " 'input[placeholder*="question"], ' 'input[placeholder*="message"]'
+            'textarea, input[placeholder*="question"], input[placeholder*="message"]'
         ).first
 
         await chat_input.fill(query)
@@ -224,9 +224,7 @@ class TestSessionManagement:
 
         # Look for edit button or editable title
         edit_button = session_item.locator(
-            '[data-testid="edit-session"], '
-            'button[aria-label*="Edit"], '
-            'button[aria-label*="Rename"]'
+            '[data-testid="edit-session"], button[aria-label*="Edit"], button[aria-label*="Rename"]'
         )
 
         editable_title = page.locator('[data-testid="editable-title"], .editable-title')
@@ -236,7 +234,7 @@ class TestSessionManagement:
             print("[TEST] Edit button clicked")
 
             # Wait for input field
-            title_input = page.locator('[data-testid="session-title-input"], ' 'input[type="text"]')
+            title_input = page.locator('[data-testid="session-title-input"], input[type="text"]')
 
             await expect(title_input.first).to_be_visible(timeout=5000)
 
@@ -253,9 +251,9 @@ class TestSessionManagement:
             session_title = session_item.locator('[data-testid="session-title"]')
             if await session_title.count() > 0:
                 updated_title = await session_title.inner_text()
-                assert (
-                    new_title in updated_title or "Neural" in updated_title
-                ), f"Session title should be updated, got: {updated_title}"
+                assert new_title in updated_title or "Neural" in updated_title, (
+                    f"Session title should be updated, got: {updated_title}"
+                )
                 print("[TEST] Session rename verified")
 
         elif await editable_title.count() > 0:
@@ -411,7 +409,7 @@ class TestSessionManagement:
 
                 # Check for share link
                 share_link = share_modal.locator(
-                    'input[value*="/share/"], ' '[data-testid="share-link"], ' "input[readonly]"
+                    'input[value*="/share/"], [data-testid="share-link"], input[readonly]'
                 )
 
                 if await share_link.count() > 0:

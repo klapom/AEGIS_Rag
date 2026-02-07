@@ -225,9 +225,9 @@ Sichere, token-effiziente Ausführungsumgebung für Shell-Befehle im Agentic RAG
 
 ```python
 from deepagents.backends.protocol import (
-    SandboxBackendProtocol, 
-    ExecuteResult, 
-    WriteResult, 
+    SandboxBackendProtocol,
+    ExecuteResult,
+    WriteResult,
     EditResult
 )
 from deepagents.backends.utils import FileInfo, GrepMatch
@@ -239,7 +239,7 @@ class BubblewrapSandboxBackend(SandboxBackendProtocol):
     Sandbox Backend using Linux Bubblewrap for process isolation.
     Implements deepagents SandboxBackendProtocol.
     """
-    
+
     def __init__(
         self,
         repo_path: str,
@@ -252,7 +252,7 @@ class BubblewrapSandboxBackend(SandboxBackendProtocol):
         self.allowed_domains = allowed_domains or []
         self.timeout = timeout
         self.seccomp_profile = seccomp_profile
-    
+
     def _build_bwrap_command(self, command: str) -> list[str]:
         """Build bubblewrap command with security restrictions."""
         return [
@@ -272,7 +272,7 @@ class BubblewrapSandboxBackend(SandboxBackendProtocol):
             # Run command
             "--", "sh", "-c", command
         ]
-    
+
     def execute(self, command: str) -> ExecuteResult:
         """Execute shell command in sandbox."""
         try:
@@ -294,30 +294,30 @@ class BubblewrapSandboxBackend(SandboxBackendProtocol):
                 stderr=f"Command timed out after {self.timeout}s",
                 exit_code=-1
             )
-    
+
     def read(self, file_path: str, offset: int = 0, limit: int = 2000) -> str:
         """Read file from sandbox filesystem."""
         # Implementation using execute()
         result = self.execute(f"sed -n '{offset+1},{offset+limit}p' {file_path}")
         return result.stdout if result.exit_code == 0 else f"Error: {result.stderr}"
-    
+
     def write(self, file_path: str, content: str) -> WriteResult:
         """Write file to workspace."""
         if not file_path.startswith("/workspace"):
             return WriteResult(error="Writes only allowed in /workspace")
         # Implementation
         ...
-    
+
     def ls_info(self, path: str) -> list[FileInfo]:
         """List directory contents."""
         result = self.execute(f"ls -la {path}")
         # Parse output to FileInfo
         ...
-    
+
     def grep_raw(
-        self, 
-        pattern: str, 
-        path: str = None, 
+        self,
+        pattern: str,
+        path: str = None,
         glob: str = None
     ) -> list[GrepMatch] | str:
         """Search for pattern in files."""
@@ -370,28 +370,28 @@ agent = create_deep_agent(
     model=model,
     backend=backend,
     system_prompt="""
-    You are an AegisRAG code analysis agent. Your task is to analyze 
+    You are an AegisRAG code analysis agent. Your task is to analyze
     codebases for documentation, architecture, and knowledge extraction.
-    
+
     ## Execution Environments
     You have two execution environments:
     - Bash: Use for file navigation, grep, find, git operations
     - Python: Use for data processing, JSON/YAML parsing, embeddings
-    
+
     Both environments share a /workspace directory for file exchange.
     Choose the appropriate language based on the task.
-    
+
     ## Session Management
     At the START of each session:
     1. Read /workspace/aegis-progress.json if it exists
     2. Report current analysis status to user
     3. Continue from where the last session stopped
-    
+
     At the END of each session (or when interrupted):
     1. Update /workspace/aegis-progress.json with your progress
     2. Document analyzed paths, extracted entities, and next steps
     3. Set status to "completed" only when ALL paths are analyzed
-    
+
     ## Progress File Format
     {
         "repo": "<repo-path>",
@@ -414,7 +414,7 @@ agent = create_deep_agent(
 # Beispiel: Multi-Language Workflow mit Progress Tracking
 result = await agent.ainvoke({
     "messages": [{
-        "role": "user", 
+        "role": "user",
         "content": """
         1. Find all Python files with TODO comments
         2. Extract the TODOs into a structured JSON

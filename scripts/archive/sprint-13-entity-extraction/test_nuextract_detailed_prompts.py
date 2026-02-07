@@ -424,44 +424,44 @@ def append_to_log(
 ):
     """Append test execution to model's log file."""
     log_content = f"""
-{'='*80}
-TEST CASE {test_case['id']}: {test_case['name']} [{prompt_type.upper()} PROMPT]
-{'='*80}
+{"=" * 80}
+TEST CASE {test_case["id"]}: {test_case["name"]} [{prompt_type.upper()} PROMPT]
+{"=" * 80}
 
 Start Time: {start_time.isoformat()}
 End Time: {end_time.isoformat()}
 Duration: {duration:.2f}s
-Expected: {test_case['expected_entities']} entities, {test_case['expected_relations']} relations
-Found: {validation['entity_count']} entities, {validation['relation_count']} relations
-Accuracy: {validation['entity_count']}/{test_case['expected_entities']} entities ({100*validation['entity_count']/test_case['expected_entities']:.1f}%), {validation['relation_count']}/{test_case['expected_relations']} relations ({100*validation['relation_count']/test_case['expected_relations']:.1f}%)
+Expected: {test_case["expected_entities"]} entities, {test_case["expected_relations"]} relations
+Found: {validation["entity_count"]} entities, {validation["relation_count"]} relations
+Accuracy: {validation["entity_count"]}/{test_case["expected_entities"]} entities ({100 * validation["entity_count"] / test_case["expected_entities"]:.1f}%), {validation["relation_count"]}/{test_case["expected_relations"]} relations ({100 * validation["relation_count"] / test_case["expected_relations"]:.1f}%)
 
-{'='*80}
+{"=" * 80}
 SYSTEM PROMPT:
-{'='*80}
+{"=" * 80}
 {system_prompt[:500]}...
 
-{'='*80}
+{"=" * 80}
 USER PROMPT:
-{'='*80}
+{"=" * 80}
 {user_prompt[:500]}...
 
-{'='*80}
+{"=" * 80}
 RAW JSON RESPONSE FROM LLM:
-{'='*80}
+{"=" * 80}
 {raw_response}
 
-{'='*80}
+{"=" * 80}
 VALIDATION RESULTS:
-{'='*80}
-JSON Valid: {validation['json_valid']}
-Entities Found: {validation['entity_count']} (expected: {test_case['expected_entities']})
-Relations Found: {validation['relation_count']} (expected: {test_case['expected_relations']})
-Errors: {validation['errors']}
+{"=" * 80}
+JSON Valid: {validation["json_valid"]}
+Entities Found: {validation["entity_count"]} (expected: {test_case["expected_entities"]})
+Relations Found: {validation["relation_count"]} (expected: {test_case["expected_relations"]})
+Errors: {validation["errors"]}
 
-{'='*80}
+{"=" * 80}
 CONVERTED LIGHTRAG FORMAT:
-{'='*80}
-{validation['lightrag_format']}
+{"=" * 80}
+{validation["lightrag_format"]}
 
 """
 
@@ -596,9 +596,9 @@ def test_model(
 def main():
     """Main test execution."""
     print(
-        f"""{'='*80}
+        f"""{"=" * 80}
      NuExtract: Prompt Strategy Comparison
-{'='*80}
+{"=" * 80}
 
 Comparing three prompt strategies:
 1. SIMPLE: Basic JSON extraction prompt (no examples)
@@ -624,9 +624,9 @@ Context Window: 16384 (LightRAG default)
     for model, supports_think in models_to_test:
         model_short = model.split("/")[-1] if "/" in model else model
 
-        print(f"\n{'='*80}")
+        print(f"\n{'=' * 80}")
         print(f"MODEL: {model_short}")
-        print(f"{'='*80}")
+        print(f"{'=' * 80}")
 
         # Warmup
         print("\n  [WARMUP] Loading model (not measured)...", end=" ", flush=True)
@@ -658,9 +658,9 @@ Context Window: 16384 (LightRAG default)
             # Write log header
             with open(log_path, "w", encoding="utf-8") as f:
                 f.write(
-                    f"""{'='*80}
+                    f"""{"=" * 80}
 NuExtract PROMPT COMPARISON TEST LOG
-{'='*80}
+{"=" * 80}
 
 Model: {model}
 Prompt Type: {prompt_type.upper()}
@@ -668,7 +668,7 @@ Test Suite: All 3 LightRAG Original Examples
 Context Window: 16384
 Start Time: {datetime.now().isoformat()}
 
-{'='*80}
+{"=" * 80}
 
 """
                 )
@@ -697,14 +697,14 @@ Start Time: {datetime.now().isoformat()}
     # ========================================================================
     # SUMMARY & COMPARISON
     # ========================================================================
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print("SUMMARY: PROMPT COMPARISON")
-    print(f"{'='*80}\n")
+    print(f"{'=' * 80}\n")
 
     print(
         f"{'Prompt':<10} {'Test':<30} {'JSON':<8} {'Entities':<15} {'Relations':<15} {'Time':<8} {'Status':<8}"
     )
-    print(f"{'-'*10} {'-'*30} {'-'*8} {'-'*15} {'-'*15} {'-'*8} {'-'*8}")
+    print(f"{'-' * 10} {'-' * 30} {'-' * 8} {'-' * 15} {'-' * 15} {'-' * 8} {'-' * 8}")
 
     for r in results:
         json_status = "VALID" if r["json_valid"] else "INVALID"
@@ -719,9 +719,9 @@ Start Time: {datetime.now().isoformat()}
         )
 
     # Calculate averages
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print("AVERAGE PERFORMANCE")
-    print(f"{'='*80}\n")
+    print(f"{'=' * 80}\n")
 
     for prompt_type in ["simple", "detailed", "enhanced"]:
         prompt_results = [r for r in results if r["prompt_type"] == prompt_type]
@@ -747,10 +747,10 @@ Start Time: {datetime.now().isoformat()}
     with open(output_file, "w", encoding="utf-8") as f:
         json.dump(results, f, indent=2)
 
-    print(f"{'='*80}")
+    print(f"{'=' * 80}")
     print(f"[OK] Detailed results saved to: {output_file}")
     print(f"[OK] Detailed logs saved to: {log_dir}/")
-    print(f"{'='*80}")
+    print(f"{'=' * 80}")
 
 
 if __name__ == "__main__":

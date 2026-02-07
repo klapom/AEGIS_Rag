@@ -72,9 +72,9 @@ class ConsentRecord(BaseModel):
     legal_basis: LegalBasis
     data_categories: List[DataCategory]
     granted_at: datetime = Field(default_factory=datetime.utcnow)
-    expires_at: Optional[datetime] = None
-    withdrawn_at: Optional[datetime] = None
-    withdrawal_reason: Optional[str] = None
+    expires_at: datetime | None = None
+    withdrawn_at: datetime | None = None
+    withdrawal_reason: str | None = None
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
     @field_validator("data_categories", mode="before")
@@ -97,7 +97,7 @@ class ConsentRecord(BaseModel):
             return False
         return True
 
-    def withdraw(self, reason: Optional[str] = None) -> None:
+    def withdraw(self, reason: str | None = None) -> None:
         """Withdraw consent (Article 7(3)).
 
         Args:
@@ -121,7 +121,7 @@ class DataProcessingRecord(BaseModel):
     data_categories: List[DataCategory]
     data_subjects: List[str]  # IDs of data subjects
     recipients: List[str] = Field(default_factory=list)  # Third parties
-    retention_period: Optional[str] = None  # e.g., "30 days", "2 years"
+    retention_period: str | None = None  # e.g., "30 days", "2 years"
     security_measures: List[str] = Field(default_factory=list)
     processed_at: datetime = Field(default_factory=datetime.utcnow)
     metadata: Dict[str, Any] = Field(default_factory=dict)
@@ -327,8 +327,8 @@ class GDPRComplianceGuard:
         self,
         consent_store: "ConsentStore",
         processing_log: "ProcessingLog",
-        pii_detector: Optional[PIIDetector] = None,
-        skill_manager: Optional[Any] = None,
+        pii_detector: PIIDetector | None = None,
+        skill_manager: Any | None = None,
     ):
         """Initialize GDPR compliance guard.
 
@@ -364,7 +364,7 @@ class GDPRComplianceGuard:
         skill_name: str,
         data_subject_id: str,
         context: Dict[str, Any],
-    ) -> tuple[bool, Optional[str]]:
+    ) -> tuple[bool, str | None]:
         """Check if skill activation is allowed under GDPR.
 
         Verifies:

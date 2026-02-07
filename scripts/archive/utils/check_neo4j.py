@@ -1,4 +1,5 @@
 """Quick script to check Neo4j content."""
+
 import asyncio
 
 from src.components.graph_rag.neo4j_client import Neo4jClient

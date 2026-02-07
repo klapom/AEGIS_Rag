@@ -44,14 +44,14 @@ async def main() -> None:
     print("-" * 80)
 
     for i, query in enumerate(test_queries, 1):
-        print(f"\n{i}. Original: \"{query}\"")
+        print(f'\n{i}. Original: "{query}"')
 
         # Rewrite
         result = await rewriter.rewrite(query)
 
         # Display result
         print(f"   Strategy: {result.strategy}")
-        print(f"   Rewritten: \"{result.rewritten_query}\"")
+        print(f'   Rewritten: "{result.rewritten_query}"')
         print(f"   Confidence: {result.confidence:.2f}")
         print(f"   Latency: {result.latency_ms:.2f}ms")
 

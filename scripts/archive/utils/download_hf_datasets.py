@@ -23,6 +23,7 @@ try:
 except ImportError:
     print("Installing datasets library...")
     import subprocess
+
     subprocess.run(["pip", "install", "datasets"], check=True)
     from datasets import load_dataset
 
@@ -151,7 +152,7 @@ def download_tacred(output_dir: Path) -> int:
 
             header = f"""# SQuAD Sample {count}
 # Source: Stanford Question Answering Dataset
-# Answer(s): {', '.join(answers[:3]) if answers else 'N/A'}
+# Answer(s): {", ".join(answers[:3]) if answers else "N/A"}
 
 """
             filepath.write_text(header + text)
@@ -185,7 +186,7 @@ def download_tacred(output_dir: Path) -> int:
 
                 header = f"""# XSum Sample {count}
 # Source: BBC News Summary
-# Summary: {sample.get('summary', 'N/A')[:100]}...
+# Summary: {sample.get("summary", "N/A")[:100]}...
 
 """
                 filepath.write_text(header + document)
@@ -250,7 +251,9 @@ def download_redocred(output_dir: Path) -> int:
 """
             filepath.write_text(header + text)
             count += 1
-            print(f"  Saved: {filename} ({len(text)} chars, {num_entities} entities, {num_relations} relations)")
+            print(
+                f"  Saved: {filename} ({len(text)} chars, {num_entities} entities, {num_relations} relations)"
+            )
 
         print(f"\nRe-DocRED: {count} samples saved to {dataset_dir}")
         return count
@@ -304,8 +307,8 @@ def download_tutorqa(output_dir: Path) -> int:
             filepath = dataset_dir / filename
 
             header = f"""# ScienceQA Sample {i}
-# Subject: {sample.get('subject', 'Unknown')}
-# Topic: {sample.get('topic', 'Unknown')}
+# Subject: {sample.get("subject", "Unknown")}
+# Topic: {sample.get("topic", "Unknown")}
 # Source: ScienceQA Educational Dataset
 
 """
@@ -330,8 +333,10 @@ def download_tutorqa(output_dir: Path) -> int:
             count = 0
             for i, sample in enumerate(samples):
                 context_parts = []
-                for title, sents in zip(sample.get("context", {}).get("title", []),
-                                        sample.get("context", {}).get("sentences", [])):
+                for title, sents in zip(
+                    sample.get("context", {}).get("title", []),
+                    sample.get("context", {}).get("sentences", []),
+                ):
                     context_parts.append(f"{title}: {' '.join(sents)}")
 
                 text = f"Question: {sample['question']}\n\nContext:\n" + "\n\n".join(context_parts)
@@ -340,8 +345,8 @@ def download_tutorqa(output_dir: Path) -> int:
                 filepath = dataset_dir / filename
 
                 header = f"""# HotpotQA Sample {i}
-# Type: {sample.get('type', 'Unknown')}
-# Level: {sample.get('level', 'Unknown')}
+# Type: {sample.get("type", "Unknown")}
+# Level: {sample.get("level", "Unknown")}
 # Source: HotpotQA Multi-hop
 
 """

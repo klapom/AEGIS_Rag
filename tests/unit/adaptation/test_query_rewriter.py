@@ -90,16 +90,12 @@ class TestStrategySelection:
         """Factual queries with moderate length should use expansion."""
         # Factual intent with 3-5 words
         assert query_rewriter._select_strategy("JWT token format", "factual") == "expansion"
-        assert (
-            query_rewriter._select_strategy("database schema design", "factual") == "expansion"
-        )
+        assert query_rewriter._select_strategy("database schema design", "factual") == "expansion"
 
     def test_exploratory_intent_refinement_strategy(self, query_rewriter):
         """Exploratory queries with few words should use refinement."""
         # Exploratory with <=4 words
-        assert (
-            query_rewriter._select_strategy("authentication flow", "exploratory") == "refinement"
-        )
+        assert query_rewriter._select_strategy("authentication flow", "exploratory") == "refinement"
         assert query_rewriter._select_strategy("API design", "exploratory") == "refinement"
 
     def test_no_rewrite_strategy(self, query_rewriter):
@@ -119,9 +115,7 @@ class TestStrategySelection:
         )
 
         # Summary queries
-        assert (
-            query_rewriter._select_strategy("summarize the architecture", "summary") == "none"
-        )
+        assert query_rewriter._select_strategy("summarize the architecture", "summary") == "none"
 
 
 # ============================================================================
@@ -220,9 +214,7 @@ class TestQueryExpansion:
         assert expanded == "API"
 
     @pytest.mark.asyncio
-    async def test_expand_query_fallback_on_shorter_response(
-        self, query_rewriter, mock_llm_proxy
-    ):
+    async def test_expand_query_fallback_on_shorter_response(self, query_rewriter, mock_llm_proxy):
         """Test fallback when expansion is shorter than original."""
         # Mock response shorter than original
         mock_llm_proxy.generate = AsyncMock(
@@ -378,9 +370,7 @@ class TestQueryRewriterIntegration:
     async def test_rewrite_no_strategy(self, query_rewriter, mock_llm_proxy):
         """Test that well-formed queries are not rewritten."""
         # Rewrite (should not call LLM)
-        result = await query_rewriter.rewrite(
-            "How to configure JWT authentication in the REST API"
-        )
+        result = await query_rewriter.rewrite("How to configure JWT authentication in the REST API")
 
         # Verify no rewriting
         assert result.original_query == result.rewritten_query
@@ -500,16 +490,18 @@ class TestSingleton:
 
         qr_module._query_rewriter = None
 
-        with patch("src.adaptation.query_rewriter.get_aegis_llm_proxy"):
-            with patch(
+        with (
+            patch("src.adaptation.query_rewriter.get_aegis_llm_proxy"),
+            patch(
                 "src.components.retrieval.intent_classifier.get_intent_classifier",
                 side_effect=ImportError("No classifier"),
-            ):
-                rewriter1 = get_query_rewriter()
-                rewriter2 = get_query_rewriter()
+            ),
+        ):
+            rewriter1 = get_query_rewriter()
+            rewriter2 = get_query_rewriter()
 
-                # Should return same instance
-                assert rewriter1 is rewriter2
+            # Should return same instance
+            assert rewriter1 is rewriter2
 
         # Reset singleton after test
         qr_module._query_rewriter = None

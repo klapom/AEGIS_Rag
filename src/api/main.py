@@ -335,7 +335,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             # Bind-mount from host may have wrong ownership; fix permissions
             import stat
 
-            _installed.chmod(stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IWGRP | stat.S_IROTH | stat.S_IWOTH)
+            _installed.chmod(
+                stat.S_IRUSR
+                | stat.S_IWUSR
+                | stat.S_IRGRP
+                | stat.S_IWGRP
+                | stat.S_IROTH
+                | stat.S_IWOTH
+            )
             logger.info("mcp_installed_file_permissions_fixed", path=str(_installed))
     except Exception as e:
         logger.warning("mcp_installed_file_setup_failed", error=str(e))

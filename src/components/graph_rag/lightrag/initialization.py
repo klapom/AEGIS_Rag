@@ -35,7 +35,7 @@ def get_default_config() -> LightRAGConfig:
         yaml_model = llm_config.get_default_model("local_ollama", "extraction")
         if yaml_model:
             llm_model = yaml_model
-    except Exception:
+    except Exception:  # nosec B110
         pass
 
     return LightRAGConfig(

@@ -183,7 +183,10 @@ class TestFourWaySearchMetadata:
             intent_latency_ms=2.5,
             weights={"dense": 0.3, "sparse": 0.3, "local": 0.4, "global": 0.0},
             total_latency_ms=150.5,
-            channels_executed=["multivector", "graph_local"],  # Sprint 88: multivector replaces vector+bm25
+            channels_executed=[
+                "multivector",
+                "graph_local",
+            ],  # Sprint 88: multivector replaces vector+bm25
             namespaces_searched=["default"],  # Sprint 41: Namespace isolation
         )
 
@@ -357,7 +360,9 @@ class TestSearchAllChannelsWorking:
         assert "multivector" in metadata.channels_executed  # Sprint 88: vector+bm25 → multivector
         assert "graph_local" in metadata.channels_executed
         assert "graph_global" in metadata.channels_executed
-        assert len(metadata.channels_executed) == 3  # Sprint 88: 4→3 (multivector, graph_local, graph_global)
+        assert (
+            len(metadata.channels_executed) == 3
+        )  # Sprint 88: 4→3 (multivector, graph_local, graph_global)
 
     @pytest.mark.asyncio
     async def test_search_respects_top_k(
@@ -475,7 +480,9 @@ class TestGracefulDegradation:
         # Sprint 92: Use dense/sparse counts instead of vector/bm25
         assert "results" in result
         assert result["metadata"].dense_results_count == 0
-        assert result["metadata"].sparse_results_count == 0  # Sprint 92: multivector fails completely (no separate sparse)
+        assert (
+            result["metadata"].sparse_results_count == 0
+        )  # Sprint 92: multivector fails completely (no separate sparse)
 
     @pytest.mark.skip(reason="Mock structure needs refactoring for Sprint 56 domains/ migration")
     @pytest.mark.asyncio

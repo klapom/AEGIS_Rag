@@ -91,7 +91,9 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "sprint49: mark test as Sprint 49 feature validation")
     config.addinivalue_line("markers", "sprint50: mark test as Sprint 50 feature validation")
     config.addinivalue_line("markers", "sprint64: mark test as Sprint 64 feature validation")
-    config.addinivalue_line("markers", "integration: mark test as integration test with real databases")
+    config.addinivalue_line(
+        "markers", "integration: mark test as integration test with real databases"
+    )
 
 
 def pytest_runtest_makereport(item, call):
@@ -129,10 +131,10 @@ async def capture_on_failure(request, page: Page = None):
 @pytest.fixture(autouse=True)
 def test_start_marker(request):
     """Print test start marker for better log readability."""
-    print(f"\n{'='*70}")
+    print(f"\n{'=' * 70}")
     print(f"Starting Test: {request.node.name}")
-    print(f"{'='*70}")
+    print(f"{'=' * 70}")
     yield
-    print(f"\n{'='*70}")
+    print(f"\n{'=' * 70}")
     print(f"Finished Test: {request.node.name}")
-    print(f"{'='*70}\n")
+    print(f"{'=' * 70}\n")

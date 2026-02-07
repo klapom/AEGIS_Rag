@@ -350,7 +350,9 @@ def test_resolve_inputs_missing_reference(orchestrator):
 
 
 @pytest.mark.asyncio
-async def test_execute_workflow_simple(orchestrator, simple_workflow, mock_skill_manager, mock_message_bus):
+async def test_execute_workflow_simple(
+    orchestrator, simple_workflow, mock_skill_manager, mock_message_bus
+):
     """Test simple workflow execution."""
     context = {"query": "test query"}
 
@@ -390,7 +392,9 @@ async def test_execute_workflow_tracks_active(orchestrator, simple_workflow):
     context = {"query": "test"}
 
     # Mock to prevent actual execution
-    with patch.object(orchestrator, "_execute_phase", new=AsyncMock(return_value={"outputs": {}, "errors": []})):
+    with patch.object(
+        orchestrator, "_execute_phase", new=AsyncMock(return_value={"outputs": {}, "errors": []})
+    ):
         result = await orchestrator.execute_workflow(
             workflow=simple_workflow,
             context=context,

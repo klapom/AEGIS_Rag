@@ -256,7 +256,7 @@ def create_access_token(user_id: str, username: str, role: str = "user") -> str:
         user_id=user_id,
         username=username,
         role=role,
-        token_type="access",
+        token_type="access",  # nosec B106 — not a password
         expires_delta=timedelta(minutes=settings.access_token_expire_minutes),
     )
 
@@ -281,7 +281,7 @@ def create_refresh_token(user_id: str, username: str, role: str = "user") -> str
         user_id=user_id,
         username=username,
         role=role,
-        token_type="refresh",
+        token_type="refresh",  # nosec B106 — not a password
         expires_delta=timedelta(days=settings.refresh_token_expire_days),
     )
 
@@ -322,7 +322,7 @@ def create_token_pair(user_id: str, username: str, role: str = "user") -> Token:
     return Token(
         access_token=access_token,
         refresh_token=refresh_token,
-        token_type="bearer",
+        token_type="bearer",  # nosec B106 — not a password
         expires_in=settings.access_token_expire_minutes * 60,
     )
 

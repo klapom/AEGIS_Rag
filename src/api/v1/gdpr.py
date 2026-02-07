@@ -56,9 +56,9 @@ router = APIRouter(prefix="/api/v1/gdpr", tags=["gdpr"])
 limiter = Limiter(key_func=get_remote_address)
 
 # Initialize storage backends (singleton pattern)
-_consent_store: Optional[ConsentStore] = None
-_processing_log: Optional[ProcessingLog] = None
-_pii_settings: Optional[PIISettingsResponse] = None
+_consent_store: ConsentStore | None = None
+_processing_log: ProcessingLog | None = None
+_pii_settings: PIISettingsResponse | None = None
 
 
 def get_consent_store() -> ConsentStore:
@@ -144,10 +144,10 @@ async def list_consents(
     request: Request,
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Items per page"),
-    user_id: Optional[str] = Query(None, description="Filter by user ID"),
-    purpose: Optional[str] = Query(None, description="Filter by purpose"),
-    legal_basis: Optional[LegalBasisEnum] = Query(None, description="Filter by legal basis"),
-    status: Optional[ConsentStatusEnum] = Query(None, description="Filter by status"),
+    user_id: str | None = Query(None, description="Filter by user ID"),
+    purpose: str | None = Query(None, description="Filter by purpose"),
+    legal_basis: LegalBasisEnum | None = Query(None, description="Filter by legal basis"),
+    status: ConsentStatusEnum | None = Query(None, description="Filter by status"),
 ) -> ConsentListResponse:
     """List all consent records (GDPR Article 7).
 
@@ -415,9 +415,9 @@ async def create_data_subject_request(
 @limiter.limit("50/minute")
 async def get_processing_activities(
     request: Request,
-    start_date: Optional[datetime] = Query(None, description="Start date filter"),
-    end_date: Optional[datetime] = Query(None, description="End date filter"),
-    purpose: Optional[str] = Query(None, description="Filter by purpose"),
+    start_date: datetime | None = Query(None, description="Start date filter"),
+    end_date: datetime | None = Query(None, description="End date filter"),
+    purpose: str | None = Query(None, description="Filter by purpose"),
 ) -> ProcessingActivityResponse:
     """List processing activities (GDPR Article 30).
 

@@ -200,9 +200,9 @@ education accessible to millions of students worldwide.
         new_chunk_count = qdrant_count_after.count
         chunks_added = new_chunk_count - initial_chunk_count
 
-        assert (
-            chunks_added > 0
-        ), f"Expected new chunks in Qdrant, but count didn't change (before: {initial_chunk_count}, after: {new_chunk_count})"
+        assert chunks_added > 0, (
+            f"Expected new chunks in Qdrant, but count didn't change (before: {initial_chunk_count}, after: {new_chunk_count})"
+        )
         print(f"✓ Qdrant: {chunks_added} new chunks added (total: {new_chunk_count})")
 
         # Retrieve one chunk to verify structure
@@ -233,9 +233,9 @@ education accessible to millions of students worldwide.
             new_entity_count = record["count"]
             entities_added = new_entity_count - initial_entity_count
 
-            assert (
-                entities_added > 0
-            ), f"Expected new entities in Neo4j, but count didn't change (before: {initial_entity_count}, after: {new_entity_count})"
+            assert entities_added > 0, (
+                f"Expected new entities in Neo4j, but count didn't change (before: {initial_entity_count}, after: {new_entity_count})"
+            )
             print(f"✓ Neo4j: {entities_added} new entities extracted (total: {new_entity_count})")
 
             # Check for expected entities from our test document
@@ -252,9 +252,9 @@ education accessible to millions of students worldwide.
                     found_entities.append(record["name"])
 
             # Expect at least 50% of entities found (LLM may extract variations)
-            assert (
-                len(found_entities) >= len(expected_entities) * 0.5
-            ), f"Expected to find at least {len(expected_entities) * 0.5} entities, found: {found_entities}"
+            assert len(found_entities) >= len(expected_entities) * 0.5, (
+                f"Expected to find at least {len(expected_entities) * 0.5} entities, found: {found_entities}"
+            )
             print(f"✓ Key entities found: {found_entities}")
 
         # =====================================================================
@@ -268,9 +268,9 @@ education accessible to millions of students worldwide.
             new_relation_count = record["count"]
             relations_added = new_relation_count - initial_relation_count
 
-            assert (
-                relations_added > 0
-            ), f"Expected new relations in Neo4j, but count didn't change (before: {initial_relation_count}, after: {new_relation_count})"
+            assert relations_added > 0, (
+                f"Expected new relations in Neo4j, but count didn't change (before: {initial_relation_count}, after: {new_relation_count})"
+            )
             print(
                 f"✓ Neo4j: {relations_added} new relations extracted (total: {new_relation_count})"
             )
@@ -287,9 +287,9 @@ education accessible to millions of students worldwide.
             relations_with_chunk_id = record["count_with_chunk_id"]
 
             # All new MENTIONED_IN relations should have source_chunk_id
-            assert (
-                relations_with_chunk_id > 0
-            ), "Sprint 49.5: Expected MENTIONED_IN relations to have source_chunk_id"
+            assert relations_with_chunk_id > 0, (
+                "Sprint 49.5: Expected MENTIONED_IN relations to have source_chunk_id"
+            )
             print(
                 f"✓ Sprint 49.5: {relations_with_chunk_id} MENTIONED_IN relations have source_chunk_id"
             )
@@ -348,9 +348,9 @@ education accessible to millions of students worldwide.
         expected_keywords = ["Andrew Ng", "Google Brain", "Coursera"]
         found_keywords = [kw for kw in expected_keywords if kw.lower() in response_text.lower()]
 
-        assert (
-            len(found_keywords) >= 2
-        ), f"Expected answer to mention at least 2 of {expected_keywords}, but found only: {found_keywords}\nAnswer: {response_text[:200]}"
+        assert len(found_keywords) >= 2, (
+            f"Expected answer to mention at least 2 of {expected_keywords}, but found only: {found_keywords}\nAnswer: {response_text[:200]}"
+        )
         print(f"✓ Answer contains expected content: {found_keywords}")
 
         # =====================================================================

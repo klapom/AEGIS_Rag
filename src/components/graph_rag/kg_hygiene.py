@@ -30,52 +30,45 @@ logger = structlog.get_logger(__name__)
 # 21 Universal Relation Types for standardized S-P-O triple extraction
 VALID_RELATION_TYPES = {
     # Structural Relations (4)
-    "PART_OF",          # Component is part of whole
-    "CONTAINS",         # Whole contains component
-    "INSTANCE_OF",      # Specific instance of a type
-    "TYPE_OF",          # Subtype relationship
-
+    "PART_OF",  # Component is part of whole
+    "CONTAINS",  # Whole contains component
+    "INSTANCE_OF",  # Specific instance of a type
+    "TYPE_OF",  # Subtype relationship
     # Organizational Relations (5)
-    "EMPLOYS",          # Organization employs person
-    "MANAGES",          # Person manages entity
-    "FOUNDED_BY",       # Organization founded by person
-    "OWNS",             # Entity owns another entity
-    "LOCATED_IN",       # Entity located in location
-
+    "EMPLOYS",  # Organization employs person
+    "MANAGES",  # Person manages entity
+    "FOUNDED_BY",  # Organization founded by person
+    "OWNS",  # Entity owns another entity
+    "LOCATED_IN",  # Entity located in location
     # Causal Relations (4)
-    "CAUSES",           # X causes Y
-    "ENABLES",          # X enables Y
-    "REQUIRES",         # X requires Y
-    "LEADS_TO",         # X leads to Y
-
+    "CAUSES",  # X causes Y
+    "ENABLES",  # X enables Y
+    "REQUIRES",  # X requires Y
+    "LEADS_TO",  # X leads to Y
     # Temporal Relations (2)
-    "PRECEDES",         # X happens before Y
-    "FOLLOWS",          # X happens after Y
-
+    "PRECEDES",  # X happens before Y
+    "FOLLOWS",  # X happens after Y
     # Functional Relations (4)
-    "USES",             # X uses Y
-    "CREATES",          # X creates Y
-    "IMPLEMENTS",       # X implements Y
-    "DEPENDS_ON",       # X depends on Y
-
+    "USES",  # X uses Y
+    "CREATES",  # X creates Y
+    "IMPLEMENTS",  # X implements Y
+    "DEPENDS_ON",  # X depends on Y
     # Semantic Relations (2)
-    "SIMILAR_TO",       # X is similar to Y
+    "SIMILAR_TO",  # X is similar to Y
     "ASSOCIATED_WITH",  # X is associated with Y
-
     # Fallback (1) - only when no specific type fits
-    "RELATED_TO",       # Generic relationship
-
+    "RELATED_TO",  # Generic relationship
     # Legacy aliases for backward compatibility (Sprint 125)
     # These will be mapped to universal types by output parser
-    "RELATES_TO",       # Legacy alias for RELATED_TO
-    "USED_BY",          # Legacy - use inverse of USES
-    "EXTENDS",          # Legacy - map to TYPE_OF or BASED_ON
-    "OPPOSITE_OF",      # Legacy - domain-specific
-    "SYNONYM_OF",       # Legacy - domain-specific
-    "MODIFIES",         # Legacy - domain-specific
-    "DELETES",          # Legacy - domain-specific
-    "READS",            # Legacy - domain-specific
-    "WRITES",           # Legacy - domain-specific
+    "RELATES_TO",  # Legacy alias for RELATED_TO
+    "USED_BY",  # Legacy - use inverse of USES
+    "EXTENDS",  # Legacy - map to TYPE_OF or BASED_ON
+    "OPPOSITE_OF",  # Legacy - domain-specific
+    "SYNONYM_OF",  # Legacy - domain-specific
+    "MODIFIES",  # Legacy - domain-specific
+    "DELETES",  # Legacy - domain-specific
+    "READS",  # Legacy - domain-specific
+    "WRITES",  # Legacy - domain-specific
 }
 
 
@@ -209,7 +202,7 @@ class KGHygieneService:
                 f"""
                 MATCH (s:base)-[r:RELATES_TO]->(t:base)
                 WHERE s.entity_name IS NOT NULL AND t.entity_name IS NOT NULL
-                {namespace_filter.replace('e.', 's.')}
+                {namespace_filter.replace("e.", "s.")}
                 RETURN count(r) AS count
                 """,
                 params,
@@ -242,7 +235,7 @@ class KGHygieneService:
                 f"""
                 MATCH (s:base)-[r:RELATES_TO]->(t:base)
                 WHERE (r.evidence_span IS NULL OR r.evidence_span = "")
-                {namespace_filter.replace('e.', 's.')}
+                {namespace_filter.replace("e.", "s.")}
                 RETURN count(r) AS count
                 """,
                 params,
@@ -254,7 +247,7 @@ class KGHygieneService:
                 f"""
                 MATCH (s:base)-[r:RELATES_TO]->(t:base)
                 WHERE r.relation_type IS NOT NULL
-                {namespace_filter.replace('e.', 's.')}
+                {namespace_filter.replace("e.", "s.")}
                 RETURN DISTINCT r.relation_type AS rel_type, count(r) AS count
                 """,
                 params,
@@ -358,7 +351,7 @@ class KGHygieneService:
             results = await self.neo4j_client.execute_read(
                 f"""
                 MATCH (e1:base), (e2:base)
-                {namespace_filter.replace('e1.', 'e1.')} {"AND" if namespace_filter else "WHERE"}
+                {namespace_filter.replace("e1.", "e1.")} {"AND" if namespace_filter else "WHERE"}
                 e1 <> e2
                 AND toLower(e1.entity_name) < toLower(e2.entity_name)
                 AND (

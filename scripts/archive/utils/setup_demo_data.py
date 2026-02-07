@@ -91,7 +91,9 @@ async def setup_demo_data(force: bool = False) -> dict:
     # Index documents - only *.md files
     try:
         stats = await pipeline.index_documents(
-            input_dir=project_root, required_exts=[".md"], batch_size=50  # Only markdown files
+            input_dir=project_root,
+            required_exts=[".md"],
+            batch_size=50,  # Only markdown files
         )
 
         logger.info("=" * 60)

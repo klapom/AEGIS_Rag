@@ -371,18 +371,22 @@ class DSPyOptimizer:
             for e in entities:
                 if isinstance(e, str):
                     # Old format: convert string to dict with CONCEPT type
-                    normalized_entities.append({
-                        "name": e,
-                        "type": "CONCEPT",
-                        "description": f"Entity extracted from training data"
-                    })
+                    normalized_entities.append(
+                        {
+                            "name": e,
+                            "type": "CONCEPT",
+                            "description": f"Entity extracted from training data",
+                        }
+                    )
                 elif isinstance(e, dict) and "name" in e:
                     # New format: ensure all required fields exist
-                    normalized_entities.append({
-                        "name": e["name"],
-                        "type": e.get("type", "CONCEPT"),
-                        "description": e.get("description", f"Entity: {e['name']}")
-                    })
+                    normalized_entities.append(
+                        {
+                            "name": e["name"],
+                            "type": e.get("type", "CONCEPT"),
+                            "description": e.get("description", f"Entity: {e['name']}"),
+                        }
+                    )
                 else:
                     logger.warning("invalid_entity_format", entity=e)
 
@@ -472,6 +476,7 @@ class DSPyOptimizer:
             Handles both old format (list[str]) and new format (list[dict]) for
             backward compatibility with existing training data.
             """
+
             # Extract entity names from structured format
             def extract_entity_names(entities: Any) -> set[str]:
                 """Extract entity names from structured or string format."""
@@ -486,7 +491,9 @@ class DSPyOptimizer:
                 return names
 
             gold_entities = extract_entity_names(example.entities)
-            pred_entities = extract_entity_names(pred.entities) if hasattr(pred, "entities") else set()
+            pred_entities = (
+                extract_entity_names(pred.entities) if hasattr(pred, "entities") else set()
+            )
 
             if not gold_entities:
                 return 1.0 if not pred_entities else 0.0
@@ -599,7 +606,8 @@ class DSPyOptimizer:
                 "entity_prompt_extracted",
                 instructions_length=len(optimized_instructions),
                 demos_count=len(extracted_demos),
-                used_fallback=optimized_instructions == EntityExtractionSignature.get_instructions(),
+                used_fallback=optimized_instructions
+                == EntityExtractionSignature.get_instructions(),
             )
 
             result = {
@@ -683,36 +691,44 @@ class DSPyOptimizer:
             normalized_entities = []
             for e in entities:
                 if isinstance(e, str):
-                    normalized_entities.append({
-                        "name": e,
-                        "type": "CONCEPT",
-                        "description": f"Entity from training data"
-                    })
+                    normalized_entities.append(
+                        {"name": e, "type": "CONCEPT", "description": f"Entity from training data"}
+                    )
                 elif isinstance(e, dict) and "name" in e:
-                    normalized_entities.append({
-                        "name": e["name"],
-                        "type": e.get("type", "CONCEPT"),
-                        "description": e.get("description", f"Entity: {e['name']}")
-                    })
+                    normalized_entities.append(
+                        {
+                            "name": e["name"],
+                            "type": e.get("type", "CONCEPT"),
+                            "description": e.get("description", f"Entity: {e['name']}"),
+                        }
+                    )
 
             # Normalize relations: ensure all required fields exist
             relations = item["relations"]
             normalized_relations = []
             for r in relations:
                 if isinstance(r, dict) and all(k in r for k in ["subject", "predicate", "object"]):
-                    normalized_relations.append({
-                        "source": r["subject"],
-                        "target": r["object"],
-                        "type": r["predicate"],
-                        "description": r.get("description", f"{r['subject']} {r['predicate']} {r['object']}")
-                    })
+                    normalized_relations.append(
+                        {
+                            "source": r["subject"],
+                            "target": r["object"],
+                            "type": r["predicate"],
+                            "description": r.get(
+                                "description", f"{r['subject']} {r['predicate']} {r['object']}"
+                            ),
+                        }
+                    )
                 elif isinstance(r, dict) and all(k in r for k in ["source", "target", "type"]):
-                    normalized_relations.append({
-                        "source": r["source"],
-                        "target": r["target"],
-                        "type": r["type"],
-                        "description": r.get("description", f"{r['source']} {r['type']} {r['target']}")
-                    })
+                    normalized_relations.append(
+                        {
+                            "source": r["source"],
+                            "target": r["target"],
+                            "type": r["type"],
+                            "description": r.get(
+                                "description", f"{r['source']} {r['type']} {r['target']}"
+                            ),
+                        }
+                    )
                 else:
                     logger.warning("invalid_relation_format", relation=r)
 
@@ -805,18 +821,21 @@ class DSPyOptimizer:
             - Old: {subject, predicate, object}
             - New: {source, target, type, description}
             """
+
             def normalize_relation(r: dict[str, str]) -> dict[str, str]:
                 """Normalize relation to {subject, predicate, object} format."""
                 if all(k in r for k in ["subject", "predicate", "object"]):
-                    return {"subject": r["subject"], "predicate": r["predicate"], "object": r["object"]}
+                    return {
+                        "subject": r["subject"],
+                        "predicate": r["predicate"],
+                        "object": r["object"],
+                    }
                 elif all(k in r for k in ["source", "target", "type"]):
                     return {"subject": r["source"], "predicate": r["type"], "object": r["target"]}
                 return {}
 
             gold_relations = [
-                normalize_relation(r)
-                for r in example.relations
-                if isinstance(r, dict)
+                normalize_relation(r) for r in example.relations if isinstance(r, dict)
             ]
             gold_relations = [r for r in gold_relations if r]  # Filter empty dicts
 
@@ -939,7 +958,8 @@ class DSPyOptimizer:
                 "relation_prompt_extracted",
                 instructions_length=len(optimized_instructions),
                 demos_count=len(extracted_demos),
-                used_fallback=optimized_instructions == RelationExtractionSignature.get_instructions(),
+                used_fallback=optimized_instructions
+                == RelationExtractionSignature.get_instructions(),
             )
 
             result = {
@@ -997,9 +1017,7 @@ class DSPyOptimizer:
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, _evaluate_sync)
 
-    def _extract_optimized_instructions(
-        self, module: Any, fallback_instructions: str
-    ) -> str:
+    def _extract_optimized_instructions(self, module: Any, fallback_instructions: str) -> str:
         """Extract optimized instructions from MIPROv2 compiled module.
 
         Sprint 124: MIPROv2 stores optimized instructions in the predictor's
@@ -1034,7 +1052,7 @@ class DSPyOptimizer:
                 try:
                     for name, pred in module.named_predictors():
                         predictors_to_check.append((f"named:{name}", pred))
-                except Exception:
+                except Exception:  # nosec B110
                     pass
 
             for source, predictor in predictors_to_check:
@@ -1229,7 +1247,7 @@ class DSPyOptimizer:
                             inputs[field_name] = value
                         else:
                             outputs[field_name] = value
-                except Exception:
+                except Exception:  # nosec B112
                     continue
 
             if inputs or outputs:
@@ -1250,7 +1268,9 @@ class DSPyOptimizer:
                 outputs = {}
                 for key in demo_keys:
                     try:
-                        value = demo[key] if hasattr(demo, "__getitem__") else getattr(demo, key, None)
+                        value = (
+                            demo[key] if hasattr(demo, "__getitem__") else getattr(demo, key, None)
+                        )
                         # Classify by field name convention
                         key_lower = key.lower()
                         if key_lower in INPUT_FIELD_NAMES or key.endswith("_input"):

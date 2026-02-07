@@ -7,6 +7,7 @@ Trigger Keywords in Commit Message:
 
 Falls Trigger gefunden: Warnung mit Hinweis auf ADR-Prozess.
 """
+
 import re
 import sys
 from pathlib import Path

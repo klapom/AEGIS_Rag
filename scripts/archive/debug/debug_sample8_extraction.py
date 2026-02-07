@@ -34,39 +34,40 @@ def load_sample_8():
     """Load Sample 8 (Q146) from WikiQA dataset."""
     try:
         from datasets import load_dataset
-        ds = load_dataset('explodinggradients/ragas-wikiqa', split='train')
+
+        ds = load_dataset("explodinggradients/ragas-wikiqa", split="train")
 
         # Sample 8 is at index 7*step where step = len(ds)//30
         # But we need to find Q146 specifically
         for i, item in enumerate(ds):
-            qid = item.get('question_id', f'Q{i}')
-            if qid == 'Q146' or i == 7:  # Index 7 or Q146
-                contexts = item.get('context', [])
+            qid = item.get("question_id", f"Q{i}")
+            if qid == "Q146" or i == 7:  # Index 7 or Q146
+                contexts = item.get("context", [])
                 if isinstance(contexts, list):
                     context_text = "\n\n".join(contexts)
                 else:
                     context_text = str(contexts)
 
                 return {
-                    'sample_id': qid,
-                    'question': item.get('question', ''),
-                    'context': context_text,
-                    'index': i,
+                    "sample_id": qid,
+                    "question": item.get("question", ""),
+                    "context": context_text,
+                    "index": i,
                 }
 
         # Fallback: get sample at index 7
         item = ds[7]
-        contexts = item.get('context', [])
+        contexts = item.get("context", [])
         if isinstance(contexts, list):
             context_text = "\n\n".join(contexts)
         else:
             context_text = str(contexts)
 
         return {
-            'sample_id': item.get('question_id', 'Q7'),
-            'question': item.get('question', ''),
-            'context': context_text,
-            'index': 7,
+            "sample_id": item.get("question_id", "Q7"),
+            "question": item.get("question", ""),
+            "context": context_text,
+            "index": 7,
         }
 
     except Exception as e:
@@ -92,7 +93,7 @@ async def debug_extraction(sample: dict):
     print("\n--- Step 1: Direct LLM Call (UNIFIED) ---")
 
     proxy = get_aegis_llm_proxy()
-    prompt = UNIFIED_EXTRACTION_PROMPT.format(text=sample['context'])
+    prompt = UNIFIED_EXTRACTION_PROMPT.format(text=sample["context"])
 
     print(f"Prompt length: {len(prompt)} chars")
 
@@ -125,6 +126,7 @@ async def debug_extraction(sample: dict):
     # Remove markdown code blocks
     if "```" in cleaned:
         import re
+
         match = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", cleaned)
         if match:
             cleaned = match.group(1).strip()
@@ -137,9 +139,9 @@ async def debug_extraction(sample: dict):
         print(f"Entities: {len(data.get('entities', []))}")
         print(f"Relationships: {len(data.get('relationships', []))}")
 
-        if data.get('entities'):
+        if data.get("entities"):
             print("\nFirst 5 entities:")
-            for e in data['entities'][:5]:
+            for e in data["entities"][:5]:
                 print(f"  - {e.get('name')} ({e.get('type')})")
 
     except json.JSONDecodeError as e:
@@ -147,6 +149,7 @@ async def debug_extraction(sample: dict):
 
         # Try extracting JSON object
         import re
+
         for pattern in [r"\{[\s\S]*\}", r"\[[\s\S]*\]"]:
             match = re.search(pattern, cleaned)
             if match:
@@ -168,8 +171,8 @@ async def debug_extraction(sample: dict):
 
     try:
         result = await benchmark.extract(
-            text=sample['context'],
-            chunk_id=sample['sample_id'],
+            text=sample["context"],
+            chunk_id=sample["sample_id"],
             document_id=f"debug_{sample['sample_id']}",
             strategy=ExtractionStrategy.UNIFIED,
         )
@@ -194,6 +197,7 @@ async def debug_extraction(sample: dict):
     except Exception as e:
         print(f"Extraction FAILED: {e}")
         import traceback
+
         traceback.print_exc()
 
     # Step 4: Test with SEQUENTIAL for comparison
@@ -201,8 +205,8 @@ async def debug_extraction(sample: dict):
 
     try:
         result_seq = await benchmark.extract(
-            text=sample['context'],
-            chunk_id=sample['sample_id'],
+            text=sample["context"],
+            chunk_id=sample["sample_id"],
             document_id=f"debug_{sample['sample_id']}_seq",
             strategy=ExtractionStrategy.SEQUENTIAL,
         )
@@ -221,6 +225,7 @@ async def debug_extraction(sample: dict):
     except Exception as e:
         print(f"SEQUENTIAL FAILED: {e}")
         import traceback
+
         traceback.print_exc()
 
 

@@ -629,7 +629,11 @@ async def test_optimize_entity_extraction_with_structured_entities():
         {
             "text": "Tesla is located in Palo Alto, California.",
             "entities": [
-                {"name": "Tesla", "type": "ORGANIZATION", "description": "Electric vehicle company"},
+                {
+                    "name": "Tesla",
+                    "type": "ORGANIZATION",
+                    "description": "Electric vehicle company",
+                },
                 {"name": "Palo Alto", "type": "LOCATION", "description": "City in California"},
                 {"name": "California", "type": "LOCATION", "description": "US State"},
             ],
@@ -743,9 +747,7 @@ async def test_optimize_relation_extraction_with_old_spo_format():
         {
             "text": "FastAPI uses Pydantic.",
             "entities": ["FastAPI", "Pydantic"],
-            "relations": [
-                {"subject": "FastAPI", "predicate": "uses", "object": "Pydantic"}
-            ],
+            "relations": [{"subject": "FastAPI", "predicate": "uses", "object": "Pydantic"}],
         },
     ]
 

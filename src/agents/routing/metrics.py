@@ -205,7 +205,7 @@ class SkillMetricsCollector:
 
     def get_usage_stats(
         self,
-        skill_name: Optional[str] = None,
+        skill_name: str | None = None,
     ) -> Dict[str, SkillUsageStats]:
         """Get aggregated usage statistics.
 

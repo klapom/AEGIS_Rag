@@ -39,7 +39,7 @@ async def main():
         print("=== Sample Examples ===")
         for i, example in enumerate(examples[:10]):
             print(
-                f"{i+1}. [{example.intent}] ({example.language}) "
+                f"{i + 1}. [{example.intent}] ({example.language}) "
                 f"{example.query[:80]}... (conf: {example.confidence:.2f})"
             )
 
@@ -63,6 +63,7 @@ async def main():
     except Exception as e:
         print(f"\n❌ ERROR: {e}")
         import traceback
+
         traceback.print_exc()
         return 2
 

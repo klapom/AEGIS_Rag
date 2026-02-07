@@ -361,7 +361,8 @@ class HybridExtractionService:
                 entities = [
                     e
                     for e in entities
-                    if e.name.lower() in filtered_names or
+                    if e.name.lower() in filtered_names
+                    or
                     # Also check normalized name (article removed)
                     filter_instance._remove_article(e.name, language).lower() in filtered_names
                 ]

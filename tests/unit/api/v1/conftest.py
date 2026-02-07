@@ -64,7 +64,6 @@ def admin_test_client():
             "src.api.v1.admin.get_last_reindex_timestamp", new_callable=AsyncMock
         ) as mock_reindex,
     ):
-
         mock_reindex.return_value = "2025-12-18T10:30:00"
 
         # Import app after patches are in place

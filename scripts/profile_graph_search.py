@@ -63,11 +63,7 @@ class PerformanceProfiler:
         print(f"\nTotal Time: {total:.2f}ms\n")
 
         # Sort by duration descending
-        sorted_timings = sorted(
-            self.timings.items(),
-            key=lambda x: x[1],
-            reverse=True
-        )
+        sorted_timings = sorted(self.timings.items(), key=lambda x: x[1], reverse=True)
 
         print(f"{'Component':<50} {'Time (ms)':<12} {'% of Total':<10}")
         print("-" * 80)
@@ -83,7 +79,7 @@ class PerformanceProfiler:
         if bottlenecks:
             print("\n🔥 BOTTLENECKS (>20% of total time):")
             for label, dur in bottlenecks:
-                percentage = (dur / total * 100)
+                percentage = dur / total * 100
                 print(f"  - {label}: {dur:.2f}ms ({percentage:.1f}%)")
 
         # Performance assessment
@@ -150,9 +146,7 @@ async def profile_graph_search(query: str, namespace: str = "default") -> Perfor
     try:
         profiler.start("2_entity_expansion")
         entities = await agent.dual_level_search.local_search(
-            query=query,
-            top_k=10,
-            namespaces=[namespace]
+            query=query, top_k=10, namespaces=[namespace]
         )
         profiler.stop("2_entity_expansion")
         logger.info(
@@ -168,9 +162,7 @@ async def profile_graph_search(query: str, namespace: str = "default") -> Perfor
     try:
         profiler.start("3_global_search")
         topics = await agent.dual_level_search.global_search(
-            query=query,
-            top_k=5,
-            namespaces=[namespace]
+            query=query, top_k=5, namespaces=[namespace]
         )
         profiler.stop("3_global_search")
         logger.info(
@@ -202,8 +194,7 @@ async def profile_graph_search(query: str, namespace: str = "default") -> Perfor
 
 
 async def profile_entity_expansion_detailed(
-    query: str,
-    namespace: str = "default"
+    query: str, namespace: str = "default"
 ) -> PerformanceProfiler:
     """Profile SmartEntityExpander in detail.
 
@@ -242,9 +233,7 @@ async def profile_entity_expansion_detailed(
     # Stage 2: Graph expansion
     profiler.start("stage2_graph_expansion")
     graph_expanded = await expander._expand_via_graph(
-        initial_entities,
-        [namespace],
-        max_hops=expander.graph_expansion_hops
+        initial_entities, [namespace], max_hops=expander.graph_expansion_hops
     )
     profiler.stop("stage2_graph_expansion")
     logger.info(
@@ -257,8 +246,7 @@ async def profile_entity_expansion_detailed(
     if len(graph_expanded) < expander.min_entities_threshold:
         profiler.start("stage3_synonym_fallback")
         synonyms = await expander._generate_synonyms_llm(
-            initial_entities[:2],
-            max_per_entity=expander.max_synonyms_per_entity
+            initial_entities[:2], max_per_entity=expander.max_synonyms_per_entity
         )
         profiler.stop("stage3_synonym_fallback")
         logger.info(
@@ -274,25 +262,21 @@ async def profile_entity_expansion_detailed(
 
 async def main():
     """Run performance profiling."""
-    parser = argparse.ArgumentParser(
-        description="Profile graph search performance"
-    )
+    parser = argparse.ArgumentParser(description="Profile graph search performance")
     parser.add_argument(
         "--query",
         type=str,
         default="What is RAG?",
-        help="Query to profile (default: 'What is RAG?')"
+        help="Query to profile (default: 'What is RAG?')",
     )
     parser.add_argument(
         "--namespace",
         type=str,
         default="default",
-        help="Namespace to search in (default: 'default')"
+        help="Namespace to search in (default: 'default')",
     )
     parser.add_argument(
-        "--detailed",
-        action="store_true",
-        help="Run detailed entity expansion profiling"
+        "--detailed", action="store_true", help="Run detailed entity expansion profiling"
     )
 
     args = parser.parse_args()
@@ -311,10 +295,7 @@ async def main():
         print("\n\n" + "=" * 80)
         print("DETAILED ENTITY EXPANSION PROFILE")
         print("=" * 80)
-        expander_profiler = await profile_entity_expansion_detailed(
-            args.query,
-            args.namespace
-        )
+        expander_profiler = await profile_entity_expansion_detailed(args.query, args.namespace)
         expander_profiler.report()
 
 

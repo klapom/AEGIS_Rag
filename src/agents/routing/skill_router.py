@@ -110,7 +110,7 @@ class SkillActivationPlan:
     optional_skills: List[str]
     permissions_needed: Set[str]
     context_budget: int  # Max tokens for skill instructions
-    clara_intent: Optional[CLARAIntent] = None
+    clara_intent: CLARAIntent | None = None
 
 
 class SkillRouter:
@@ -203,7 +203,7 @@ class SkillRouter:
             intent_mappings=list(self.INTENT_SKILL_MAP.keys()),
         )
 
-    async def route(self, query: str, user_context: Optional[Dict] = None) -> SkillActivationPlan:
+    async def route(self, query: str, user_context: Dict | None = None) -> SkillActivationPlan:
         """Determine which skills to activate for a query.
 
         Process:
@@ -469,7 +469,7 @@ class SkillAwareCoordinator:
             llm_model=getattr(llm, "model", "unknown"),
         )
 
-    async def process(self, query: str, user_context: Optional[Dict] = None) -> str:
+    async def process(self, query: str, user_context: Dict | None = None) -> str:
         """Process query with skill-aware context.
 
         Args:

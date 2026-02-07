@@ -668,9 +668,9 @@ class TestMetricsPerformance:
         elapsed = time.time() - start_time
 
         # Recording 3000 metrics should take less than 1 second
-        assert (
-            elapsed < 1.0
-        ), f"Metrics recording too slow: {elapsed:.3f}s for {iterations*3} operations"
+        assert elapsed < 1.0, (
+            f"Metrics recording too slow: {elapsed:.3f}s for {iterations * 3} operations"
+        )
 
     def test_histogram_observation_performance(self):
         """Test histogram observation performance."""

@@ -156,9 +156,7 @@ def ragas_exploratory_dataset(aegis_ragas_benchmark_samples) -> list[BenchmarkSa
     Returns:
         Samples with metadata.intent == "exploratory"
     """
-    return [
-        s for s in aegis_ragas_benchmark_samples if s.metadata.get("intent") == "exploratory"
-    ]
+    return [s for s in aegis_ragas_benchmark_samples if s.metadata.get("intent") == "exploratory"]
 
 
 @pytest.fixture(scope="function")

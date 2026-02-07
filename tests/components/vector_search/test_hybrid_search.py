@@ -28,7 +28,6 @@ def test_hybrid_search_init_default():
         patch("src.components.vector_search.hybrid_search.UnifiedEmbeddingService"),
         patch("src.components.vector_search.hybrid_search.BM25Search"),
     ):
-
         search = HybridSearch()
 
         assert search.collection_name is not None, "Collection name should be set"

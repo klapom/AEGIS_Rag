@@ -3,6 +3,7 @@
 Sprint 32 Post-Mortem: Diagnose why Entity extraction is not working.
 Tests the full extraction pipeline step by step.
 """
+
 import asyncio
 import sys
 from pathlib import Path
@@ -47,7 +48,9 @@ async def main():
 
         if entities:
             print("\n    Extracting relationships...")
-            relationships = await service.extract_relationships(test_text, entities, "debug_test_doc")
+            relationships = await service.extract_relationships(
+                test_text, entities, "debug_test_doc"
+            )
             print(f"    Relationships extracted: {len(relationships)}")
 
             for rel in relationships:
@@ -58,6 +61,7 @@ async def main():
     except Exception as e:
         print(f"    ERROR: {e}")
         import traceback
+
         traceback.print_exc()
 
     # Step 2: Test LLMExtractionPipeline via factory
@@ -86,6 +90,7 @@ async def main():
     except Exception as e:
         print(f"    ERROR: {e}")
         import traceback
+
         traceback.print_exc()
 
     # Step 3: Check Neo4j connection
@@ -117,6 +122,7 @@ async def main():
     except Exception as e:
         print(f"    ERROR: {e}")
         import traceback
+
         traceback.print_exc()
 
     # Step 4: Test AegisLLMProxy
@@ -152,6 +158,7 @@ async def main():
     except Exception as e:
         print(f"    ERROR: {e}")
         import traceback
+
         traceback.print_exc()
 
     print("\n" + "=" * 60)

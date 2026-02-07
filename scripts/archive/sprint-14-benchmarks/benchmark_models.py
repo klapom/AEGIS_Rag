@@ -246,9 +246,9 @@ async def benchmark_model(model: str, client: AsyncClient) -> dict[str, Any]:
     Returns:
         Dictionary with benchmark results
     """
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print(f"Benchmarking: {model}")
-    print(f"{'='*80}")
+    print(f"{'=' * 80}")
 
     # Entity extraction
     print("\n[1/2] Running entity extraction...")
@@ -319,13 +319,13 @@ Models: Gemma-3-4b-it, Qwen3-4B (HF GGUF), Qwen3-4B (standard), Llama3.2:3b
             )
 
     # Print comparison table
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print("BENCHMARK RESULTS - COMPARISON")
-    print(f"{'='*80}\n")
+    print(f"{'=' * 80}\n")
 
     # Header
     print(f"{'Model':<40} {'Entities':<12} {'Relations':<12} {'Total Time':<15} {'Status'}")
-    print(f"{'-'*40} {'-'*12} {'-'*12} {'-'*15} {'-'*10}")
+    print(f"{'-' * 40} {'-' * 12} {'-' * 12} {'-' * 15} {'-' * 10}")
 
     # Results
     for result in results:
@@ -348,9 +348,9 @@ Models: Gemma-3-4b-it, Qwen3-4B (HF GGUF), Qwen3-4B (standard), Llama3.2:3b
             print(f"{model_name:<40} {'N/A':<12} {'N/A':<12} {'N/A':<15} [ERROR]")
 
     # Quality analysis
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print("QUALITY ANALYSIS")
-    print(f"{'='*80}\n")
+    print(f"{'=' * 80}\n")
 
     for result in results:
         if result.get("success"):
@@ -381,9 +381,9 @@ Models: Gemma-3-4b-it, Qwen3-4B (HF GGUF), Qwen3-4B (standard), Llama3.2:3b
                     print(f"    ... and {len(relations) - 3} more")
 
     # Recommendation
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print("RECOMMENDATION")
-    print(f"{'='*80}\n")
+    print(f"{'=' * 80}\n")
 
     successful_results = [r for r in results if r.get("success")]
     if successful_results:

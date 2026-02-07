@@ -15,11 +15,7 @@ async def main():
     # Get first 5 documents from default namespace
     results = await client.scroll(
         collection_name="documents_v1",
-        scroll_filter={
-            "must": [
-                {"key": "namespace_id", "match": {"value": "default"}}
-            ]
-        },
+        scroll_filter={"must": [{"key": "namespace_id", "match": {"value": "default"}}]},
         limit=5,
         with_payload=True,
     )

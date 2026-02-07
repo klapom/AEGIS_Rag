@@ -39,9 +39,7 @@ class TestRecursiveLLMProcessorInitialization:
         assert processor.settings.max_depth == 3
         assert len(processor.settings.levels) == 4
 
-    def test_backward_compatibility_old_params(
-        self, mock_llm, mock_skill_registry
-    ):
+    def test_backward_compatibility_old_params(self, mock_llm, mock_skill_registry):
         """Test backward compatibility with deprecated parameters."""
         processor = RecursiveLLMProcessor(
             llm=mock_llm,
@@ -80,9 +78,7 @@ class TestRecursiveLLMProcessorInitialization:
                 settings=invalid_settings,
             )
 
-    def test_level_config_fallback_warning(
-        self, mock_llm, mock_skill_registry
-    ):
+    def test_level_config_fallback_warning(self, mock_llm, mock_skill_registry):
         """Test warning logged when max_depth > len(levels)."""
         settings = RecursiveLLMSettings(
             max_depth=5,
@@ -183,9 +179,7 @@ class TestSegmentationPerLevel:
             settings=recursive_llm_settings,
         )
 
-        segments = processor._segment_document(
-            sample_document_short, level=1, parent_id="seg_0_0"
-        )
+        segments = processor._segment_document(sample_document_short, level=1, parent_id="seg_0_0")
 
         assert len(segments) > 0
         assert all(s.parent_id == "seg_0_0" for s in segments)
@@ -217,8 +211,12 @@ class TestScoreRelevanceDenseSparse:
 
     @pytest.mark.asyncio
     async def test_score_relevance_dense_sparse(
-        self, mock_llm, mock_skill_registry, mock_embedding_service,
-        recursive_llm_settings, sample_segments
+        self,
+        mock_llm,
+        mock_skill_registry,
+        mock_embedding_service,
+        recursive_llm_settings,
+        sample_segments,
     ):
         """Test dense+sparse scoring method."""
         processor = RecursiveLLMProcessor(
@@ -247,8 +245,12 @@ class TestScoreRelevanceDenseSparse:
 
     @pytest.mark.asyncio
     async def test_dense_sparse_batch_embedding(
-        self, mock_llm, mock_skill_registry, mock_embedding_service,
-        recursive_llm_settings, sample_segments
+        self,
+        mock_llm,
+        mock_skill_registry,
+        mock_embedding_service,
+        recursive_llm_settings,
+        sample_segments,
     ):
         """Test dense+sparse uses batch embedding, not one-by-one."""
         processor = RecursiveLLMProcessor(
@@ -273,8 +275,12 @@ class TestScoreRelevanceDenseSparse:
 
     @pytest.mark.asyncio
     async def test_dense_sparse_hybrid_scoring(
-        self, mock_llm, mock_skill_registry,
-        recursive_llm_settings, sample_segments, sample_embedding_vectors
+        self,
+        mock_llm,
+        mock_skill_registry,
+        recursive_llm_settings,
+        sample_segments,
+        sample_embedding_vectors,
     ):
         """Test hybrid score calculation (0.6 * dense + 0.4 * sparse)."""
         processor = RecursiveLLMProcessor(
@@ -319,8 +325,12 @@ class TestScoreRelevanceMultiVector:
 
     @pytest.mark.asyncio
     async def test_score_relevance_multi_vector(
-        self, mock_llm, mock_skill_registry,
-        recursive_llm_settings, sample_segments, mock_multi_vector_model
+        self,
+        mock_llm,
+        mock_skill_registry,
+        recursive_llm_settings,
+        sample_segments,
+        mock_multi_vector_model,
     ):
         """Test multi-vector (ColBERT) scoring method."""
         processor = RecursiveLLMProcessor(
@@ -345,8 +355,12 @@ class TestScoreRelevanceMultiVector:
 
     @pytest.mark.asyncio
     async def test_multi_vector_lazy_loading(
-        self, mock_llm, mock_skill_registry,
-        recursive_llm_settings, sample_segments, mock_multi_vector_model
+        self,
+        mock_llm,
+        mock_skill_registry,
+        recursive_llm_settings,
+        sample_segments,
+        mock_multi_vector_model,
     ):
         """Test multi-vector model is lazy-loaded (singleton)."""
         processor = RecursiveLLMProcessor(
@@ -371,8 +385,12 @@ class TestScoreRelevanceMultiVector:
 
     @pytest.mark.asyncio
     async def test_multi_vector_fallback_to_dense_sparse(
-        self, mock_llm, mock_skill_registry, mock_embedding_service,
-        recursive_llm_settings, sample_segments
+        self,
+        mock_llm,
+        mock_skill_registry,
+        mock_embedding_service,
+        recursive_llm_settings,
+        sample_segments,
     ):
         """Test fallback to dense+sparse if FlagEmbedding not available."""
         processor = RecursiveLLMProcessor(
@@ -381,21 +399,23 @@ class TestScoreRelevanceMultiVector:
             settings=recursive_llm_settings,
         )
 
-        with patch(
-            "src.agents.context.recursive_llm.BGEM3FlagModel",
-            side_effect=ImportError("FlagEmbedding not installed"),
-        ):
-            with patch(
+        with (
+            patch(
+                "src.agents.context.recursive_llm.BGEM3FlagModel",
+                side_effect=ImportError("FlagEmbedding not installed"),
+            ),
+            patch(
                 "src.agents.context.recursive_llm.get_embedding_service",
                 return_value=mock_embedding_service,
-            ):
-                # Should fallback to dense+sparse instead of raising
-                scored = await processor._score_relevance_multi_vector(
-                    sample_segments,
-                    "test query",
-                )
+            ),
+        ):
+            # Should fallback to dense+sparse instead of raising
+            scored = await processor._score_relevance_multi_vector(
+                sample_segments,
+                "test query",
+            )
 
-                assert len(scored) > 0
+            assert len(scored) > 0
 
 
 class TestScoreRelevanceAdaptive:
@@ -403,8 +423,12 @@ class TestScoreRelevanceAdaptive:
 
     @pytest.mark.asyncio
     async def test_score_relevance_adaptive_fine_grained(
-        self, mock_llm, mock_skill_registry, mock_embedding_service,
-        recursive_llm_settings, sample_segments
+        self,
+        mock_llm,
+        mock_skill_registry,
+        mock_embedding_service,
+        recursive_llm_settings,
+        sample_segments,
     ):
         """Test adaptive scoring for fine-grained queries → multi-vector."""
         processor = RecursiveLLMProcessor(
@@ -413,9 +437,7 @@ class TestScoreRelevanceAdaptive:
             settings=recursive_llm_settings,
         )
 
-        with patch(
-            "src.agents.context.recursive_llm.get_granularity_mapper"
-        ) as mock_mapper:
+        with patch("src.agents.context.recursive_llm.get_granularity_mapper") as mock_mapper:
             mapper_instance = AsyncMock()
             mapper_instance.classify_granularity.return_value = (
                 "fine-grained",
@@ -440,8 +462,7 @@ class TestScoreRelevanceAdaptive:
 
     @pytest.mark.asyncio
     async def test_score_relevance_adaptive_holistic(
-        self, mock_llm, mock_skill_registry,
-        recursive_llm_settings, sample_segments
+        self, mock_llm, mock_skill_registry, recursive_llm_settings, sample_segments
     ):
         """Test adaptive scoring for holistic queries → LLM."""
         processor = RecursiveLLMProcessor(
@@ -450,9 +471,7 @@ class TestScoreRelevanceAdaptive:
             settings=recursive_llm_settings,
         )
 
-        with patch(
-            "src.agents.context.recursive_llm.get_granularity_mapper"
-        ) as mock_mapper:
+        with patch("src.agents.context.recursive_llm.get_granularity_mapper") as mock_mapper:
             mapper_instance = AsyncMock()
             mapper_instance.classify_granularity.return_value = ("holistic", 0.90)
             mock_mapper.return_value = mapper_instance
@@ -468,9 +487,7 @@ class TestScoreRelevanceAdaptive:
 class TestParallelWorkers:
     """Tests for parallel worker configuration (Feature 92.10)."""
 
-    def test_detect_llm_backend_ollama(
-        self, mock_llm, mock_skill_registry, recursive_llm_settings
-    ):
+    def test_detect_llm_backend_ollama(self, mock_llm, mock_skill_registry, recursive_llm_settings):
         """Test detecting Ollama backend."""
         processor = RecursiveLLMProcessor(
             llm=mock_llm,
@@ -485,9 +502,7 @@ class TestParallelWorkers:
         backend = processor._detect_llm_backend()
         assert backend in ["ollama", "unknown"]  # Actual detection logic
 
-    def test_worker_limit_ollama(
-        self, mock_llm, mock_skill_registry, recursive_llm_settings
-    ):
+    def test_worker_limit_ollama(self, mock_llm, mock_skill_registry, recursive_llm_settings):
         """Test worker limits for Ollama (1 worker for DGX Spark)."""
         processor = RecursiveLLMProcessor(
             llm=mock_llm,
@@ -498,9 +513,7 @@ class TestParallelWorkers:
         worker_limit = processor.settings.worker_limits.get("ollama", 1)
         assert worker_limit == 1
 
-    def test_worker_limit_openai(
-        self, mock_llm, mock_skill_registry, recursive_llm_settings
-    ):
+    def test_worker_limit_openai(self, mock_llm, mock_skill_registry, recursive_llm_settings):
         """Test worker limits for OpenAI (10 workers)."""
         processor = RecursiveLLMProcessor(
             llm=mock_llm,
@@ -555,10 +568,9 @@ class TestParallelWorkers:
 
         findings = []
         for batch in processor._batched(sample_segments, 2):
-            batch_findings = await asyncio.gather(*[
-                processor._explore_segment(s, "test", 1, None)
-                for s in batch
-            ])
+            batch_findings = await asyncio.gather(
+                *[processor._explore_segment(s, "test", 1, None) for s in batch]
+            )
             findings.extend(batch_findings)
 
         assert call_count == len(sample_segments)
@@ -569,8 +581,7 @@ class TestProcessingFlow:
 
     @pytest.mark.asyncio
     async def test_process_short_document(
-        self, mock_llm, mock_skill_registry, recursive_llm_settings,
-        sample_document_short
+        self, mock_llm, mock_skill_registry, recursive_llm_settings, sample_document_short
     ):
         """Test processing a short document."""
         processor = RecursiveLLMProcessor(
@@ -633,8 +644,7 @@ class TestProcessingFlow:
 
     @pytest.mark.asyncio
     async def test_process_empty_query_raises_error(
-        self, mock_llm, mock_skill_registry, recursive_llm_settings,
-        sample_document_short
+        self, mock_llm, mock_skill_registry, recursive_llm_settings, sample_document_short
     ):
         """Test processing with empty query raises ValueError."""
         processor = RecursiveLLMProcessor(
@@ -652,8 +662,12 @@ class TestScoringMethodRouting:
 
     @pytest.mark.asyncio
     async def test_score_relevance_routes_to_dense_sparse(
-        self, mock_llm, mock_skill_registry, mock_embedding_service,
-        recursive_llm_settings, sample_segments
+        self,
+        mock_llm,
+        mock_skill_registry,
+        mock_embedding_service,
+        recursive_llm_settings,
+        sample_segments,
     ):
         """Test _score_relevance routes to dense+sparse for that method."""
         settings = RecursiveLLMSettings(
@@ -672,27 +686,29 @@ class TestScoringMethodRouting:
             settings=settings,
         )
 
-        with patch(
-            "src.agents.context.recursive_llm.get_embedding_service",
-            return_value=mock_embedding_service,
+        with (
+            patch(
+                "src.agents.context.recursive_llm.get_embedding_service",
+                return_value=mock_embedding_service,
+            ),
+            patch.object(
+                processor,
+                "_score_relevance_dense_sparse",
+                wraps=processor._score_relevance_dense_sparse,
+            ) as mock_method,
         ):
-            with patch.object(
-                processor, "_score_relevance_dense_sparse",
-                wraps=processor._score_relevance_dense_sparse
-            ) as mock_method:
-                await processor._score_relevance(
-                    sample_segments,
-                    "test query",
-                    skill=None,
-                    level=0,
-                )
+            await processor._score_relevance(
+                sample_segments,
+                "test query",
+                skill=None,
+                level=0,
+            )
 
-                assert mock_method.called
+            assert mock_method.called
 
     @pytest.mark.asyncio
     async def test_score_relevance_routes_to_llm(
-        self, mock_llm, mock_skill_registry,
-        recursive_llm_settings, sample_segments
+        self, mock_llm, mock_skill_registry, recursive_llm_settings, sample_segments
     ):
         """Test _score_relevance routes to LLM for that method."""
         settings = RecursiveLLMSettings(
@@ -712,8 +728,7 @@ class TestScoringMethodRouting:
         )
 
         with patch.object(
-            processor, "_score_relevance_llm",
-            wraps=processor._score_relevance_llm
+            processor, "_score_relevance_llm", wraps=processor._score_relevance_llm
         ) as mock_method:
             await processor._score_relevance(
                 sample_segments,
@@ -726,8 +741,12 @@ class TestScoringMethodRouting:
 
     @pytest.mark.asyncio
     async def test_score_relevance_routes_to_adaptive(
-        self, mock_llm, mock_skill_registry, mock_embedding_service,
-        recursive_llm_settings, sample_segments
+        self,
+        mock_llm,
+        mock_skill_registry,
+        mock_embedding_service,
+        recursive_llm_settings,
+        sample_segments,
     ):
         """Test _score_relevance routes to adaptive for that method."""
         settings = RecursiveLLMSettings(
@@ -746,9 +765,7 @@ class TestScoringMethodRouting:
             settings=settings,
         )
 
-        with patch(
-            "src.agents.context.recursive_llm.get_granularity_mapper"
-        ) as mock_mapper:
+        with patch("src.agents.context.recursive_llm.get_granularity_mapper") as mock_mapper:
             mapper_instance = AsyncMock()
             mapper_instance.classify_granularity.return_value = (
                 "fine-grained",
@@ -757,8 +774,7 @@ class TestScoringMethodRouting:
             mock_mapper.return_value = mapper_instance
 
             with patch.object(
-                processor, "_score_relevance_adaptive",
-                wraps=processor._score_relevance_adaptive
+                processor, "_score_relevance_adaptive", wraps=processor._score_relevance_adaptive
             ) as mock_method:
                 await processor._score_relevance(
                     sample_segments,

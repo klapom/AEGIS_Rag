@@ -377,9 +377,7 @@ class TestExplainabilityAuditIntegration:
         )
 
         # Verify trace was saved
-        retrieved_trace = await explainability_engine.storage.get(
-            sample_decision_trace.id
-        )
+        retrieved_trace = await explainability_engine.storage.get(sample_decision_trace.id)
         assert retrieved_trace is not None
         assert retrieved_trace.id == sample_decision_trace.id
 
@@ -505,9 +503,7 @@ class TestGDPRExplainabilityIntegration:
         await explainability_engine.storage.save(trace_with_consent)
 
         # Verify trace was stored
-        retrieved = await explainability_engine.storage.get(
-            trace_with_consent.id
-        )
+        retrieved = await explainability_engine.storage.get(trace_with_consent.id)
         assert retrieved is not None
 
     @pytest.mark.asyncio
@@ -531,9 +527,7 @@ class TestGDPRExplainabilityIntegration:
             - Audit event logs redaction event
         """
         # Create response with PII
-        response_with_pii = (
-            "Contact user at john@example.com with the following information..."
-        )
+        response_with_pii = "Contact user at john@example.com with the following information..."
 
         # Redact PII (not authorized categories)
         redacted = gdpr_guard.redact_pii(
@@ -871,7 +865,9 @@ class TestFullGovernanceWorkflow:
                 "skill_name": skill_name,
                 "reason": "Missing GDPR consent",
                 "error_message": error_msg,
-                "data_categories_required": [c.value for c in gdpr_guard.get_skill_requirements(skill_name)],
+                "data_categories_required": [
+                    c.value for c in gdpr_guard.get_skill_requirements(skill_name)
+                ],
             },
         )
 

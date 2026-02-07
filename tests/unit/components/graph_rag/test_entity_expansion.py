@@ -41,8 +41,16 @@ def mock_embedding_service():
 @pytest.fixture
 def entity_expander(mock_neo4j_client, mock_llm_proxy, mock_embedding_service):
     """SmartEntityExpander instance with mocked dependencies."""
-    with patch("src.components.graph_rag.entity_expansion.get_aegis_llm_proxy", return_value=mock_llm_proxy), \
-         patch("src.components.graph_rag.entity_expansion.get_embedding_service", return_value=mock_embedding_service):
+    with (
+        patch(
+            "src.components.graph_rag.entity_expansion.get_aegis_llm_proxy",
+            return_value=mock_llm_proxy,
+        ),
+        patch(
+            "src.components.graph_rag.entity_expansion.get_embedding_service",
+            return_value=mock_embedding_service,
+        ),
+    ):
         expander = SmartEntityExpander(
             neo4j_client=mock_neo4j_client,
             graph_expansion_hops=1,
@@ -71,7 +79,9 @@ class TestSmartEntityExpander:
         )
 
         # Execute
-        entities = await entity_expander._extract_entities_llm("What are the global implications of abortion?")
+        entities = await entity_expander._extract_entities_llm(
+            "What are the global implications of abortion?"
+        )
 
         # Verify
         assert len(entities) == 3
@@ -140,9 +150,7 @@ class TestSmartEntityExpander:
 
         # Execute
         expanded = await entity_expander._expand_via_graph(
-            initial_entities=["abortion"],
-            namespaces=["amnesty_qa"],
-            max_hops=1
+            initial_entities=["abortion"], namespaces=["amnesty_qa"], max_hops=1
         )
 
         # Verify
@@ -166,9 +174,7 @@ class TestSmartEntityExpander:
         # Execute with 3 hops
         entity_expander.graph_expansion_hops = 3
         expanded = await entity_expander._expand_via_graph(
-            initial_entities=["abortion"],
-            namespaces=["amnesty_qa"],
-            max_hops=3
+            initial_entities=["abortion"], namespaces=["amnesty_qa"], max_hops=3
         )
 
         # Verify
@@ -195,8 +201,7 @@ class TestSmartEntityExpander:
 
         # Execute
         synonyms = await entity_expander._generate_synonyms_llm(
-            entities=["abortion"],
-            max_per_entity=3
+            entities=["abortion"], max_per_entity=3
         )
 
         # Verify
@@ -222,15 +227,16 @@ class TestSmartEntityExpander:
 
         # Execute with max=3 per entity, 2 entities
         synonyms = await entity_expander._generate_synonyms_llm(
-            entities=["abortion", "rights"],
-            max_per_entity=3
+            entities=["abortion", "rights"], max_per_entity=3
         )
 
         # Verify - should get 3 * 2 = 6 synonyms max
         assert len(synonyms) <= 6
 
     @pytest.mark.asyncio
-    async def test_expand_entities_3stage_no_fallback(self, entity_expander, mock_llm_proxy, mock_neo4j_client):
+    async def test_expand_entities_3stage_no_fallback(
+        self, entity_expander, mock_llm_proxy, mock_neo4j_client
+    ):
         """Test full 3-stage pipeline when graph expansion sufficient (no synonym fallback)."""
         # Sprint 115: Mock namespace check to avoid early-exit
         # Stage 0: Namespace has entities
@@ -257,7 +263,7 @@ class TestSmartEntityExpander:
         expanded, hops_used = await entity_expander.expand_entities(
             query="What are the global implications of abortion?",
             namespaces=["amnesty_qa"],
-            top_k=10
+            top_k=10,
         )
 
         # Verify - should NOT call LLM for synonyms (graph gave enough)
@@ -266,7 +272,9 @@ class TestSmartEntityExpander:
         assert mock_llm_proxy.generate.call_count == 1  # Only Stage 1, not Stage 3
 
     @pytest.mark.asyncio
-    async def test_expand_entities_3stage_with_fallback(self, entity_expander, mock_llm_proxy, mock_neo4j_client):
+    async def test_expand_entities_3stage_with_fallback(
+        self, entity_expander, mock_llm_proxy, mock_neo4j_client
+    ):
         """Test full 3-stage pipeline when graph sparse (triggers synonym fallback)."""
         # Sprint 115: Mock namespace check + graph expansion
         # Stage 0: Namespace has entities
@@ -300,7 +308,7 @@ class TestSmartEntityExpander:
                 tokens_output=20,
                 cost_usd=0.0,
                 latency_ms=100,
-            )
+            ),
         ]
         mock_llm_proxy.generate.side_effect = llm_responses
 
@@ -309,7 +317,7 @@ class TestSmartEntityExpander:
         expanded, hops_used = await entity_expander.expand_entities(
             query="What are the global implications of abortion?",
             namespaces=["amnesty_qa"],
-            top_k=10
+            top_k=10,
         )
 
         # Verify - should call LLM twice (Stage 1 + Stage 3)
@@ -319,7 +327,9 @@ class TestSmartEntityExpander:
         assert hops_used == 1  # Sprint 92: Verify hops_used is returned
 
     @pytest.mark.asyncio
-    async def test_expand_and_rerank_semantic(self, entity_expander, mock_llm_proxy, mock_neo4j_client, mock_embedding_service):
+    async def test_expand_and_rerank_semantic(
+        self, entity_expander, mock_llm_proxy, mock_neo4j_client, mock_embedding_service
+    ):
         """Test Stage 4: Semantic reranking with BGE-M3."""
         # Sprint 115: Mock namespace check + graph expansion
         mock_neo4j_client.execute_read.side_effect = [
@@ -345,6 +355,7 @@ class TestSmartEntityExpander:
 
         # Mock embeddings for semantic similarity
         import numpy as np
+
         query_embedding = np.array([1.0, 0.0, 0.0])
         entity_embeddings = {
             "abortion": np.array([0.9, 0.1, 0.0]),  # High similarity (0.9)
@@ -365,7 +376,7 @@ class TestSmartEntityExpander:
         ranked_entities, hops_used = await entity_expander.expand_and_rerank(
             query="What are the global implications of abortion?",
             namespaces=["amnesty_qa"],
-            top_k=3
+            top_k=3,
         )
 
         # Verify semantic ranking
@@ -406,60 +417,68 @@ class TestSmartEntityExpander:
 
     def test_initialization_validates_hops(self, mock_neo4j_client):
         """Test that initialization validates graph_expansion_hops range (1-3)."""
-        with patch("src.components.graph_rag.entity_expansion.get_aegis_llm_proxy"), \
-             patch("src.components.graph_rag.entity_expansion.get_embedding_service"):
+        with (
+            patch("src.components.graph_rag.entity_expansion.get_aegis_llm_proxy"),
+            patch("src.components.graph_rag.entity_expansion.get_embedding_service"),
+        ):
             # Test minimum clamping
             expander = SmartEntityExpander(
                 neo4j_client=mock_neo4j_client,
-                graph_expansion_hops=0  # Below minimum
+                graph_expansion_hops=0,  # Below minimum
             )
             assert expander.graph_expansion_hops == 1
 
             # Test maximum clamping
             expander = SmartEntityExpander(
                 neo4j_client=mock_neo4j_client,
-                graph_expansion_hops=5  # Above maximum
+                graph_expansion_hops=5,  # Above maximum
             )
             assert expander.graph_expansion_hops == 3
 
     def test_initialization_validates_threshold(self, mock_neo4j_client):
         """Test that initialization validates min_entities_threshold range (5-20)."""
-        with patch("src.components.graph_rag.entity_expansion.get_aegis_llm_proxy"), \
-             patch("src.components.graph_rag.entity_expansion.get_embedding_service"):
+        with (
+            patch("src.components.graph_rag.entity_expansion.get_aegis_llm_proxy"),
+            patch("src.components.graph_rag.entity_expansion.get_embedding_service"),
+        ):
             # Test minimum clamping
             expander = SmartEntityExpander(
                 neo4j_client=mock_neo4j_client,
-                min_entities_threshold=2  # Below minimum
+                min_entities_threshold=2,  # Below minimum
             )
             assert expander.min_entities_threshold == 5
 
             # Test maximum clamping
             expander = SmartEntityExpander(
                 neo4j_client=mock_neo4j_client,
-                min_entities_threshold=30  # Above maximum
+                min_entities_threshold=30,  # Above maximum
             )
             assert expander.min_entities_threshold == 20
 
     def test_initialization_validates_synonyms(self, mock_neo4j_client):
         """Test that initialization validates max_synonyms_per_entity range (1-5)."""
-        with patch("src.components.graph_rag.entity_expansion.get_aegis_llm_proxy"), \
-             patch("src.components.graph_rag.entity_expansion.get_embedding_service"):
+        with (
+            patch("src.components.graph_rag.entity_expansion.get_aegis_llm_proxy"),
+            patch("src.components.graph_rag.entity_expansion.get_embedding_service"),
+        ):
             # Test minimum clamping
             expander = SmartEntityExpander(
                 neo4j_client=mock_neo4j_client,
-                max_synonyms_per_entity=0  # Below minimum
+                max_synonyms_per_entity=0,  # Below minimum
             )
             assert expander.max_synonyms_per_entity == 1
 
             # Test maximum clamping
             expander = SmartEntityExpander(
                 neo4j_client=mock_neo4j_client,
-                max_synonyms_per_entity=10  # Above maximum
+                max_synonyms_per_entity=10,  # Above maximum
             )
             assert expander.max_synonyms_per_entity == 5
 
     @pytest.mark.asyncio
-    async def test_early_exit_namespace_has_no_entities(self, entity_expander, mock_neo4j_client, mock_llm_proxy):
+    async def test_early_exit_namespace_has_no_entities(
+        self, entity_expander, mock_neo4j_client, mock_llm_proxy
+    ):
         """Test Sprint 113 early-exit: namespace has no entities (saves ~10-12s)."""
         # Mock namespace entity check returns False
         mock_neo4j_client.execute_read.return_value = [{"has_entities": False}]
@@ -468,7 +487,7 @@ class TestSmartEntityExpander:
         expanded, hops_used = await entity_expander.expand_entities(
             query="What are the global implications of abortion?",
             namespaces=["empty_namespace"],
-            top_k=10
+            top_k=10,
         )
 
         # Verify early-exit
@@ -480,7 +499,9 @@ class TestSmartEntityExpander:
         assert mock_neo4j_client.execute_read.call_count == 1
 
     @pytest.mark.asyncio
-    async def test_early_exit_llm_found_no_entities(self, entity_expander, mock_llm_proxy, mock_neo4j_client):
+    async def test_early_exit_llm_found_no_entities(
+        self, entity_expander, mock_llm_proxy, mock_neo4j_client
+    ):
         """Test Sprint 115 early-exit: LLM found no entities (saves ~10-15s)."""
         # Mock namespace has entities
         mock_neo4j_client.execute_read.side_effect = [
@@ -503,7 +524,7 @@ class TestSmartEntityExpander:
         expanded, hops_used = await entity_expander.expand_entities(
             query="asdfghjkl",  # Nonsense query
             namespaces=["test_namespace"],
-            top_k=10
+            top_k=10,
         )
 
         # Verify early-exit after Stage 1
@@ -515,7 +536,9 @@ class TestSmartEntityExpander:
         assert mock_neo4j_client.execute_read.call_count == 1
 
     @pytest.mark.asyncio
-    async def test_early_exit_graph_expansion_empty(self, entity_expander, mock_llm_proxy, mock_neo4j_client):
+    async def test_early_exit_graph_expansion_empty(
+        self, entity_expander, mock_llm_proxy, mock_neo4j_client
+    ):
         """Test Sprint 115 early-exit: graph expansion found no entities (saves ~10-15s)."""
         # Mock namespace has entities
         # Mock graph expansion returns empty
@@ -540,7 +563,7 @@ class TestSmartEntityExpander:
         expanded, hops_used = await entity_expander.expand_entities(
             query="What are the global implications of abortion?",
             namespaces=["test_namespace"],
-            top_k=10
+            top_k=10,
         )
 
         # Verify early-exit after Stage 2

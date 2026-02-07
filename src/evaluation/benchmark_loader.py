@@ -190,14 +190,14 @@ class BenchmarkDatasetLoader:
             # Load dataset from HuggingFace
             dataset_config = config.get("config")
             if dataset_config:
-                raw_dataset = load_dataset(
+                raw_dataset = load_dataset(  # nosec B615 — trusted HF datasets
                     config["path"],
                     dataset_config,
                     split=split,
                     trust_remote_code=True,
                 )
             else:
-                raw_dataset = load_dataset(
+                raw_dataset = load_dataset(  # nosec B615 — trusted HF datasets
                     config["path"],
                     split=split,
                     trust_remote_code=True,

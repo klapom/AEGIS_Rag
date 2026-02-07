@@ -89,7 +89,7 @@ async def memory_check_node(state: IngestionState) -> IngestionState:
 
         # Check GPU VRAM usage (nvidia-smi)
         try:
-            result = subprocess.run(
+            result = subprocess.run(  # nosec B603 B607 — internal nvidia-smi query
                 ["nvidia-smi", "--query-gpu=memory.used", "--format=csv,noheader,nounits"],
                 capture_output=True,
                 text=True,

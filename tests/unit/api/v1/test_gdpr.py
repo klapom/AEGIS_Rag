@@ -319,9 +319,7 @@ class TestCreateDataSubjectRequest:
         assert data["request_type"] == "portability"
 
     @pytest.mark.asyncio
-    async def test_create_request_logs_processing_activity(
-        self, client, mock_processing_log
-    ):
+    async def test_create_request_logs_processing_activity(self, client, mock_processing_log):
         """Test that request creation logs processing activity."""
         request_data = {
             "request_type": "access",

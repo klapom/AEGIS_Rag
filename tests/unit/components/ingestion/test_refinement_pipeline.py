@@ -295,9 +295,7 @@ class TestBackgroundRefinement:
             patch(
                 "src.components.ingestion.refinement_pipeline.extract_entities_and_relations_llm"
             ) as mock_extract,
-            patch(
-                "src.components.ingestion.refinement_pipeline.update_neo4j_graph"
-            ) as mock_neo4j,
+            patch("src.components.ingestion.refinement_pipeline.update_neo4j_graph") as mock_neo4j,
             patch(
                 "src.components.ingestion.refinement_pipeline.update_qdrant_metadata"
             ) as mock_qdrant,

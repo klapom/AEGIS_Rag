@@ -51,7 +51,9 @@ def get_orchestrator() -> SkillOrchestrator:
     global _orchestrator_instance
     if _orchestrator_instance is None:
         _orchestrator_instance = SkillOrchestrator(
-            skill_manager=None, message_bus=None, llm=None  # Minimal init for monitoring
+            skill_manager=None,
+            message_bus=None,
+            llm=None,  # Minimal init for monitoring
         )
     return _orchestrator_instance
 

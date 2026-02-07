@@ -84,16 +84,16 @@ async def test_docling_parse_error__invalid_file__error_caught_and_logged():
             updated_state = await docling_parse_node(state)
 
             # Assert: Error caught and state updated
-            assert (
-                updated_state["docling_status"] == "failed"
-            ), "Docling status not marked as failed"
+            assert updated_state["docling_status"] == "failed", (
+                "Docling status not marked as failed"
+            )
             assert len(updated_state["errors"]) > 0, "No errors recorded in state"
 
             # Assert: Error includes file context
             error_msg = str(updated_state["errors"][0])
-            assert (
-                "invalid.pdf" in error_msg or "Empty file" in error_msg
-            ), f"Error lacks context: {error_msg}"
+            assert "invalid.pdf" in error_msg or "Empty file" in error_msg, (
+                f"Error lacks context: {error_msg}"
+            )
 
     finally:
         # Cleanup
@@ -146,9 +146,9 @@ async def test_docling_parse_timeout__large_file__error_propagated():
             assert updated_state["docling_status"] == "failed"
             error_msg = str(updated_state["errors"][0])
             assert "timeout" in error_msg.lower(), f"Timeout not in error: {error_msg}"
-            assert (
-                "300" in error_msg or "large.pdf" in error_msg
-            ), f"Error lacks context: {error_msg}"
+            assert "300" in error_msg or "large.pdf" in error_msg, (
+                f"Error lacks context: {error_msg}"
+            )
 
     finally:
         import shutil
@@ -271,9 +271,9 @@ async def test_graph_extraction_failure__neo4j_unavailable__vector_data_saved():
 
             # Assert: Error message mentions Neo4j
             error_msg = str(updated_state["errors"][-1])
-            assert (
-                "neo4j" in error_msg.lower() or "connection" in error_msg.lower()
-            ), f"Error lacks Neo4j context: {error_msg}"
+            assert "neo4j" in error_msg.lower() or "connection" in error_msg.lower(), (
+                f"Error lacks Neo4j context: {error_msg}"
+            )
 
     finally:
         import shutil
@@ -353,19 +353,19 @@ async def test_partial_failure__vlm_and_graph_fail__qdrant_succeeds():
                     final_state = await pipeline.ainvoke(state)
 
                     # Assert: Overall progress complete (even with partial failures)
-                    assert (
-                        final_state.get("overall_progress", 0.0) > 0.5
-                    ), "Pipeline did not make progress despite partial success"
+                    assert final_state.get("overall_progress", 0.0) > 0.5, (
+                        "Pipeline did not make progress despite partial success"
+                    )
 
                     # Assert: Embedding succeeded
-                    assert (
-                        final_state.get("embedding_status") == "completed"
-                    ), "Embedding should succeed despite graph failure"
+                    assert final_state.get("embedding_status") == "completed", (
+                        "Embedding should succeed despite graph failure"
+                    )
 
                     # Assert: Graph failed (expected)
-                    assert (
-                        final_state.get("graph_status") == "failed"
-                    ), "Graph status should be failed"
+                    assert final_state.get("graph_status") == "failed", (
+                        "Graph status should be failed"
+                    )
 
                     # Assert: Errors recorded but pipeline completed
                     assert len(final_state.get("errors", [])) > 0, "Errors not recorded"
@@ -487,9 +487,9 @@ async def test_no_silent_failures__exception_raised__must_be_logged():
 
             # Assert: Error details preserved
             error_msg = str(updated_state["errors"][0])
-            assert (
-                "Unexpected error" in error_msg or "RuntimeError" in error_msg
-            ), f"Exception details lost: {error_msg}"
+            assert "Unexpected error" in error_msg or "RuntimeError" in error_msg, (
+                f"Exception details lost: {error_msg}"
+            )
 
     finally:
         import shutil

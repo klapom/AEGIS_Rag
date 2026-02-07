@@ -186,9 +186,9 @@ def test_search_ranking_order(sample_documents):
 
     # Verify scores are descending
     for i in range(len(results) - 1):
-        assert (
-            results[i]["score"] >= results[i + 1]["score"]
-        ), "Scores should be in descending order"
+        assert results[i]["score"] >= results[i + 1]["score"], (
+            "Scores should be in descending order"
+        )
 
     # Verify ranks are sequential
     for i, result in enumerate(results):
@@ -241,9 +241,9 @@ def test_search_relevance(sample_documents):
     results = search.search("Vector Search Qdrant", top_k=5)
 
     # First result should mention vector search
-    assert (
-        "vector" in results[0]["text"].lower() or "qdrant" in results[0]["text"].lower()
-    ), "Top result should be relevant to query"
+    assert "vector" in results[0]["text"].lower() or "qdrant" in results[0]["text"].lower(), (
+        "Top result should be relevant to query"
+    )
 
 
 @pytest.mark.unit
@@ -272,9 +272,9 @@ def test_get_corpus_size(sample_documents):
 
     search.fit(sample_documents, text_field="text")
 
-    assert search.get_corpus_size() == len(
-        sample_documents
-    ), f"Corpus size should be {len(sample_documents)}"
+    assert search.get_corpus_size() == len(sample_documents), (
+        f"Corpus size should be {len(sample_documents)}"
+    )
 
 
 @pytest.mark.unit

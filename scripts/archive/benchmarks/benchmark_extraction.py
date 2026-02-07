@@ -49,11 +49,13 @@ def load_ragas_texts(num_texts: int = 5) -> list[dict]:
             data = json.loads(line)
             # Combine contexts into single text
             combined_text = "\n\n".join(data["contexts"])
-            texts.append({
-                "text": combined_text,
-                "question_id": data["metadata"]["question_id"],
-                "question": data["question"],
-            })
+            texts.append(
+                {
+                    "text": combined_text,
+                    "question_id": data["metadata"]["question_id"],
+                    "question": data["question"],
+                }
+            )
 
     return texts
 
@@ -100,12 +102,18 @@ async def run_comparison_benchmark(num_texts: int = 3):
         uni_avg_entities = sum(m.entities_extracted for m in uni_metrics) / len(uni_metrics)
 
         speedup = seq_avg_time / uni_avg_time if uni_avg_time > 0 else 0
-        call_reduction = (seq_avg_calls - uni_avg_calls) / seq_avg_calls * 100 if seq_avg_calls > 0 else 0
+        call_reduction = (
+            (seq_avg_calls - uni_avg_calls) / seq_avg_calls * 100 if seq_avg_calls > 0 else 0
+        )
 
         print(f"\n{'Metric':<25} {'Sequential':<15} {'Unified':<15} {'Improvement':<15}")
         print("-" * 70)
-        print(f"{'Avg Time (ms)':<25} {seq_avg_time:<15.1f} {uni_avg_time:<15.1f} {speedup:.2f}x faster")
-        print(f"{'Avg LLM Calls':<25} {seq_avg_calls:<15.1f} {uni_avg_calls:<15.1f} {call_reduction:.0f}% reduction")
+        print(
+            f"{'Avg Time (ms)':<25} {seq_avg_time:<15.1f} {uni_avg_time:<15.1f} {speedup:.2f}x faster"
+        )
+        print(
+            f"{'Avg LLM Calls':<25} {seq_avg_calls:<15.1f} {uni_avg_calls:<15.1f} {call_reduction:.0f}% reduction"
+        )
         print(f"{'Avg Entities':<25} {seq_avg_entities:<15.1f} {uni_avg_entities:<15.1f}")
 
         # Quality comparison per text
@@ -114,15 +122,19 @@ async def run_comparison_benchmark(num_texts: int = 3):
         print("-" * 70)
 
         for i, (seq, uni) in enumerate(zip(seq_metrics, uni_metrics)):
-            print(f"\nText {i+1} ({texts_data[i]['question_id']}):")
-            print(f"  Sequential: {seq.entities_extracted} entities, "
-                  f"{seq.typed_relations_extracted} typed rels, "
-                  f"{seq.semantic_relations_extracted} semantic rels, "
-                  f"{seq.total_time_ms:.0f}ms")
-            print(f"  Unified:    {uni.entities_extracted} entities, "
-                  f"{uni.typed_relations_extracted} typed rels, "
-                  f"{uni.semantic_relations_extracted} semantic rels, "
-                  f"{uni.total_time_ms:.0f}ms")
+            print(f"\nText {i + 1} ({texts_data[i]['question_id']}):")
+            print(
+                f"  Sequential: {seq.entities_extracted} entities, "
+                f"{seq.typed_relations_extracted} typed rels, "
+                f"{seq.semantic_relations_extracted} semantic rels, "
+                f"{seq.total_time_ms:.0f}ms"
+            )
+            print(
+                f"  Unified:    {uni.entities_extracted} entities, "
+                f"{uni.typed_relations_extracted} typed rels, "
+                f"{uni.semantic_relations_extracted} semantic rels, "
+                f"{uni.total_time_ms:.0f}ms"
+            )
 
     return results
 
@@ -162,8 +174,10 @@ async def run_single_extraction(text: str, strategy: str = "unified"):
 
     print(f"\nSemantic Relations ({len(result.semantic_relations)}):")
     for r in result.semantic_relations[:10]:
-        print(f"  - {r.get('source')} --> {r.get('target')} "
-              f"(strength: {r.get('strength')}) {r.get('description', '')[:40]}...")
+        print(
+            f"  - {r.get('source')} --> {r.get('target')} "
+            f"(strength: {r.get('strength')}) {r.get('description', '')[:40]}..."
+        )
 
     return result
 

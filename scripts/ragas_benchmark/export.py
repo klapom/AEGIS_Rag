@@ -22,11 +22,7 @@ from .models import NormalizedSample, SamplingStats
 logger = logging.getLogger(__name__)
 
 
-def export_jsonl(
-    samples: List[NormalizedSample],
-    output_path: str,
-    pretty: bool = False
-) -> str:
+def export_jsonl(samples: List[NormalizedSample], output_path: str, pretty: bool = False) -> str:
     """
     Export samples to JSONL format.
 
@@ -46,13 +42,13 @@ def export_jsonl(
 
     logger.info(f"Exporting {len(samples)} samples to {output_path}")
 
-    with open(output_path, 'w', encoding='utf-8') as f:
+    with open(output_path, "w", encoding="utf-8") as f:
         for sample in samples:
             if pretty:
                 json_str = json.dumps(sample.to_dict(), ensure_ascii=False, indent=2)
             else:
                 json_str = sample.to_json()
-            f.write(json_str + '\n')
+            f.write(json_str + "\n")
 
     # Calculate SHA256
     sha256_hash = _calculate_sha256(output_path)
@@ -63,10 +59,7 @@ def export_jsonl(
     return sha256_hash
 
 
-def export_manifest(
-    samples: List[NormalizedSample],
-    output_path: str
-) -> None:
+def export_manifest(samples: List[NormalizedSample], output_path: str) -> None:
     """
     Export manifest CSV for audit/reproducibility.
 
@@ -83,34 +76,34 @@ def export_manifest(
     logger.info(f"Exporting manifest to {output_path}")
 
     fieldnames = [
-        'id',
-        'doc_type',
-        'question_type',
-        'difficulty',
-        'answerable',
-        'source_dataset',
-        'original_id',
-        'question_length',
-        'context_count',
-        'total_context_length',
+        "id",
+        "doc_type",
+        "question_type",
+        "difficulty",
+        "answerable",
+        "source_dataset",
+        "original_id",
+        "question_length",
+        "context_count",
+        "total_context_length",
     ]
 
-    with open(output_path, 'w', newline='', encoding='utf-8') as f:
+    with open(output_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
 
         for sample in samples:
             row = {
-                'id': sample.id,
-                'doc_type': sample.doc_type,
-                'question_type': sample.question_type,
-                'difficulty': sample.difficulty,
-                'answerable': sample.answerable,
-                'source_dataset': sample.source_dataset,
-                'original_id': sample.metadata.get('original_id', ''),
-                'question_length': len(sample.question),
-                'context_count': len(sample.contexts),
-                'total_context_length': sum(len(c) for c in sample.contexts),
+                "id": sample.id,
+                "doc_type": sample.doc_type,
+                "question_type": sample.question_type,
+                "difficulty": sample.difficulty,
+                "answerable": sample.answerable,
+                "source_dataset": sample.source_dataset,
+                "original_id": sample.metadata.get("original_id", ""),
+                "question_length": len(sample.question),
+                "context_count": len(sample.contexts),
+                "total_context_length": sum(len(c) for c in sample.contexts),
             }
             writer.writerow(row)
 
@@ -118,9 +111,7 @@ def export_manifest(
 
 
 def export_statistics_report(
-    samples: List[NormalizedSample],
-    output_path: str,
-    dataset_name: str = "RAGAS Phase 1"
+    samples: List[NormalizedSample], output_path: str, dataset_name: str = "RAGAS Phase 1"
 ) -> None:
     """
     Export detailed statistics report.
@@ -148,8 +139,8 @@ def export_statistics_report(
         "## Summary",
         "",
         f"- **Total Samples:** {stats.total_samples}",
-        f"- **Answerable:** {stats.answerable_count} ({stats.answerable_count/max(1,stats.total_samples)*100:.1f}%)",
-        f"- **Unanswerable:** {stats.unanswerable_count} ({stats.unanswerable_count/max(1,stats.total_samples)*100:.1f}%)",
+        f"- **Answerable:** {stats.answerable_count} ({stats.answerable_count / max(1, stats.total_samples) * 100:.1f}%)",
+        f"- **Unanswerable:** {stats.unanswerable_count} ({stats.unanswerable_count / max(1, stats.total_samples) * 100:.1f}%)",
         "",
         "## Document Types",
         "",
@@ -161,11 +152,13 @@ def export_statistics_report(
         pct = count / max(1, stats.total_samples) * 100
         report_lines.append(f"| {doc_type} | {count} | {pct:.1f}% |")
 
-    report_lines.extend([
-        "",
-        "## Question Types",
-        "",
-    ])
+    report_lines.extend(
+        [
+            "",
+            "## Question Types",
+            "",
+        ]
+    )
 
     for doc_type, qtypes in sorted(stats.question_type_counts.items()):
         report_lines.append(f"### {doc_type}")
@@ -180,33 +173,37 @@ def export_statistics_report(
 
         report_lines.append("")
 
-    report_lines.extend([
-        "## Difficulty Distribution",
-        "",
-        "| Difficulty | Count | Percentage |",
-        "|------------|-------|------------|",
-    ])
+    report_lines.extend(
+        [
+            "## Difficulty Distribution",
+            "",
+            "| Difficulty | Count | Percentage |",
+            "|------------|-------|------------|",
+        ]
+    )
 
     for diff, count in sorted(stats.difficulty_counts.items()):
         pct = count / max(1, stats.total_samples) * 100
         report_lines.append(f"| {diff} | {count} | {pct:.1f}% |")
 
     if stats.dropped_samples > 0:
-        report_lines.extend([
-            "",
-            "## Dropped Samples",
-            "",
-            f"Total dropped: {stats.dropped_samples}",
-            "",
-            "| Reason | Count |",
-            "|--------|-------|",
-        ])
+        report_lines.extend(
+            [
+                "",
+                "## Dropped Samples",
+                "",
+                f"Total dropped: {stats.dropped_samples}",
+                "",
+                "| Reason | Count |",
+                "|--------|-------|",
+            ]
+        )
         for reason, count in sorted(stats.drop_reasons.items()):
             report_lines.append(f"| {reason} | {count} |")
 
     # Write report
-    with open(output_path, 'w', encoding='utf-8') as f:
-        f.write('\n'.join(report_lines))
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write("\n".join(report_lines))
 
     logger.info(f"Statistics report exported: {output_path}")
 
@@ -228,7 +225,7 @@ def load_jsonl(input_path: str) -> List[NormalizedSample]:
 
     samples = []
 
-    with open(input_path, 'r', encoding='utf-8') as f:
+    with open(input_path, encoding="utf-8") as f:
         for line_num, line in enumerate(f, 1):
             line = line.strip()
             if not line:
@@ -278,7 +275,7 @@ def verify_jsonl(input_path: str) -> Dict[str, Any]:
     result["sha256"] = _calculate_sha256(input_path)
 
     # Validate each line
-    with open(input_path, 'r', encoding='utf-8') as f:
+    with open(input_path, encoding="utf-8") as f:
         for line_num, line in enumerate(f, 1):
             result["total_lines"] += 1
             line = line.strip()
@@ -290,29 +287,29 @@ def verify_jsonl(input_path: str) -> Dict[str, Any]:
                 data = json.loads(line)
 
                 # Check required fields
-                required = ["id", "question", "ground_truth", "contexts",
-                           "doc_type", "question_type", "difficulty"]
+                required = [
+                    "id",
+                    "question",
+                    "ground_truth",
+                    "contexts",
+                    "doc_type",
+                    "question_type",
+                    "difficulty",
+                ]
                 missing = [f for f in required if f not in data]
 
                 if missing:
-                    result["invalid_lines"].append({
-                        "line": line_num,
-                        "error": f"Missing fields: {missing}"
-                    })
+                    result["invalid_lines"].append(
+                        {"line": line_num, "error": f"Missing fields: {missing}"}
+                    )
                 else:
                     result["valid_samples"] += 1
 
             except json.JSONDecodeError as e:
-                result["invalid_lines"].append({
-                    "line": line_num,
-                    "error": str(e)
-                })
+                result["invalid_lines"].append({"line": line_num, "error": str(e)})
 
     # Determine overall validity
-    result["valid"] = (
-        result["valid_samples"] > 0 and
-        len(result["invalid_lines"]) == 0
-    )
+    result["valid"] = result["valid_samples"] > 0 and len(result["invalid_lines"]) == 0
 
     return result
 
@@ -321,8 +318,8 @@ def _calculate_sha256(file_path: Path) -> str:
     """Calculate SHA256 hash of file."""
     sha256 = hashlib.sha256()
 
-    with open(file_path, 'rb') as f:
-        for chunk in iter(lambda: f.read(8192), b''):
+    with open(file_path, "rb") as f:
+        for chunk in iter(lambda: f.read(8192), b""):
             sha256.update(chunk)
 
     return sha256.hexdigest()

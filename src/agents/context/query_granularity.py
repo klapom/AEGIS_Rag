@@ -297,7 +297,7 @@ class CLARAGranularityMapper:
 
 
 # Global singleton instance
-_granularity_mapper: Optional[CLARAGranularityMapper] = None
+_granularity_mapper: CLARAGranularityMapper | None = None
 
 
 def get_granularity_mapper() -> CLARAGranularityMapper:

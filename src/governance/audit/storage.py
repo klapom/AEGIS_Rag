@@ -46,10 +46,10 @@ class AuditStorage(ABC):
     @abstractmethod
     async def query(
         self,
-        start_time: Optional[datetime] = None,
-        end_time: Optional[datetime] = None,
-        actor_id: Optional[str] = None,
-        event_types: Optional[List["AuditEventType"]] = None,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+        actor_id: str | None = None,
+        event_types: List["AuditEventType"] | None = None,
         limit: int = 1000,
     ) -> List["AuditEvent"]:
         """Query audit events with filtering.
@@ -126,10 +126,10 @@ class InMemoryAuditStorage(AuditStorage):
 
     async def query(
         self,
-        start_time: Optional[datetime] = None,
-        end_time: Optional[datetime] = None,
-        actor_id: Optional[str] = None,
-        event_types: Optional[List["AuditEventType"]] = None,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+        actor_id: str | None = None,
+        event_types: List["AuditEventType"] | None = None,
         limit: int = 1000,
     ) -> List["AuditEvent"]:
         """Query events with in-memory filtering.

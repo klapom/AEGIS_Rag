@@ -43,7 +43,9 @@ def create_post_parse_pipeline():
     return graph.compile()
 
 
-def create_state_from_ragas(question_data: dict, namespace_id: str = "ragas_eval") -> IngestionState:
+def create_state_from_ragas(
+    question_data: dict, namespace_id: str = "ragas_eval"
+) -> IngestionState:
     """Create IngestionState from RAGAS question data."""
     question_id = question_data["metadata"]["question_id"]
     contexts = question_data["contexts"]
@@ -53,6 +55,7 @@ def create_state_from_ragas(question_data: dict, namespace_id: str = "ragas_eval
 
     # Generate document_id from question_id
     import hashlib
+
     document_id = hashlib.md5(question_id.encode()).hexdigest()[:16]
 
     return IngestionState(
@@ -103,7 +106,7 @@ async def ingest_documents(num_docs: int = 10):
 
     for i, question in enumerate(questions):
         question_id = question["metadata"]["question_id"]
-        logger.info(f"\n[{i+1}/{len(questions)}] Ingesting {question_id}...")
+        logger.info(f"\n[{i + 1}/{len(questions)}] Ingesting {question_id}...")
 
         try:
             # Create state
@@ -116,15 +119,17 @@ async def ingest_documents(num_docs: int = 10):
 
             # Check status
             if final_state.get("graph_status") == "completed":
-                ingested.append({
-                    "question_id": question_id,
-                    "document_id": state["document_id"],
-                    "question": question["question"],
-                    "ground_truth": question["ground_truth"],
-                    "time_seconds": doc_time,
-                    "entities": final_state.get("total_entities_extracted", 0),
-                    "relations": final_state.get("total_relations_created", 0),
-                })
+                ingested.append(
+                    {
+                        "question_id": question_id,
+                        "document_id": state["document_id"],
+                        "question": question["question"],
+                        "ground_truth": question["ground_truth"],
+                        "time_seconds": doc_time,
+                        "entities": final_state.get("total_entities_extracted", 0),
+                        "relations": final_state.get("total_relations_created", 0),
+                    }
+                )
                 logger.info(f"  ✓ Ingested in {doc_time:.1f}s")
             else:
                 logger.warning(f"  ✗ Failed: {final_state.get('errors', [])}")
@@ -132,6 +137,7 @@ async def ingest_documents(num_docs: int = 10):
         except Exception as e:
             logger.error(f"  ✗ Error: {e}")
             import traceback
+
             traceback.print_exc()
 
     total_time = time.time() - total_start
@@ -169,7 +175,7 @@ async def run_evaluations(ingested_docs: list, num_evals: int = 5):
         ground_truth = doc["ground_truth"]
         question_id = doc["question_id"]
 
-        logger.info(f"\n[{i+1}/{num_evals}] Evaluating: {question_id}")
+        logger.info(f"\n[{i + 1}/{num_evals}] Evaluating: {question_id}")
         logger.info(f"  Question: {question[:80]}...")
         logger.info(f"  Ground truth: {ground_truth}")
 
@@ -250,11 +256,14 @@ Answer (be concise, 1-2 sentences):"""
 
             logger.info(f"  Answer: {answer[:100]}...")
             logger.info(f"  Correct: {'✓' if is_correct else '✗'}")
-            logger.info(f"  Times: vector={vector_time:.2f}s, graph={graph_time:.2f}s, llm={llm_time:.2f}s")
+            logger.info(
+                f"  Times: vector={vector_time:.2f}s, graph={graph_time:.2f}s, llm={llm_time:.2f}s"
+            )
 
         except Exception as e:
             logger.error(f"  Error: {e}")
             import traceback
+
             traceback.print_exc()
 
     # Summary
@@ -263,7 +272,7 @@ Answer (be concise, 1-2 sentences):"""
     logger.info("=" * 70)
 
     correct = sum(1 for r in results if r.get("is_correct"))
-    logger.info(f"Correct answers: {correct}/{len(results)} ({100*correct/len(results):.1f}%)")
+    logger.info(f"Correct answers: {correct}/{len(results)} ({100 * correct / len(results):.1f}%)")
 
     avg_vector = sum(r["vector_time"] for r in results) / len(results) if results else 0
     avg_graph = sum(r["graph_time"] for r in results) / len(results) if results else 0
@@ -281,8 +290,16 @@ async def main():
     # Check GPU status first
     logger.info("Checking Ollama GPU status...")
     import subprocess
+
     result = subprocess.run(
-        ["docker", "exec", "aegis-ollama", "nvidia-smi", "--query-gpu=utilization.gpu", "--format=csv,noheader"],
+        [
+            "docker",
+            "exec",
+            "aegis-ollama",
+            "nvidia-smi",
+            "--query-gpu=utilization.gpu",
+            "--format=csv,noheader",
+        ],
         capture_output=True,
         text=True,
     )

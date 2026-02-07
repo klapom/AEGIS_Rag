@@ -74,9 +74,7 @@ def render_table_html(table_data: dict, json_content: dict) -> str:
                         f"{cell_text}</th>"
                     )
                 else:
-                    html += (
-                        f'<td style="border: 1px solid #ddd; padding: 8px;">' f"{cell_text}</td>"
-                    )
+                    html += f'<td style="border: 1px solid #ddd; padding: 8px;">{cell_text}</td>'
 
             html += "</tr>"
 
@@ -465,7 +463,7 @@ def generate_html_report(
             </div>
             <div class="stat-card">
                 <div class="stat-label">Pages</div>
-                <div class="stat-value">{len(parsed.layout.get('pages', {}))}</div>
+                <div class="stat-value">{len(parsed.layout.get("pages", {}))}</div>
             </div>
         </div>
 
@@ -500,12 +498,12 @@ def generate_html_report(
 
                 html += f"""
         <div class="table-item">
-            <div class="item-header">Table {i}: {table.get('label', 'table')}</div>
+            <div class="item-header">Table {i}: {table.get("label", "table")}</div>
             <div class="item-details">
                 <div class="item-label">Reference:</div>
-                <div class="item-value">{table.get('ref', 'N/A')}</div>
+                <div class="item-value">{table.get("ref", "N/A")}</div>
                 <div class="item-label">Page:</div>
-                <div class="item-value">{table.get('page_no', 'N/A')}</div>
+                <div class="item-value">{table.get("page_no", "N/A")}</div>
                 <div class="item-label">Bounding Box:</div>
                 <div class="item-value"><div class="bbox">{bbox_str}</div></div>
             </div>
@@ -587,12 +585,12 @@ def generate_html_report(
 
                 html += f"""
         <div class="image-item">
-            <div class="item-header">Image {i}: {image.get('label', 'picture')}</div>
+            <div class="item-header">Image {i}: {image.get("label", "picture")}</div>
             <div class="item-details">
                 <div class="item-label">Reference:</div>
-                <div class="item-value">{image.get('ref', 'N/A')}</div>
+                <div class="item-value">{image.get("ref", "N/A")}</div>
                 <div class="item-label">Page:</div>
-                <div class="item-value">{image.get('page_no', 'N/A')}</div>
+                <div class="item-value">{image.get("page_no", "N/A")}</div>
                 <div class="item-label">Bounding Box:</div>
                 <div class="item-value"><div class="bbox">{bbox_str}</div></div>
             </div>

@@ -194,8 +194,8 @@ async def get_current_user(
     is_local = client_host in localhost_ips or (
         client_host
         and (
-            client_host.startswith("172.26.")       # Docker bridge network
-            or client_host.startswith("192.168.")   # Local network (DGX Spark)
+            client_host.startswith("172.26.")  # Docker bridge network
+            or client_host.startswith("192.168.")  # Local network (DGX Spark)
         )
     )
 

@@ -48,7 +48,7 @@ Complete documentation for parallel Sprints 91 & 92 enabling intelligent agent c
 
 ### 3. Planner Skill Prompts
 
-**Files:** 
+**Files:**
 - `skills/planner/prompts/decompose.txt` (3.6 KB)
   - Query decomposition template
   - Task structure specification

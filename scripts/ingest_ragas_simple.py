@@ -94,7 +94,9 @@ async def ingest_ragas_dataset(
 
     # Create pipeline with FULL graph extraction for RAGAS evaluation
     pipeline = create_ingestion_pipeline(skip_graph=False)
-    logger.info("Pipeline created with chunking → embedding → graph extraction (full ER extraction)")
+    logger.info(
+        "Pipeline created with chunking → embedding → graph extraction (full ER extraction)"
+    )
 
     # Ingest each document
     results = []
@@ -102,7 +104,7 @@ async def ingest_ragas_dataset(
 
     for i, question_data in enumerate(questions):
         question = question_data["question"]
-        logger.info(f"\n[{i+1}/{len(questions)}] Ingesting question: {question[:60]}...")
+        logger.info(f"\n[{i + 1}/{len(questions)}] Ingesting question: {question[:60]}...")
 
         try:
             # Combine contexts into single document text
@@ -111,6 +113,7 @@ async def ingest_ragas_dataset(
 
             # Generate unique document_id
             import hashlib
+
             doc_id = f"ragas_{hashlib.md5(question.encode()).hexdigest()[:12]}"
 
             # Sprint 76 TD-084/TD-085: Use create_initial_state with namespace/domain
@@ -156,13 +159,16 @@ async def ingest_ragas_dataset(
                 }
                 results.append(result)
                 logger.info(f"  ✓ Success in {doc_time:.1f}s")
-                logger.info(f"    Chunks: {result['chunks']}, Entities: {result['entities']}, Relations: {result['relations']}")
+                logger.info(
+                    f"    Chunks: {result['chunks']}, Entities: {result['entities']}, Relations: {result['relations']}"
+                )
             else:
                 logger.warning(f"  ✗ Failed: {final_state.get('errors', [])}")
 
         except Exception as e:
             logger.error(f"  ✗ Error: {e}")
             import traceback
+
             traceback.print_exc()
 
     total_time = time.time() - total_start
@@ -215,11 +221,7 @@ async def verify_namespace_isolation(namespace_id: str = "ragas_eval"):
         collection_name = settings.qdrant_collection
         count_result = client.count(
             collection_name=collection_name,
-            count_filter={
-                "must": [
-                    {"key": "namespace_id", "match": {"value": namespace_id}}
-                ]
-            },
+            count_filter={"must": [{"key": "namespace_id", "match": {"value": namespace_id}}]},
         )
 
         logger.info(f"Documents in namespace '{namespace_id}': {count_result.count}")
@@ -227,11 +229,7 @@ async def verify_namespace_isolation(namespace_id: str = "ragas_eval"):
         # Count points in default namespace for comparison
         default_count = client.count(
             collection_name=collection_name,
-            count_filter={
-                "must": [
-                    {"key": "namespace_id", "match": {"value": "default"}}
-                ]
-            },
+            count_filter={"must": [{"key": "namespace_id", "match": {"value": "default"}}]},
         )
 
         logger.info(f"Documents in namespace 'default': {default_count.count}")
@@ -240,6 +238,7 @@ async def verify_namespace_isolation(namespace_id: str = "ragas_eval"):
     except Exception as e:
         logger.error(f"Failed to verify namespace isolation: {e}")
         import traceback
+
         traceback.print_exc()
 
 

@@ -376,7 +376,7 @@ class GraphQueryResult(BaseModel):
             "example": {
                 "query": "What companies has John Smith worked for?",
                 "answer": (
-                    "John Smith has worked for Google (2020-present) " "and Microsoft (2015-2020)."
+                    "John Smith has worked for Google (2020-present) and Microsoft (2015-2020)."
                 ),
                 "entities": [
                     {

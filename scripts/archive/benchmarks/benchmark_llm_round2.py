@@ -3,6 +3,7 @@
 LLM Extraction Benchmark Round 2
 Tests multiple models against qwen3:32b baseline using the same RAGAS sample.
 """
+
 import json
 import sys
 import time
@@ -13,8 +14,8 @@ import requests
 # Same RAGAS sample as Round 1 (833 chars from 3 HotPotQA samples)
 TEST_SAMPLES = [
     "Arthur's Magazine (1844–1846) was an American literary periodical published in Philadelphia in the 19th century. First for Women is a woman's magazine published by Bauer Media Group in the USA. The Oberoi family is an Indian family that is famous for its involvement in hotels, namely through The Oberoi Group.",
-    "The Oberoi Group is a hotel company with its head office in Delhi. Allison Beth \"Allie\" Goertz (born March 2, 1991) is an American musician. She's known for her satirical songs based on various pop culture topics.",
-    "\"Cossbysweater\" by Goertz is a satirical song about comedian Bill Cosby that appeared on YouTube and became viral. Richard Nixon's second vice president was Gerald Ford. The Simpsons is an animated TV series created by Matt Groening."
+    'The Oberoi Group is a hotel company with its head office in Delhi. Allison Beth "Allie" Goertz (born March 2, 1991) is an American musician. She\'s known for her satirical songs based on various pop culture topics.',
+    '"Cossbysweater" by Goertz is a satirical song about comedian Bill Cosby that appeared on YouTube and became viral. Richard Nixon\'s second vice president was Gerald Ford. The Simpsons is an animated TV series created by Matt Groening.',
 ]
 
 CHUNK_SIZE = 500
@@ -63,13 +64,14 @@ def chunk_text(text: str, chunk_size: int) -> list:
     """Simple character-based chunking."""
     chunks = []
     for i in range(0, len(text), chunk_size):
-        chunks.append(text[i:i + chunk_size])
+        chunks.append(text[i : i + chunk_size])
     return chunks
 
 
 def parse_json_array(text: str) -> list | None:
     """Try to extract a JSON array from text."""
     import re
+
     text = text.strip()
 
     # Direct parse
@@ -81,7 +83,7 @@ def parse_json_array(text: str) -> list | None:
         pass
 
     # Find JSON array
-    match = re.search(r'\[[\s\S]*\]', text)
+    match = re.search(r"\[[\s\S]*\]", text)
     if match:
         try:
             data = json.loads(match.group())
@@ -91,9 +93,9 @@ def parse_json_array(text: str) -> list | None:
             pass
 
     # Remove markdown code blocks
-    text = re.sub(r'```json\s*', '', text)
-    text = re.sub(r'```\s*', '', text)
-    match = re.search(r'\[[\s\S]*\]', text)
+    text = re.sub(r"```json\s*", "", text)
+    text = re.sub(r"```\s*", "", text)
+    match = re.search(r"\[[\s\S]*\]", text)
     if match:
         try:
             data = json.loads(match.group())
@@ -119,9 +121,9 @@ def extract_with_model(model: str, text: str, timeout: int = 180) -> dict:
     }
 
     chunks = chunk_text(text, CHUNK_SIZE)
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Model: {model}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     print(f"  Text: {len(text)} chars -> {len(chunks)} chunks")
 
     all_entities = []
@@ -151,9 +153,9 @@ def extract_with_model(model: str, text: str, timeout: int = 180) -> dict:
                     "options": {
                         "temperature": 0.1,
                         "num_predict": 4096,
-                    }
+                    },
                 },
-                timeout=timeout
+                timeout=timeout,
             )
 
             if response.status_code != 200:
@@ -173,7 +175,9 @@ def extract_with_model(model: str, text: str, timeout: int = 180) -> dict:
                 chunk_result["entities"] = entities
                 all_entities.extend(entities)
 
-            print(f"  Chunk {i}: {len(entities or [])} entities in {chunk_result['entity_time']:.1f}s ({tokens} tokens)")
+            print(
+                f"  Chunk {i}: {len(entities or [])} entities in {chunk_result['entity_time']:.1f}s ({tokens} tokens)"
+            )
 
         except requests.exceptions.Timeout:
             chunk_result["error"] = f"Timeout after {timeout}s"
@@ -196,17 +200,14 @@ def extract_with_model(model: str, text: str, timeout: int = 180) -> dict:
                 "http://localhost:11434/api/generate",
                 json={
                     "model": model,
-                    "prompt": RELATION_PROMPT.format(
-                        text=chunk,
-                        entities=", ".join(entity_names)
-                    ),
+                    "prompt": RELATION_PROMPT.format(text=chunk, entities=", ".join(entity_names)),
                     "stream": False,
                     "options": {
                         "temperature": 0.1,
                         "num_predict": 4096,
-                    }
+                    },
                 },
-                timeout=timeout
+                timeout=timeout,
             )
 
             if response.status_code == 200:
@@ -221,7 +222,9 @@ def extract_with_model(model: str, text: str, timeout: int = 180) -> dict:
                     chunk_result["relations"] = relations
                     all_relations.extend(relations)
 
-                print(f"          + {len(relations or [])} relations in {chunk_result['relation_time']:.1f}s")
+                print(
+                    f"          + {len(relations or [])} relations in {chunk_result['relation_time']:.1f}s"
+                )
 
         except:
             pass  # Relations are optional
@@ -231,7 +234,9 @@ def extract_with_model(model: str, text: str, timeout: int = 180) -> dict:
 
     result["total_entities"] = len(all_entities)
     result["total_relations"] = len(all_relations)
-    result["total_time"] = sum(c.get("entity_time", 0) + c.get("relation_time", 0) for c in result["chunks"])
+    result["total_time"] = sum(
+        c.get("entity_time", 0) + c.get("relation_time", 0) for c in result["chunks"]
+    )
     result["all_entities"] = all_entities
     result["all_relations"] = all_relations
 
@@ -241,13 +246,13 @@ def extract_with_model(model: str, text: str, timeout: int = 180) -> dict:
 def main():
     # Models to benchmark (working models from sanity test)
     MODELS_TO_TEST = [
-        "qwen3:32b",           # BASELINE
-        "gemma3:4b",           # TOP performer in sanity test
-        "qwen2.5:7b",          # Good quality
-        "phi4-mini:latest",    # Function calling support
-        "mistral:7b",          # Versatile
-        "qwen2.5:3b",          # Fast
-        "nuextract:3.8b",      # Specialized extraction
+        "qwen3:32b",  # BASELINE
+        "gemma3:4b",  # TOP performer in sanity test
+        "qwen2.5:7b",  # Good quality
+        "phi4-mini:latest",  # Function calling support
+        "mistral:7b",  # Versatile
+        "qwen2.5:3b",  # Fast
+        "nuextract:3.8b",  # Specialized extraction
     ]
 
     # Allow specific models via command line
@@ -257,9 +262,9 @@ def main():
     # Combine test samples
     full_text = " ".join(TEST_SAMPLES)
 
-    print("="*60)
+    print("=" * 60)
     print("LLM EXTRACTION BENCHMARK - ROUND 2")
-    print("="*60)
+    print("=" * 60)
     print(f"Test text: {len(full_text)} characters")
     print(f"Chunk size: {CHUNK_SIZE} characters")
     print(f"Models to test: {len(MODELS_TO_TEST)}")
@@ -273,23 +278,27 @@ def main():
             results.append(result)
         except Exception as e:
             print(f"\nERROR with {model}: {e}")
-            results.append({
-                "model": model,
-                "status": "error",
-                "error": str(e),
-            })
+            results.append(
+                {
+                    "model": model,
+                    "status": "error",
+                    "error": str(e),
+                }
+            )
 
     # Summary
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("COMPLETE BENCHMARK SUMMARY")
-    print("="*80)
+    print("=" * 80)
 
     # Find baseline
     baseline = next((r for r in results if r["model"] == "qwen3:32b"), None)
     baseline_time = baseline.get("total_time", 1) if baseline else 1
 
-    print(f"\n{'Model':<25} {'Entities':<10} {'Relations':<10} {'Time (s)':<12} {'Speed':<15} {'Status'}")
-    print("-"*90)
+    print(
+        f"\n{'Model':<25} {'Entities':<10} {'Relations':<10} {'Time (s)':<12} {'Speed':<15} {'Status'}"
+    )
+    print("-" * 90)
 
     for r in results:
         if r.get("status") == "error":
@@ -302,33 +311,41 @@ def main():
         if r["model"] == "qwen3:32b":
             speed_str = "1.0x (baseline)"
         elif speed_factor < 1:
-            speed_str = f"{1/speed_factor:.1f}x FASTER"
+            speed_str = f"{1 / speed_factor:.1f}x FASTER"
         else:
             speed_str = f"{speed_factor:.1f}x slower"
 
         status = "✅" if r.get("status") == "success" else "⚠️"
-        print(f"{r['model']:<25} {r.get('total_entities', 0):<10} {r.get('total_relations', 0):<10} {time_taken:<12.1f} {speed_str:<15} {status}")
+        print(
+            f"{r['model']:<25} {r.get('total_entities', 0):<10} {r.get('total_relations', 0):<10} {time_taken:<12.1f} {speed_str:<15} {status}"
+        )
 
-    print("-"*90)
+    print("-" * 90)
 
     # Save results
-    output_file = f"reports/llm_extraction_benchmark_round2_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+    output_file = (
+        f"reports/llm_extraction_benchmark_round2_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+    )
     with open(output_file, "w") as f:
-        json.dump({
-            "timestamp": datetime.now().isoformat(),
-            "test_text_length": len(full_text),
-            "chunk_size": CHUNK_SIZE,
-            "models_tested": MODELS_TO_TEST,
-            "baseline_model": "qwen3:32b",
-            "results": results,
-        }, f, indent=2)
+        json.dump(
+            {
+                "timestamp": datetime.now().isoformat(),
+                "test_text_length": len(full_text),
+                "chunk_size": CHUNK_SIZE,
+                "models_tested": MODELS_TO_TEST,
+                "baseline_model": "qwen3:32b",
+                "results": results,
+            },
+            f,
+            indent=2,
+        )
 
     print(f"\nResults saved to: {output_file}")
 
     # Print entity comparison for top models
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("ENTITY COMPARISON (showing unique entities)")
-    print("="*80)
+    print("=" * 80)
 
     for r in results[:4]:  # Top 4 models
         if r.get("all_entities"):

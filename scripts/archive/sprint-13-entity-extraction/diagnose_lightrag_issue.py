@@ -108,7 +108,7 @@ async def main():
                 node = record["n"]
                 # Get node properties
                 props = dict(node.items())
-                print(f"    {i+1}. {props}")
+                print(f"    {i + 1}. {props}")
 
         # Count relationships
         result = await session.run("MATCH ()-[r]->() RETURN count(r) AS count")
@@ -125,7 +125,7 @@ async def main():
             print(f"\n  Sample relationships ({len(records)} shown):")
             for i, record in enumerate(records):
                 print(
-                    f"    {i+1}. {record['rel_type']}: {dict(record['a'].items())} -> {dict(record['b'].items())}"
+                    f"    {i + 1}. {record['rel_type']}: {dict(record['a'].items())} -> {dict(record['b'].items())}"
                 )
 
     # Step 6: Test get_stats() method

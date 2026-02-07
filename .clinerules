@@ -184,7 +184,7 @@ code_standards:
   class_naming: "PascalCase"
   function_naming: "snake_case"
   constant_naming: "SCREAMING_SNAKE_CASE"
-  
+
 # Subagenten Reminder
 subagents:
   - "Backend Agent: Core Logic, Agents, Components"

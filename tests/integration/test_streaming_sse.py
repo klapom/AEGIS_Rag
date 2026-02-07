@@ -59,7 +59,11 @@ def test_chat_stream_endpoint_basic(client):
                     events.append(event)
 
                     # Measure TTFT on first content event
-                    if first_event_time is None and event.get("type") in ["token", "answer_chunk", "phase_event"]:
+                    if first_event_time is None and event.get("type") in [
+                        "token",
+                        "answer_chunk",
+                        "phase_event",
+                    ]:
                         first_event_time = time.time() - start_time
 
                 except json.JSONDecodeError:
@@ -76,7 +80,7 @@ def test_chat_stream_endpoint_basic(client):
         # TTFT should be measured (if we got content)
         if first_event_time is not None:
             # TTFT target: < 100ms (relaxed to 500ms for integration test with real services)
-            assert first_event_time < 0.5, f"TTFT too high: {first_event_time*1000}ms"
+            assert first_event_time < 0.5, f"TTFT too high: {first_event_time * 1000}ms"
 
 
 def test_chat_stream_endpoint_with_namespaces(client):

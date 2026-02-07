@@ -247,4 +247,3 @@
 - Responsive design
 - Accessibility attributes (aria-label, data-testid)
 - Error handling with user-friendly messages
-

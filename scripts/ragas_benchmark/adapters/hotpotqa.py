@@ -55,7 +55,7 @@ class HotpotQAAdapter(DatasetAdapter):
             "supporting_facts": "supporting_facts",
         }
 
-    def adapt(self, record: Dict[str, Any], record_idx: int = 0) -> Optional[NormalizedSample]:
+    def adapt(self, record: Dict[str, Any], record_idx: int = 0) -> NormalizedSample | None:
         """
         Transform HotpotQA record to NormalizedSample.
 
@@ -201,12 +201,7 @@ class HotpotQAAdapter(DatasetAdapter):
         # Fall back to keyword-based classification
         return self.classify_question_type(question)
 
-    def _infer_difficulty(
-        self,
-        hotpot_level: str,
-        question_type: str,
-        context_length: int
-    ) -> str:
+    def _infer_difficulty(self, hotpot_level: str, question_type: str, context_length: int) -> str:
         """
         Infer difficulty from HotpotQA level and other factors.
 

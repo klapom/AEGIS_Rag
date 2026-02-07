@@ -488,38 +488,38 @@ def test_spacy_gemma(
         # Log Results
         # ====================================================================
         log_content = f"""
-{'='*80}
-TEST CASE {test_case['id']}: {test_case['name']} [spaCy + Semantic Dedup + Gemma]
-{'='*80}
+{"=" * 80}
+TEST CASE {test_case["id"]}: {test_case["name"]} [spaCy + Semantic Dedup + Gemma]
+{"=" * 80}
 
-Expected: {test_case['expected_entities']} entities, {test_case['expected_relations']} relations
-Found: {results['deduplicated_entities']} entities (after dedup), {results['relations_found']} relations
+Expected: {test_case["expected_entities"]} entities, {test_case["expected_relations"]} relations
+Found: {results["deduplicated_entities"]} entities (after dedup), {results["relations_found"]} relations
 
-Phase 1 (spaCy NER):          {results['phase1_time']:.2f}s → {results['spacy_entities']} entities (raw)
-Phase 2 (Semantic Dedup):     {results['phase2_time']:.2f}s → {results['deduplicated_entities']} entities ({results['dedup_reduction']:.1f}% reduction)
-Phase 3 (Gemma Relations):    {results['phase3_time']:.2f}s → {results['relations_found']} relations
-Total Time:                   {results['total_time']:.2f}s
+Phase 1 (spaCy NER):          {results["phase1_time"]:.2f}s → {results["spacy_entities"]} entities (raw)
+Phase 2 (Semantic Dedup):     {results["phase2_time"]:.2f}s → {results["deduplicated_entities"]} entities ({results["dedup_reduction"]:.1f}% reduction)
+Phase 3 (Gemma Relations):    {results["phase3_time"]:.2f}s → {results["relations_found"]} relations
+Total Time:                   {results["total_time"]:.2f}s
 
-Accuracy: {results['entity_accuracy']:.1f}% entities, {results['relation_accuracy']:.1f}% relations
+Accuracy: {results["entity_accuracy"]:.1f}% entities, {results["relation_accuracy"]:.1f}% relations
 
-{'='*80}
+{"=" * 80}
 PHASE 1 - spaCy RAW ENTITIES:
-{'='*80}
+{"=" * 80}
 {json.dumps(spacy_entities, indent=2)}
 
-{'='*80}
+{"=" * 80}
 PHASE 2 - DEDUPLICATED ENTITIES:
-{'='*80}
+{"=" * 80}
 {json.dumps(deduplicated_entities, indent=2)}
 
-{'='*80}
+{"=" * 80}
 PHASE 3 - GEMMA RELATIONS:
-{'='*80}
+{"=" * 80}
 {json.dumps(relations, indent=2)}
 
-{'='*80}
+{"=" * 80}
 PHASE 4 - LIGHTRAG FORMAT:
-{'='*80}
+{"=" * 80}
 {lightrag_format}
 
 """
@@ -539,14 +539,14 @@ PHASE 4 - LIGHTRAG FORMAT:
         with open(log_path, "a", encoding="utf-8") as f:
             f.write(
                 f"""
-{'='*80}
-TEST CASE {test_case['id']}: {test_case['name']} [ERROR]
-{'='*80}
+{"=" * 80}
+TEST CASE {test_case["id"]}: {test_case["name"]} [ERROR]
+{"=" * 80}
 Error: {e}
 
 Full Traceback:
 {error_details}
-{'='*80}
+{"=" * 80}
 """
             )
 
@@ -556,9 +556,9 @@ Full Traceback:
 def main():
     """Main test execution."""
     print(
-        f"""{'='*80}
+        f"""{"=" * 80}
      spaCy NER + Semantic Dedup + Gemma 3 4B Relation Extraction
-{'='*80}
+{"=" * 80}
 
 Architecture:
   Phase 1: Entity Extraction -> spaCy Transformer NER ONLY (no LLM)
@@ -615,9 +615,9 @@ Expected:
     model = "hf.co/MaziyarPanahi/gemma-3-4b-it-GGUF:Q4_K_M"
     model_short = model.split("/")[-1] if "/" in model else model
 
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print(f"RELATION MODEL: {model_short}")
-    print(f"{'='*80}")
+    print(f"{'=' * 80}")
 
     # Warmup
     print("\n[WARMUP] Loading Gemma model (not measured)...", end=" ", flush=True)
@@ -646,9 +646,9 @@ Expected:
     # Write log header
     with open(log_path, "w", encoding="utf-8") as f:
         f.write(
-            f"""{'='*80}
+            f"""{"=" * 80}
 spaCy NER + SEMANTIC DEDUP + Gemma 3 4B TEST LOG
-{'='*80}
+{"=" * 80}
 
 Phase 1: spaCy en_core_web_trf (Transformer NER)
 Phase 2: sentence-transformers all-MiniLM-L6-v2 (Semantic Deduplication, threshold=0.93)
@@ -656,10 +656,10 @@ Phase 3: {model} (Relation Extraction)
 Strategy: Multi-phase extraction with semantic deduplication
 Test Suite: All 3 LightRAG Original Examples
 Context Window: 16384
-GPU Enabled: {torch.cuda.is_available() if SENTENCE_TRANSFORMERS_AVAILABLE else 'N/A'}
+GPU Enabled: {torch.cuda.is_available() if SENTENCE_TRANSFORMERS_AVAILABLE else "N/A"}
 Start Time: {datetime.now().isoformat()}
 
-{'='*80}
+{"=" * 80}
 
 """
         )
@@ -685,12 +685,12 @@ Start Time: {datetime.now().isoformat()}
     # ========================================================================
     # SUMMARY
     # ========================================================================
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print("SUMMARY: spaCy + Semantic Dedup + Gemma Performance")
-    print(f"{'='*80}\n")
+    print(f"{'=' * 80}\n")
 
     print(f"{'Test':<30} {'Raw->Dedup':<15} {'Relations':<12} {'Total Time':<12} {'Status':<8}")
-    print(f"{'-'*30} {'-'*15} {'-'*12} {'-'*12} {'-'*8}")
+    print(f"{'-' * 30} {'-' * 15} {'-' * 12} {'-' * 12} {'-' * 8}")
 
     for r in results:
         entity_str = (
@@ -704,9 +704,9 @@ Start Time: {datetime.now().isoformat()}
         )
 
     # Calculate averages
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print("AVERAGE PERFORMANCE")
-    print(f"{'='*80}\n")
+    print(f"{'=' * 80}\n")
 
     avg_time = sum(r["total_time"] for r in results) / len(results)
     avg_phase1 = sum(r["phase1_time"] for r in results) / len(results)
@@ -735,14 +735,14 @@ Start Time: {datetime.now().isoformat()}
     with open(output_file, "w", encoding="utf-8") as f:
         json.dump(results, f, indent=2)
 
-    print(f"{'='*80}")
+    print(f"{'=' * 80}")
     print(f"[OK] Results saved to: {output_file}")
     print(f"[OK] Detailed logs: {log_dir}/")
     if deduplicator:
         print(f"[OK] Semantic deduplication: ENABLED (threshold={deduplicator.threshold})")
     else:
         print("[WARNING] Semantic deduplication: DISABLED")
-    print(f"{'='*80}")
+    print(f"{'=' * 80}")
 
 
 if __name__ == "__main__":

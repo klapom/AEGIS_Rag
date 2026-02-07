@@ -194,9 +194,9 @@ def extract_entities(model: str, test_case: dict[str, Any], client: Client) -> d
 def benchmark_model(model_name: str, client: Client) -> dict[str, Any]:
     """Run comprehensive benchmark on a model."""
     model_short = model_name.split(":")[-1] if ":" in model_name else model_name
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print(f"BENCHMARKING: {model_short}")
-    print(f"{'='*80}\n")
+    print(f"{'=' * 80}\n")
 
     results = []
     total_time = 0
@@ -256,15 +256,15 @@ Complexity levels: SIMPLE, MEDIUM, COMPLEX, VERY COMPLEX
         benchmark_results.append(result)
 
     # COMPARISON TABLE
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print("OVERALL COMPARISON")
-    print(f"{'='*80}\n")
+    print(f"{'=' * 80}\n")
 
     q8_result = benchmark_results[0]
     q4_result = benchmark_results[1]
 
     print(f"{'Metric':<30} {'Q8_0':<20} {'Q4_K_M':<20} {'Difference'}")
-    print(f"{'-'*30} {'-'*20} {'-'*20} {'-'*15}")
+    print(f"{'-' * 30} {'-' * 20} {'-' * 20} {'-' * 15}")
 
     # Total entities
     q8_ent = q8_result["total_entities"]
@@ -289,14 +289,14 @@ Complexity levels: SIMPLE, MEDIUM, COMPLEX, VERY COMPLEX
     )
 
     # PER-TEST COMPARISON
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print("PER-TEST RESULTS")
-    print(f"{'='*80}\n")
+    print(f"{'=' * 80}\n")
 
     print(
         f"{'Test':<8} {'Complexity':<15} {'Q8_0 Ent':<12} {'Q4_K_M Ent':<12} {'Q8_0 Time':<12} {'Q4_K_M Time'}"
     )
-    print(f"{'-'*8} {'-'*15} {'-'*12} {'-'*12} {'-'*12} {'-'*12}")
+    print(f"{'-' * 8} {'-' * 15} {'-' * 12} {'-' * 12} {'-' * 12} {'-' * 12}")
 
     for i in range(len(TEST_CASES)):
         q8_test = q8_result["test_results"][i]
@@ -309,9 +309,9 @@ Complexity levels: SIMPLE, MEDIUM, COMPLEX, VERY COMPLEX
         )
 
     # ANALYSIS BY COMPLEXITY
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print("ANALYSIS BY COMPLEXITY LEVEL")
-    print(f"{'='*80}\n")
+    print(f"{'=' * 80}\n")
 
     complexity_levels = ["SIMPLE", "MEDIUM", "COMPLEX", "VERY COMPLEX"]
 
@@ -333,9 +333,9 @@ Complexity levels: SIMPLE, MEDIUM, COMPLEX, VERY COMPLEX
         print()
 
     # FINAL RECOMMENDATION
-    print(f"{'='*80}")
+    print(f"{'=' * 80}")
     print("RECOMMENDATION")
-    print(f"{'='*80}\n")
+    print(f"{'=' * 80}\n")
 
     speed_improvement = time_diff
     quality_diff_pct = ent_diff

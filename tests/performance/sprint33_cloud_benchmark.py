@@ -163,12 +163,12 @@ async def run_pipeline_benchmark(doc_config: dict) -> dict:
     file_path = doc_config["path"]
     doc_name = doc_config["name"]
 
-    print(f"\n{'='*70}")
+    print(f"\n{'=' * 70}")
     print(f"BENCHMARK: {doc_name}")
     print(f"Format: {doc_config['format'].upper()}")
     print(f"Description: {doc_config['description']}")
     print(f"File size: {file_path.stat().st_size / 1024:.1f} KB")
-    print(f"{'='*70}\n")
+    print(f"{'=' * 70}\n")
 
     if not file_path.exists():
         print(f"[ERROR] File not found: {file_path}")

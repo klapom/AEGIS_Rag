@@ -93,16 +93,21 @@ class TestGleaningDisabled:
         assert entities[1].name == "Elon Musk"
 
     @pytest.mark.asyncio
-    async def test_gleaning_disabled_no_completeness_check(self, extraction_service, sample_entities):
+    async def test_gleaning_disabled_no_completeness_check(
+        self, extraction_service, sample_entities
+    ):
         """Test that completeness check is NOT called when gleaning disabled."""
-        with patch.object(
-            extraction_service,
-            "_extract_entities_with_rank",
-            return_value=sample_entities,
-        ), patch.object(
-            extraction_service,
-            "_check_extraction_completeness",
-            side_effect=AssertionError("Should not be called"),
+        with (
+            patch.object(
+                extraction_service,
+                "_extract_entities_with_rank",
+                return_value=sample_entities,
+            ),
+            patch.object(
+                extraction_service,
+                "_check_extraction_completeness",
+                side_effect=AssertionError("Should not be called"),
+            ),
         ):
             entities = await extraction_service.extract_entities_with_gleaning(
                 text="Tesla was founded by Elon Musk.",
@@ -194,14 +199,16 @@ class TestGleaningEarlyTermination:
     async def test_gleaning_stops_early_on_complete(self, extraction_service, sample_entities):
         """Test that gleaning stops early if LLM says extraction is complete."""
         # Mock initial extraction
-        with patch.object(
-            extraction_service, "_extract_entities_with_rank", return_value=sample_entities
-        ), patch.object(
-            extraction_service, "_check_extraction_completeness", return_value=True
-        ), patch.object(
-            extraction_service,
-            "_extract_missing_entities",
-            side_effect=AssertionError("Should not be called"),
+        with (
+            patch.object(
+                extraction_service, "_extract_entities_with_rank", return_value=sample_entities
+            ),
+            patch.object(extraction_service, "_check_extraction_completeness", return_value=True),
+            patch.object(
+                extraction_service,
+                "_extract_missing_entities",
+                side_effect=AssertionError("Should not be called"),
+            ),
         ):
             entities = await extraction_service.extract_entities_with_gleaning(
                 text="Tesla was founded by Elon Musk.",
@@ -243,14 +250,16 @@ class TestGleaningMultipleRounds:
         )
 
         # Mock multiple rounds
-        with patch.object(
-            extraction_service, "_extract_entities_with_rank", return_value=sample_entities
-        ), patch.object(
-            extraction_service, "_check_extraction_completeness", return_value=False
-        ), patch.object(
-            extraction_service,
-            "_extract_missing_entities",
-            side_effect=[[round_2_entity], [round_3_entity]],
+        with (
+            patch.object(
+                extraction_service, "_extract_entities_with_rank", return_value=sample_entities
+            ),
+            patch.object(extraction_service, "_check_extraction_completeness", return_value=False),
+            patch.object(
+                extraction_service,
+                "_extract_missing_entities",
+                side_effect=[[round_2_entity], [round_3_entity]],
+            ),
         ):
             entities = await extraction_service.extract_entities_with_gleaning(
                 text="Tesla was founded by Elon Musk in 2003 in Palo Alto.",
@@ -264,13 +273,15 @@ class TestGleaningMultipleRounds:
     async def test_gleaning_respects_max_rounds(self, extraction_service, sample_entities):
         """Test that gleaning respects max_gleanings limit."""
         # Mock completeness check to always return False (never complete)
-        with patch.object(
-            extraction_service, "_extract_entities_with_rank", return_value=sample_entities
-        ), patch.object(
-            extraction_service, "_check_extraction_completeness", return_value=False
-        ), patch.object(
-            extraction_service, "_extract_missing_entities", return_value=[]
-        ) as mock_extract_missing:
+        with (
+            patch.object(
+                extraction_service, "_extract_entities_with_rank", return_value=sample_entities
+            ),
+            patch.object(extraction_service, "_check_extraction_completeness", return_value=False),
+            patch.object(
+                extraction_service, "_extract_missing_entities", return_value=[]
+            ) as mock_extract_missing,
+        ):
             await extraction_service.extract_entities_with_gleaning(
                 text="Tesla was founded by Elon Musk.",
                 gleaning_steps=2,
@@ -286,9 +297,33 @@ class TestEntityDeduplication:
     def test_deduplication_removes_exact_duplicates(self, extraction_service):
         """Test that deduplication removes exact name matches (case-insensitive)."""
         entities = [
-            GraphEntity(id="e1", name="Tesla", type="ORGANIZATION", description="Company 1", properties={}, source_document=None, confidence=1.0),
-            GraphEntity(id="e2", name="tesla", type="ORGANIZATION", description="Company 2", properties={}, source_document=None, confidence=0.9),
-            GraphEntity(id="e3", name="TESLA", type="ORGANIZATION", description="Company 3", properties={}, source_document=None, confidence=0.8),
+            GraphEntity(
+                id="e1",
+                name="Tesla",
+                type="ORGANIZATION",
+                description="Company 1",
+                properties={},
+                source_document=None,
+                confidence=1.0,
+            ),
+            GraphEntity(
+                id="e2",
+                name="tesla",
+                type="ORGANIZATION",
+                description="Company 2",
+                properties={},
+                source_document=None,
+                confidence=0.9,
+            ),
+            GraphEntity(
+                id="e3",
+                name="TESLA",
+                type="ORGANIZATION",
+                description="Company 3",
+                properties={},
+                source_document=None,
+                confidence=0.8,
+            ),
         ]
 
         deduplicated = extraction_service._merge_and_deduplicate_entities(entities)
@@ -301,8 +336,24 @@ class TestEntityDeduplication:
     def test_deduplication_removes_substring_duplicates(self, extraction_service):
         """Test that deduplication removes substring matches."""
         entities = [
-            GraphEntity(id="e1", name="Tesla Inc", type="ORGANIZATION", description="Full name", properties={}, source_document=None, confidence=1.0),
-            GraphEntity(id="e2", name="Tesla", type="ORGANIZATION", description="Short name", properties={}, source_document=None, confidence=0.9),
+            GraphEntity(
+                id="e1",
+                name="Tesla Inc",
+                type="ORGANIZATION",
+                description="Full name",
+                properties={},
+                source_document=None,
+                confidence=1.0,
+            ),
+            GraphEntity(
+                id="e2",
+                name="Tesla",
+                type="ORGANIZATION",
+                description="Short name",
+                properties={},
+                source_document=None,
+                confidence=0.9,
+            ),
         ]
 
         deduplicated = extraction_service._merge_and_deduplicate_entities(entities)
@@ -314,9 +365,33 @@ class TestEntityDeduplication:
     def test_deduplication_preserves_unique_entities(self, extraction_service):
         """Test that deduplication preserves unique entities."""
         entities = [
-            GraphEntity(id="e1", name="Tesla", type="ORGANIZATION", description="Company", properties={}, source_document=None, confidence=1.0),
-            GraphEntity(id="e2", name="Elon Musk", type="PERSON", description="CEO", properties={}, source_document=None, confidence=1.0),
-            GraphEntity(id="e3", name="SpaceX", type="ORGANIZATION", description="Space company", properties={}, source_document=None, confidence=1.0),
+            GraphEntity(
+                id="e1",
+                name="Tesla",
+                type="ORGANIZATION",
+                description="Company",
+                properties={},
+                source_document=None,
+                confidence=1.0,
+            ),
+            GraphEntity(
+                id="e2",
+                name="Elon Musk",
+                type="PERSON",
+                description="CEO",
+                properties={},
+                source_document=None,
+                confidence=1.0,
+            ),
+            GraphEntity(
+                id="e3",
+                name="SpaceX",
+                type="ORGANIZATION",
+                description="Space company",
+                properties={},
+                source_document=None,
+                confidence=1.0,
+            ),
         ]
 
         deduplicated = extraction_service._merge_and_deduplicate_entities(entities)
@@ -411,14 +486,16 @@ class TestGleaningErrorHandling:
         )
 
         # Mock: Round 2 fails, Round 3 succeeds
-        with patch.object(
-            extraction_service, "_extract_entities_with_rank", return_value=sample_entities
-        ), patch.object(
-            extraction_service, "_check_extraction_completeness", return_value=False
-        ), patch.object(
-            extraction_service,
-            "_extract_missing_entities",
-            side_effect=[Exception("Round 2 failed"), [round_2_entity]],
+        with (
+            patch.object(
+                extraction_service, "_extract_entities_with_rank", return_value=sample_entities
+            ),
+            patch.object(extraction_service, "_check_extraction_completeness", return_value=False),
+            patch.object(
+                extraction_service,
+                "_extract_missing_entities",
+                side_effect=[Exception("Round 2 failed"), [round_2_entity]],
+            ),
         ):
             entities = await extraction_service.extract_entities_with_gleaning(
                 text="Tesla was founded by Elon Musk in 2003.",
@@ -432,19 +509,22 @@ class TestGleaningErrorHandling:
     @pytest.mark.asyncio
     async def test_gleaning_deduplication_always_runs(self, extraction_service, sample_entities):
         """Test that deduplication always runs even if all gleaning rounds fail."""
-        with patch.object(
-            extraction_service, "_extract_entities_with_rank", return_value=sample_entities
-        ), patch.object(
-            extraction_service, "_check_extraction_completeness", return_value=False
-        ), patch.object(
-            extraction_service,
-            "_extract_missing_entities",
-            side_effect=Exception("All rounds failed"),
-        ), patch.object(
-            extraction_service,
-            "_merge_and_deduplicate_entities",
-            return_value=sample_entities,
-        ) as mock_dedup:
+        with (
+            patch.object(
+                extraction_service, "_extract_entities_with_rank", return_value=sample_entities
+            ),
+            patch.object(extraction_service, "_check_extraction_completeness", return_value=False),
+            patch.object(
+                extraction_service,
+                "_extract_missing_entities",
+                side_effect=Exception("All rounds failed"),
+            ),
+            patch.object(
+                extraction_service,
+                "_merge_and_deduplicate_entities",
+                return_value=sample_entities,
+            ) as mock_dedup,
+        ):
             entities = await extraction_service.extract_entities_with_gleaning(
                 text="Tesla was founded by Elon Musk.",
                 gleaning_steps=1,

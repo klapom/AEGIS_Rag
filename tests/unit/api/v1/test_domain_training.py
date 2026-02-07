@@ -735,9 +735,7 @@ class TestConnectivityEvaluationEndpoint:
             }
         ]
 
-        with patch(
-            "src.components.graph_rag.neo4j_client.get_neo4j_client"
-        ) as mock_get_neo4j:
+        with patch("src.components.graph_rag.neo4j_client.get_neo4j_client") as mock_get_neo4j:
             # Setup mock
             mock_neo4j = AsyncMock()
             mock_neo4j.execute_read = AsyncMock(return_value=mock_result)
@@ -774,9 +772,7 @@ class TestConnectivityEvaluationEndpoint:
         # Mock Neo4j response (empty namespace)
         mock_result = []
 
-        with patch(
-            "src.components.graph_rag.neo4j_client.get_neo4j_client"
-        ) as mock_get_neo4j:
+        with patch("src.components.graph_rag.neo4j_client.get_neo4j_client") as mock_get_neo4j:
             # Setup mock
             mock_neo4j = AsyncMock()
             mock_neo4j.execute_read = AsyncMock(return_value=mock_result)
@@ -813,9 +809,7 @@ class TestConnectivityEvaluationEndpoint:
             }
         ]
 
-        with patch(
-            "src.components.graph_rag.neo4j_client.get_neo4j_client"
-        ) as mock_get_neo4j:
+        with patch("src.components.graph_rag.neo4j_client.get_neo4j_client") as mock_get_neo4j:
             # Setup mock
             mock_neo4j = AsyncMock()
             mock_neo4j.execute_read = AsyncMock(return_value=mock_result)
@@ -849,9 +843,7 @@ class TestConnectivityEvaluationEndpoint:
             }
         ]
 
-        with patch(
-            "src.components.graph_rag.neo4j_client.get_neo4j_client"
-        ) as mock_get_neo4j:
+        with patch("src.components.graph_rag.neo4j_client.get_neo4j_client") as mock_get_neo4j:
             # Setup mock
             mock_neo4j = AsyncMock()
             mock_neo4j.execute_read = AsyncMock(return_value=mock_result)
@@ -899,9 +891,7 @@ class TestConnectivityEvaluationEndpoint:
             }
         ]
 
-        with patch(
-            "src.components.graph_rag.neo4j_client.get_neo4j_client"
-        ) as mock_get_neo4j:
+        with patch("src.components.graph_rag.neo4j_client.get_neo4j_client") as mock_get_neo4j:
             # Setup mock
             mock_neo4j = AsyncMock()
             mock_neo4j.execute_read = AsyncMock(return_value=mock_result)
@@ -929,14 +919,10 @@ class TestConnectivityEvaluationEndpoint:
             "domain_type": "factual",
         }
 
-        with patch(
-            "src.components.graph_rag.neo4j_client.get_neo4j_client"
-        ) as mock_get_neo4j:
+        with patch("src.components.graph_rag.neo4j_client.get_neo4j_client") as mock_get_neo4j:
             # Setup mock to raise error
             mock_neo4j = AsyncMock()
-            mock_neo4j.execute_read = AsyncMock(
-                side_effect=Exception("Neo4j connection failed")
-            )
+            mock_neo4j.execute_read = AsyncMock(side_effect=Exception("Neo4j connection failed"))
             mock_get_neo4j.return_value = mock_neo4j
 
             response = test_client.post(
@@ -983,13 +969,9 @@ class TestEnhancedTrainingStatus:
             "error_message": None,
         }
 
-    def test_get_training_status_with_steps(
-        self, test_client, mock_training_log_in_progress
-    ):
+    def test_get_training_status_with_steps(self, test_client, mock_training_log_in_progress):
         """Test training status includes step-by-step progress."""
-        with patch(
-            "src.components.domain_training.get_domain_repository"
-        ) as mock_get_repo:
+        with patch("src.components.domain_training.get_domain_repository") as mock_get_repo:
             mock_repo = AsyncMock()
             mock_repo.get_latest_training_log = AsyncMock(
                 return_value=mock_training_log_in_progress
@@ -1045,17 +1027,11 @@ class TestEnhancedTrainingStatus:
             assert data["elapsed_time_ms"] is not None
             assert data["estimated_completion"] is not None
 
-    def test_get_training_status_completed(
-        self, test_client, mock_training_log_completed
-    ):
+    def test_get_training_status_completed(self, test_client, mock_training_log_completed):
         """Test training status for completed training."""
-        with patch(
-            "src.components.domain_training.get_domain_repository"
-        ) as mock_get_repo:
+        with patch("src.components.domain_training.get_domain_repository") as mock_get_repo:
             mock_repo = AsyncMock()
-            mock_repo.get_latest_training_log = AsyncMock(
-                return_value=mock_training_log_completed
-            )
+            mock_repo.get_latest_training_log = AsyncMock(return_value=mock_training_log_completed)
             mock_get_repo.return_value = mock_repo
 
             response = test_client.get("/api/v1/admin/domains/medical/training-status")
@@ -1082,9 +1058,7 @@ class TestEnhancedTrainingStatus:
 
     def test_get_training_status_not_found(self, test_client):
         """Test 404 when no training log exists."""
-        with patch(
-            "src.components.domain_training.get_domain_repository"
-        ) as mock_get_repo:
+        with patch("src.components.domain_training.get_domain_repository") as mock_get_repo:
             mock_repo = AsyncMock()
             mock_repo.get_latest_training_log = AsyncMock(return_value=None)
             mock_get_repo.return_value = mock_repo
@@ -1098,9 +1072,7 @@ class TestEnhancedTrainingStatus:
         """Test 500 when database connection fails."""
         from src.core.exceptions import DatabaseConnectionError
 
-        with patch(
-            "src.components.domain_training.get_domain_repository"
-        ) as mock_get_repo:
+        with patch("src.components.domain_training.get_domain_repository") as mock_get_repo:
             mock_repo = AsyncMock()
             mock_repo.get_latest_training_log = AsyncMock(
                 side_effect=DatabaseConnectionError("Neo4j", "Connection failed")
@@ -1153,13 +1125,9 @@ class TestTrainingLogsEndpoint:
 
     def test_get_training_logs_success(self, test_client, mock_training_logs_result):
         """Test successful retrieval of training logs."""
-        with patch(
-            "src.components.domain_training.get_domain_repository"
-        ) as mock_get_repo:
+        with patch("src.components.domain_training.get_domain_repository") as mock_get_repo:
             mock_repo = AsyncMock()
-            mock_repo.get_training_log_messages = AsyncMock(
-                return_value=mock_training_logs_result
-            )
+            mock_repo.get_training_log_messages = AsyncMock(return_value=mock_training_logs_result)
             mock_get_repo.return_value = mock_repo
 
             response = test_client.get("/api/v1/admin/domains/medical/training-logs")
@@ -1191,9 +1159,7 @@ class TestTrainingLogsEndpoint:
             "page_size": 50,
         }
 
-        with patch(
-            "src.components.domain_training.get_domain_repository"
-        ) as mock_get_repo:
+        with patch("src.components.domain_training.get_domain_repository") as mock_get_repo:
             mock_repo = AsyncMock()
             mock_repo.get_training_log_messages = AsyncMock(return_value=mock_result)
             mock_get_repo.return_value = mock_repo
@@ -1217,18 +1183,14 @@ class TestTrainingLogsEndpoint:
 
     def test_get_training_logs_invalid_page(self, test_client):
         """Test validation of page parameter."""
-        response = test_client.get(
-            "/api/v1/admin/domains/medical/training-logs?page=0"
-        )
+        response = test_client.get("/api/v1/admin/domains/medical/training-logs?page=0")
 
         assert response.status_code == 422
         assert "page must be >= 1" in response.json()["detail"]
 
     def test_get_training_logs_invalid_page_size(self, test_client):
         """Test validation of page_size parameter."""
-        response = test_client.get(
-            "/api/v1/admin/domains/medical/training-logs?page_size=200"
-        )
+        response = test_client.get("/api/v1/admin/domains/medical/training-logs?page_size=200")
 
         assert response.status_code == 422
         assert "page_size must be 1-100" in response.json()["detail"]
@@ -1242,9 +1204,7 @@ class TestTrainingLogsEndpoint:
             "page_size": 20,
         }
 
-        with patch(
-            "src.components.domain_training.get_domain_repository"
-        ) as mock_get_repo:
+        with patch("src.components.domain_training.get_domain_repository") as mock_get_repo:
             mock_repo = AsyncMock()
             mock_repo.get_training_log_messages = AsyncMock(return_value=mock_result)
             mock_get_repo.return_value = mock_repo
@@ -1260,9 +1220,7 @@ class TestTrainingLogsEndpoint:
         """Test 500 when database connection fails."""
         from src.core.exceptions import DatabaseConnectionError
 
-        with patch(
-            "src.components.domain_training.get_domain_repository"
-        ) as mock_get_repo:
+        with patch("src.components.domain_training.get_domain_repository") as mock_get_repo:
             mock_repo = AsyncMock()
             mock_repo.get_training_log_messages = AsyncMock(
                 side_effect=DatabaseConnectionError("Neo4j", "Connection failed")

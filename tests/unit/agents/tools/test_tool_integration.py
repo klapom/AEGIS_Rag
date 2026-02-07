@@ -119,7 +119,7 @@ class TestShouldUseToolsHybrid:
         config = MockToolsConfig()
         state = {
             "answer": "I need to search for Python documentation",
-            "question": "How to use Python?"
+            "question": "How to use Python?",
         }
 
         # Mock LLM decision
@@ -146,14 +146,12 @@ class TestShouldUseToolsHybrid:
             return MockToolDecision()
 
         mocker.patch(
-            "src.agents.tools.tool_integration.get_llm_client",
-            return_value=mock_llm_client
+            "src.agents.tools.tool_integration.get_llm_client", return_value=mock_llm_client
         )
 
         # Mock the chain execution
         mocker.patch(
-            "src.agents.tools.tool_integration._should_use_tools_llm",
-            return_value="tools"
+            "src.agents.tools.tool_integration._should_use_tools_llm", return_value="tools"
         )
 
         # Execute
@@ -177,7 +175,7 @@ class TestShouldUseToolsRouter:
 
         mocker.patch(
             "src.agents.tools.tool_integration.get_tools_config_service",
-            return_value=mock_config_service
+            return_value=mock_config_service,
         )
 
         state = {"answer": "[TOOL:test]"}
@@ -193,7 +191,7 @@ class TestShouldUseToolsRouter:
         # Mock config service to raise error
         mocker.patch(
             "src.agents.tools.tool_integration.get_tools_config_service",
-            side_effect=Exception("Redis connection failed")
+            side_effect=Exception("Redis connection failed"),
         )
 
         state = {"answer": "[TOOL:test]"}
@@ -215,7 +213,7 @@ class TestShouldUseToolsRouter:
 
         mocker.patch(
             "src.agents.tools.tool_integration.get_tools_config_service",
-            return_value=mock_config_service
+            return_value=mock_config_service,
         )
 
         state = {"answer": "[TOOL:test]"}

@@ -238,9 +238,9 @@ Testing models with LightRAG's original prompt format:
     for model, supports_think in models_to_test:
         model_short = model.split("/")[-1] if "/" in model else model
 
-        print(f"\n{'='*80}")
+        print(f"\n{'=' * 80}")
         print(f"MODEL: {model_short}")
-        print(f"{'='*80}")
+        print(f"{'=' * 80}")
 
         for test_case in TEST_CASES:
             # Test default mode
@@ -282,14 +282,14 @@ Testing models with LightRAG's original prompt format:
                         print(f"    ERROR: {err}")
 
     # SUMMARY
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print("SUMMARY: FORMAT COMPLIANCE")
-    print(f"{'='*80}\n")
+    print(f"{'=' * 80}\n")
 
     print(
         f"{'Model':<35} {'Mode':<15} {'Test':<20} {'Format':<12} {'Entities':<10} {'Relations':<10} {'Status'}"
     )
-    print(f"{'-'*35} {'-'*15} {'-'*20} {'-'*12} {'-'*10} {'-'*10} {'-'*8}")
+    print(f"{'-' * 35} {'-' * 15} {'-' * 20} {'-' * 12} {'-' * 10} {'-' * 10} {'-' * 8}")
 
     for r in results:
         if "error" in r:
@@ -305,9 +305,9 @@ Testing models with LightRAG's original prompt format:
         )
 
     # BEST PERFORMERS
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print("BEST FORMAT COMPLIANCE")
-    print(f"{'='*80}\n")
+    print(f"{'=' * 80}\n")
 
     successful = [r for r in results if r.get("success")]
     if successful:
@@ -331,9 +331,9 @@ Testing models with LightRAG's original prompt format:
         print(f"  Entities: {fastest['entity_count']}, Relations: {fastest['relation_count']}")
 
     # FORMAT ERRORS SUMMARY
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print("COMMON FORMAT ERRORS")
-    print(f"{'='*80}\n")
+    print(f"{'=' * 80}\n")
 
     error_types = {}
     for r in results:

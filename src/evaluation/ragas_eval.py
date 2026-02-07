@@ -652,7 +652,7 @@ class RAGASEvaluator:
                 </tr>
             </thead>
             <tbody>
-                {''.join(rows)}
+                {"".join(rows)}
             </tbody>
         </table>
 

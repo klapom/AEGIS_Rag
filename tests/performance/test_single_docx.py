@@ -57,7 +57,7 @@ async def main():
         for i, h in enumerate(section_headers[:20]):
             text = h.get("text", "")[:60]
             level = h.get("level", "?")
-            print(f"  [{i+1}] L{level}: '{text}'")
+            print(f"  [{i + 1}] L{level}: '{text}'")
     else:
         print("\nNo section_header labels found!")
         print("Checking for title labels...")
@@ -77,7 +77,7 @@ async def main():
             print("\nFirst 10 bold short paragraphs:")
             for i, t in enumerate(bold_short[:10]):
                 text = t.get("text", "")[:50]
-                print(f"  [{i+1}] '{text}'")
+                print(f"  [{i + 1}] '{text}'")
 
 
 if __name__ == "__main__":

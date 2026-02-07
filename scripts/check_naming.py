@@ -35,9 +35,7 @@ class NamingChecker(ast.NodeVisitor):
             if not re.match(r"^[A-Z][a-zA-Z0-9]*$", node.name):
                 # Skip private classes starting with _
                 if not node.name.startswith("_"):
-                    self.errors.append(
-                        (node.lineno, f"Class '{node.name}' should be PascalCase")
-                    )
+                    self.errors.append((node.lineno, f"Class '{node.name}' should be PascalCase"))
         self.generic_visit(node)
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
@@ -54,9 +52,7 @@ class NamingChecker(ast.NodeVisitor):
 
         # Check snake_case (lowercase with underscores)
         if not re.match(r"^_?[a-z][a-z0-9_]*$", node.name):
-            self.errors.append(
-                (node.lineno, f"Function '{node.name}' should be snake_case")
-            )
+            self.errors.append((node.lineno, f"Function '{node.name}' should be snake_case"))
         self.generic_visit(node)
 
     def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
@@ -71,9 +67,7 @@ class NamingChecker(ast.NodeVisitor):
             return
 
         if not re.match(r"^_?[a-z][a-z0-9_]*$", node.name):
-            self.errors.append(
-                (node.lineno, f"Async function '{node.name}' should be snake_case")
-            )
+            self.errors.append((node.lineno, f"Async function '{node.name}' should be snake_case"))
         self.generic_visit(node)
 
     def visit_Assign(self, node: ast.Assign) -> None:
@@ -103,7 +97,7 @@ def check_file(filepath: str) -> List[Tuple[str, int, str]]:
     """Check naming conventions in a Python file."""
     errors = []
     try:
-        with open(filepath, "r", encoding="utf-8") as f:
+        with open(filepath, encoding="utf-8") as f:
             source = f.read()
         tree = ast.parse(source)
         checker = NamingChecker(filepath)

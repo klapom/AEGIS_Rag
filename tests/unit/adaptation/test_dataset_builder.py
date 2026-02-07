@@ -179,9 +179,7 @@ def temp_graph_trace_file(tmp_path: Path) -> Path:
                     ]
                 },
                 "graph_global": {
-                    "results": [
-                        {"chunk_id": "g3", "text": "Global context...", "score": 0.82}
-                    ]
+                    "results": [{"chunk_id": "g3", "text": "Global context...", "score": 0.82}]
                 },
             },
             "evidence": {
@@ -546,9 +544,7 @@ class TestDatasetBuilder:
         output_path = tmp_path / "output.jsonl"
 
         # Should not raise exception
-        examples = await builder.build_intent_dataset(
-            min_quality=0.5, output_path=str(output_path)
-        )
+        examples = await builder.build_intent_dataset(min_quality=0.5, output_path=str(output_path))
 
         # Should skip malformed trace, only include valid ones above threshold
         assert len(examples) >= 0  # Might be 0 if all filtered out
@@ -561,7 +557,7 @@ class TestDatasetBuilder:
 
         with open(trace_file, "w") as f:
             f.write('{"valid": "json"}\n')
-            f.write('invalid json here\n')  # Invalid line
+            f.write("invalid json here\n")  # Invalid line
             f.write('{"another": "valid"}\n')
 
         traces = dataset_builder._read_jsonl(trace_file)

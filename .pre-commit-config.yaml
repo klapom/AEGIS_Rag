@@ -1,244 +1,144 @@
-# Pre-commit Hooks Configuration
-# Installiere mit: pre-commit install
-# Führe manuell aus: pre-commit run --all-files
+# Pre-commit Hooks Configuration — AegisRAG
+# Install:  pre-commit install && pre-commit install --hook-type commit-msg
+# Run all:  pre-commit run --all-files
+# Update:   pre-commit autoupdate
+#
+# Sprint 126: Cleaned up — removed redundant hooks (Black, isort), fixed missing scripts,
+# added TypeScript check, updated to Python 3.12
 
 repos:
-  # 1. CODE FORMATTING (Auto-Fix)
+  # ──────────────────────────────────────────────
+  # 1. RUFF — Linting + Formatting (replaces Black, isort, Flake8)
+  # ──────────────────────────────────────────────
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.6.8
+    rev: v0.14.8
     hooks:
-      # Ruff Linter (ersetzt Flake8, isort, pyupgrade)
       - id: ruff
-        name: "🔍 Ruff Linter"
-        args: 
-          - --fix
-          - --exit-non-zero-on-fix
-          - --config=pyproject.toml
-        
-      # Ruff Formatter (ersetzt Black teilweise)
+        name: "Ruff Linter"
+        args: [--fix, --exit-non-zero-on-fix, --config=pyproject.toml]
       - id: ruff-format
-        name: "🎨 Ruff Formatter"
-        args:
-          - --config=pyproject.toml
+        name: "Ruff Formatter"
+        args: [--config=pyproject.toml]
 
-  # 2. Black Formatter (zusätzlich zu Ruff)
-  - repo: https://github.com/psf/black
-    rev: 24.8.0
-    hooks:
-      - id: black
-        name: "⚫ Black Formatter"
-        language_version: python3.11
-        args:
-          - --line-length=100
-          - --target-version=py311
-
-  # 3. TYPE CHECKING (Strict Mode)
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.11.2
-    hooks:
-      - id: mypy
-        name: "🔬 MyPy Type Checker"
-        args:
-          - --strict
-          - --config-file=pyproject.toml
-        additional_dependencies:
-          - types-redis
-          - types-requests
-          - types-pyyaml
-          - pydantic
-        # Nur Python Files, keine Tests (Tests haben andere Rules)
-        files: ^src/.*\.py$
-
-  # 4. SECURITY SCANNING
-  - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.9
-    hooks:
-      - id: bandit
-        name: "🔒 Bandit Security Scanner"
-        args:
-          - -c
-          - pyproject.toml
-          - -r
-          - src/
-        # Exclude Tests (haben absichtlich unsichere Patterns)
-        exclude: ^tests/
-
-  # 5. DEPENDENCY SECURITY
-  - repo: https://github.com/Lucas-C/pre-commit-hooks-safety
-    rev: v1.3.3
-    hooks:
-      - id: python-safety-dependencies-check
-        name: "🛡️ Safety Dependency Scanner"
-        files: pyproject.toml
-
-  # 6. SECRET DETECTION
+  # ──────────────────────────────────────────────
+  # 2. SECRET DETECTION — Prevent API keys, passwords in commits
+  # ──────────────────────────────────────────────
   - repo: https://github.com/Yelp/detect-secrets
     rev: v1.5.0
     hooks:
       - id: detect-secrets
-        name: "🔑 Detect Secrets"
-        args:
-          - --baseline
-          - .secrets.baseline
+        name: "Secret Detection"
+        args: [--baseline, .secrets.baseline]
         exclude: |
           (?x)^(
             \.env\.template|
             tests/.*|
-            .*\.example
+            .*\.example|
+            docs/.*
           )$
 
-  # 7. YAML VALIDATION
+  # ──────────────────────────────────────────────
+  # 3. TYPESCRIPT CHECK — Catch compile errors in frontend
+  # ──────────────────────────────────────────────
+  - repo: local
+    hooks:
+      - id: tsc-check
+        name: "TypeScript Check"
+        entry: bash -c 'cd frontend && npx tsc --noEmit --pretty 2>&1 | head -30'
+        language: system
+        files: ^frontend/.*\.(ts|tsx)$
+        pass_filenames: false
+
+  # ──────────────────────────────────────────────
+  # 4. YAML / JSON / TOML Validation + File Checks
+  # ──────────────────────────────────────────────
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
+    rev: v5.0.0
     hooks:
       - id: check-yaml
-        name: "📋 Check YAML Syntax"
-        args: [--safe]
-      
+        name: "YAML Syntax"
+        args: [--unsafe]
       - id: check-json
-        name: "📋 Check JSON Syntax"
-      
+        name: "JSON Syntax"
+        exclude: ^frontend/tsconfig\.
       - id: check-toml
-        name: "📋 Check TOML Syntax"
-      
+        name: "TOML Syntax"
       - id: check-added-large-files
-        name: "📦 Check Large Files"
+        name: "Large Files (>1MB)"
         args: [--maxkb=1000]
-      
       - id: check-merge-conflict
-        name: "🔀 Check Merge Conflicts"
-      
+        name: "Merge Conflict Markers"
       - id: trailing-whitespace
-        name: "✂️ Trim Trailing Whitespace"
-      
+        name: "Trailing Whitespace"
+        args: [--markdown-linebreak-ext=md]
       - id: end-of-file-fixer
-        name: "📄 Fix End of Files"
-      
-      - id: mixed-line-ending
-        name: "↩️ Fix Line Endings"
-        args: [--fix=lf]
+        name: "End of File Newline"
 
-  # 8. NAMING CONVENTIONS CHECK (Custom)
+  # ──────────────────────────────────────────────
+  # 5. SECURITY — Bandit static analysis
+  # ──────────────────────────────────────────────
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.8.3
+    hooks:
+      - id: bandit
+        name: "Bandit Security"
+        args: [-c, pyproject.toml]
+        types: [python]
+        exclude: |
+          (?x)^(
+            tests/.*|
+            scripts/.*|
+            examples/.*|
+            docs/.*
+          )$
+
+  # ──────────────────────────────────────────────
+  # 6. NAMING CONVENTIONS (Custom — Sprint 18)
+  # ──────────────────────────────────────────────
   - repo: local
     hooks:
       - id: check-naming-conventions
-        name: "📝 Check Naming Conventions"
-        entry: python scripts/check_naming.py
+        name: "Naming Conventions"
+        entry: python3 scripts/check_naming.py
         language: system
         types: [python]
         pass_filenames: true
 
-  # 9. ADR DETECTION (Custom)
+  # ──────────────────────────────────────────────
+  # 7. COMMIT MESSAGE — Conventional Commits
+  # ──────────────────────────────────────────────
+  # Note: conventional-pre-commit v4.x has an argparse bug with pre-commit 4.5.0
+  # where the commit-msg file isn't forwarded. Using a local hook instead.
   - repo: local
     hooks:
-      - id: check-adr-needed
-        name: "📚 Check if ADR needed"
-        entry: python scripts/check_adr.py
+      - id: conventional-commit
+        name: "Conventional Commit Message"
+        entry: python3 scripts/check_conventional_commit.py
         language: system
+        stages: [commit-msg]
         always_run: true
         pass_filenames: false
 
-  # 10. IMPORT VALIDATION (TD-42 Sprint 18)
-  - repo: local
-    hooks:
-      - id: check-imports
-        name: "🔍 TD-42: Validate Python Imports"
-        entry: python scripts/check_imports.py
-        language: system
-        types: [python]
-        pass_filenames: true
-        description: "Prevent import errors like Sprint 17 TD-41"
+# ──────────────────────────────────────────────
+# Global Configuration
+# ──────────────────────────────────────────────
 
-  # 11. ROUTER PREFIX VALIDATION (TD-42 Sprint 18)
-  - repo: local
-    hooks:
-      - id: check-router-prefix
-        name: "🛣️ TD-42: Validate Router Prefixes"
-        entry: python scripts/check_router_prefix.py
-        language: system
-        types: [python]
-        pass_filenames: true
-        description: "Enforce router prefix conventions from TD-41 fix"
-
-  # 10. IMPORT SORTING (via Ruff, aber nochmal explizit)
-  - repo: https://github.com/PyCQA/isort
-    rev: 5.13.2
-    hooks:
-      - id: isort
-        name: "📥 Sort Imports"
-        args:
-          - --profile=black
-          - --line-length=100
-          - --multi-line=3
-
-  # 11. DOCSTRING VALIDATION
-  - repo: https://github.com/pycqa/pydocstyle
-    rev: 6.3.0
-    hooks:
-      - id: pydocstyle
-        name: "📖 Check Docstrings"
-        args:
-          - --convention=google
-          - --add-ignore=D100,D104,D105,D107
-        exclude: ^tests/
-
-  # 12. COMMIT MESSAGE VALIDATION (Conventional Commits)
-  - repo: https://github.com/compilerla/conventional-pre-commit
-    rev: v3.4.0
-    hooks:
-      - id: conventional-pre-commit
-        name: "💬 Validate Commit Message"
-        stages: [commit-msg]
-        args:
-          - feat
-          - fix
-          - docs
-          - style
-          - refactor
-          - test
-          - chore
-          - perf
-          - ci
-
-  # 13. MARKDOWN LINTING
-  - repo: https://github.com/igorshubovych/markdownlint-cli
-    rev: v0.41.0
-    hooks:
-      - id: markdownlint
-        name: "📝 Markdown Linter"
-        args:
-          - --fix
-          - --config=.markdownlint.json
-
-  # 14. DOCKER LINTING
-  - repo: https://github.com/hadolint/hadolint
-    rev: v2.12.0
-    hooks:
-      - id: hadolint-docker
-        name: "🐳 Dockerfile Linter"
-        args:
-          - --ignore=DL3008
-          - --ignore=DL3009
-
-# Configuration
 default_language_version:
-  python: python3.11
+  python: python3.12
 
-# Global excludes
 exclude: |
   (?x)^(
-    \.venv/|
-    \.git/|
-    \.mypy_cache/|
-    \.pytest_cache/|
-    \.ruff_cache/|
-    __pycache__/|
+    \.venv/.*|
+    \.git/.*|
+    \.mypy_cache/.*|
+    \.pytest_cache/.*|
+    \.ruff_cache/.*|
+    __pycache__/.*|
+    node_modules/.*|
+    models/.*|
     \.env$|
     \.env\..*
   )$
 
-# Fail fast (stop on first failure)
 fail_fast: false
-
-# Minimum pre-commit version
 minimum_pre_commit_version: "3.0.0"

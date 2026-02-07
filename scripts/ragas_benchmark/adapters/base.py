@@ -37,7 +37,7 @@ class DatasetAdapter(ABC):
         self.drop_reasons: Dict[str, int] = {}
 
     @abstractmethod
-    def adapt(self, record: Dict[str, Any], record_idx: int = 0) -> Optional[NormalizedSample]:
+    def adapt(self, record: Dict[str, Any], record_idx: int = 0) -> NormalizedSample | None:
         """
         Transform raw record to normalized format.
 
@@ -127,11 +127,8 @@ class DatasetAdapter(ABC):
             return "D3"
 
     def validate_sample(
-        self,
-        question: str,
-        answer: str,
-        contexts: List[str]
-    ) -> tuple[bool, Optional[str]]:
+        self, question: str, answer: str, contexts: List[str]
+    ) -> tuple[bool, str | None]:
         """
         Validate sample meets minimum requirements.
 

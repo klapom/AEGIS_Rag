@@ -64,9 +64,9 @@ def test_rrf_basic_fusion(vector_results, bm25_results):
 
     # Verify ranking order (descending RRF scores)
     for i in range(len(fused) - 1):
-        assert (
-            fused[i]["rrf_score"] >= fused[i + 1]["rrf_score"]
-        ), "Results should be sorted by RRF score descending"
+        assert fused[i]["rrf_score"] >= fused[i + 1]["rrf_score"], (
+            "Results should be sorted by RRF score descending"
+        )
 
     # doc1 and doc3 appear in both rankings, should rank higher
     top_ids = [doc["id"] for doc in fused[:3]]
@@ -82,9 +82,9 @@ def test_rrf_score_calculation(vector_results, bm25_results):
     # doc1 is rank 1 in vector, rank 2 in BM25
     doc1_result = next(doc for doc in fused if doc["id"] == "doc1")
     expected_score = (1 / (k + 1)) + (1 / (k + 2))
-    assert (
-        abs(doc1_result["rrf_score"] - expected_score) < 0.0001
-    ), f"RRF score mismatch: {doc1_result['rrf_score']} != {expected_score}"
+    assert abs(doc1_result["rrf_score"] - expected_score) < 0.0001, (
+        f"RRF score mismatch: {doc1_result['rrf_score']} != {expected_score}"
+    )
 
 
 @pytest.mark.unit
@@ -103,9 +103,9 @@ def test_rrf_single_ranking(vector_results):
 
     # Verify order is preserved
     for i, result in enumerate(fused):
-        assert (
-            result["id"] == vector_results[i]["id"]
-        ), f"Order should be preserved: {result['id']} != {vector_results[i]['id']}"
+        assert result["id"] == vector_results[i]["id"], (
+            f"Order should be preserved: {result['id']} != {vector_results[i]['id']}"
+        )
 
 
 @pytest.mark.unit
@@ -233,9 +233,9 @@ def test_weighted_rrf_extreme_weights(vector_results, bm25_results):
     )
 
     # Top result should be similar to vector-only ranking
-    assert (
-        fused[0]["id"] == vector_results[0]["id"]
-    ), "Heavy vector weight should prioritize vector results"
+    assert fused[0]["id"] == vector_results[0]["id"], (
+        "Heavy vector weight should prioritize vector results"
+    )
 
 
 @pytest.mark.unit

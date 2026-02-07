@@ -42,9 +42,7 @@ class TestDomainPersistence:
         yield
         # Cleanup
         async with neo4j_driver.session() as session:
-            await session.run(
-                "MATCH (d:Domain) WHERE d.name STARTS WITH 'test_' DETACH DELETE d"
-            )
+            await session.run("MATCH (d:Domain) WHERE d.name STARTS WITH 'test_' DETACH DELETE d")
 
     @staticmethod
     def create_test_dataset(num_samples: int) -> str:
@@ -177,7 +175,9 @@ class TestDomainPersistence:
             precision = record["precision"]
             recall = record["recall"]
 
-            logger.info(f"Domain metrics - F1: {f1_score}, Precision: {precision}, Recall: {recall}")
+            logger.info(
+                f"Domain metrics - F1: {f1_score}, Precision: {precision}, Recall: {recall}"
+            )
 
             # Verify realistic metrics
             assert 0.0 <= f1_score <= 1.0, f"Invalid F1 score: {f1_score}"

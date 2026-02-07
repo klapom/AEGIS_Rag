@@ -188,7 +188,11 @@ class TestQueryComplexityScorer:
 
         # Should not crash, should use default intent score (0.2)
         assert result.factors["intent"] > 0.0
-        assert result.tier in [ComplexityTier.FAST, ComplexityTier.BALANCED, ComplexityTier.ADVANCED]
+        assert result.tier in [
+            ComplexityTier.FAST,
+            ComplexityTier.BALANCED,
+            ComplexityTier.ADVANCED,
+        ]
 
     def test_custom_weights(self):
         """Test scorer with custom factor weights."""
@@ -214,7 +218,11 @@ class TestQueryComplexityScorer:
 
         # Should not crash, should return valid result
         assert isinstance(result, QueryComplexityScore)
-        assert result.tier in [ComplexityTier.FAST, ComplexityTier.BALANCED, ComplexityTier.ADVANCED]
+        assert result.tier in [
+            ComplexityTier.FAST,
+            ComplexityTier.BALANCED,
+            ComplexityTier.ADVANCED,
+        ]
 
     def test_very_long_query(self):
         """Test handling of very long query (>30 words)."""

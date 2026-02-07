@@ -230,7 +230,9 @@ class TestRedisMemoryBudget:
 
             # Should be configured to 8GB (8589934592 bytes)
             expected_bytes = 8 * 1024 * 1024 * 1024
-            assert maxmemory_bytes == expected_bytes, f"Redis maxmemory should be 8GB, got {maxmemory_bytes / 1024 / 1024 / 1024:.2f}GB"
+            assert maxmemory_bytes == expected_bytes, (
+                f"Redis maxmemory should be 8GB, got {maxmemory_bytes / 1024 / 1024 / 1024:.2f}GB"
+            )
 
             await client.aclose()
 
@@ -267,7 +269,9 @@ class TestMemoryOptimizationE2E:
         # Memory should not grow unbounded
         # Delta should be reasonable (<200MB for 1000 embeddings)
         if profiler._enabled:
-            assert stats["delta_process_mb"] < 200, f"Memory grew by {stats['delta_process_mb']:.2f}MB (expected <200MB)"
+            assert stats["delta_process_mb"] < 200, (
+                f"Memory grew by {stats['delta_process_mb']:.2f}MB (expected <200MB)"
+            )
 
     @pytest.mark.asyncio
     async def test_repeated_operations_no_memory_leak(self):
@@ -290,4 +294,6 @@ class TestMemoryOptimizationE2E:
 
         # Memory delta should be minimal (<50MB)
         if profiler._enabled:
-            assert abs(stats["delta_process_mb"]) < 50, f"Memory leak detected: {stats['delta_process_mb']:.2f}MB delta"
+            assert abs(stats["delta_process_mb"]) < 50, (
+                f"Memory leak detected: {stats['delta_process_mb']:.2f}MB delta"
+            )

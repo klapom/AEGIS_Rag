@@ -43,7 +43,9 @@ def estimate_tokens(text: str) -> int:
     return len(text) // CHARS_PER_TOKEN
 
 
-def chunk_text(text: str, min_tokens: int = MIN_CHUNK_TOKENS, max_tokens: int = MAX_CHUNK_TOKENS) -> list[str]:
+def chunk_text(
+    text: str, min_tokens: int = MIN_CHUNK_TOKENS, max_tokens: int = MAX_CHUNK_TOKENS
+) -> list[str]:
     """Chunk text into production-sized pieces (800-1800 tokens).
 
     Uses paragraph boundaries when possible.
@@ -107,6 +109,7 @@ def chunk_text(text: str, min_tokens: int = MIN_CHUNK_TOKENS, max_tokens: int = 
 @dataclass
 class ChunkedSample:
     """A sample with chunked text."""
+
     sample_id: str
     question: str
     original_text: str
@@ -118,6 +121,7 @@ class ChunkedSample:
 @dataclass
 class ChunkedBenchmarkResult:
     """Results from chunked benchmark."""
+
     strategy: str
     samples_processed: int
     total_chunks_processed: int
@@ -134,7 +138,8 @@ def load_wikiqa_samples(num_samples: int = 10) -> list[ChunkedSample]:
     """Load and chunk WikiQA samples."""
     try:
         from datasets import load_dataset
-        ds = load_dataset('explodinggradients/ragas-wikiqa', split='train')
+
+        ds = load_dataset("explodinggradients/ragas-wikiqa", split="train")
 
         samples = []
         step = max(1, len(ds) // num_samples)
@@ -144,7 +149,7 @@ def load_wikiqa_samples(num_samples: int = 10) -> list[ChunkedSample]:
                 break
 
             item = ds[i]
-            contexts = item.get('context', [])
+            contexts = item.get("context", [])
             if isinstance(contexts, list):
                 context_text = "\n\n".join(contexts)
             else:
@@ -153,14 +158,16 @@ def load_wikiqa_samples(num_samples: int = 10) -> list[ChunkedSample]:
             # Chunk the text
             chunks = chunk_text(context_text)
 
-            samples.append(ChunkedSample(
-                sample_id=item.get('question_id', f'Q{i}'),
-                question=item.get('question', ''),
-                original_text=context_text,
-                chunks=chunks,
-                original_chars=len(context_text),
-                total_chunks=len(chunks),
-            ))
+            samples.append(
+                ChunkedSample(
+                    sample_id=item.get("question_id", f"Q{i}"),
+                    question=item.get("question", ""),
+                    original_text=context_text,
+                    chunks=chunks,
+                    original_chars=len(context_text),
+                    total_chunks=len(chunks),
+                )
+            )
 
         return samples
 
@@ -191,11 +198,11 @@ async def run_chunked_benchmark(
     )
 
     for sample_idx, sample in enumerate(samples):
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"Sample {sample_idx + 1}/{len(samples)}: {sample.sample_id}")
         print(f"Original: {sample.original_chars} chars → {sample.total_chunks} chunks")
         print(f"Question: {sample.question[:80]}...")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
 
         sample_entities = 0
         sample_relationships = 0
@@ -204,7 +211,9 @@ async def run_chunked_benchmark(
 
         for chunk_idx, chunk_text in enumerate(sample.chunks):
             chunk_tokens = estimate_tokens(chunk_text)
-            print(f"\n  Chunk {chunk_idx + 1}/{sample.total_chunks}: {len(chunk_text)} chars (~{chunk_tokens} tokens)")
+            print(
+                f"\n  Chunk {chunk_idx + 1}/{sample.total_chunks}: {len(chunk_text)} chars (~{chunk_tokens} tokens)"
+            )
 
             try:
                 extraction_result = await benchmark.extract(
@@ -223,27 +232,35 @@ async def run_chunked_benchmark(
                 sample_time_ms += metrics.total_time_ms
                 result.total_chunks_processed += 1
 
-                print(f"    → Entities: {chunk_entities}, Rels: {chunk_rels}, Time: {metrics.total_time_ms:.0f}ms")
+                print(
+                    f"    → Entities: {chunk_entities}, Rels: {chunk_rels}, Time: {metrics.total_time_ms:.0f}ms"
+                )
 
                 # Show first few extracted entities for quality check
                 if extraction_result.entities[:3]:
-                    print(f"    → Sample entities: {[e.name for e in extraction_result.entities[:3]]}")
+                    print(
+                        f"    → Sample entities: {[e.name for e in extraction_result.entities[:3]]}"
+                    )
 
-                chunk_results.append({
-                    'chunk_idx': chunk_idx,
-                    'chars': len(chunk_text),
-                    'tokens': chunk_tokens,
-                    'entities': chunk_entities,
-                    'relationships': chunk_rels,
-                    'time_ms': metrics.total_time_ms,
-                })
+                chunk_results.append(
+                    {
+                        "chunk_idx": chunk_idx,
+                        "chars": len(chunk_text),
+                        "tokens": chunk_tokens,
+                        "entities": chunk_entities,
+                        "relationships": chunk_rels,
+                        "time_ms": metrics.total_time_ms,
+                    }
+                )
 
             except Exception as e:
                 print(f"    → ERROR: {e}")
-                chunk_results.append({
-                    'chunk_idx': chunk_idx,
-                    'error': str(e),
-                })
+                chunk_results.append(
+                    {
+                        "chunk_idx": chunk_idx,
+                        "error": str(e),
+                    }
+                )
 
         # Aggregate sample results
         result.samples_processed += 1
@@ -251,23 +268,29 @@ async def run_chunked_benchmark(
         result.total_relationships += sample_relationships
         result.total_time_ms += sample_time_ms
 
-        result.per_sample_results.append({
-            'sample_id': sample.sample_id,
-            'original_chars': sample.original_chars,
-            'num_chunks': sample.total_chunks,
-            'total_entities': sample_entities,
-            'total_relationships': sample_relationships,
-            'total_time_ms': sample_time_ms,
-            'chunks': chunk_results,
-        })
+        result.per_sample_results.append(
+            {
+                "sample_id": sample.sample_id,
+                "original_chars": sample.original_chars,
+                "num_chunks": sample.total_chunks,
+                "total_entities": sample_entities,
+                "total_relationships": sample_relationships,
+                "total_time_ms": sample_time_ms,
+                "chunks": chunk_results,
+            }
+        )
 
-        print(f"\n  Sample Total: {sample_entities} entities, {sample_relationships} rels, {sample_time_ms:.0f}ms")
+        print(
+            f"\n  Sample Total: {sample_entities} entities, {sample_relationships} rels, {sample_time_ms:.0f}ms"
+        )
 
     # Calculate averages
     if result.total_chunks_processed > 0:
         result.avg_time_per_chunk_ms = result.total_time_ms / result.total_chunks_processed
         result.avg_entities_per_chunk = result.total_entities / result.total_chunks_processed
-        result.avg_relationships_per_chunk = result.total_relationships / result.total_chunks_processed
+        result.avg_relationships_per_chunk = (
+            result.total_relationships / result.total_chunks_processed
+        )
 
     return result
 
@@ -283,7 +306,7 @@ def print_summary(result: ChunkedBenchmarkResult, samples: list[ChunkedSample]):
     print("\n--- OVERVIEW ---")
     print(f"Samples processed: {result.samples_processed}")
     print(f"Total chunks processed: {result.total_chunks_processed}")
-    print(f"Total time: {result.total_time_ms/1000:.1f}s ({result.total_time_ms/60000:.1f}min)")
+    print(f"Total time: {result.total_time_ms / 1000:.1f}s ({result.total_time_ms / 60000:.1f}min)")
 
     print("\n--- PERFORMANCE ---")
     print(f"Avg time per chunk: {result.avg_time_per_chunk_ms:.0f}ms")
@@ -308,38 +331,44 @@ def print_summary(result: ChunkedBenchmarkResult, samples: list[ChunkedSample]):
     print("\n--- PER-SAMPLE BREAKDOWN ---")
     for sample_result in result.per_sample_results:
         print(f"\n{sample_result['sample_id']}:")
-        print(f"  Original: {sample_result['original_chars']} chars → {sample_result['num_chunks']} chunks")
-        print(f"  Entities: {sample_result['total_entities']}, Rels: {sample_result['total_relationships']}")
-        print(f"  Time: {sample_result['total_time_ms']:.0f}ms ({sample_result['total_time_ms']/1000:.1f}s)")
+        print(
+            f"  Original: {sample_result['original_chars']} chars → {sample_result['num_chunks']} chunks"
+        )
+        print(
+            f"  Entities: {sample_result['total_entities']}, Rels: {sample_result['total_relationships']}"
+        )
+        print(
+            f"  Time: {sample_result['total_time_ms']:.0f}ms ({sample_result['total_time_ms'] / 1000:.1f}s)"
+        )
 
 
 def save_results(result: ChunkedBenchmarkResult, output_path: Path):
     """Save results to JSON."""
     data = {
-        'metadata': {
-            'timestamp': datetime.now().isoformat(),
-            'strategy': result.strategy,
-            'chunking_params': {
-                'min_tokens': MIN_CHUNK_TOKENS,
-                'max_tokens': MAX_CHUNK_TOKENS,
-                'chars_per_token': CHARS_PER_TOKEN,
+        "metadata": {
+            "timestamp": datetime.now().isoformat(),
+            "strategy": result.strategy,
+            "chunking_params": {
+                "min_tokens": MIN_CHUNK_TOKENS,
+                "max_tokens": MAX_CHUNK_TOKENS,
+                "chars_per_token": CHARS_PER_TOKEN,
             },
         },
-        'summary': {
-            'samples_processed': result.samples_processed,
-            'total_chunks_processed': result.total_chunks_processed,
-            'total_time_ms': result.total_time_ms,
-            'avg_time_per_chunk_ms': result.avg_time_per_chunk_ms,
-            'total_entities': result.total_entities,
-            'avg_entities_per_chunk': result.avg_entities_per_chunk,
-            'total_relationships': result.total_relationships,
-            'avg_relationships_per_chunk': result.avg_relationships_per_chunk,
+        "summary": {
+            "samples_processed": result.samples_processed,
+            "total_chunks_processed": result.total_chunks_processed,
+            "total_time_ms": result.total_time_ms,
+            "avg_time_per_chunk_ms": result.avg_time_per_chunk_ms,
+            "total_entities": result.total_entities,
+            "avg_entities_per_chunk": result.avg_entities_per_chunk,
+            "total_relationships": result.total_relationships,
+            "avg_relationships_per_chunk": result.avg_relationships_per_chunk,
         },
-        'per_sample': result.per_sample_results,
+        "per_sample": result.per_sample_results,
     }
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(output_path, 'w') as f:
+    with open(output_path, "w") as f:
         json.dump(data, f, indent=2)
 
     print(f"\nResults saved to: {output_path}")
@@ -376,8 +405,10 @@ async def main():
     print("\nChunk distribution:")
     for s in samples:
         chunk_sizes = [len(c) for c in s.chunks]
-        print(f"  {s.sample_id}: {s.original_chars} chars → {s.total_chunks} chunks "
-              f"(avg {sum(chunk_sizes)//len(chunk_sizes)} chars/chunk)")
+        print(
+            f"  {s.sample_id}: {s.original_chars} chars → {s.total_chunks} chunks "
+            f"(avg {sum(chunk_sizes) // len(chunk_sizes)} chars/chunk)"
+        )
 
     # Run benchmark
     start_time = time.time()
@@ -388,12 +419,16 @@ async def main():
     print_summary(result, samples)
 
     # Save results
-    output_path = Path(args.output) if args.output else Path(
-        f"reports/chunked_unified_benchmark_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+    output_path = (
+        Path(args.output)
+        if args.output
+        else Path(
+            f"reports/chunked_unified_benchmark_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        )
     )
     save_results(result, output_path)
 
-    print(f"\nTotal benchmark time: {total_time:.1f}s ({total_time/60:.1f}min)")
+    print(f"\nTotal benchmark time: {total_time:.1f}s ({total_time / 60:.1f}min)")
 
 
 if __name__ == "__main__":

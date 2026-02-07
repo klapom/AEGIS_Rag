@@ -1150,7 +1150,7 @@ MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024  # 100MB
     description="Upload one or more files to the server for subsequent indexing. Files are stored in data/uploads/{session_id}/",
 )
 async def upload_files(
-    files: list[UploadFile] = File(..., description="Files to upload")
+    files: list[UploadFile] = File(..., description="Files to upload"),
 ) -> UploadResponse:
     """Upload files to server for indexing.
 
@@ -1792,7 +1792,7 @@ async def reindex_with_vlm_enrichment(
             total_errors = 0
 
             msg = f"Starting VLM batch ingestion (batch_id={batch_id})..."
-            yield f'data: {json.dumps({"status": "ingestion", "progress": 0.2, "message": msg})}\n\n'
+            yield f"data: {json.dumps({'status': 'ingestion', 'progress': 0.2, 'message': msg})}\n\n"
 
             async for result in run_batch_ingestion(doc_paths, batch_id):
                 completed_docs += 1
@@ -3072,7 +3072,7 @@ async def update_pipeline_config(config: PipelineConfigSchema) -> PipelineConfig
 
 @router.post("/pipeline/config/preset/{preset_name}", response_model=PipelineConfigSchema)
 async def apply_config_preset(
-    preset_name: Literal["conservative", "balanced", "aggressive"]
+    preset_name: Literal["conservative", "balanced", "aggressive"],
 ) -> PipelineConfigSchema:
     """Apply a predefined configuration preset.
 

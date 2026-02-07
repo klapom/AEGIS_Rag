@@ -643,7 +643,7 @@ class AugmentationService:
         # Format seed examples
         examples_text = "\n\n".join(
             [
-                f"Example {i+1}:\nText: {s.text[:300]}...\n"
+                f"Example {i + 1}:\nText: {s.text[:300]}...\n"
                 f"Entities: {[e.dict() for e in s.entities[:5]]}\n"
                 f"Relations: {[r.dict() for r in s.relations[:3]]}"
                 for i, s in enumerate(seeds[:3])

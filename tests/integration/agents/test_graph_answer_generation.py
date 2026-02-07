@@ -44,16 +44,18 @@ async def test_graph_query_generates_answer():
     assert "answer" in result, "Result should contain 'answer' key"
     answer = result["answer"]
     assert answer, "Answer should not be empty"
-    assert answer != "I'm sorry, I couldn't generate an answer. Please try rephrasing your question.", \
-        "Answer should not be fallback message (answer node was invoked)"
+    assert (
+        answer != "I'm sorry, I couldn't generate an answer. Please try rephrasing your question."
+    ), "Answer should not be fallback message (answer node was invoked)"
 
     # Verify answer is substantive (>100 chars indicates real generation)
     assert len(answer) > 100, f"Answer should be substantive, got {len(answer)} chars"
 
     # Verify agent path includes graph_query
     agent_path = result.get("metadata", {}).get("agent_path", [])
-    assert any("graph_query" in step for step in agent_path), \
+    assert any("graph_query" in step for step in agent_path), (
         f"Agent path should include graph_query, got: {agent_path}"
+    )
 
     print(f"✅ Graph query generated answer: {len(answer)} chars")
     print(f"✅ Retrieved {len(contexts)} contexts")
@@ -84,7 +86,8 @@ async def test_graph_query_answer_has_citations():
 
     # Verify citation markers in answer ([1], [2], etc.)
     import re
-    citations = re.findall(r'\[(\d+)\]', answer)
+
+    citations = re.findall(r"\[(\d+)\]", answer)
 
     # Should have at least one citation (since we have contexts)
     assert len(citations) > 0, f"Answer should contain citation markers, got: {answer[:200]}"

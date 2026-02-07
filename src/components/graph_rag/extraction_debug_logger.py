@@ -34,7 +34,7 @@ import structlog
 
 # Enable/disable debug logging via environment variable
 EXTRACTION_DEBUG_ENABLED = os.environ.get("AEGIS_EXTRACTION_DEBUG", "1") == "1"
-EXTRACTION_DEBUG_DIR = Path(os.environ.get("AEGIS_EXTRACTION_DEBUG_DIR", "/tmp/extraction_debug"))
+EXTRACTION_DEBUG_DIR = Path(os.environ.get("AEGIS_EXTRACTION_DEBUG_DIR", "/tmp/extraction_debug"))  # nosec B108
 
 logger = structlog.get_logger(__name__)
 

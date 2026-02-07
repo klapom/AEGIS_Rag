@@ -373,4 +373,3 @@ function formatSSEChunks(chunks: ChatChunk[]): string {
 5. Update all assertions in group10
 6. Run tests and verify
 7. Check similar issues in groups 11, 12
-

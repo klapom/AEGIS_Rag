@@ -198,7 +198,7 @@ class SkillLifecycleEvent:
     timestamp: datetime
     old_state: SkillState
     new_state: SkillState
-    version: Optional[str] = None
+    version: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
@@ -280,7 +280,7 @@ class SkillLifecycleManager:
     async def load(
         self,
         skill_name: str,
-        version: Optional[str] = None,
+        version: str | None = None,
     ) -> bool:
         """Load skill into memory.
 
@@ -406,7 +406,7 @@ class SkillLifecycleManager:
     async def activate(
         self,
         skill_name: str,
-        context_allocation: Optional[int] = None,
+        context_allocation: int | None = None,
     ) -> str:
         """Activate skill and return instructions for context.
 
@@ -640,7 +640,7 @@ class SkillLifecycleManager:
         """
         return self.context_budget - sum(self._active_context_usage.values())
 
-    def get_events(self, skill_name: Optional[str] = None) -> list[SkillLifecycleEvent]:
+    def get_events(self, skill_name: str | None = None) -> list[SkillLifecycleEvent]:
         """Get lifecycle events, optionally filtered by skill.
 
         Args:
@@ -663,8 +663,8 @@ class SkillLifecycleManager:
     def _resolve_skill_path(
         self,
         skill_name: str,
-        version: Optional[str] = None,
-    ) -> Optional[Path]:
+        version: str | None = None,
+    ) -> Path | None:
         """Resolve skill directory path.
 
         Args:
@@ -734,8 +734,8 @@ class SkillLifecycleManager:
         event_type: str,
         old_state: SkillState,
         new_state: SkillState,
-        version: Optional[str] = None,
-        metadata: Optional[dict[str, Any]] = None,
+        version: str | None = None,
+        metadata: dict[str, Any] | None = None,
     ):
         """Record lifecycle event.
 

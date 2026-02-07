@@ -169,7 +169,13 @@ class TestBundleInstaller:
         """Test installer with default bundles directory."""
         installer = BundleInstaller()
 
-        expected_dir = Path(__file__).parent.parent.parent.parent.parent / "src" / "agents" / "skills" / "bundles"
+        expected_dir = (
+            Path(__file__).parent.parent.parent.parent.parent
+            / "src"
+            / "agents"
+            / "skills"
+            / "bundles"
+        )
         # Just check it's a Path object, actual path may vary
         assert isinstance(installer.bundles_dir, Path)
 
@@ -311,9 +317,7 @@ class TestBundleInstaller:
 
     def test_generate_summary_failure(self, installer: BundleInstaller):
         """Test generating summary for failed installation."""
-        report = InstallationReport(
-            bundle_id="test", success=False, failed_skills=["skill1"]
-        )
+        report = InstallationReport(bundle_id="test", success=False, failed_skills=["skill1"])
 
         summary = installer._generate_summary(report)
 

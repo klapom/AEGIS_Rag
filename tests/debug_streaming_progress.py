@@ -34,10 +34,10 @@ async def test_streaming_progress():
                 if os.path.exists(test_file) and test_file.endswith(".pdf"):
                     break
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("Testing run_ingestion_pipeline_streaming()")
     print(f"File: {test_file}")
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
 
     try:
         update_count = 0
@@ -65,9 +65,9 @@ async def test_streaming_progress():
             if errors:
                 print(f"    ERRORS: {errors}")
 
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"TOTAL UPDATES RECEIVED: {update_count}")
-        print(f"{'='*60}\n")
+        print(f"{'=' * 60}\n")
 
         if update_count < 5:
             print("WARNING: Expected at least 5-6 updates (one per pipeline node)")

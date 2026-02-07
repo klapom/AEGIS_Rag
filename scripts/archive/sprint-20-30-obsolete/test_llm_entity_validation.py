@@ -398,8 +398,8 @@ async def main():
 
         f.write("## Summary\n\n")
         f.write(f"- **Total Entities:** {len(entities)}\n")
-        f.write(f"- **KEEP:** {keep_count} ({keep_count/len(entities)*100:.1f}%)\n")
-        f.write(f"- **DISCARD:** {discard_count} ({discard_count/len(entities)*100:.1f}%)\n\n")
+        f.write(f"- **KEEP:** {keep_count} ({keep_count / len(entities) * 100:.1f}%)\n")
+        f.write(f"- **DISCARD:** {discard_count} ({discard_count / len(entities) * 100:.1f}%)\n\n")
 
         f.write("## Kept Entities (High Quality)\n\n")
         for r in results:
@@ -427,12 +427,12 @@ async def main():
     print(f"\n   [OK] Results written to {output_file.name}")
 
     # Statistics
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print("VALIDATION SUMMARY")
     print("=" * 80)
     print(f"Total Entities:    {len(entities)}")
-    print(f"KEEP:              {keep_count} ({keep_count/len(entities)*100:.1f}%)")
-    print(f"DISCARD:           {discard_count} ({discard_count/len(entities)*100:.1f}%)")
+    print(f"KEEP:              {keep_count} ({keep_count / len(entities) * 100:.1f}%)")
+    print(f"DISCARD:           {discard_count} ({discard_count / len(entities) * 100:.1f}%)")
     print(f"Quality Improvement: -{discard_count} noise entities removed")
     print("=" * 80)
 

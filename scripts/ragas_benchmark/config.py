@@ -30,21 +30,21 @@ DOC_TYPE_QUOTAS_PHASE1: Dict[str, int] = {
 # Must sum to doc_type quota
 QUESTION_TYPE_QUOTAS_PHASE1: Dict[str, Dict[str, int]] = {
     "clean_text": {
-        "lookup": 60,       # Simple fact retrieval
-        "definition": 40,   # "What is X?"
-        "howto": 40,        # Procedural questions
-        "multihop": 70,     # Multi-step reasoning (HotpotQA strength)
-        "comparison": 50,   # "Which is X vs Y?"
-        "policy": 20,       # Rule-based questions
-        "numeric": 10,      # Number-based answers
-        "entity": 10,       # Entity identification
+        "lookup": 60,  # Simple fact retrieval
+        "definition": 40,  # "What is X?"
+        "howto": 40,  # Procedural questions
+        "multihop": 70,  # Multi-step reasoning (HotpotQA strength)
+        "comparison": 50,  # "Which is X vs Y?"
+        "policy": 20,  # Rule-based questions
+        "numeric": 10,  # Number-based answers
+        "entity": 10,  # Entity identification
     },  # Total: 300
     "log_ticket": {
-        "lookup": 40,       # Log entry lookup
-        "howto": 45,        # Troubleshooting steps
-        "entity": 25,       # Component/service identification
-        "multihop": 25,     # Cross-log reasoning
-        "policy": 15,       # Operational procedures
+        "lookup": 40,  # Log entry lookup
+        "howto": 45,  # Troubleshooting steps
+        "entity": 25,  # Component/service identification
+        "multihop": 25,  # Cross-log reasoning
+        "policy": 15,  # Operational procedures
     },  # Total: 150
 }
 
@@ -107,36 +107,98 @@ DATASET_CONFIGS = {
 # Keywords for heuristic question type classification
 QUESTION_TYPE_KEYWORDS: Dict[str, list] = {
     "definition": [
-        "what is", "what are", "define", "meaning of", "definition",
-        "explain what", "describe what", "was ist", "erkläre",
+        "what is",
+        "what are",
+        "define",
+        "meaning of",
+        "definition",
+        "explain what",
+        "describe what",
+        "was ist",
+        "erkläre",
     ],
     "howto": [
-        "how to", "how do", "how can", "steps to", "procedure",
-        "process for", "way to", "method to", "wie kann", "wie geht",
+        "how to",
+        "how do",
+        "how can",
+        "steps to",
+        "procedure",
+        "process for",
+        "way to",
+        "method to",
+        "wie kann",
+        "wie geht",
     ],
     "comparison": [
-        "compare", "vs", "versus", "difference between", "which is",
-        "better", "worse", "more", "less", "unterschied", "vergleich",
+        "compare",
+        "vs",
+        "versus",
+        "difference between",
+        "which is",
+        "better",
+        "worse",
+        "more",
+        "less",
+        "unterschied",
+        "vergleich",
     ],
     "lookup": [
-        "when", "where", "who", "which", "what year", "what date",
-        "what time", "what place", "wann", "wo", "wer", "welche",
+        "when",
+        "where",
+        "who",
+        "which",
+        "what year",
+        "what date",
+        "what time",
+        "what place",
+        "wann",
+        "wo",
+        "wer",
+        "welche",
     ],
     "numeric": [
-        "how many", "how much", "number of", "count", "total",
-        "percentage", "rate", "wie viele", "wieviel",
+        "how many",
+        "how much",
+        "number of",
+        "count",
+        "total",
+        "percentage",
+        "rate",
+        "wie viele",
+        "wieviel",
     ],
     "entity": [
-        "name of", "called", "identify", "list the", "who is",
-        "what company", "what organization", "name", "identifiziere",
+        "name of",
+        "called",
+        "identify",
+        "list the",
+        "who is",
+        "what company",
+        "what organization",
+        "name",
+        "identifiziere",
     ],
     "policy": [
-        "should", "allowed", "permitted", "required", "must",
-        "rule", "regulation", "policy", "guideline", "regel", "vorschrift",
+        "should",
+        "allowed",
+        "permitted",
+        "required",
+        "must",
+        "rule",
+        "regulation",
+        "policy",
+        "guideline",
+        "regel",
+        "vorschrift",
     ],
     "multihop": [
-        "both", "and also", "as well as", "in addition",
-        "relationship between", "connected to", "led to",
+        "both",
+        "and also",
+        "as well as",
+        "in addition",
+        "relationship between",
+        "connected to",
+        "led to",
     ],
 }
 
@@ -150,9 +212,9 @@ DEFAULT_QUESTION_TYPE = "lookup"
 # Distribution of unanswerable generation methods
 UNANSWERABLE_METHOD_DISTRIBUTION: Dict[str, float] = {
     "temporal_shift": 0.30,  # Future/past context
-    "entity_swap": 0.30,     # Non-existent entities
-    "negation": 0.20,        # NOT in corpus
-    "cross_domain": 0.20,    # Unrelated domain
+    "entity_swap": 0.30,  # Non-existent entities
+    "negation": 0.20,  # NOT in corpus
+    "cross_domain": 0.20,  # Unrelated domain
 }
 
 # Prefixes for temporal_shift method

@@ -31,9 +31,7 @@ class TestDeepResearchIntegration:
             "src.domains.llm_integration.proxy.aegis_llm_proxy.get_aegis_llm_proxy",
             return_value=mocker.MagicMock(
                 generate=mocker.AsyncMock(
-                    return_value=mocker.MagicMock(
-                        content="1. Query 1\n2. Query 2\n3. Query 3"
-                    )
+                    return_value=mocker.MagicMock(content="1. Query 1\n2. Query 2\n3. Query 3")
                 )
             ),
         )
@@ -69,7 +67,11 @@ class TestDeepResearchIntegration:
                     return_value={
                         "answer": "OMNITRACKER is a comprehensive workflow management system that integrates seamlessly with SAP and other enterprise systems.",
                         "sources": [
-                            {"index": 1, "text": "OMNITRACKER is a workflow management system.", "score": 0.9},
+                            {
+                                "index": 1,
+                                "text": "OMNITRACKER is a workflow management system.",
+                                "score": 0.9,
+                            },
                             {"index": 2, "text": "OMNITRACKER integrates with SAP.", "score": 0.8},
                         ],
                     }
@@ -116,9 +118,7 @@ class TestDeepResearchIntegration:
         mocker.patch(
             "src.domains.llm_integration.proxy.aegis_llm_proxy.get_aegis_llm_proxy",
             return_value=mocker.MagicMock(
-                generate=mocker.AsyncMock(
-                    return_value=mocker.MagicMock(content="1. Query 1")
-                )
+                generate=mocker.AsyncMock(return_value=mocker.MagicMock(content="1. Query 1"))
             ),
         )
 
@@ -164,9 +164,7 @@ class TestDeepResearchIntegration:
         mocker.patch(
             "src.domains.llm_integration.proxy.aegis_llm_proxy.get_aegis_llm_proxy",
             return_value=mocker.MagicMock(
-                generate=mocker.AsyncMock(
-                    return_value=mocker.MagicMock(content="1. Query 1")
-                )
+                generate=mocker.AsyncMock(return_value=mocker.MagicMock(content="1. Query 1"))
             ),
         )
 
@@ -177,7 +175,11 @@ class TestDeepResearchIntegration:
                 process_query=mocker.AsyncMock(
                     return_value={
                         "retrieved_contexts": [
-                            {"text": f"High quality context {i}", "score": 0.9, "source_channel": "vector"}
+                            {
+                                "text": f"High quality context {i}",
+                                "score": 0.9,
+                                "source_channel": "vector",
+                            }
                             for i in range(10)
                         ]
                     }
@@ -190,7 +192,10 @@ class TestDeepResearchIntegration:
             "src.agents.answer_generator.AnswerGenerator",
             return_value=mocker.MagicMock(
                 generate_with_citations=mocker.AsyncMock(
-                    return_value={"answer": "Comprehensive answer", "sources": [{"index": i} for i in range(5)]}
+                    return_value={
+                        "answer": "Comprehensive answer",
+                        "sources": [{"index": i} for i in range(5)],
+                    }
                 )
             ),
         )

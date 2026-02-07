@@ -26,7 +26,7 @@ class TraceStorage(ABC):
         pass
 
     @abstractmethod
-    async def get(self, trace_id: str) -> Optional[DecisionTrace]:
+    async def get(self, trace_id: str) -> DecisionTrace | None:
         """
         Retrieve a decision trace by ID.
 
@@ -41,9 +41,9 @@ class TraceStorage(ABC):
     @abstractmethod
     async def query(
         self,
-        start_time: Optional[datetime] = None,
-        end_time: Optional[datetime] = None,
-        skill_name: Optional[str] = None,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+        skill_name: str | None = None,
         limit: int = 100,
     ) -> List[DecisionTrace]:
         """
@@ -76,8 +76,8 @@ class TraceStorage(ABC):
     @abstractmethod
     async def count(
         self,
-        start_time: Optional[datetime] = None,
-        end_time: Optional[datetime] = None,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
     ) -> int:
         """
         Count decision traces.
@@ -113,7 +113,7 @@ class InMemoryTraceStorage(TraceStorage):
         """
         self._traces[trace.id] = trace
 
-    async def get(self, trace_id: str) -> Optional[DecisionTrace]:
+    async def get(self, trace_id: str) -> DecisionTrace | None:
         """
         Retrieve a decision trace by ID.
 
@@ -127,9 +127,9 @@ class InMemoryTraceStorage(TraceStorage):
 
     async def query(
         self,
-        start_time: Optional[datetime] = None,
-        end_time: Optional[datetime] = None,
-        skill_name: Optional[str] = None,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+        skill_name: str | None = None,
         limit: int = 100,
     ) -> List[DecisionTrace]:
         """
@@ -184,8 +184,8 @@ class InMemoryTraceStorage(TraceStorage):
 
     async def count(
         self,
-        start_time: Optional[datetime] = None,
-        end_time: Optional[datetime] = None,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
     ) -> int:
         """
         Count decision traces in memory.
@@ -239,15 +239,15 @@ class RedisTraceStorage(TraceStorage):
         """Save trace to Redis (not implemented)."""
         raise NotImplementedError("Redis storage implementation pending")
 
-    async def get(self, trace_id: str) -> Optional[DecisionTrace]:
+    async def get(self, trace_id: str) -> DecisionTrace | None:
         """Get trace from Redis (not implemented)."""
         raise NotImplementedError("Redis storage implementation pending")
 
     async def query(
         self,
-        start_time: Optional[datetime] = None,
-        end_time: Optional[datetime] = None,
-        skill_name: Optional[str] = None,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+        skill_name: str | None = None,
         limit: int = 100,
     ) -> List[DecisionTrace]:
         """Query traces from Redis (not implemented)."""
@@ -259,8 +259,8 @@ class RedisTraceStorage(TraceStorage):
 
     async def count(
         self,
-        start_time: Optional[datetime] = None,
-        end_time: Optional[datetime] = None,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
     ) -> int:
         """Count traces in Redis (not implemented)."""
         raise NotImplementedError("Redis storage implementation pending")

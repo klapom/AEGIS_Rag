@@ -69,7 +69,11 @@ async def test_research_graph():
         print("\n" + "=" * 80)
         print("SYNTHESIS:")
         print("=" * 80)
-        print(final_state["synthesis"][:500] + "..." if len(final_state["synthesis"]) > 500 else final_state["synthesis"])
+        print(
+            final_state["synthesis"][:500] + "..."
+            if len(final_state["synthesis"]) > 500
+            else final_state["synthesis"]
+        )
         print("=" * 80)
 
         print(f"\nSub-queries executed ({len(final_state['sub_queries'])}):")

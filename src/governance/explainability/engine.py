@@ -27,8 +27,8 @@ class SkillSelectionReason:
 
     skill_name: str
     confidence: float
-    trigger_matched: Optional[str] = None
-    intent_classification: Optional[str] = None
+    trigger_matched: str | None = None
+    intent_classification: str | None = None
     alternative_skills: List[str] = field(default_factory=list)
 
 
@@ -383,7 +383,7 @@ All skill selections, tool invocations, and source attributions are recorded."""
         prompt = f"""Given the claim: "{claim}"
 
 And these source excerpts:
-{chr(10).join([f'[{i}] {a.text_excerpt}' for i, a in enumerate(trace.attributions)])}
+{chr(10).join([f"[{i}] {a.text_excerpt}" for i, a in enumerate(trace.attributions)])}
 
 Which source(s) support this claim? Return source numbers (0-indexed) separated by commas.
 If no source supports the claim, return "UNSUPPORTED".

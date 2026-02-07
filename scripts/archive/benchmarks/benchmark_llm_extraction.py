@@ -26,9 +26,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # Models to benchmark
 MODELS_TO_TEST = [
-    "qwen3:32b",           # Current default (20GB)
+    "qwen3:32b",  # Current default (20GB)
     "sam860/qwen3:8b-Q4_K_M",  # Quantized 8B (5GB)
-    "nuextract:3.8b",      # Specialized extraction (2.2GB)
+    "nuextract:3.8b",  # Specialized extraction (2.2GB)
 ]
 
 # Chunk size for testing
@@ -57,9 +57,9 @@ async def extract_with_model(
     """
     from src.components.graph_rag.extraction_factory import ExtractionPipelineFactory
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Model: {model}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     start_time = time.time()
 
@@ -74,13 +74,15 @@ async def extract_with_model(
     # Chunk text
     chunks = []
     for i in range(0, len(text), CHUNK_SIZE):
-        chunk_text = text[i:i + CHUNK_SIZE]
+        chunk_text = text[i : i + CHUNK_SIZE]
         if chunk_text.strip():
-            chunks.append({
-                "chunk_id": f"chunk_{i // CHUNK_SIZE}",
-                "text": chunk_text,
-                "chunk_index": i // CHUNK_SIZE,
-            })
+            chunks.append(
+                {
+                    "chunk_id": f"chunk_{i // CHUNK_SIZE}",
+                    "text": chunk_text,
+                    "chunk_index": i // CHUNK_SIZE,
+                }
+            )
 
     print(f"Text length: {len(text)} chars")
     print(f"Chunks: {len(chunks)} x {CHUNK_SIZE} chars")
@@ -110,22 +112,28 @@ async def extract_with_model(
             all_entities.extend(entities)
             all_relations.extend(relations)
 
-            chunk_results.append({
-                "chunk_index": chunk["chunk_index"],
-                "text_length": len(chunk["text"]),
-                "entities": len(entities),
-                "relations": len(relations),
-                "time_seconds": round(chunk_time, 2),
-            })
+            chunk_results.append(
+                {
+                    "chunk_index": chunk["chunk_index"],
+                    "text_length": len(chunk["text"]),
+                    "entities": len(entities),
+                    "relations": len(relations),
+                    "time_seconds": round(chunk_time, 2),
+                }
+            )
 
-            print(f"    -> {len(entities)} entities, {len(relations)} relations ({chunk_time:.1f}s)")
+            print(
+                f"    -> {len(entities)} entities, {len(relations)} relations ({chunk_time:.1f}s)"
+            )
 
         except Exception as e:
             print(f"    -> ERROR: {e}")
-            chunk_results.append({
-                "chunk_index": chunk["chunk_index"],
-                "error": str(e),
-            })
+            chunk_results.append(
+                {
+                    "chunk_index": chunk["chunk_index"],
+                    "error": str(e),
+                }
+            )
 
     total_time = time.time() - start_time
 
@@ -164,20 +172,17 @@ async def main():
 
     print(f"\nUsing {len(selected_samples)} samples:")
     for i, s in enumerate(selected_samples):
-        print(f"  {i+1}. {s['question'][:50]}...")
+        print(f"  {i + 1}. {s['question'][:50]}...")
 
     # Combine contexts
-    full_text = " ".join(
-        ctx for sample in selected_samples for ctx in sample["contexts"]
-    )
+    full_text = " ".join(ctx for sample in selected_samples for ctx in sample["contexts"])
     print(f"\nTotal text: {len(full_text)} characters")
 
     # Run benchmark for each model
     results = {
         "timestamp": datetime.now().strftime("%Y%m%d_%H%M%S"),
         "samples_used": [
-            {"question": s["question"], "ground_truth": s["ground_truth"]}
-            for s in selected_samples
+            {"question": s["question"], "ground_truth": s["ground_truth"]} for s in selected_samples
         ],
         "full_text": full_text,
         "chunk_size": CHUNK_SIZE,
@@ -185,9 +190,9 @@ async def main():
     }
 
     for model in MODELS_TO_TEST:
-        print(f"\n\n{'#'*80}")
+        print(f"\n\n{'#' * 80}")
         print(f"# BENCHMARKING: {model}")
-        print(f"{'#'*80}")
+        print(f"{'#' * 80}")
 
         try:
             model_result = await extract_with_model(
@@ -224,12 +229,14 @@ async def main():
                 "before": len(entities),
                 "after": len(deduped),
                 "removed": len(entities) - len(deduped),
-                "reduction_pct": round(
-                    (len(entities) - len(deduped)) / len(entities) * 100, 1
-                ) if entities else 0,
+                "reduction_pct": round((len(entities) - len(deduped)) / len(entities) * 100, 1)
+                if entities
+                else 0,
             }
             print(f"\n{model}:")
-            print(f"  Entities: {len(entities)} -> {len(deduped)} ({model_result['dedup_stats']['reduction_pct']}% reduction)")
+            print(
+                f"  Entities: {len(entities)} -> {len(deduped)} ({model_result['dedup_stats']['reduction_pct']}% reduction)"
+            )
 
     # Save results
     output_path = Path(f"reports/llm_extraction_benchmark_{results['timestamp']}.json")
@@ -238,7 +245,7 @@ async def main():
     with open(output_path, "w") as f:
         json.dump(results, f, indent=2, default=str)
 
-    print(f"\n\n{'='*80}")
+    print(f"\n\n{'=' * 80}")
     print(f"Results saved to: {output_path}")
     print("=" * 80)
 
@@ -255,7 +262,9 @@ async def main():
             print(f"{model:<30} ERROR: {r['error'][:40]}")
         else:
             dedup_count = r.get("dedup_stats", {}).get("after", r.get("total_entities", 0))
-            print(f"{model:<30} {r.get('total_entities', 0):<12} {r.get('total_relations', 0):<12} {dedup_count:<12} {r.get('total_time_seconds', 0):<12}")
+            print(
+                f"{model:<30} {r.get('total_entities', 0):<12} {r.get('total_relations', 0):<12} {dedup_count:<12} {r.get('total_time_seconds', 0):<12}"
+            )
 
     print("\n" + "-" * 80)
     print("Deduped = after MultiCriteriaDeduplicator")

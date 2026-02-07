@@ -78,6 +78,7 @@ async def create_test_documents():
 
     # Generate fake embeddings (1024 dimensions for BGE-M3)
     import random
+
     def fake_embedding():
         return [random.uniform(-1, 1) for _ in range(1024)]
 
@@ -143,7 +144,7 @@ async def create_test_documents():
                 "source": doc["source"],
                 "document_id": doc["document_id"],
                 "chunk_id": doc["id"],
-            }
+            },
         )
         points.append(point)
         print(f"  + [{doc['namespace_id']}] {doc['source']}: {doc['text'][:50]}...")
@@ -190,7 +191,7 @@ async def create_neo4j_entities():
                 "entity_type": entity_type,
                 "namespace": namespace,
                 "description": description,
-            }
+            },
         )
         print(f"  + [{namespace}] {name} ({entity_type})")
 
@@ -217,7 +218,9 @@ async def verify_namespace_isolation():
     )
     print(f"   Found {len(results)} documents")
     for r in results[:3]:
-        print(f"   - {r.get('payload', {}).get('source', 'unknown')}: {r.get('payload', {}).get('text', '')[:40]}...")
+        print(
+            f"   - {r.get('payload', {}).get('source', 'unknown')}: {r.get('payload', {}).get('text', '')[:40]}..."
+        )
 
     # Test 2: Search in eval_sprint41 namespace
     print("\n2. Search in 'eval_sprint41' namespace:")
@@ -228,7 +231,9 @@ async def verify_namespace_isolation():
     )
     print(f"   Found {len(results)} documents")
     for r in results[:3]:
-        print(f"   - {r.get('payload', {}).get('source', 'unknown')}: {r.get('payload', {}).get('text', '')[:40]}...")
+        print(
+            f"   - {r.get('payload', {}).get('source', 'unknown')}: {r.get('payload', {}).get('text', '')[:40]}..."
+        )
 
     # Test 3: Cross-namespace search (general + user_alice)
     print("\n3. Cross-namespace search ('general' + 'user_alice_project1'):")
@@ -239,8 +244,8 @@ async def verify_namespace_isolation():
     )
     print(f"   Found {len(results)} documents")
     for r in results:
-        ns = r.get('payload', {}).get('namespace_id', 'unknown')
-        src = r.get('payload', {}).get('source', 'unknown')
+        ns = r.get("payload", {}).get("namespace_id", "unknown")
+        src = r.get("payload", {}).get("source", "unknown")
         print(f"   - [{ns}] {src}")
 
     # Test 4: Empty namespace returns empty
@@ -290,6 +295,7 @@ async def main():
     except Exception as e:
         print(f"\nERROR: {e}")
         import traceback
+
         traceback.print_exc()
         return 1
 

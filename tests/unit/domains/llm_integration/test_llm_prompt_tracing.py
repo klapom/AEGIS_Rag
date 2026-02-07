@@ -108,9 +108,7 @@ class TestPhaseEventEmission:
     async def test_emit_in_progress_phase_event(self, mocker):
         """Test IN_PROGRESS phase event emitted before LLM execution."""
         # Mock dependencies
-        mock_stream_phase_event = mocker.patch(
-            "src.agents.phase_events_queue.stream_phase_event"
-        )
+        mock_stream_phase_event = mocker.patch("src.agents.phase_events_queue.stream_phase_event")
         mock_execute = mocker.patch.object(
             AegisLLMProxy,
             "_execute_with_any_llm",
@@ -154,9 +152,7 @@ class TestPhaseEventEmission:
     async def test_emit_completed_phase_event(self, mocker):
         """Test COMPLETED phase event emitted after successful LLM execution."""
         # Mock dependencies
-        mock_stream_phase_event = mocker.patch(
-            "src.agents.phase_events_queue.stream_phase_event"
-        )
+        mock_stream_phase_event = mocker.patch("src.agents.phase_events_queue.stream_phase_event")
         mock_execute = mocker.patch.object(
             AegisLLMProxy,
             "_execute_with_any_llm",
@@ -202,9 +198,7 @@ class TestPhaseEventEmission:
     async def test_emit_failed_phase_event(self, mocker):
         """Test FAILED phase event emitted when all providers fail."""
         # Mock dependencies
-        mock_stream_phase_event = mocker.patch(
-            "src.agents.phase_events_queue.stream_phase_event"
-        )
+        mock_stream_phase_event = mocker.patch("src.agents.phase_events_queue.stream_phase_event")
         mocker.patch.object(
             AegisLLMProxy,
             "_execute_with_any_llm",
@@ -236,9 +230,7 @@ class TestPhaseEventEmission:
     async def test_no_phase_event_when_disabled(self, mocker):
         """Test no phase events emitted when emit_phase_event=False."""
         # Mock dependencies
-        mock_stream_phase_event = mocker.patch(
-            "src.agents.phase_events_queue.stream_phase_event"
-        )
+        mock_stream_phase_event = mocker.patch("src.agents.phase_events_queue.stream_phase_event")
         mock_execute = mocker.patch.object(
             AegisLLMProxy,
             "_execute_with_any_llm",
@@ -274,9 +266,7 @@ class TestPhaseEventEmission:
     async def test_no_phase_event_when_no_prompt_name(self, mocker):
         """Test no phase events emitted when task has no prompt_name."""
         # Mock dependencies
-        mock_stream_phase_event = mocker.patch(
-            "src.agents.phase_events_queue.stream_phase_event"
-        )
+        mock_stream_phase_event = mocker.patch("src.agents.phase_events_queue.stream_phase_event")
         mock_execute = mocker.patch.object(
             AegisLLMProxy,
             "_execute_with_any_llm",

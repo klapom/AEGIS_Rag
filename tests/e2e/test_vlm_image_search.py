@@ -125,7 +125,8 @@ class TestVLMImageSearch:
 
                 # Find chunks with image annotations
                 image_chunks = [
-                    c for c in chunks
+                    c
+                    for c in chunks
                     if c.get("image_annotations") and len(c["image_annotations"]) > 0
                 ]
 
@@ -139,9 +140,7 @@ class TestVLMImageSearch:
                     assert "image_annotations" in first_image_chunk
                     assert len(first_image_chunk["image_annotations"]) > 0
 
-                    logger.info(
-                        f"Image chunk verified: {first_image_chunk['image_annotations']}"
-                    )
+                    logger.info(f"Image chunk verified: {first_image_chunk['image_annotations']}")
 
             # Step 6: Test search functionality
             # Search for content that would only be in VLM descriptions
@@ -238,9 +237,7 @@ class TestVLMImageSearch:
                     assert "picture_ref" in first_annotation
                     assert "bbox" in first_annotation
 
-                    logger.info(
-                        f"Image annotation structure verified: {first_annotation}"
-                    )
+                    logger.info(f"Image annotation structure verified: {first_annotation}")
             else:
                 logger.warning("No image points found in Qdrant")
 

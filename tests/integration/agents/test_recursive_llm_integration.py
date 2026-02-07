@@ -152,8 +152,7 @@ class TestAdaptiveScoringIntegration:
     @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_adaptive_scoring_fine_grained_query(
-        self, mock_llm, mock_skill_registry, mock_embedding_service,
-        sample_document_long
+        self, mock_llm, mock_skill_registry, mock_embedding_service, sample_document_long
     ):
         """Test adaptive scoring for fine-grained query."""
         settings = RecursiveLLMSettings(
@@ -173,9 +172,7 @@ class TestAdaptiveScoringIntegration:
         )
 
         # Mock granularity mapper to return fine-grained
-        with patch(
-            "src.agents.context.recursive_llm.get_granularity_mapper"
-        ) as mock_mapper:
+        with patch("src.agents.context.recursive_llm.get_granularity_mapper") as mock_mapper:
             mapper_instance = AsyncMock()
             mapper_instance.classify_granularity.return_value = (
                 "fine-grained",
@@ -187,9 +184,7 @@ class TestAdaptiveScoringIntegration:
             with patch.object(processor, "_segment_document") as mock_seg:
                 with patch.object(processor, "_score_relevance") as mock_score:
                     with patch.object(processor, "_explore_segment") as mock_explore:
-                        with patch.object(
-                            processor, "_aggregate_findings"
-                        ) as mock_agg:
+                        with patch.object(processor, "_aggregate_findings") as mock_agg:
                             from src.agents.context.recursive_llm import DocumentSegment
 
                             segment = DocumentSegment(
@@ -246,9 +241,7 @@ class TestAdaptiveScoringIntegration:
         )
 
         # Mock granularity mapper to return holistic
-        with patch(
-            "src.agents.context.recursive_llm.get_granularity_mapper"
-        ) as mock_mapper:
+        with patch("src.agents.context.recursive_llm.get_granularity_mapper") as mock_mapper:
             mapper_instance = AsyncMock()
             mapper_instance.classify_granularity.return_value = ("holistic", 0.90)
             mock_mapper.return_value = mapper_instance
@@ -256,9 +249,7 @@ class TestAdaptiveScoringIntegration:
             with patch.object(processor, "_segment_document") as mock_seg:
                 with patch.object(processor, "_score_relevance") as mock_score:
                     with patch.object(processor, "_explore_segment") as mock_explore:
-                        with patch.object(
-                            processor, "_aggregate_findings"
-                        ) as mock_agg:
+                        with patch.object(processor, "_aggregate_findings") as mock_agg:
                             from src.agents.context.recursive_llm import DocumentSegment
 
                             segment = DocumentSegment(
@@ -346,9 +337,9 @@ class TestParallelWorkersIntegration:
         # Process in parallel batches
         findings = []
         for batch in processor._batched(segments, 3):
-            batch_findings = await asyncio.gather(*[
-                processor._explore_segment(s, "test", 1, None) for s in batch
-            ])
+            batch_findings = await asyncio.gather(
+                *[processor._explore_segment(s, "test", 1, None) for s in batch]
+            )
             findings.extend(batch_findings)
 
         # Verify all segments were processed
@@ -382,8 +373,7 @@ class TestMixedScoringMethods:
     @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_different_scoring_per_level(
-        self, mock_llm, mock_skill_registry, mock_embedding_service,
-        sample_document_long
+        self, mock_llm, mock_skill_registry, mock_embedding_service, sample_document_long
     ):
         """Test different scoring methods at different recursion levels."""
         settings = RecursiveLLMSettings(
@@ -502,8 +492,7 @@ class TestErrorHandlingIntegration:
         ):
             # Should fallback to LLM scoring
             with patch.object(
-                processor, "_score_relevance_llm",
-                wraps=processor._score_relevance_llm
+                processor, "_score_relevance_llm", wraps=processor._score_relevance_llm
             ) as mock_llm_score:
                 await processor._score_relevance(
                     sample_segments,

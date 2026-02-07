@@ -205,9 +205,7 @@ class TestMCPConfigLoader:
             ]
         }
 
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".yaml", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             yaml.dump(config_data, f)
             temp_path = f.name
 
@@ -224,9 +222,7 @@ class TestMCPConfigLoader:
 
     def test_load_empty_file(self):
         """Test loading empty YAML file returns empty config."""
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".yaml", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             f.write("")
             temp_path = f.name
 
@@ -248,9 +244,7 @@ class TestMCPConfigLoader:
 
     def test_load_invalid_yaml(self):
         """Test loading invalid YAML raises ValueError."""
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".yaml", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             f.write("invalid: yaml: content:\n  - broken")
             temp_path = f.name
 
@@ -275,9 +269,7 @@ class TestMCPConfigLoader:
             ]
         }
 
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".yaml", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             yaml.dump(config_data, f)
             temp_path = f.name
 
@@ -294,9 +286,7 @@ class TestMCPConfigLoader:
         """Test reloading configuration."""
         config_data = {"servers": []}
 
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".yaml", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             yaml.dump(config_data, f)
             temp_path = f.name
 
@@ -327,9 +317,7 @@ class TestMCPConfigLoader:
 
     def test_config_property(self):
         """Test config property lazy loading."""
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".yaml", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             yaml.dump({"servers": []}, f)
             temp_path = f.name
 

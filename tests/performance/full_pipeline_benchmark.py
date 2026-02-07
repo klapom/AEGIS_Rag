@@ -240,10 +240,10 @@ async def run_full_pipeline(file_path: Path, timing_capture: TimingLogCapture) -
 
     timing_capture.current_document = file_path.name
 
-    print(f"\n{'='*70}")
+    print(f"\n{'=' * 70}")
     print(f"FULL PIPELINE BENCHMARK: {file_path.name}")
     print(f"File size: {file_path.stat().st_size / 1024:.1f} KB")
-    print(f"{'='*70}\n")
+    print(f"{'=' * 70}\n")
 
     start_time = time.perf_counter()
 
@@ -267,10 +267,10 @@ async def run_full_pipeline(file_path: Path, timing_capture: TimingLogCapture) -
         doc_timings = timing_capture.get_timings_for_document(file_path.name)
         stage_timings = extract_stage_timings(doc_timings)
 
-        print(f"\n{'='*70}")
+        print(f"\n{'=' * 70}")
         print(f"BENCHMARK COMPLETE: {file_path.name}")
-        print(f"Total time: {total_time:.2f}s ({total_time*1000:.0f}ms)")
-        print(f"{'='*70}")
+        print(f"Total time: {total_time:.2f}s ({total_time * 1000:.0f}ms)")
+        print(f"{'=' * 70}")
 
         # Print stage breakdown
         print("\nSTAGE BREAKDOWN:")

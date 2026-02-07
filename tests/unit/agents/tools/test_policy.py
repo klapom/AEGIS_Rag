@@ -269,10 +269,12 @@ class TestPolicyEngineCanUseTool:
         engine.register_skill("research", allowed_tools=["restricted"])
         engine.register_skill("basic", allowed_tools=["restricted"])
 
-        engine.add_rule(PolicyRule(
-            tool_name="restricted",
-            allowed_skills=["research"],
-        ))
+        engine.add_rule(
+            PolicyRule(
+                tool_name="restricted",
+                allowed_skills=["research"],
+            )
+        )
 
         # research should be allowed
         assert await engine.can_use_tool("research", "restricted") is True
@@ -287,10 +289,12 @@ class TestPolicyEngineCanUseTool:
         engine.register_skill("research", allowed_tools=["tool"])
         engine.register_skill("banned", allowed_tools=["tool"])
 
-        engine.add_rule(PolicyRule(
-            tool_name="tool",
-            denied_skills=["banned"],
-        ))
+        engine.add_rule(
+            PolicyRule(
+                tool_name="tool",
+                denied_skills=["banned"],
+            )
+        )
 
         assert await engine.can_use_tool("research", "tool") is True
         assert await engine.can_use_tool("banned", "tool") is False
@@ -301,10 +305,12 @@ class TestPolicyEngineCanUseTool:
         engine = PolicyEngine()
         engine.register_skill("research", allowed_tools=["api"])
 
-        engine.add_rule(PolicyRule(
-            tool_name="api",
-            required_params=["url"],
-        ))
+        engine.add_rule(
+            PolicyRule(
+                tool_name="api",
+                required_params=["url"],
+            )
+        )
 
         # Without required param
         assert await engine.can_use_tool("research", "api", {}) is False
@@ -318,10 +324,12 @@ class TestPolicyEngineCanUseTool:
         engine = PolicyEngine()
         engine.register_skill("research", allowed_tools=["api"])
 
-        engine.add_rule(PolicyRule(
-            tool_name="api",
-            forbidden_params=["admin_key"],
-        ))
+        engine.add_rule(
+            PolicyRule(
+                tool_name="api",
+                forbidden_params=["admin_key"],
+            )
+        )
 
         # Without forbidden param
         assert await engine.can_use_tool("research", "api", {"url": "..."}) is True
@@ -339,10 +347,12 @@ class TestPolicyEngineCanUseTool:
             url = inputs.get("url", "")
             return url.startswith("https://")
 
-        engine.add_rule(PolicyRule(
-            tool_name="api",
-            validators=[validate_url],
-        ))
+        engine.add_rule(
+            PolicyRule(
+                tool_name="api",
+                validators=[validate_url],
+            )
+        )
 
         # Invalid URL
         assert await engine.can_use_tool("research", "api", {"url": "http://..."}) is False
@@ -444,11 +454,15 @@ class TestPolicyEngineAuditLog:
         engine = PolicyEngine()
         engine.register_skill("research", allowed_tools=["api"])
 
-        await engine.can_use_tool("research", "api", {
-            "url": "https://example.com",
-            "api_key": "secret123",
-            "password": "hunter2",
-        })
+        await engine.can_use_tool(
+            "research",
+            "api",
+            {
+                "url": "https://example.com",
+                "api_key": "secret123",
+                "password": "hunter2",
+            },
+        )
 
         log = engine.get_audit_log()
         inputs = log[0].inputs

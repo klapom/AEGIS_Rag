@@ -107,7 +107,7 @@ class NativeEmbeddingService:
                 torch.cuda.synchronize()
                 allocated_gb = torch.cuda.memory_allocated() / 1024**3
                 return round(allocated_gb, 2)
-        except Exception:
+        except Exception:  # nosec B110
             pass
 
         # Fallback estimate for BGE-M3

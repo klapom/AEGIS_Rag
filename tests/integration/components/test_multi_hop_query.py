@@ -243,7 +243,7 @@ async def test_sub_query_failure_propagation():
     results = []
     for i in range(2):
         try:
-            result = await agent.retrieve(f"Query {i+1}")
+            result = await agent.retrieve(f"Query {i + 1}")
             results.append(result)
         except Exception as e:
             results.append({"error": str(e)})

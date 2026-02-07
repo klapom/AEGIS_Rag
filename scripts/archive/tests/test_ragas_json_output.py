@@ -148,8 +148,8 @@ Output (JSON only):"""
         print(f"   Keys: {list(parsed.keys())}")
         if "classifications" in parsed:
             print(f"   Classifications count: {len(parsed['classifications'])}")
-            if parsed['classifications']:
-                first = parsed['classifications'][0]
+            if parsed["classifications"]:
+                first = parsed["classifications"][0]
                 print(f"   First item keys: {list(first.keys())}")
         else:
             print(f"   ❌ Missing 'classifications' key!")
@@ -258,5 +258,6 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"\n\n❌ TEST FAILED: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)

@@ -138,16 +138,16 @@ relevance_score = 0.4 * bm25_score + 0.5 * semantic_score + 0.1 * structure_scor
 ```python
 class SegmentManager:
     def segment_document(
-        self, 
-        content: str, 
-        segment_size: int = 8192, 
+        self,
+        content: str,
+        segment_size: int = 8192,
         overlap: int = 200
     ) -> List[Segment]: ...
 
 class RelevanceScorer:
     def score_segments(
-        self, 
-        query: str, 
+        self,
+        query: str,
         segments: List[Segment]
     ) -> List[ScoredSegment]: ...
 ```

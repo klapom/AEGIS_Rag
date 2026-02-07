@@ -68,15 +68,19 @@ settings = get_settings()
 
 def _parse_json_field(value: str | None, default: Any = None) -> Any:
     """Parse a JSON string from Neo4j, returning default if None/empty."""
+    import ast
+
     if value is None:
         return default
     if isinstance(value, (dict, list)):
         return value
     try:
-        import json
-
         return json.loads(value)
     except (json.JSONDecodeError, TypeError):
+        pass
+    try:
+        return ast.literal_eval(value)
+    except (ValueError, SyntaxError):
         return default
 
 
@@ -743,9 +747,7 @@ async def list_domains(request: Request) -> ApiResponse[list[DomainResponse]]:
                 description=d["description"],
                 status=d["status"],
                 llm_model=d["llm_model"],
-                training_metrics=(
-                    eval(d["training_metrics"]) if d.get("training_metrics") else None
-                ),
+                training_metrics=_parse_json_field(d.get("training_metrics")),
                 created_at=str(d["created_at"]),
                 trained_at=str(d["trained_at"]) if d.get("trained_at") else None,
                 entity_sub_type_mapping=_parse_json_field(d.get("entity_sub_type_mapping"), {}),
@@ -916,12 +918,7 @@ async def get_domain(domain_name: str) -> DomainResponse:
         logger.info("domain_retrieved", name=domain_name, status=domain["status"])
 
         # Parse JSON fields safely
-        training_metrics = None
-        if domain.get("training_metrics"):
-            try:
-                training_metrics = eval(domain["training_metrics"])
-            except Exception:
-                training_metrics = {}
+        training_metrics = _parse_json_field(domain.get("training_metrics"))
 
         return DomainResponse(
             id=domain["id"],
@@ -1019,7 +1016,10 @@ async def update_domain(
         updated_domain = await repo.update_domain(domain_name, **update_data)
 
         # Sprint 126: Invalidate extraction type mapping cache if mapping changed
-        if update_request.entity_sub_type_mapping is not None or update_request.relation_hints is not None:
+        if (
+            update_request.entity_sub_type_mapping is not None
+            or update_request.relation_hints is not None
+        ):
             from src.components.graph_rag.extraction_service import (
                 invalidate_domain_type_mappings_cache,
             )
@@ -1029,12 +1029,7 @@ async def update_domain(
         logger.info("domain_updated_successfully", name=domain_name)
 
         # Convert Neo4j datetime fields for JSON serialization
-        training_metrics = None
-        if updated_domain.get("training_metrics"):
-            try:
-                training_metrics = eval(updated_domain["training_metrics"])
-            except Exception:
-                training_metrics = {}
+        training_metrics = _parse_json_field(updated_domain.get("training_metrics"))
 
         domain_response = DomainResponse(
             id=updated_domain["id"],
@@ -1044,8 +1039,12 @@ async def update_domain(
             llm_model=updated_domain["llm_model"],
             training_metrics=training_metrics,
             created_at=str(updated_domain["created_at"]),
-            trained_at=str(updated_domain["trained_at"]) if updated_domain.get("trained_at") else None,
-            entity_sub_type_mapping=_parse_json_field(updated_domain.get("entity_sub_type_mapping"), {}),
+            trained_at=str(updated_domain["trained_at"])
+            if updated_domain.get("trained_at")
+            else None,
+            entity_sub_type_mapping=_parse_json_field(
+                updated_domain.get("entity_sub_type_mapping"), {}
+            ),
             relation_hints=_parse_json_field(updated_domain.get("relation_hints"), []),
         )
 

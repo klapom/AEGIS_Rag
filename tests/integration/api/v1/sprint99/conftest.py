@@ -156,7 +156,7 @@ def audit_event_batch_data() -> list[dict[str, Any]]:
                 "timestamp": (now + timedelta(seconds=i)).isoformat(),
                 "resource": f"resource_{i}",
                 "hash": f"hash_{i:05d}",
-                "prev_hash": f"hash_{i-1:05d}" if i > 0 else None,
+                "prev_hash": f"hash_{i - 1:05d}" if i > 0 else None,
             }
         )
 

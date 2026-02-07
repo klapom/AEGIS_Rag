@@ -326,7 +326,7 @@ class TestGraphExplorationWorkflow:
 
                 # Look for details panel
                 details_panel = page.locator(
-                    '.details, .node-details, [data-testid="node-details"], ' ".panel, .sidebar"
+                    '.details, .node-details, [data-testid="node-details"], .panel, .sidebar'
                 ).first
 
                 if await details_panel.count() > 0:

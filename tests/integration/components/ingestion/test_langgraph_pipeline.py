@@ -200,7 +200,9 @@ def mock_chunking_service():
     Tests using this fixture should be skipped or rewritten for adaptive_chunking.
     """
     # Sprint 121 TD-054: patch with create=True to avoid AttributeError on deleted function
-    with patch("src.components.ingestion.langgraph_nodes.get_chunking_service", create=True) as mock_get_service:
+    with patch(
+        "src.components.ingestion.langgraph_nodes.get_chunking_service", create=True
+    ) as mock_get_service:
         from src.core.chunk import Chunk
 
         mock_service = Mock()

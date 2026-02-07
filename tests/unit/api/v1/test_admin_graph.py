@@ -340,15 +340,15 @@ class TestCommunitySummarizationEndpoint:
         mock_session.run = AsyncMock(
             side_effect=[
                 communities_result,  # Get communities without summaries
-                entities_result,     # Get community entities (community 1)
-                relationships_result, # Get community relationships (community 1)
-                store_result,        # Store summary (community 1)
-                entities_result,     # Get community entities (community 2)
-                relationships_result, # Get community relationships (community 2)
-                store_result,        # Store summary (community 2)
-                entities_result,     # Get community entities (community 3)
-                relationships_result, # Get community relationships (community 3)
-                store_result,        # Store summary (community 3)
+                entities_result,  # Get community entities (community 1)
+                relationships_result,  # Get community relationships (community 1)
+                store_result,  # Store summary (community 1)
+                entities_result,  # Get community entities (community 2)
+                relationships_result,  # Get community relationships (community 2)
+                store_result,  # Store summary (community 2)
+                entities_result,  # Get community entities (community 3)
+                relationships_result,  # Get community relationships (community 3)
+                store_result,  # Store summary (community 3)
             ]
         )
 
@@ -366,9 +366,7 @@ class TestCommunitySummarizationEndpoint:
                 "src.components.graph_rag.neo4j_client.get_neo4j_client",
                 return_value=mock_neo4j,
             ),
-            patch(
-                "src.components.graph_rag.community_summarizer.get_llm_client"
-            ) as mock_llm,
+            patch("src.components.graph_rag.community_summarizer.get_llm_client") as mock_llm,
         ):
             # Mock LLM response
             mock_llm_instance = AsyncMock()
@@ -465,12 +463,12 @@ class TestCommunitySummarizationEndpoint:
         mock_session.run = AsyncMock(
             side_effect=[
                 communities_result,  # Get ALL communities (force=True)
-                entities_result,     # Get entities (community 1)
-                relationships_result, # Get relationships (community 1)
-                store_result,        # Store summary (community 1)
-                entities_result,     # Get entities (community 2)
-                relationships_result, # Get relationships (community 2)
-                store_result,        # Store summary (community 2)
+                entities_result,  # Get entities (community 1)
+                relationships_result,  # Get relationships (community 1)
+                store_result,  # Store summary (community 1)
+                entities_result,  # Get entities (community 2)
+                relationships_result,  # Get relationships (community 2)
+                store_result,  # Store summary (community 2)
             ]
         )
 
@@ -488,9 +486,7 @@ class TestCommunitySummarizationEndpoint:
                 "src.components.graph_rag.neo4j_client.get_neo4j_client",
                 return_value=mock_neo4j,
             ),
-            patch(
-                "src.components.graph_rag.community_summarizer.get_llm_client"
-            ) as mock_llm,
+            patch("src.components.graph_rag.community_summarizer.get_llm_client") as mock_llm,
         ):
             # Mock LLM response
             mock_llm_instance = AsyncMock()
@@ -602,9 +598,7 @@ class TestCommunitySummarizationEndpoint:
                 "src.components.graph_rag.neo4j_client.get_neo4j_client",
                 return_value=mock_neo4j,
             ),
-            patch(
-                "src.components.graph_rag.community_summarizer.get_llm_client"
-            ) as mock_llm,
+            patch("src.components.graph_rag.community_summarizer.get_llm_client") as mock_llm,
         ):
             mock_llm_instance = AsyncMock()
             mock_llm_instance.generate = AsyncMock(return_value="Test summary")

@@ -16,7 +16,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 
-from src.components.llm_integration.ollama_health import OllamaHealthMonitor, get_ollama_health_monitor
+from src.components.llm_integration.ollama_health import (
+    OllamaHealthMonitor,
+    get_ollama_health_monitor,
+)
 
 
 class TestOllamaHealthMonitor:

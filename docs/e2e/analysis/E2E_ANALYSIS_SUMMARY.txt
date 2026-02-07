@@ -17,7 +17,7 @@ CRITICAL FINDINGS - OVERLAPPING TEST AREAS
 1. ADMIN INDEXING (PRIMARY DUPLICATE CLUSTER)
    ├─ admin/indexing.spec.ts [46 tests] ← KEEP (more comprehensive)
    └─ group21-indexing-training.spec.ts [26 tests] ← DELETE
-   
+
 2. LLM CONFIGURATION (SEVERE FRAGMENTATION - 3 FILES, 53 TESTS)
    ├─ admin/llm-config.spec.ts [26 tests] ← KEEP
    ├─ admin/llm-config-backend-integration.spec.ts [10 tests] ← KEEP
@@ -51,7 +51,7 @@ TIER-BASED REMOVAL STRATEGY
 
 TIER 1: SAFE TO REMOVE (4 files, 70 tests)
   High Confidence - Sprint 112 consolidation artifacts
-  
+
   rm frontend/e2e/group18-admin-dashboard.spec.ts
   rm frontend/e2e/group21-indexing-training.spec.ts
   rm frontend/e2e/group20-domain-discovery.spec.ts
@@ -59,13 +59,13 @@ TIER 1: SAFE TO REMOVE (4 files, 70 tests)
 
 TIER 2: LIKELY SAFE (2 files, 31 tests)
   Verify test coverage first, then remove
-  
+
   rm frontend/e2e/tests/admin/mcp-tools.spec.ts
   rm frontend/e2e/group12-graph-communities.spec.ts
 
 TIER 3: MANUAL REVIEW (2 files, 30 tests)
   Compare content before consolidation
-  
+
   group07-memory-management.spec.ts (15)
   tests/admin/memory-management.spec.ts (15)
 
@@ -111,11 +111,11 @@ GENERATED ANALYSIS DOCUMENTS
 1. PLAYWRIGHT_DUPLICATE_ANALYSIS.md (DETAILED - 300+ lines)
    Location: /home/admin/projects/aegisrag/AEGIS_Rag/
    Content: Full analysis, risk assessment, verification steps
-   
+
 2. DUPLICATE_REMOVAL_CHECKLIST.md (QUICK REFERENCE)
    Location: /home/admin/projects/aegisrag/AEGIS_Rag/
    Content: Step-by-step removal guide, verification commands
-   
+
 3. E2E_ANALYSIS_SUMMARY.txt (THIS FILE)
    Location: /home/admin/projects/aegisrag/AEGIS_Rag/
    Content: Quick summary for immediate reference
@@ -128,20 +128,20 @@ Week 1: REVIEW (1-2 hours)
   [ ] Read PLAYWRIGHT_DUPLICATE_ANALYSIS.md
   [ ] Verify Tier 1 file pairs for coverage equivalence
   [ ] Check for any CI/CD scripts referencing deleted files
-  
+
 Week 2: REMOVAL (2-4 hours)
   [ ] Back up current test results: npm run test:e2e > baseline.json
   [ ] Remove Tier 1 files (4 files, ~70 tests)
   [ ] Run E2E suite to verify no breakage
   [ ] Remove Tier 2 files (2 files, ~31 tests)
   [ ] Run E2E suite again
-  
+
 Week 3: CONSOLIDATION & VERIFICATION (1-2 hours)
   [ ] Manual review of Tier 3 memory management files
   [ ] Merge or delete as appropriate
   [ ] Update PLAYWRIGHT_E2E.md with new file counts
   [ ] Create comprehensive git commit
-  
+
 Future: STANDARDIZATION
   [ ] Adopt /tests/* as standard directory structure
   [ ] Deprecate /group* pattern (keep running but no new tests)

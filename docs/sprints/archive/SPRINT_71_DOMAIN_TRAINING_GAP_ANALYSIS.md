@@ -297,4 +297,3 @@ This is correct - the domain training router is mounted at `/admin/domains` WITH
    - Upload batch documents
    - View domain details
    - Validate and re-index
-

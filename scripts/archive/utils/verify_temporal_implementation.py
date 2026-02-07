@@ -147,28 +147,21 @@ def main() -> int:
 
     print("Feature 39.2-39.4: Bi-Temporal Query API")
     print("-" * 70)
-    results.append(check_file_exists(
-        "src/api/v1/temporal.py",
-        "Temporal API router"
-    ))
+    results.append(check_file_exists("src/api/v1/temporal.py", "Temporal API router"))
     results.append(check_api_endpoints())
     print()
 
     print("Testing")
     print("-" * 70)
-    results.append(check_file_exists(
-        "tests/unit/api/test_temporal.py",
-        "Temporal API tests"
-    ))
+    results.append(check_file_exists("tests/unit/api/test_temporal.py", "Temporal API tests"))
     results.append(check_tests())
     print()
 
     print("Documentation")
     print("-" * 70)
-    results.append(check_file_exists(
-        "SPRINT_39_IMPLEMENTATION_SUMMARY.md",
-        "Implementation summary"
-    ))
+    results.append(
+        check_file_exists("SPRINT_39_IMPLEMENTATION_SUMMARY.md", "Implementation summary")
+    )
     print()
 
     print("=" * 70)

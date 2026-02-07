@@ -412,7 +412,8 @@ class QueryRewriterV2:
 
         # Step 2: Map C-LARA intent to graph intents
         mapping = CLARA_TO_GRAPH_INTENT_MAP.get(
-            clara_intent_value, CLARA_TO_GRAPH_INTENT_MAP["factual"]  # Default mapping
+            clara_intent_value,
+            CLARA_TO_GRAPH_INTENT_MAP["factual"],  # Default mapping
         )
 
         graph_intents = list(mapping["default_intents"])

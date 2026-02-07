@@ -154,7 +154,9 @@ async def embedding_node(state: IngestionState) -> IngestionState:
         embedding_dim = (
             len(embeddings[0]["dense"])
             if is_multi_vector
-            else len(embeddings[0]) if embeddings else 0
+            else len(embeddings[0])
+            if embeddings
+            else 0
         )
         avg_sparse_tokens = (
             sum(len(e["sparse_vector"].indices) for e in embeddings) / len(embeddings)

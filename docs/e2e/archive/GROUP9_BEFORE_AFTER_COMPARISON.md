@@ -372,4 +372,3 @@ test('example', async ({ page }) => {
   await expect(page).toHaveText('Success');  // Fails due to missing data
 });
 ```
-

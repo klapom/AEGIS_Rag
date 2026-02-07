@@ -636,7 +636,9 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
                                         {
                                             "type": "skill_activation",
                                             "data": {
-                                                "skills": event.metadata.get("activated_skills", []),
+                                                "skills": event.metadata.get(
+                                                    "activated_skills", []
+                                                ),
                                                 "skill_count": event.metadata.get("skill_count", 0),
                                                 "instruction_tokens": event.metadata.get(
                                                     "instruction_tokens", 0
@@ -1870,7 +1872,7 @@ async def create_share_link(
         app_settings = get_app_settings()
         base_url = (
             f"http://{app_settings.api_host}"
-            if app_settings.api_host not in ("0.0.0.0", "localhost")
+            if app_settings.api_host not in ("0.0.0.0", "localhost")  # nosec B104
             else "http://localhost"
         )
         share_url = f"{base_url}:5173/share/{share_token}"

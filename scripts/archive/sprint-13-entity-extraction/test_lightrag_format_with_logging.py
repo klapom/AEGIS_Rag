@@ -453,9 +453,9 @@ Logs will be saved to: {LOG_DIR}
     for model in models:
         model_short = model.split("/")[-1] if "/" in model else model
 
-        print(f"\n{'='*80}")
+        print(f"\n{'=' * 80}")
         print(f"MODEL: {model_short}")
-        print(f"{'='*80}")
+        print(f"{'=' * 80}")
 
         for test_case in TEST_CASES:
             # Test default mode
@@ -491,9 +491,9 @@ Logs will be saved to: {LOG_DIR}
                 print(f"      Log: {result['log_file']}")
 
     # Summary
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print("SUMMARY")
-    print(f"{'='*80}\n")
+    print(f"{'=' * 80}\n")
 
     successful = [r for r in results if r.get("success")]
     failed = [r for r in results if not r.get("success")]

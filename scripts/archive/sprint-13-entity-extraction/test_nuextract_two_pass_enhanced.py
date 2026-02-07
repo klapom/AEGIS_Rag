@@ -326,9 +326,9 @@ def fuse_entities(
             )
             if nuextract_entity and nuextract_entity["type"] != spacy_entity["type"]:
                 # Note type difference in description
-                nuextract_entity[
-                    "description"
-                ] += f" (spaCy also identified as {spacy_entity['type']})"
+                nuextract_entity["description"] += (
+                    f" (spaCy also identified as {spacy_entity['type']})"
+                )
 
     return fused
 
@@ -534,74 +534,74 @@ def test_two_pass(model: str, test_case: dict, client: Client, nlp, log_path: Pa
         # Log Results with FULL PROMPTS AND RESPONSES
         # ====================================================================
         log_content = f"""
-{'='*80}
-TEST CASE {test_case['id']}: {test_case['name']} [TWO-PASS + spaCy ENHANCED]
-{'='*80}
+{"=" * 80}
+TEST CASE {test_case["id"]}: {test_case["name"]} [TWO-PASS + spaCy ENHANCED]
+{"=" * 80}
 
-Expected: {test_case['expected_entities']} entities, {test_case['expected_relations']} relations
-Found: {results['fused_entities']} entities, {results['relations_found']} relations
+Expected: {test_case["expected_entities"]} entities, {test_case["expected_relations"]} relations
+Found: {results["fused_entities"]} entities, {results["relations_found"]} relations
 
-Phase 1a (NuExtract Entities): {results['pass1a_time']:.2f}s → {results['nuextract_entities']} entities
-Phase 1b (spaCy NER):           {results['pass1b_time']:.2f}s → {results['spacy_entities']} entities
-Phase 2  (Entity Fusion):       → {results['fused_entities']} entities (unified)
-Phase 3  (Relations):           {results['pass2_time']:.2f}s → {results['relations_found']} relations
-Total Time:                     {results['total_time']:.2f}s
+Phase 1a (NuExtract Entities): {results["pass1a_time"]:.2f}s → {results["nuextract_entities"]} entities
+Phase 1b (spaCy NER):           {results["pass1b_time"]:.2f}s → {results["spacy_entities"]} entities
+Phase 2  (Entity Fusion):       → {results["fused_entities"]} entities (unified)
+Phase 3  (Relations):           {results["pass2_time"]:.2f}s → {results["relations_found"]} relations
+Total Time:                     {results["total_time"]:.2f}s
 
-Accuracy: {results['entity_accuracy']:.1f}% entities, {results['relation_accuracy']:.1f}% relations
+Accuracy: {results["entity_accuracy"]:.1f}% entities, {results["relation_accuracy"]:.1f}% relations
 
-{'='*80}
+{"=" * 80}
 PHASE 1a - ENTITY EXTRACTION PROMPT (SYSTEM):
-{'='*80}
+{"=" * 80}
 {SYSTEM_PROMPT_ENTITY}
 
-{'='*80}
+{"=" * 80}
 PHASE 1a - ENTITY EXTRACTION PROMPT (USER):
-{'='*80}
+{"=" * 80}
 {user_prompt_entity}
 
-{'='*80}
+{"=" * 80}
 PHASE 1a - RAW LLM RESPONSE:
-{'='*80}
+{"=" * 80}
 {raw_entity_response}
 
-{'='*80}
+{"=" * 80}
 PHASE 1a - PARSED NuExtract ENTITIES:
-{'='*80}
+{"=" * 80}
 {json.dumps(nuextract_entities, indent=2)}
 
-{'='*80}
+{"=" * 80}
 PHASE 1b - spaCy NER ENTITIES:
-{'='*80}
+{"=" * 80}
 {json.dumps(spacy_entities, indent=2)}
 
-{'='*80}
+{"=" * 80}
 PHASE 2 - FUSED ENTITIES:
-{'='*80}
+{"=" * 80}
 {json.dumps(fused_entities, indent=2)}
 
-{'='*80}
+{"=" * 80}
 PHASE 3 - RELATION EXTRACTION PROMPT (SYSTEM):
-{'='*80}
+{"=" * 80}
 {SYSTEM_PROMPT_RELATION}
 
-{'='*80}
+{"=" * 80}
 PHASE 3 - RELATION EXTRACTION PROMPT (USER):
-{'='*80}
+{"=" * 80}
 {user_prompt_relation}
 
-{'='*80}
+{"=" * 80}
 PHASE 3 - RAW LLM RESPONSE:
-{'='*80}
+{"=" * 80}
 {raw_relation_response}
 
-{'='*80}
+{"=" * 80}
 PHASE 3 - PARSED RELATIONS:
-{'='*80}
+{"=" * 80}
 {json.dumps(relations, indent=2)}
 
-{'='*80}
+{"=" * 80}
 PHASE 4 - LIGHTRAG FORMAT OUTPUT:
-{'='*80}
+{"=" * 80}
 {lightrag_format}
 
 """
@@ -621,14 +621,14 @@ PHASE 4 - LIGHTRAG FORMAT OUTPUT:
         with open(log_path, "a", encoding="utf-8") as f:
             f.write(
                 f"""
-{'='*80}
-TEST CASE {test_case['id']}: {test_case['name']} [ERROR]
-{'='*80}
+{"=" * 80}
+TEST CASE {test_case["id"]}: {test_case["name"]} [ERROR]
+{"=" * 80}
 Error: {e}
 
 Full Traceback:
 {error_details}
-{'='*80}
+{"=" * 80}
 """
             )
 
@@ -638,9 +638,9 @@ Full Traceback:
 def main():
     """Main test execution."""
     print(
-        f"""{'='*80}
+        f"""{"=" * 80}
      NuExtract Two-Pass ENHANCED with spaCy NER Fusion
-{'='*80}
+{"=" * 80}
 
 Architecture:
   Phase 1a: Entity Extraction -> NuExtract 4B -> Entities (JSON)
@@ -682,9 +682,9 @@ Baseline Two-Pass (without enhanced examples):
     model = "hf.co/mradermacher/NuExtract-2.0-4B-i1-GGUF:Q4_K_M"
     model_short = model.split("/")[-1] if "/" in model else model
 
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print(f"MODEL: {model_short}")
-    print(f"{'='*80}")
+    print(f"{'=' * 80}")
 
     # Warmup
     print("\n[WARMUP] Loading model (not measured)...", end=" ", flush=True)
@@ -712,9 +712,9 @@ Baseline Two-Pass (without enhanced examples):
     # Write log header
     with open(log_path, "w", encoding="utf-8") as f:
         f.write(
-            f"""{'='*80}
+            f"""{"=" * 80}
 NuExtract TWO-PASS ENHANCED + spaCy NER TEST LOG
-{'='*80}
+{"=" * 80}
 
 Model: {model}
 Strategy: Two-Pass with spaCy NER Fusion + Enhanced Relation Examples
@@ -723,7 +723,7 @@ Context Window: 16384
 Enhancement: 4 detailed relation extraction examples
 Start Time: {datetime.now().isoformat()}
 
-{'='*80}
+{"=" * 80}
 
 """
         )
@@ -748,12 +748,12 @@ Start Time: {datetime.now().isoformat()}
     # ========================================================================
     # SUMMARY
     # ========================================================================
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print("SUMMARY: TWO-PASS vs BASELINE COMPARISON")
-    print(f"{'='*80}\n")
+    print(f"{'=' * 80}\n")
 
     print(f"{'Test':<30} {'Total Time':<12} {'Entities':<15} {'Relations':<15} {'Status':<8}")
-    print(f"{'-'*30} {'-'*12} {'-'*15} {'-'*15} {'-'*8}")
+    print(f"{'-' * 30} {'-' * 12} {'-' * 15} {'-' * 15} {'-' * 8}")
 
     for r in results:
         entity_str = f"{r['fused_entities']}/{r['entities_expected']} ({r['entity_accuracy']:.0f}%)"
@@ -767,9 +767,9 @@ Start Time: {datetime.now().isoformat()}
         )
 
     # Calculate averages
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print("AVERAGE PERFORMANCE")
-    print(f"{'='*80}\n")
+    print(f"{'=' * 80}\n")
 
     avg_time = sum(r["total_time"] for r in results) / len(results)
     avg_entity_acc = sum(r["entity_accuracy"] for r in results) / len(results)
@@ -793,12 +793,12 @@ Start Time: {datetime.now().isoformat()}
     print()
 
     print("DELTA (Enhanced vs Baseline Two-Pass):")
-    print(f"  Time: {avg_time - 5.6:+.1f}s ({100*(avg_time - 5.6)/5.6:+.1f}%)")
+    print(f"  Time: {avg_time - 5.6:+.1f}s ({100 * (avg_time - 5.6) / 5.6:+.1f}%)")
     print(
-        f"  Entity Accuracy: {avg_entity_acc - 153.3:+.1f}% ({100*(avg_entity_acc - 153.3)/153.3:+.1f}%)"
+        f"  Entity Accuracy: {avg_entity_acc - 153.3:+.1f}% ({100 * (avg_entity_acc - 153.3) / 153.3:+.1f}%)"
     )
     print(
-        f"  Relation Accuracy: {avg_relation_acc - 44.7:+.1f}% ({100*(avg_relation_acc - 44.7)/44.7:+.1f}%)"
+        f"  Relation Accuracy: {avg_relation_acc - 44.7:+.1f}% ({100 * (avg_relation_acc - 44.7) / 44.7:+.1f}%)"
     )
     print()
 
@@ -807,10 +807,10 @@ Start Time: {datetime.now().isoformat()}
     with open(output_file, "w", encoding="utf-8") as f:
         json.dump(results, f, indent=2)
 
-    print(f"{'='*80}")
+    print(f"{'=' * 80}")
     print(f"[OK] Detailed results saved to: {output_file}")
     print(f"[OK] Detailed logs saved to: {log_dir}/")
-    print(f"{'='*80}")
+    print(f"{'=' * 80}")
 
 
 if __name__ == "__main__":

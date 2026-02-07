@@ -163,9 +163,7 @@ class TestExecuteResearchQueries:
                     ]
                 }
 
-        mock_coordinator.process_query = mocker.AsyncMock(
-            side_effect=process_query_side_effect
-        )
+        mock_coordinator.process_query = mocker.AsyncMock(side_effect=process_query_side_effect)
 
         mocker.patch(
             "src.agents.coordinator.CoordinatorAgent",
@@ -210,9 +208,7 @@ class TestExecuteResearchQueries:
             else:
                 raise Exception("Query failed")
 
-        mock_coordinator.process_query = mocker.AsyncMock(
-            side_effect=process_query_side_effect
-        )
+        mock_coordinator.process_query = mocker.AsyncMock(side_effect=process_query_side_effect)
 
         mocker.patch(
             "src.agents.coordinator.CoordinatorAgent",

@@ -268,9 +268,7 @@ class TestSkillCertificationFramework:
         assert report.passed is False
 
         # Find security check
-        security_check = next(
-            c for c in report.checks if c.name == "security.dangerous_patterns"
-        )
+        security_check = next(c for c in report.checks if c.name == "security.dangerous_patterns")
         assert not security_check.passed
         assert security_check.details is not None
         assert len(security_check.details["patterns"]) > 0
@@ -354,9 +352,7 @@ permissions:
         report = await framework.certify(tmp_path, CertificationLevel.STANDARD)
 
         # Find high-risk check
-        high_risk_check = next(
-            c for c in report.checks if c.name == "permissions.high_risk"
-        )
+        high_risk_check = next(c for c in report.checks if c.name == "permissions.high_risk")
         assert not high_risk_check.passed  # Should fail due to high-risk permissions
         assert high_risk_check.details is not None
         assert "file_delete" in high_risk_check.details["high_risk_permissions"]
@@ -455,9 +451,7 @@ audit:
         report = await framework.certify(tmp_path, CertificationLevel.ENTERPRISE)
 
         # Find explainability config check
-        explain_check = next(
-            c for c in report.checks if c.name == "explainability.config_exists"
-        )
+        explain_check = next(c for c in report.checks if c.name == "explainability.config_exists")
         assert not explain_check.passed
 
     # Test level determination
@@ -465,21 +459,11 @@ audit:
     def test_determine_level_all_pass(self, framework):
         """Test level determination when all checks pass."""
         checks = [
-            CertificationCheck(
-                "syntax.name", True, CertificationLevel.BASIC, "Passed"
-            ),
-            CertificationCheck(
-                "syntax.version", True, CertificationLevel.BASIC, "Passed"
-            ),
-            CertificationCheck(
-                "security.patterns", True, CertificationLevel.STANDARD, "Passed"
-            ),
-            CertificationCheck(
-                "gdpr.legal_basis", True, CertificationLevel.STANDARD, "Passed"
-            ),
-            CertificationCheck(
-                "audit.config", True, CertificationLevel.ENTERPRISE, "Passed"
-            ),
+            CertificationCheck("syntax.name", True, CertificationLevel.BASIC, "Passed"),
+            CertificationCheck("syntax.version", True, CertificationLevel.BASIC, "Passed"),
+            CertificationCheck("security.patterns", True, CertificationLevel.STANDARD, "Passed"),
+            CertificationCheck("gdpr.legal_basis", True, CertificationLevel.STANDARD, "Passed"),
+            CertificationCheck("audit.config", True, CertificationLevel.ENTERPRISE, "Passed"),
         ]
 
         level = framework._determine_level(checks)
@@ -488,21 +472,11 @@ audit:
     def test_determine_level_partial_pass(self, framework):
         """Test level determination with partial pass."""
         checks = [
-            CertificationCheck(
-                "syntax.name", True, CertificationLevel.BASIC, "Passed"
-            ),
-            CertificationCheck(
-                "syntax.version", True, CertificationLevel.BASIC, "Passed"
-            ),
-            CertificationCheck(
-                "security.patterns", True, CertificationLevel.STANDARD, "Passed"
-            ),
-            CertificationCheck(
-                "gdpr.legal_basis", False, CertificationLevel.STANDARD, "Failed"
-            ),
-            CertificationCheck(
-                "audit.config", True, CertificationLevel.ENTERPRISE, "Passed"
-            ),
+            CertificationCheck("syntax.name", True, CertificationLevel.BASIC, "Passed"),
+            CertificationCheck("syntax.version", True, CertificationLevel.BASIC, "Passed"),
+            CertificationCheck("security.patterns", True, CertificationLevel.STANDARD, "Passed"),
+            CertificationCheck("gdpr.legal_basis", False, CertificationLevel.STANDARD, "Failed"),
+            CertificationCheck("audit.config", True, CertificationLevel.ENTERPRISE, "Passed"),
         ]
 
         level = framework._determine_level(checks)
@@ -511,12 +485,8 @@ audit:
     def test_determine_level_basic_fail(self, framework):
         """Test level determination when BASIC checks fail."""
         checks = [
-            CertificationCheck(
-                "syntax.name", True, CertificationLevel.BASIC, "Passed"
-            ),
-            CertificationCheck(
-                "syntax.version", False, CertificationLevel.BASIC, "Failed"
-            ),
+            CertificationCheck("syntax.name", True, CertificationLevel.BASIC, "Passed"),
+            CertificationCheck("syntax.version", False, CertificationLevel.BASIC, "Failed"),
         ]
 
         level = framework._determine_level(checks)
@@ -527,9 +497,7 @@ audit:
     def test_generate_recommendations_target_achieved(self, framework):
         """Test recommendations when target level achieved."""
         checks = [
-            CertificationCheck(
-                "syntax.name", True, CertificationLevel.BASIC, "Passed"
-            ),
+            CertificationCheck("syntax.name", True, CertificationLevel.BASIC, "Passed"),
         ]
 
         recommendations = framework._generate_recommendations(
@@ -541,18 +509,10 @@ audit:
     def test_generate_recommendations_target_not_achieved(self, framework):
         """Test recommendations when target level not achieved."""
         checks = [
-            CertificationCheck(
-                "syntax.name", True, CertificationLevel.BASIC, "Passed"
-            ),
-            CertificationCheck(
-                "syntax.version", True, CertificationLevel.BASIC, "Passed"
-            ),
-            CertificationCheck(
-                "security.patterns", False, CertificationLevel.STANDARD, "Failed"
-            ),
-            CertificationCheck(
-                "gdpr.legal_basis", False, CertificationLevel.STANDARD, "Failed"
-            ),
+            CertificationCheck("syntax.name", True, CertificationLevel.BASIC, "Passed"),
+            CertificationCheck("syntax.version", True, CertificationLevel.BASIC, "Passed"),
+            CertificationCheck("security.patterns", False, CertificationLevel.STANDARD, "Failed"),
+            CertificationCheck("gdpr.legal_basis", False, CertificationLevel.STANDARD, "Failed"),
         ]
 
         recommendations = framework._generate_recommendations(

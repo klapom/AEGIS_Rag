@@ -24,7 +24,9 @@ class TestDSPyTrainingSample:
         sample = DSPyTrainingSample(
             text="Machine learning uses neural networks.",
             entities=["Machine Learning", "Neural Networks"],
-            relations=[{"subject": "Machine Learning", "predicate": "USES", "object": "Neural Networks"}],
+            relations=[
+                {"subject": "Machine Learning", "predicate": "USES", "object": "Neural Networks"}
+            ],
         )
 
         result = sample.to_dspy_entity_format()
@@ -39,7 +41,9 @@ class TestDSPyTrainingSample:
         sample = DSPyTrainingSample(
             text="Machine learning uses neural networks.",
             entities=["Machine Learning", "Neural Networks"],
-            relations=[{"subject": "Machine Learning", "predicate": "USES", "object": "Neural Networks"}],
+            relations=[
+                {"subject": "Machine Learning", "predicate": "USES", "object": "Neural Networks"}
+            ],
         )
 
         result = sample.to_dspy_relation_format()
@@ -111,9 +115,7 @@ class TestTrainingDataCollector:
         assert len(sample.relations) == 1
         assert sample.document_id == "doc_001"
 
-    def test_collect_rejected_too_few_entities(
-        self, collector: TrainingDataCollector
-    ) -> None:
+    def test_collect_rejected_too_few_entities(self, collector: TrainingDataCollector) -> None:
         """Test rejection when too few entities."""
         collector.min_entities = 5  # Require 5 entities
 
@@ -127,9 +129,7 @@ class TestTrainingDataCollector:
         assert sample is None
         assert collector.rejected_too_few_items > 0
 
-    def test_collect_rejected_low_confidence(
-        self, collector: TrainingDataCollector
-    ) -> None:
+    def test_collect_rejected_low_confidence(self, collector: TrainingDataCollector) -> None:
         """Test rejection when confidence too low."""
         collector.min_entity_confidence = 0.9  # Require high confidence
 
@@ -149,7 +149,10 @@ class TestTrainingDataCollector:
         for i in range(3):
             collector.collect(
                 text=f"Text {i}",
-                entities=[{"name": f"E{i}", "confidence": 0.9}, {"name": f"E{i}2", "confidence": 0.9}],
+                entities=[
+                    {"name": f"E{i}", "confidence": 0.9},
+                    {"name": f"E{i}2", "confidence": 0.9},
+                ],
                 relations=[{"source": f"E{i}", "target": f"E{i}2", "confidence": 0.9}],
                 metadata={},
             )
@@ -264,6 +267,7 @@ class TestGetTrainingDataCollector:
         """Test that singleton returns same instance."""
         # Reset singleton for test
         import src.components.domain_training.training_data_collector as module
+
         module._training_data_collector = None
 
         c1 = get_training_data_collector()

@@ -90,11 +90,7 @@ async def main():
         # Search by document_id in payload
         results = await qdrant_client.async_client.scroll(
             collection_name=settings.qdrant_collection,
-            scroll_filter={
-                "must": [
-                    {"key": "document_id", "match": {"value": document_id}}
-                ]
-            },
+            scroll_filter={"must": [{"key": "document_id", "match": {"value": document_id}}]},
             limit=100,
             with_payload=True,
         )
@@ -146,7 +142,9 @@ async def main():
         LIMIT 20
         """
 
-        entity_results = await neo4j_client.execute_read(cypher_entities, {"document_id": document_id})
+        entity_results = await neo4j_client.execute_read(
+            cypher_entities, {"document_id": document_id}
+        )
 
         logger.info("\n[4b] Entities in Neo4j (with source_id):")
         for record in entity_results:

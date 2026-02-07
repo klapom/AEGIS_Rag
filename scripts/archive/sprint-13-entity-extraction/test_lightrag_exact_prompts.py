@@ -114,15 +114,15 @@ def append_to_log(
     """Append test execution to model's log file."""
     # Format test content
     log_content = f"""
-{'='*80}
-TEST CASE {test_case['id']}: {test_case['name']}
-{'='*80}
+{"=" * 80}
+TEST CASE {test_case["id"]}: {test_case["name"]}
+{"=" * 80}
 
 Start Time: {start_time.isoformat()}
 End Time: {end_time.isoformat()}
 Duration: {duration:.2f}s
 
-Expected: {test_case['expected_entities']} entities, {test_case['expected_relations']} relations
+Expected: {test_case["expected_entities"]} entities, {test_case["expected_relations"]} relations
 
 --------------------------------------------------------------------------------
 SYSTEM PROMPT:
@@ -146,10 +146,10 @@ RESPONSE FROM LLM:
 VALIDATION RESULTS:
 --------------------------------------------------------------------------------
 
-Valid Format: {validation['valid']}
-Has Completion Delimiter: {validation['has_completion']}
-Entities Found: {validation['entity_count']}
-Relations Found: {validation['relation_count']}
+Valid Format: {validation["valid"]}
+Has Completion Delimiter: {validation["has_completion"]}
+Entities Found: {validation["entity_count"]}
+Relations Found: {validation["relation_count"]}
 
 """
 
@@ -369,9 +369,9 @@ Expected format:
     for model, supports_think in models_to_test:
         model_short = model.split("/")[-1] if "/" in model else model
 
-        print(f"\n{'='*80}")
+        print(f"\n{'=' * 80}")
         print(f"MODEL: {model_short}")
-        print(f"{'='*80}")
+        print(f"{'=' * 80}")
 
         # Test default mode
         mode = "default"
@@ -382,16 +382,16 @@ Expected format:
         # Write log header
         with open(log_path, "w", encoding="utf-8") as f:
             f.write(
-                f"""{'='*80}
+                f"""{"=" * 80}
 LightRAG EXACT PROMPTS TEST LOG
-{'='*80}
+{"=" * 80}
 
 Model: {model}
 Mode: {mode}
 Test Suite: All 3 LightRAG Original Examples
 Start Time: {datetime.now().isoformat()}
 
-{'='*80}
+{"=" * 80}
 
 """
             )
@@ -415,7 +415,7 @@ Start Time: {datetime.now().isoformat()}
 
         # Write log footer
         with open(log_path, "a", encoding="utf-8") as f:
-            f.write(f"\n{'='*80}\nEND OF LOG - {datetime.now().isoformat()}\n{'='*80}\n")
+            f.write(f"\n{'=' * 80}\nEND OF LOG - {datetime.now().isoformat()}\n{'=' * 80}\n")
 
         # Test think=False if supported
         if supports_think:
@@ -430,16 +430,16 @@ Start Time: {datetime.now().isoformat()}
             # Write log header
             with open(log_path, "w", encoding="utf-8") as f:
                 f.write(
-                    f"""{'='*80}
+                    f"""{"=" * 80}
 LightRAG EXACT PROMPTS TEST LOG
-{'='*80}
+{"=" * 80}
 
 Model: {model}
 Mode: {mode}
 Test Suite: All 3 LightRAG Original Examples
 Start Time: {datetime.now().isoformat()}
 
-{'='*80}
+{"=" * 80}
 
 """
                 )
@@ -465,17 +465,17 @@ Start Time: {datetime.now().isoformat()}
 
             # Write log footer
             with open(log_path, "a", encoding="utf-8") as f:
-                f.write(f"\n{'='*80}\nEND OF LOG - {datetime.now().isoformat()}\n{'='*80}\n")
+                f.write(f"\n{'=' * 80}\nEND OF LOG - {datetime.now().isoformat()}\n{'=' * 80}\n")
 
     # SUMMARY
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print("SUMMARY: FORMAT COMPLIANCE")
-    print(f"{'='*80}\n")
+    print(f"{'=' * 80}\n")
 
     print(
         f"{'Model':<35} {'Mode':<15} {'Test':<30} {'Format':<12} {'Entities':<12} {'Relations':<12} {'Status'}"
     )
-    print(f"{'-'*35} {'-'*15} {'-'*30} {'-'*12} {'-'*12} {'-'*12} {'-'*8}")
+    print(f"{'-' * 35} {'-' * 15} {'-' * 30} {'-' * 12} {'-' * 12} {'-' * 12} {'-' * 8}")
 
     for r in results:
         if "error" in r and not r.get("entity_count"):
@@ -491,9 +491,9 @@ Start Time: {datetime.now().isoformat()}
         )
 
     # ACCURACY ANALYSIS
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print("ACCURACY ANALYSIS (vs Expected Counts)")
-    print(f"{'='*80}\n")
+    print(f"{'=' * 80}\n")
 
     successful = [r for r in results if r.get("success")]
     if successful:
@@ -522,9 +522,9 @@ Start Time: {datetime.now().isoformat()}
                     )
 
     # BEST PERFORMERS
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print("BEST PERFORMERS")
-    print(f"{'='*80}\n")
+    print(f"{'=' * 80}\n")
 
     if successful:
         # Best by total extraction (entities + relations)
@@ -565,9 +565,9 @@ Start Time: {datetime.now().isoformat()}
         print(f"  Time: {balanced['time']:.2f}s")
 
     # FORMAT ERRORS SUMMARY
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print("COMMON FORMAT ERRORS")
-    print(f"{'='*80}\n")
+    print(f"{'=' * 80}\n")
 
     error_types = {}
     for r in results:
@@ -592,9 +592,9 @@ Start Time: {datetime.now().isoformat()}
         print("  No format errors detected!")
 
     # RECOMMENDATION
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print("RECOMMENDATION FOR PRODUCTION")
-    print(f"{'='*80}\n")
+    print(f"{'=' * 80}\n")
 
     if successful:
         # Group by model

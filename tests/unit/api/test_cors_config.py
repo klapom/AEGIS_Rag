@@ -33,15 +33,15 @@ def test_cors__no_wildcard_origins__security():
     is a security risk in production.
     """
     # Verify no wildcard in config
-    assert (
-        "*" not in settings.cors_origins
-    ), "Wildcard origin (*) found in CORS config - SECURITY RISK!"
+    assert "*" not in settings.cors_origins, (
+        "Wildcard origin (*) found in CORS config - SECURITY RISK!"
+    )
 
     # Verify we have specific origins
     assert len(settings.cors_origins) > 0, "No CORS origins configured"
-    assert all(
-        origin.startswith("http") for origin in settings.cors_origins
-    ), "All CORS origins should be full URLs"
+    assert all(origin.startswith("http") for origin in settings.cors_origins), (
+        "All CORS origins should be full URLs"
+    )
 
 
 def test_cors__allowed_origin__accepted(client):

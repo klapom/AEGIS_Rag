@@ -61,12 +61,16 @@ def mock_config():
 @pytest.fixture
 def proxy_with_cache(mock_cache_service, mock_config):
     """Create AegisLLMProxy with mocked cache service."""
-    with patch(
-        "src.domains.llm_integration.proxy.aegis_llm_proxy.get_llm_proxy_config",
-        return_value=mock_config,
-    ), patch("src.domains.llm_integration.proxy.aegis_llm_proxy.CostTracker"), patch(
-        "src.domains.llm_integration.proxy.aegis_llm_proxy.PromptCacheService",
-        return_value=mock_cache_service,
+    with (
+        patch(
+            "src.domains.llm_integration.proxy.aegis_llm_proxy.get_llm_proxy_config",
+            return_value=mock_config,
+        ),
+        patch("src.domains.llm_integration.proxy.aegis_llm_proxy.CostTracker"),
+        patch(
+            "src.domains.llm_integration.proxy.aegis_llm_proxy.PromptCacheService",
+            return_value=mock_cache_service,
+        ),
     ):
         proxy = AegisLLMProxy(config=mock_config)
     return proxy, mock_cache_service
@@ -123,9 +127,10 @@ class TestCacheIntegrationWithProxy:
             cost_usd=0.0,
         )
 
-        with patch.object(
-            proxy, "_execute_with_any_llm", return_value=llm_response
-        ) as mock_execute, patch.object(proxy, "_track_metrics"):
+        with (
+            patch.object(proxy, "_execute_with_any_llm", return_value=llm_response) as mock_execute,
+            patch.object(proxy, "_track_metrics"),
+        ):
             result = await proxy.generate(task, use_cache=True)
 
             # Verify cache was checked
@@ -161,9 +166,10 @@ class TestCacheIntegrationWithProxy:
             cost_usd=0.0,
         )
 
-        with patch.object(
-            proxy, "_execute_with_any_llm", return_value=llm_response
-        ) as mock_execute, patch.object(proxy, "_track_metrics"):
+        with (
+            patch.object(proxy, "_execute_with_any_llm", return_value=llm_response) as mock_execute,
+            patch.object(proxy, "_track_metrics"),
+        ):
             result = await proxy.generate(task, use_cache=False)
 
             # Verify cache was NOT checked

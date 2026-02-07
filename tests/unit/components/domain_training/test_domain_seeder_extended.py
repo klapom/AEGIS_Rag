@@ -56,18 +56,17 @@ deployment_profiles:
 
     def test_load_seed_domains_contains_35_domains(self):
         """Test that seed catalog contains 35 domains."""
-        with patch("builtins.open", create=True), patch(
-            "src.components.domain_training.domain_seeder.SEED_DOMAINS_PATH"
-        ) as mock_path:
-
+        with (
+            patch("builtins.open", create=True),
+            patch("src.components.domain_training.domain_seeder.SEED_DOMAINS_PATH") as mock_path,
+        ):
             # Mock the file exists check
             mock_path.exists.return_value = True
 
             with patch("yaml.safe_load") as mock_yaml:
                 # Create 35 mock domains
                 mock_domains = [
-                    {"domain_id": f"domain_{i}", "name": f"Domain {i}"}
-                    for i in range(35)
+                    {"domain_id": f"domain_{i}", "name": f"Domain {i}"} for i in range(35)
                 ]
 
                 mock_yaml.return_value = {
@@ -83,9 +82,7 @@ deployment_profiles:
 
     def test_load_seed_domains_file_not_found(self):
         """Test that FileNotFoundError is raised when seed_domains.yaml not found."""
-        with patch(
-            "src.components.domain_training.domain_seeder.SEED_DOMAINS_PATH"
-        ) as mock_path:
+        with patch("src.components.domain_training.domain_seeder.SEED_DOMAINS_PATH") as mock_path:
             mock_path.exists.return_value = False
 
             with pytest.raises(FileNotFoundError):
@@ -93,14 +90,10 @@ deployment_profiles:
 
     def test_load_seed_domains_yaml_parse_error(self):
         """Test that ValueError is raised on YAML parse error."""
-        with patch(
-            "src.components.domain_training.domain_seeder.SEED_DOMAINS_PATH"
-        ) as mock_path:
+        with patch("src.components.domain_training.domain_seeder.SEED_DOMAINS_PATH") as mock_path:
             mock_path.exists.return_value = True
 
-            with patch("builtins.open", create=True), patch(
-                "yaml.safe_load"
-            ) as mock_yaml:
+            with patch("builtins.open", create=True), patch("yaml.safe_load") as mock_yaml:
                 mock_yaml.side_effect = Exception("Invalid YAML syntax")
 
                 with pytest.raises(ValueError):
@@ -108,17 +101,13 @@ deployment_profiles:
 
     def test_load_seed_domains_logging(self):
         """Test that domain loading is properly logged."""
-        with patch(
-            "src.components.domain_training.domain_seeder.SEED_DOMAINS_PATH"
-        ) as mock_path, patch(
-            "src.components.domain_training.domain_seeder.logger"
-        ) as mock_logger:
-
+        with (
+            patch("src.components.domain_training.domain_seeder.SEED_DOMAINS_PATH") as mock_path,
+            patch("src.components.domain_training.domain_seeder.logger") as mock_logger,
+        ):
             mock_path.exists.return_value = True
 
-            with patch("builtins.open", create=True), patch(
-                "yaml.safe_load"
-            ) as mock_yaml:
+            with patch("builtins.open", create=True), patch("yaml.safe_load") as mock_yaml:
                 mock_yaml.return_value = {
                     "domains": [{"domain_id": "test", "name": "Test"}],
                     "deployment_profiles": {},
@@ -141,12 +130,13 @@ class TestSeedDomain:
         mock_repo.get_domain.return_value = None  # Domain doesn't exist
         mock_repo.create_domain.return_value = {"id": "domain_123", "name": "test_domain"}
 
-        with patch(
-            "src.components.domain_training.domain_seeder.get_domain_repository",
-            return_value=mock_repo,
-        ), patch(
-            "src.components.domain_training.domain_seeder._load_seed_domains"
-        ) as mock_load:
+        with (
+            patch(
+                "src.components.domain_training.domain_seeder.get_domain_repository",
+                return_value=mock_repo,
+            ),
+            patch("src.components.domain_training.domain_seeder._load_seed_domains") as mock_load,
+        ):
             mock_load.return_value = {
                 "domains": [
                     {
@@ -211,12 +201,13 @@ class TestSeedDomain:
         mock_repo.get_domain.return_value = None
         mock_repo.create_domain.return_value = {"id": "domain_456", "name": "medical"}
 
-        with patch(
-            "src.components.domain_training.domain_seeder.get_domain_repository",
-            return_value=mock_repo,
-        ), patch(
-            "src.components.domain_training.domain_seeder._load_seed_domains"
-        ) as mock_load:
+        with (
+            patch(
+                "src.components.domain_training.domain_seeder.get_domain_repository",
+                return_value=mock_repo,
+            ),
+            patch("src.components.domain_training.domain_seeder._load_seed_domains") as mock_load,
+        ):
             mock_load.return_value = {
                 "domains": [
                     {
@@ -245,16 +236,12 @@ class TestSeedAllDomains:
         """Test that seed_all_domains() seeds all 35 domains."""
         mock_repo = AsyncMock()
 
-        with patch(
-            "src.components.domain_training.domain_seeder.seed_domain"
-        ) as mock_seed_one, patch(
-            "src.components.domain_training.domain_seeder._load_seed_domains"
-        ) as mock_load:
-
+        with (
+            patch("src.components.domain_training.domain_seeder.seed_domain") as mock_seed_one,
+            patch("src.components.domain_training.domain_seeder._load_seed_domains") as mock_load,
+        ):
             # Mock 35 domains
-            mock_domains = [
-                {"domain_id": f"domain_{i}", "name": f"Domain {i}"} for i in range(35)
-            ]
+            mock_domains = [{"domain_id": f"domain_{i}", "name": f"Domain {i}"} for i in range(35)]
 
             mock_load.return_value = {
                 "domains": mock_domains,
@@ -274,21 +261,20 @@ class TestSeedAllDomains:
         mock_repo = AsyncMock()
         mock_repo.get_domain.return_value = None  # All domains are new
 
-        with patch(
-            "src.components.domain_training.domain_seeder._load_seed_domains"
-        ) as mock_load, patch(
-            "src.components.domain_training.domain_seeder.seed_domain",
-            new_callable=AsyncMock,
-            return_value=True,
-        ) as mock_seed, patch(
-            "src.components.domain_training.domain_seeder.get_domain_repository",
-            return_value=mock_repo,
+        with (
+            patch("src.components.domain_training.domain_seeder._load_seed_domains") as mock_load,
+            patch(
+                "src.components.domain_training.domain_seeder.seed_domain",
+                new_callable=AsyncMock,
+                return_value=True,
+            ) as mock_seed,
+            patch(
+                "src.components.domain_training.domain_seeder.get_domain_repository",
+                return_value=mock_repo,
+            ),
         ):
-
             # Mock 10 domains
-            mock_domains = [
-                {"domain_id": f"domain_{i}", "name": f"Domain {i}"} for i in range(10)
-            ]
+            mock_domains = [{"domain_id": f"domain_{i}", "name": f"Domain {i}"} for i in range(10)]
 
             mock_load.return_value = {
                 "domains": mock_domains,
@@ -328,13 +314,13 @@ class TestDeploymentProfile:
         mock_redis = AsyncMock()
         mock_redis.get.return_value = "pharma_company"
 
-        with patch(
-            "src.components.domain_training.domain_seeder._get_redis_client",
-            return_value=mock_redis,
-        ), patch(
-            "src.components.domain_training.domain_seeder._load_seed_domains"
-        ) as mock_load:
-
+        with (
+            patch(
+                "src.components.domain_training.domain_seeder._get_redis_client",
+                return_value=mock_redis,
+            ),
+            patch("src.components.domain_training.domain_seeder._load_seed_domains") as mock_load,
+        ):
             mock_load.return_value = {
                 "deployment_profiles": {
                     "pharma_company": {
@@ -359,17 +345,15 @@ class TestDeploymentProfile:
         mock_redis = AsyncMock()
         mock_redis.get.return_value = None  # No profile set
 
-        with patch(
-            "src.components.domain_training.domain_seeder._get_redis_client",
-            return_value=mock_redis,
-        ), patch(
-            "src.components.domain_training.domain_seeder._load_seed_domains"
-        ) as mock_load:
-
+        with (
+            patch(
+                "src.components.domain_training.domain_seeder._get_redis_client",
+                return_value=mock_redis,
+            ),
+            patch("src.components.domain_training.domain_seeder._load_seed_domains") as mock_load,
+        ):
             # Default profile should have all domains
-            all_domains = [
-                {"domain_id": f"domain_{i}", "name": f"Domain {i}"} for i in range(5)
-            ]
+            all_domains = [{"domain_id": f"domain_{i}", "name": f"Domain {i}"} for i in range(5)]
 
             mock_load.return_value = {
                 "domains": all_domains,
@@ -384,10 +368,7 @@ class TestDeploymentProfile:
     @pytest.mark.asyncio
     async def test_get_domain_config_returns_metadata(self):
         """Test that get_domain_config() returns domain metadata."""
-        with patch(
-            "src.components.domain_training.domain_seeder._load_seed_domains"
-        ) as mock_load:
-
+        with patch("src.components.domain_training.domain_seeder._load_seed_domains") as mock_load:
             mock_load.return_value = {
                 "domains": [
                     {
@@ -410,10 +391,7 @@ class TestDeploymentProfile:
     @pytest.mark.asyncio
     async def test_get_domain_config_not_found(self):
         """Test get_domain_config() returns None for non-existent domain."""
-        with patch(
-            "src.components.domain_training.domain_seeder._load_seed_domains"
-        ) as mock_load:
-
+        with patch("src.components.domain_training.domain_seeder._load_seed_domains") as mock_load:
             mock_load.return_value = {"domains": []}
 
             config = await get_domain_config("nonexistent_domain")
@@ -434,13 +412,13 @@ class TestSeedDomainIntegration:
             "name": "test_domain",
         }
 
-        with patch(
-            "src.components.domain_training.domain_seeder.get_domain_repository",
-            return_value=mock_repo,
-        ), patch(
-            "src.components.domain_training.domain_seeder._load_seed_domains"
-        ) as mock_load:
-
+        with (
+            patch(
+                "src.components.domain_training.domain_seeder.get_domain_repository",
+                return_value=mock_repo,
+            ),
+            patch("src.components.domain_training.domain_seeder._load_seed_domains") as mock_load,
+        ):
             mock_load.return_value = {
                 "domains": [
                     {
@@ -468,16 +446,17 @@ class TestSeedDomainIntegration:
         mock_redis = AsyncMock()
         mock_repo = AsyncMock()
 
-        with patch(
-            "src.components.domain_training.domain_seeder._get_redis_client",
-            return_value=mock_redis,
-        ), patch(
-            "src.components.domain_training.domain_seeder.get_domain_repository",
-            return_value=mock_repo,
-        ), patch(
-            "src.components.domain_training.domain_seeder._load_seed_domains"
-        ) as mock_load:
-
+        with (
+            patch(
+                "src.components.domain_training.domain_seeder._get_redis_client",
+                return_value=mock_redis,
+            ),
+            patch(
+                "src.components.domain_training.domain_seeder.get_domain_repository",
+                return_value=mock_repo,
+            ),
+            patch("src.components.domain_training.domain_seeder._load_seed_domains") as mock_load,
+        ):
             mock_load.return_value = {
                 "domains": [
                     {"domain_id": "medicine", "name": "Medicine"},

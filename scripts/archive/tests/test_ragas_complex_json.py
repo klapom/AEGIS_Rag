@@ -78,6 +78,7 @@ Output (JSON only):"""
     except Exception as e:
         print(f"❌ OTHER ERROR: {e}")
         import traceback
+
         traceback.print_exc()
 
     print()
@@ -163,6 +164,7 @@ Output (JSON only):"""
     except Exception as e:
         print(f"❌ OTHER ERROR: {e}")
         import traceback
+
         traceback.print_exc()
 
     print()
@@ -192,5 +194,6 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"\n\n❌ TEST FAILED: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)

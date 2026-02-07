@@ -93,7 +93,7 @@ class TriggerConfigLoader:
 
     def __init__(
         self,
-        config_path: Optional[str | Path] = None,
+        config_path: str | Path | None = None,
     ):
         """Initialize trigger config loader.
 
@@ -197,7 +197,7 @@ class TriggerConfigLoader:
         logger.info("patterns_compiled", count=len(patterns))
         return patterns
 
-    def get_triggered_skills(self, query: str, intent: Optional[str] = None) -> List[TriggerMatch]:
+    def get_triggered_skills(self, query: str, intent: str | None = None) -> List[TriggerMatch]:
         """Get all skills triggered by query and intent.
 
         Combines triggers from multiple sources:
@@ -329,7 +329,7 @@ class TriggerConfigLoader:
 
         return deduplicated
 
-    def get_context_budget(self, intent: Optional[str] = None) -> int:
+    def get_context_budget(self, intent: str | None = None) -> int:
         """Get context budget for an intent.
 
         Args:

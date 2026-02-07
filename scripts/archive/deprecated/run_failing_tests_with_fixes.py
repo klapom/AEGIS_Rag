@@ -109,7 +109,7 @@ async def main():
     print(f"Total: {len(results)} tests")
     print(f"Passed: {passed} ✅")
     print(f"Failed: {failed} ❌")
-    print(f"Success Rate: {passed/len(results)*100:.1f}%")
+    print(f"Success Rate: {passed / len(results) * 100:.1f}%")
     print()
 
     if failed > 0:

@@ -30,6 +30,7 @@ class NormalizedSample:
         source_dataset: Original dataset name (hotpot_qa, ragbench, logqa)
         metadata: Additional dataset-specific metadata
     """
+
     id: str
     question: str
     ground_truth: str
@@ -57,7 +58,7 @@ class NormalizedSample:
                 **self.metadata,
                 "generation_timestamp": datetime.utcnow().isoformat() + "Z",
                 "generator_version": "1.0.0",
-            }
+            },
         }
 
     def to_json(self) -> str:
@@ -99,6 +100,7 @@ class NormalizedSample:
 @dataclass
 class SamplingStats:
     """Statistics for stratified sampling validation."""
+
     total_samples: int = 0
     doc_type_counts: Dict[str, int] = field(default_factory=dict)
     question_type_counts: Dict[str, Dict[str, int]] = field(default_factory=dict)
@@ -113,18 +115,19 @@ class SamplingStats:
         self.total_samples += 1
 
         # Doc type
-        self.doc_type_counts[sample.doc_type] = \
-            self.doc_type_counts.get(sample.doc_type, 0) + 1
+        self.doc_type_counts[sample.doc_type] = self.doc_type_counts.get(sample.doc_type, 0) + 1
 
         # Question type (nested by doc_type)
         if sample.doc_type not in self.question_type_counts:
             self.question_type_counts[sample.doc_type] = {}
-        self.question_type_counts[sample.doc_type][sample.question_type] = \
+        self.question_type_counts[sample.doc_type][sample.question_type] = (
             self.question_type_counts[sample.doc_type].get(sample.question_type, 0) + 1
+        )
 
         # Difficulty
-        self.difficulty_counts[sample.difficulty] = \
+        self.difficulty_counts[sample.difficulty] = (
             self.difficulty_counts.get(sample.difficulty, 0) + 1
+        )
 
         # Answerable
         if sample.answerable:
@@ -144,8 +147,8 @@ class SamplingStats:
             "RAGAS Benchmark Sampling Statistics",
             "=" * 60,
             f"Total Samples: {self.total_samples}",
-            f"  - Answerable: {self.answerable_count} ({self.answerable_count/max(1,self.total_samples)*100:.1f}%)",
-            f"  - Unanswerable: {self.unanswerable_count} ({self.unanswerable_count/max(1,self.total_samples)*100:.1f}%)",
+            f"  - Answerable: {self.answerable_count} ({self.answerable_count / max(1, self.total_samples) * 100:.1f}%)",
+            f"  - Unanswerable: {self.unanswerable_count} ({self.unanswerable_count / max(1, self.total_samples) * 100:.1f}%)",
             "",
             "Doc Types:",
         ]

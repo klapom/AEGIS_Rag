@@ -64,7 +64,7 @@ def main():
 
     print("=" * 80)
     print(
-        f"Reduction: {original_size - cleaned_size} bytes ({(1 - cleaned_size/original_size)*100:.1f}%)"
+        f"Reduction: {original_size - cleaned_size} bytes ({(1 - cleaned_size / original_size) * 100:.1f}%)"
     )
     print(f"Fits in 512-token chunk: {'YES' if cleaned_size < 400 else 'NO - still too large'}")
 

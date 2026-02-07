@@ -72,6 +72,7 @@ TRACK_A_DATASETS = {
 # Service Health Check
 # =============================================================================
 
+
 async def check_services() -> dict[str, bool]:
     """Check if all required services are running.
 
@@ -114,6 +115,7 @@ async def check_services() -> dict[str, bool]:
 # =============================================================================
 # Dataset Loading & Ingestion
 # =============================================================================
+
 
 async def load_and_ingest_dataset(
     dataset_name: str,
@@ -226,6 +228,7 @@ async def save_evaluation_dataset(
 # RAGAS Evaluation
 # =============================================================================
 
+
 async def run_ragas_evaluation(
     dataset_path: Path,
     namespace: str,
@@ -298,6 +301,7 @@ async def run_ragas_evaluation(
 # =============================================================================
 # Main Pipeline
 # =============================================================================
+
 
 async def run_track_a_pipeline(
     sample_size: int = 10,
@@ -424,7 +428,9 @@ async def run_track_a_pipeline(
             evaluation_results[dataset_name] = results
 
             metrics = results["metrics"]
-            print(f"    ✓ Evaluated {results['sample_count']} samples in {results['duration_seconds']:.1f}s")
+            print(
+                f"    ✓ Evaluated {results['sample_count']} samples in {results['duration_seconds']:.1f}s"
+            )
             print(f"      Context Precision: {metrics['context_precision']:.3f}")
             print(f"      Context Recall:    {metrics['context_recall']:.3f}")
             print(f"      Faithfulness:      {metrics['faithfulness']:.3f}")
@@ -467,10 +473,14 @@ async def run_track_a_pipeline(
     valid_results = [r for r in evaluation_results.values() if "error" not in r]
     if valid_results:
         avg_metrics = {
-            "context_precision": sum(r["metrics"]["context_precision"] for r in valid_results) / len(valid_results),
-            "context_recall": sum(r["metrics"]["context_recall"] for r in valid_results) / len(valid_results),
-            "faithfulness": sum(r["metrics"]["faithfulness"] for r in valid_results) / len(valid_results),
-            "answer_relevancy": sum(r["metrics"]["answer_relevancy"] for r in valid_results) / len(valid_results),
+            "context_precision": sum(r["metrics"]["context_precision"] for r in valid_results)
+            / len(valid_results),
+            "context_recall": sum(r["metrics"]["context_recall"] for r in valid_results)
+            / len(valid_results),
+            "faithfulness": sum(r["metrics"]["faithfulness"] for r in valid_results)
+            / len(valid_results),
+            "answer_relevancy": sum(r["metrics"]["answer_relevancy"] for r in valid_results)
+            / len(valid_results),
         }
         report["summary"] = {
             "datasets_evaluated": len(valid_results),
@@ -505,11 +515,10 @@ async def run_track_a_pipeline(
 # CLI Entry Point
 # =============================================================================
 
+
 def main():
     """Main entry point."""
-    parser = argparse.ArgumentParser(
-        description="Run Track A RAGAS Evaluation on AEGIS RAG"
-    )
+    parser = argparse.ArgumentParser(description="Run Track A RAGAS Evaluation on AEGIS RAG")
     parser.add_argument(
         "--sample-size",
         type=int,

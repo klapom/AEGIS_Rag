@@ -215,9 +215,7 @@ knowledge distillation, and hard negative mining.
         ],
     )
 
-    processor = RecursiveLLMProcessor(
-        llm=llm, skill_registry=skill_registry, settings=settings
-    )
+    processor = RecursiveLLMProcessor(llm=llm, skill_registry=skill_registry, settings=settings)
 
     print(f"\nQuery: {query}")
     print(f"Scoring: Level 0-1 (dense+sparse), Level 2 (adaptive → LLM)")
@@ -236,11 +234,7 @@ knowledge distillation, and hard negative mining.
 
         # Validate answer mentions key contributions
         answer_lower = result["answer"].lower()
-        if (
-            "multi" in answer_lower
-            and "vector" in answer_lower
-            or "retrieval" in answer_lower
-        ):
+        if "multi" in answer_lower and "vector" in answer_lower or "retrieval" in answer_lower:
             print("\n✅ PASS: Answer summarizes key contributions")
         else:
             print("\n⚠️ WARNING: Answer may not cover all contributions")
@@ -281,11 +275,9 @@ async def test_per_level_configuration():
         ],
     )
 
-    processor = RecursiveLLMProcessor(
-        llm=llm, skill_registry=skill_registry, settings=settings
-    )
+    processor = RecursiveLLMProcessor(llm=llm, skill_registry=skill_registry, settings=settings)
 
-    print(f"\nDocument length: {len(document)} chars (~{len(document)//4} tokens)")
+    print(f"\nDocument length: {len(document)} chars (~{len(document) // 4} tokens)")
     print(f"Max depth: {settings.max_depth}")
     print("\nPyramid structure:")
     for level_config in settings.levels:

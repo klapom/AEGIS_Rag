@@ -138,7 +138,7 @@ class TestSectionCommunitiesEndpoint:
 
             # Make request with invalid algorithm
             response = client.get(
-                "/api/v1/graph/communities/doc_123/sections/Introduction?" "algorithm=invalid"
+                "/api/v1/graph/communities/doc_123/sections/Introduction?algorithm=invalid"
             )
 
             # Should fail validation
@@ -171,7 +171,7 @@ class TestSectionCommunitiesEndpoint:
 
             # Make request with invalid resolution (< 0.1)
             response = client.get(
-                "/api/v1/graph/communities/doc_123/sections/Introduction?" "resolution=0.05"
+                "/api/v1/graph/communities/doc_123/sections/Introduction?resolution=0.05"
             )
 
             # Should fail validation

@@ -133,7 +133,8 @@ class SourceChunkIdMigration:
             updated = 0
 
             while updated < total:
-                result = await session.run("""
+                result = await session.run(
+                    """
                     MATCH (e:base)-[r:MENTIONED_IN]->(c:chunk)
                     WHERE r.source_chunk_id IS NULL
                     WITH e, r, c
@@ -141,7 +142,9 @@ class SourceChunkIdMigration:
                     SET r.source_chunk_id = c.chunk_id,
                         r.migrated_at = datetime()
                     RETURN count(r) AS updated
-                """, batch_size=batch_size)
+                """,
+                    batch_size=batch_size,
+                )
 
                 record = await result.single()
                 batch_updated = record["updated"] if record else 0
@@ -222,11 +225,9 @@ class SourceChunkIdMigration:
                 logger.info(
                     "dry_run_sample_relates_to",
                     sample_count=len(records),
-                    samples=[{
-                        "source": r[0],
-                        "target": r[1],
-                        "chunk_id": r[2][:16]
-                    } for r in records],
+                    samples=[
+                        {"source": r[0], "target": r[1], "chunk_id": r[2][:16]} for r in records
+                    ],
                 )
                 self.stats["relates_to_skipped"] = total
                 return self.stats
@@ -236,7 +237,8 @@ class SourceChunkIdMigration:
             updated = 0
 
             while updated < total:
-                result = await session.run("""
+                result = await session.run(
+                    """
                     MATCH (e1:base)-[r:RELATES_TO]->(e2:base)
                     WHERE r.source_chunk_id IS NULL
                     MATCH (e1)-[:MENTIONED_IN]->(c:chunk)
@@ -245,7 +247,9 @@ class SourceChunkIdMigration:
                     SET r.source_chunk_id = c.chunk_id,
                         r.migrated_at = datetime()
                     RETURN count(r) AS updated
-                """, batch_size=batch_size)
+                """,
+                    batch_size=batch_size,
+                )
 
                 record = await result.single()
                 batch_updated = record["updated"] if record else 0
@@ -313,14 +317,8 @@ class SourceChunkIdMigration:
             await self.migrate_relates_to_relationships()
 
             # Print summary
-            total_updated = (
-                self.stats["mentioned_in_updated"] +
-                self.stats["relates_to_updated"]
-            )
-            total_relationships = (
-                self.stats["mentioned_in_total"] +
-                self.stats["relates_to_total"]
-            )
+            total_updated = self.stats["mentioned_in_updated"] + self.stats["relates_to_updated"]
+            total_relationships = self.stats["mentioned_in_total"] + self.stats["relates_to_total"]
 
             logger.info(
                 "migration_completed",
@@ -373,9 +371,9 @@ async def main():
     stats = await migration.run()
 
     # Print summary
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("MIGRATION SUMMARY")
-    print("="*60)
+    print("=" * 60)
     print(f"Mode: {'DRY RUN' if args.dry_run else 'APPLIED'}")
     print("\nMENTIONED_IN Relationships:")
     print(f"  Total found: {stats['mentioned_in_total']}")
@@ -390,7 +388,7 @@ async def main():
         print(f"\n⚠ Orphaned Entities: {len(stats['orphaned_entities'])}")
         print("  (Entities with RELATES_TO but no MENTIONED_IN)")
 
-    print("="*60 + "\n")
+    print("=" * 60 + "\n")
 
     if args.dry_run:
         print("✓ Dry run completed. Run without --dry-run to apply changes.")

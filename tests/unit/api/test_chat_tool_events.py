@@ -82,7 +82,9 @@ class TestToolEventEmission:
                 "success": True,
                 "duration_ms": phase_event.duration_ms,
                 "execution_id": execution_id,
-                "timestamp": phase_event.end_time.isoformat() if phase_event.end_time else phase_event.start_time.isoformat(),
+                "timestamp": phase_event.end_time.isoformat()
+                if phase_event.end_time
+                else phase_event.start_time.isoformat(),
             },
         }
 
@@ -122,7 +124,9 @@ class TestToolEventEmission:
                 "error": phase_event.error or "Tool execution failed",
                 "details": phase_event.metadata.get("error_details", ""),
                 "execution_id": execution_id,
-                "timestamp": phase_event.end_time.isoformat() if phase_event.end_time else phase_event.start_time.isoformat(),
+                "timestamp": phase_event.end_time.isoformat()
+                if phase_event.end_time
+                else phase_event.start_time.isoformat(),
             },
         }
 
@@ -169,7 +173,9 @@ class TestToolEventEmission:
         )
 
         # Simulate chat.py logic
-        tool_name = phase_event.metadata.get("tool_name") or phase_event.metadata.get("tool_action", "unknown")
+        tool_name = phase_event.metadata.get("tool_name") or phase_event.metadata.get(
+            "tool_action", "unknown"
+        )
 
         assert tool_name == "search machine learning"
 
@@ -183,7 +189,9 @@ class TestToolEventEmission:
         )
 
         # Simulate chat.py logic
-        tool_name = phase_event.metadata.get("tool_name") or phase_event.metadata.get("tool_action", "unknown")
+        tool_name = phase_event.metadata.get("tool_name") or phase_event.metadata.get(
+            "tool_action", "unknown"
+        )
 
         assert tool_name == "unknown"
 

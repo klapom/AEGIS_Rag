@@ -51,7 +51,7 @@ def normalize_entity_name(name: str) -> str:
     # Lowercase, strip whitespace, remove common punctuation
     normalized = name.lower().strip()
     # Remove quotes
-    normalized = normalized.replace('"', '').replace("'", "")
+    normalized = normalized.replace('"', "").replace("'", "")
     # Collapse multiple spaces
     normalized = " ".join(normalized.split())
     return normalized
@@ -145,17 +145,11 @@ async def extract_with_model(
     try:
         # Extract entities
         entities = await extraction_service.extract_entities(text)
-        entity_dicts = [
-            e.model_dump() if hasattr(e, "model_dump") else e
-            for e in entities
-        ]
+        entity_dicts = [e.model_dump() if hasattr(e, "model_dump") else e for e in entities]
 
         # Extract relations
         relations = await extraction_service.extract_relationships(text, entities)
-        relation_dicts = [
-            r.model_dump() if hasattr(r, "model_dump") else r
-            for r in relations
-        ]
+        relation_dicts = [r.model_dump() if hasattr(r, "model_dump") else r for r in relations]
 
         logger.info(
             "extraction_complete",
@@ -244,7 +238,9 @@ async def compare_models(
                 continue
 
             cand_data = all_extractions[model][sample_idx]
-            cand_entities = set(normalize_entity_name(e.get("name", "")) for e in cand_data["entities"])
+            cand_entities = set(
+                normalize_entity_name(e.get("name", "")) for e in cand_data["entities"]
+            )
             cand_relations = set(normalize_relation(r) for r in cand_data["relations"])
 
             entity_comparison = calculate_overlap(cand_entities, ref_entities)
@@ -283,13 +279,21 @@ async def compare_models(
         results["aggregated"][model] = {
             "vs_reference": reference_model,
             "entity_metrics": {
-                "avg_precision": round(sum(entity_precisions) / len(entity_precisions), 3) if entity_precisions else 0,
-                "avg_recall": round(sum(entity_recalls) / len(entity_recalls), 3) if entity_recalls else 0,
+                "avg_precision": round(sum(entity_precisions) / len(entity_precisions), 3)
+                if entity_precisions
+                else 0,
+                "avg_recall": round(sum(entity_recalls) / len(entity_recalls), 3)
+                if entity_recalls
+                else 0,
                 "avg_f1": round(sum(entity_f1s) / len(entity_f1s), 3) if entity_f1s else 0,
             },
             "relation_metrics": {
-                "avg_precision": round(sum(relation_precisions) / len(relation_precisions), 3) if relation_precisions else 0,
-                "avg_recall": round(sum(relation_recalls) / len(relation_recalls), 3) if relation_recalls else 0,
+                "avg_precision": round(sum(relation_precisions) / len(relation_precisions), 3)
+                if relation_precisions
+                else 0,
+                "avg_recall": round(sum(relation_recalls) / len(relation_recalls), 3)
+                if relation_recalls
+                else 0,
                 "avg_f1": round(sum(relation_f1s) / len(relation_f1s), 3) if relation_f1s else 0,
             },
         }
@@ -318,62 +322,74 @@ def generate_markdown_report(results: dict) -> str:
 
     for model, agg in results["aggregated"].items():
         em = agg["entity_metrics"]
-        lines.append(f"| {model} | {em['avg_precision']:.1%} | {em['avg_recall']:.1%} | {em['avg_f1']:.1%} |")
+        lines.append(
+            f"| {model} | {em['avg_precision']:.1%} | {em['avg_recall']:.1%} | {em['avg_f1']:.1%} |"
+        )
 
-    lines.extend([
-        "",
-        "### Relation Extraction Quality",
-        "",
-        "| Model | Precision | Recall | F1 Score |",
-        "|-------|-----------|--------|----------|",
-    ])
+    lines.extend(
+        [
+            "",
+            "### Relation Extraction Quality",
+            "",
+            "| Model | Precision | Recall | F1 Score |",
+            "|-------|-----------|--------|----------|",
+        ]
+    )
 
     for model, agg in results["aggregated"].items():
         rm = agg["relation_metrics"]
-        lines.append(f"| {model} | {rm['avg_precision']:.1%} | {rm['avg_recall']:.1%} | {rm['avg_f1']:.1%} |")
+        lines.append(
+            f"| {model} | {rm['avg_precision']:.1%} | {rm['avg_recall']:.1%} | {rm['avg_f1']:.1%} |"
+        )
 
-    lines.extend([
-        "",
-        "---",
-        "",
-        "## Interpretation Guide",
-        "",
-        "- **Precision**: How many of the model's extractions are also in the reference? (Higher = fewer false positives)",
-        "- **Recall**: How many of the reference's extractions does the model find? (Higher = fewer misses)",
-        "- **F1 Score**: Harmonic mean of precision and recall (balanced metric)",
-        "",
-        "### Quality Thresholds",
-        "",
-        "| Quality Level | F1 Score |",
-        "|---------------|----------|",
-        "| Excellent | >= 80% |",
-        "| Good | 60-80% |",
-        "| Moderate | 40-60% |",
-        "| Poor | < 40% |",
-        "",
-        "---",
-        "",
-        "## Per-Sample Details",
-        "",
-    ])
+    lines.extend(
+        [
+            "",
+            "---",
+            "",
+            "## Interpretation Guide",
+            "",
+            "- **Precision**: How many of the model's extractions are also in the reference? (Higher = fewer false positives)",
+            "- **Recall**: How many of the reference's extractions does the model find? (Higher = fewer misses)",
+            "- **F1 Score**: Harmonic mean of precision and recall (balanced metric)",
+            "",
+            "### Quality Thresholds",
+            "",
+            "| Quality Level | F1 Score |",
+            "|---------------|----------|",
+            "| Excellent | >= 80% |",
+            "| Good | 60-80% |",
+            "| Moderate | 40-60% |",
+            "| Poor | < 40% |",
+            "",
+            "---",
+            "",
+            "## Per-Sample Details",
+            "",
+        ]
+    )
 
     for sample in results["per_sample"]:
-        lines.extend([
-            f"### {sample['sample_id']}",
-            f"**Question:** {sample['question']}",
-            "",
-            f"**Reference ({sample['reference']['model']}):** {sample['reference']['entities_count']} entities",
-            "",
-        ])
+        lines.extend(
+            [
+                f"### {sample['sample_id']}",
+                f"**Question:** {sample['question']}",
+                "",
+                f"**Reference ({sample['reference']['model']}):** {sample['reference']['entities_count']} entities",
+                "",
+            ]
+        )
 
         for model, comp in sample["comparisons"].items():
             ent = comp["entities"]
             rel = comp["relations"]
-            lines.extend([
-                f"**{model}:**",
-                f"- Entities: {ent['set_a_size']} found, {ent['intersection']} overlap ({ent['recall']:.0%} recall)",
-                f"- Relations: {rel['set_a_size']} found, {rel['intersection']} overlap ({rel['recall']:.0%} recall)",
-            ])
+            lines.extend(
+                [
+                    f"**{model}:**",
+                    f"- Entities: {ent['set_a_size']} found, {ent['intersection']} overlap ({ent['recall']:.0%} recall)",
+                    f"- Relations: {rel['set_a_size']} found, {rel['intersection']} overlap ({rel['recall']:.0%} recall)",
+                ]
+            )
 
             if ent["unique_to_a_items"]:
                 unique_str = ", ".join(ent["unique_to_a_items"][:5])
@@ -383,11 +399,13 @@ def generate_markdown_report(results: dict) -> str:
                 lines.append(f"- Missed entities: {missed_str}...")
             lines.append("")
 
-    lines.extend([
-        "---",
-        "",
-        f"*Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*",
-    ])
+    lines.extend(
+        [
+            "---",
+            "",
+            f"*Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*",
+        ]
+    )
 
     return "\n".join(lines)
 

@@ -196,7 +196,9 @@ async def run_evaluation(
         print("\n" + "-" * 80)
         print("PER-INTENT BREAKDOWN")
         print("-" * 80)
-        print(f"{'Intent':<15} {'Samples':<10} {'Precision':<12} {'Recall':<12} {'Faith':<12} {'Relevancy':<12}")
+        print(
+            f"{'Intent':<15} {'Samples':<10} {'Precision':<12} {'Recall':<12} {'Faith':<12} {'Relevancy':<12}"
+        )
         print("-" * 80)
 
         for intent_metrics in results.per_intent_metrics:

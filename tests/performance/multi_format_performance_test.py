@@ -54,10 +54,10 @@ async def test_single_file(file_path: Path) -> FormatTestResult:
     file_ext = file_path.suffix.lower()
     file_size_kb = file_path.stat().st_size / 1024
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Testing: {file_path.name}")
     print(f"Format: {file_ext}, Size: {file_size_kb:.1f} KB")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     try:
         # Step 1: Parse with Docling
@@ -100,7 +100,7 @@ async def test_single_file(file_path: Path) -> FormatTestResult:
                 heading_short = s.heading[:40] if s.heading else "(no heading)"
                 source = s.metadata.get("heading_source", "?")
                 print(
-                    f"          [{i+1}] L{s.level} '{heading_short}...' ({s.token_count} tokens, {source})"
+                    f"          [{i + 1}] L{s.level} '{heading_short}...' ({s.token_count} tokens, {source})"
                 )
 
         return FormatTestResult(
@@ -204,7 +204,7 @@ async def main():
     print("\nResults:")
     print(f"  Files tested:     {len(results)}")
     print(f"  Successful:       {success_count}/{len(results)}")
-    print(f"  Total size:       {total_size_kb/1024:.2f} MB")
+    print(f"  Total size:       {total_size_kb / 1024:.2f} MB")
     print(f"  Total parse time: {total_parse_time:.2f}s")
     print(f"  Total sections:   {total_sections}")
     print(f"  Total tokens:     {total_tokens}")
@@ -213,8 +213,8 @@ async def main():
     # Performance metrics
     if total_parse_time > 0:
         print("\nPerformance:")
-        print(f"  Throughput:       {total_size_kb/total_parse_time:.1f} KB/s")
-        print(f"  Avg time/file:    {total_parse_time/len(results):.2f}s")
+        print(f"  Throughput:       {total_size_kb / total_parse_time:.1f} KB/s")
+        print(f"  Avg time/file:    {total_parse_time / len(results):.2f}s")
 
     # Format breakdown
     print("\nBy Format:")
@@ -240,9 +240,9 @@ async def main():
         for r in errors:
             print(f"  {r.file_name}: {r.error}")
 
-    print(f"\n{'='*70}")
+    print(f"\n{'=' * 70}")
     print(f"TEST COMPLETE: {success_count}/{len(results)} formats working")
-    print(f"{'='*70}")
+    print(f"{'=' * 70}")
 
 
 if __name__ == "__main__":

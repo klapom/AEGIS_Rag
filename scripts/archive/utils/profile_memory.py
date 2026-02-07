@@ -81,9 +81,7 @@ class MemoryProfiler:
 
         return output
 
-    async def profile_stage_memory(
-        self, stage_name: str, coro: Any
-    ) -> dict[str, Any]:
+    async def profile_stage_memory(self, stage_name: str, coro: Any) -> dict[str, Any]:
         """Profile memory usage for a single stage.
 
         Args:
@@ -136,9 +134,7 @@ class MemoryProfiler:
         # Stage 1: Intent Classification
         from src.components.retrieval.intent_classifier import classify_intent
 
-        stage1 = await self.profile_stage_memory(
-            "intent_classification", classify_intent(query)
-        )
+        stage1 = await self.profile_stage_memory("intent_classification", classify_intent(query))
         stages.append(stage1)
 
         # Stage 2: Retrieval
@@ -268,8 +264,7 @@ class MemoryProfiler:
             "leak_detected": leak_detected,
             "initial_memory_mb": memory_samples[0]["memory_mb"],
             "final_memory_mb": memory_samples[-1]["memory_mb"],
-            "total_growth_mb": memory_samples[-1]["memory_mb"]
-            - memory_samples[0]["memory_mb"],
+            "total_growth_mb": memory_samples[-1]["memory_mb"] - memory_samples[0]["memory_mb"],
             "samples": memory_samples,
         }
 
@@ -307,21 +302,19 @@ async def main():
 
     if args.iterations:
         # Memory leak detection
-        print(f"\n{'='*80}")
+        print(f"\n{'=' * 80}")
         print(f"Memory Leak Detection: {args.iterations} iterations")
-        print(f"{'='*80}\n")
+        print(f"{'=' * 80}\n")
 
         result = await profiler.detect_memory_leaks(iterations=args.iterations)
 
-        print(f"\n{'='*80}")
+        print(f"\n{'=' * 80}")
         print("Leak Detection Results")
-        print(f"{'='*80}")
+        print(f"{'=' * 80}")
         print(f"Initial Memory:    {result['initial_memory_mb']:.1f} MB")
         print(f"Final Memory:      {result['final_memory_mb']:.1f} MB")
         print(f"Total Growth:      {result['total_growth_mb']:.1f} MB")
-        print(
-            f"Growth Rate:       {result['slope_mb_per_iteration']:.3f} MB/iteration"
-        )
+        print(f"Growth Rate:       {result['slope_mb_per_iteration']:.3f} MB/iteration")
         print(f"Leak Detected:     {result['leak_detected']}")
 
         if result["leak_detected"]:
@@ -343,9 +336,9 @@ async def main():
         # Single query profiling
         query = args.query or SAMPLE_QUERIES[0]
 
-        print(f"\n{'='*80}")
+        print(f"\n{'=' * 80}")
         print(f"Memory Profiling: {query}")
-        print(f"{'='*80}\n")
+        print(f"{'=' * 80}\n")
 
         result = await profiler.profile_pipeline_memory(query)
 

@@ -400,7 +400,7 @@ Examples:
   reproductive choice
 
 Entities:
-{chr(10).join(f'- {e}' for e in entities)}
+{chr(10).join(f"- {e}" for e in entities)}
 
 Synonyms:"""
 

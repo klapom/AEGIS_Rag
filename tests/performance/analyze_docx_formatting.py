@@ -127,7 +127,7 @@ print("=" * 70)
 print(
     f"""
 FINDINGS:
-- DOCX texts have {sum(1 for t in texts if t.get('formatting', {}).get('bold'))} bold texts
+- DOCX texts have {sum(1 for t in texts if t.get("formatting", {}).get("bold"))} bold texts
 - {len(bold_short)} are short (<100 chars) - likely headings
 - Formatting is available but NOT used to set label='title'
 

@@ -386,17 +386,26 @@ class TestSprint78EntityChunkExpansion:
     @pytest.fixture
     def mock_entity_expander(self):
         """Mock SmartEntityExpander for 3-stage expansion."""
-        with patch("src.components.graph_rag.entity_expansion.SmartEntityExpander") as mock_expander_class:
+        with patch(
+            "src.components.graph_rag.entity_expansion.SmartEntityExpander"
+        ) as mock_expander_class:
             mock_instance = MagicMock()
-            mock_instance.expand_entities = AsyncMock(return_value=["abortion", "reproductive rights"])
+            mock_instance.expand_entities = AsyncMock(
+                return_value=["abortion", "reproductive rights"]
+            )
             mock_expander_class.return_value = mock_instance
             yield mock_instance
 
     @pytest.fixture
     def dual_level_search(self, mock_neo4j_client):
         """DualLevelSearch instance with mocked dependencies."""
-        with patch("src.components.graph_rag.dual_level_search.get_aegis_llm_proxy"), \
-             patch("src.components.graph_rag.dual_level_search.Neo4jClient", return_value=mock_neo4j_client):
+        with (
+            patch("src.components.graph_rag.dual_level_search.get_aegis_llm_proxy"),
+            patch(
+                "src.components.graph_rag.dual_level_search.Neo4jClient",
+                return_value=mock_neo4j_client,
+            ),
+        ):
             search = DualLevelSearch(
                 neo4j_uri="bolt://localhost:7687",
                 neo4j_user="neo4j",
@@ -426,15 +435,18 @@ class TestSprint78EntityChunkExpansion:
                 "chunk_index": 12,
                 "matched_entities": ["abortion", "women's health"],
                 "entity_count": 2,
-            }
+            },
         ]
 
         # Execute
-        with patch("src.components.graph_rag.entity_expansion.SmartEntityExpander", return_value=mock_entity_expander):
+        with patch(
+            "src.components.graph_rag.entity_expansion.SmartEntityExpander",
+            return_value=mock_entity_expander,
+        ):
             entities = await dual_level_search.local_search(
                 query="What are the global implications of abortion?",
                 top_k=5,
-                namespaces=["amnesty_qa"]
+                namespaces=["amnesty_qa"],
             )
 
         # Verify - should return chunks as GraphEntity objects
@@ -459,11 +471,12 @@ class TestSprint78EntityChunkExpansion:
         """Test that Cypher query uses MENTIONED_IN relationship to expand to chunks."""
         mock_neo4j_client.execute_read.return_value = []
 
-        with patch("src.components.graph_rag.entity_expansion.SmartEntityExpander", return_value=mock_entity_expander):
+        with patch(
+            "src.components.graph_rag.entity_expansion.SmartEntityExpander",
+            return_value=mock_entity_expander,
+        ):
             await dual_level_search.local_search(
-                query="Test query",
-                top_k=5,
-                namespaces=["test_ns"]
+                query="Test query", top_k=5, namespaces=["test_ns"]
             )
 
         # Verify Cypher query structure
@@ -485,7 +498,9 @@ class TestSprint78EntityChunkExpansion:
         mock_neo4j_client.execute_read.return_value = []
 
         # Mock SmartEntityExpander
-        with patch("src.components.graph_rag.entity_expansion.SmartEntityExpander") as mock_expander_class:
+        with patch(
+            "src.components.graph_rag.entity_expansion.SmartEntityExpander"
+        ) as mock_expander_class:
             mock_instance = MagicMock()
             mock_instance.expand_entities = AsyncMock(
                 return_value=["abortion", "reproductive rights", "Supreme Court"]
@@ -495,7 +510,7 @@ class TestSprint78EntityChunkExpansion:
             await dual_level_search.local_search(
                 query="What are the global implications of abortion?",
                 top_k=5,
-                namespaces=["amnesty_qa"]
+                namespaces=["amnesty_qa"],
             )
 
             # Verify SmartEntityExpander was instantiated and called
@@ -514,11 +529,12 @@ class TestSprint78EntityChunkExpansion:
         """Test that local_search correctly filters chunks by namespace."""
         mock_neo4j_client.execute_read.return_value = []
 
-        with patch("src.components.graph_rag.entity_expansion.SmartEntityExpander", return_value=mock_entity_expander):
+        with patch(
+            "src.components.graph_rag.entity_expansion.SmartEntityExpander",
+            return_value=mock_entity_expander,
+        ):
             await dual_level_search.local_search(
-                query="Test query",
-                top_k=5,
-                namespaces=["namespace_a", "namespace_b"]
+                query="Test query", top_k=5, namespaces=["namespace_a", "namespace_b"]
             )
 
         # Verify Cypher query filters by namespace
@@ -552,14 +568,15 @@ class TestSprint78EntityChunkExpansion:
                 "chunk_index": 2,
                 "matched_entities": ["e1"],
                 "entity_count": 1,
-            }
+            },
         ]
 
-        with patch("src.components.graph_rag.entity_expansion.SmartEntityExpander", return_value=mock_entity_expander):
+        with patch(
+            "src.components.graph_rag.entity_expansion.SmartEntityExpander",
+            return_value=mock_entity_expander,
+        ):
             entities = await dual_level_search.local_search(
-                query="Test",
-                top_k=5,
-                namespaces=["test"]
+                query="Test", top_k=5, namespaces=["test"]
             )
 
         # Verify ordering - higher entity count should come first
@@ -586,11 +603,12 @@ class TestSprint78EntityChunkExpansion:
             for i in range(10)
         ]
 
-        with patch("src.components.graph_rag.entity_expansion.SmartEntityExpander", return_value=mock_entity_expander):
+        with patch(
+            "src.components.graph_rag.entity_expansion.SmartEntityExpander",
+            return_value=mock_entity_expander,
+        ):
             entities = await dual_level_search.local_search(
-                query="Test",
-                top_k=3,
-                namespaces=["test"]
+                query="Test", top_k=3, namespaces=["test"]
             )
 
         # Verify Cypher LIMIT was applied

@@ -318,9 +318,9 @@ def test_retryable_error_types():
 
     for error in retryable_errors:
         test_state = handle_agent_error(error, state.copy(), "TestAgent")
-        assert (
-            test_state["metadata"]["error"]["retryable"] is True
-        ), f"{type(error).__name__} should be retryable"
+        assert test_state["metadata"]["error"]["retryable"] is True, (
+            f"{type(error).__name__} should be retryable"
+        )
 
 
 @pytest.mark.unit
@@ -337,9 +337,9 @@ def test_non_retryable_error_types():
 
     for error in non_retryable_errors:
         test_state = handle_agent_error(error, state.copy(), "TestAgent")
-        assert (
-            test_state["metadata"]["error"]["retryable"] is False
-        ), f"{type(error).__name__} should not be retryable"
+        assert test_state["metadata"]["error"]["retryable"] is False, (
+            f"{type(error).__name__} should not be retryable"
+        )
 
 
 @pytest.mark.unit
@@ -358,6 +358,6 @@ def test_retryable_error_by_message_pattern():
     for message in retryable_messages:
         error = Exception(message)
         test_state = handle_agent_error(error, state.copy(), "TestAgent")
-        assert (
-            test_state["metadata"]["error"]["retryable"] is True
-        ), f"Error with message '{message}' should be retryable"
+        assert test_state["metadata"]["error"]["retryable"] is True, (
+            f"Error with message '{message}' should be retryable"
+        )

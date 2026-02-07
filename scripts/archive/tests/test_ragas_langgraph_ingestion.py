@@ -141,12 +141,10 @@ RAGAS_TEST_SAMPLE = {
         It is known for its artistic heritage, elaborate canal system, and
         narrow houses with gabled facades. The city has a population of
         about 900,000 people in the urban area.""",
-
         """Badr Hari is a Moroccan-Dutch super heavyweight kickboxer from Amsterdam.
         He is a former K-1 World Grand Prix finalist and has won multiple world
         championships. Known for his aggressive fighting style and powerful punches,
         Hari has been one of the most popular kickboxers in the sport's history.""",
-
         """The Anne Frank House is a museum in Amsterdam dedicated to the Jewish
         wartime diarist Anne Frank. The building is located on the Prinsengracht canal
         and is one of Amsterdam's most popular tourist attractions.""",
@@ -206,6 +204,7 @@ async def main():
     except Exception as e:
         logger.error(f"Pipeline failed: {e}")
         import traceback
+
         traceback.print_exc()
         return
 
@@ -236,12 +235,7 @@ async def main():
         results, _ = qdrant_sync.scroll(
             collection_name=settings.qdrant_collection,
             scroll_filter=Filter(
-                must=[
-                    FieldCondition(
-                        key="document_id",
-                        match=MatchValue(value=document_id)
-                    )
-                ]
+                must=[FieldCondition(key="document_id", match=MatchValue(value=document_id))]
             ),
             limit=100,
             with_payload=True,
@@ -259,6 +253,7 @@ async def main():
     except Exception as e:
         logger.error(f"Qdrant query failed: {e}")
         import traceback
+
         traceback.print_exc()
 
     # Query Neo4j for stored chunk/entity IDs

@@ -143,9 +143,7 @@ class TestPlanResearch:
         """Test fallback when LLM fails."""
         # Mock LLM to raise error
         mock_llm = mocker.MagicMock()
-        mock_llm.generate = mocker.AsyncMock(
-            side_effect=Exception("LLM error")
-        )
+        mock_llm.generate = mocker.AsyncMock(side_effect=Exception("LLM error"))
 
         mocker.patch(
             "src.domains.llm_integration.proxy.aegis_llm_proxy.get_aegis_llm_proxy",

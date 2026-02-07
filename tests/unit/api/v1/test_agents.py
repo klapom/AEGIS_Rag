@@ -234,8 +234,9 @@ async def test_get_agent_details_success(client):
     mock_bus.get_queue_size = AsyncMock(return_value=3)
     mock_bus.close = AsyncMock()
 
-    with patch("src.api.v1.agents.SkillOrchestrator", return_value=mock_orchestrator), patch(
-        "src.api.v1.agents.MessageBus", return_value=mock_bus
+    with (
+        patch("src.api.v1.agents.SkillOrchestrator", return_value=mock_orchestrator),
+        patch("src.api.v1.agents.MessageBus", return_value=mock_bus),
     ):
         response = client.get("/api/v1/agents/research_manager/details")
 
@@ -283,8 +284,9 @@ async def test_get_agent_details_idle_status(client):
     mock_bus.get_queue_size = AsyncMock(return_value=0)
     mock_bus.close = AsyncMock()
 
-    with patch("src.api.v1.agents.SkillOrchestrator", return_value=mock_orchestrator), patch(
-        "src.api.v1.agents.MessageBus", return_value=mock_bus
+    with (
+        patch("src.api.v1.agents.SkillOrchestrator", return_value=mock_orchestrator),
+        patch("src.api.v1.agents.MessageBus", return_value=mock_bus),
     ):
         response = client.get("/api/v1/agents/idle_agent/details")
 
@@ -356,7 +358,11 @@ def test_agent_details_model():
         skills=["skill1"],
         active_tasks=[],
         performance=AgentPerformance(
-            tasks_completed=50, tasks_failed=2, success_rate=0.96, avg_duration_ms=3000, queue_size=1
+            tasks_completed=50,
+            tasks_failed=2,
+            success_rate=0.96,
+            avg_duration_ms=3000,
+            queue_size=1,
         ),
     )
 

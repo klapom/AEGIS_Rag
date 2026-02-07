@@ -131,12 +131,12 @@ def get_lifecycle():
 async def list_skills(
     page: int = Query(1, ge=1, description="Page number (1-indexed)"),
     page_size: int = Query(20, ge=10, le=100, description="Items per page"),
-    status_filter: Optional[str] = Query(
+    status_filter: str | None = Query(
         None, description="Filter by status (active, inactive, all)", alias="status"
     ),
-    category: Optional[SkillCategory] = Query(None, description="Filter by category"),
-    tags: Optional[str] = Query(None, description="Filter by tags (comma-separated)"),
-    search: Optional[str] = Query(None, description="Full-text search query"),
+    category: SkillCategory | None = Query(None, description="Filter by category"),
+    tags: str | None = Query(None, description="Filter by tags (comma-separated)"),
+    search: str | None = Query(None, description="Full-text search query"),
 ) -> SkillListResponse:
     """List all skills with pagination and filtering.
 
@@ -1823,9 +1823,7 @@ async def get_skill_md(skill_name: str) -> SkillMdResponse:
 
 
 @router.put("/{skill_name}/skill-md", response_model=SkillUpdateResponse)
-async def update_skill_md(
-    skill_name: str, request: SkillMdUpdateRequest
-) -> SkillUpdateResponse:
+async def update_skill_md(skill_name: str, request: SkillMdUpdateRequest) -> SkillUpdateResponse:
     """Update SKILL.md content for a specific skill.
 
     Sprint 121: SKILL.md Editor write support

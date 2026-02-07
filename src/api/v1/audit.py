@@ -54,7 +54,7 @@ router = APIRouter(prefix="/api/v1/audit", tags=["audit"])
 limiter = Limiter(key_func=get_remote_address)
 
 # Initialize audit trail manager (singleton pattern)
-_audit_manager: Optional[AuditTrailManager] = None
+_audit_manager: AuditTrailManager | None = None
 
 
 def _seed_demo_events(manager: AuditTrailManager) -> None:
@@ -211,11 +211,11 @@ async def list_audit_events(
     request: Request,
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Items per page"),
-    event_type: Optional[AuditEventTypeEnum] = Query(None, description="Filter by event type"),
-    actor_id: Optional[str] = Query(None, description="Filter by actor ID"),
-    outcome: Optional[OutcomeEnum] = Query(None, description="Filter by outcome"),
-    start_time: Optional[datetime] = Query(None, description="Start time filter"),
-    end_time: Optional[datetime] = Query(None, description="End time filter"),
+    event_type: AuditEventTypeEnum | None = Query(None, description="Filter by event type"),
+    actor_id: str | None = Query(None, description="Filter by actor ID"),
+    outcome: OutcomeEnum | None = Query(None, description="Filter by outcome"),
+    start_time: datetime | None = Query(None, description="Start time filter"),
+    end_time: datetime | None = Query(None, description="End time filter"),
 ) -> AuditEventListResponse:
     """List audit events (EU AI Act Article 12).
 
@@ -435,8 +435,8 @@ async def generate_audit_report(
 @limiter.limit("10/minute")
 async def verify_audit_integrity(
     request: Request,
-    start_time: Optional[datetime] = Query(None, description="Verification start time"),
-    end_time: Optional[datetime] = Query(None, description="Verification end time"),
+    start_time: datetime | None = Query(None, description="Verification start time"),
+    end_time: datetime | None = Query(None, description="Verification end time"),
 ) -> IntegrityCheckResponse:
     """Verify SHA-256 cryptographic chain integrity (EU AI Act Article 12).
 

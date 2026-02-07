@@ -36,9 +36,7 @@ structlog.configure(
 logger = structlog.get_logger(__name__)
 
 
-def load_hotpotqa_samples(
-    jsonl_path: str, num_samples: int = 10
-) -> list[dict]:
+def load_hotpotqa_samples(jsonl_path: str, num_samples: int = 10) -> list[dict]:
     """Load HotPotQA samples from JSONL file.
 
     Args:
@@ -111,13 +109,15 @@ def save_samples_as_txt(
         with open(meta_path, "w", encoding="utf-8") as f:
             json.dump(metadata, f, indent=2)
 
-        file_infos.append({
-            "txt_path": str(txt_path),
-            "question_id": question_id,
-            "question": sample.get("question"),
-            "ground_truth": sample.get("ground_truth"),
-            "text_length": len(text_content),
-        })
+        file_infos.append(
+            {
+                "txt_path": str(txt_path),
+                "question_id": question_id,
+                "question": sample.get("question"),
+                "ground_truth": sample.get("ground_truth"),
+                "text_length": len(text_content),
+            }
+        )
 
         logger.info(
             "sample_saved_as_txt",
@@ -164,7 +164,9 @@ async def run_pipeline_on_txt_files(
     )
     chunking_service = get_chunking_service(chunking_config)
     extractor = create_extraction_pipeline_from_config()
-    deduplicator = create_deduplicator_from_config(settings) if settings.enable_multi_criteria_dedup else None
+    deduplicator = (
+        create_deduplicator_from_config(settings) if settings.enable_multi_criteria_dedup else None
+    )
 
     results = []
 
@@ -266,7 +268,9 @@ async def run_pipeline_on_txt_files(
                     "entities_after": len(deduplicated_entities),
                     "reduction_percent": round(
                         (1 - len(deduplicated_entities) / len(all_entities)) * 100, 1
-                    ) if all_entities else 0,
+                    )
+                    if all_entities
+                    else 0,
                     "duration_seconds": round(dedup_time, 3),
                 }
                 all_entities = deduplicated_entities
@@ -308,11 +312,13 @@ async def run_pipeline_on_txt_files(
                 question_id=question_id,
                 error=str(e),
             )
-            results.append({
-                "question_id": question_id,
-                "status": "error",
-                "error": str(e),
-            })
+            results.append(
+                {
+                    "question_id": question_id,
+                    "status": "error",
+                    "error": str(e),
+                }
+            )
 
     return results
 
@@ -353,8 +359,7 @@ def generate_evaluation_report(
     # Aggregate deduplication
     total_entities_deduped = sum(r.get("final_entities", 0) for r in successful)
     dedup_samples_with_reduction = [
-        r for r in successful
-        if r.get("deduplication", {}).get("reduction_percent", 0) > 0
+        r for r in successful if r.get("deduplication", {}).get("reduction_percent", 0) > 0
     ]
 
     # Timing
@@ -373,7 +378,9 @@ def generate_evaluation_report(
         "chunking_summary": {
             "total_input_chars": total_input_chars,
             "total_chunks_created": total_chunks,
-            "avg_chunk_size_chars": sum(all_chunk_sizes) / len(all_chunk_sizes) if all_chunk_sizes else 0,
+            "avg_chunk_size_chars": sum(all_chunk_sizes) / len(all_chunk_sizes)
+            if all_chunk_sizes
+            else 0,
             "min_chunk_size_chars": min(all_chunk_sizes) if all_chunk_sizes else 0,
             "max_chunk_size_chars": max(all_chunk_sizes) if all_chunk_sizes else 0,
         },
@@ -389,7 +396,9 @@ def generate_evaluation_report(
             "total_entities_after": total_entities_deduped,
             "overall_reduction_percent": round(
                 (1 - total_entities_deduped / total_entities_raw) * 100, 1
-            ) if total_entities_raw > 0 else 0,
+            )
+            if total_entities_raw > 0
+            else 0,
             "samples_with_reduction": len(dedup_samples_with_reduction),
         },
         "timing_summary": {
@@ -436,7 +445,9 @@ def print_summary(report: dict) -> None:
     ext = report["extraction_summary"]
     print(f"Total Entities (raw): {ext['total_entities_raw']}")
     print(f"Total Relations: {ext['total_relations']}")
-    print(f"Avg per Sample: {ext['avg_entities_per_sample']:.1f} entities, {ext['avg_relations_per_sample']:.1f} relations")
+    print(
+        f"Avg per Sample: {ext['avg_entities_per_sample']:.1f} entities, {ext['avg_relations_per_sample']:.1f} relations"
+    )
     print("Entity Types:")
     for etype, count in sorted(ext["entity_types"].items(), key=lambda x: -x[1])[:10]:
         print(f"  {etype}: {count}")

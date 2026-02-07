@@ -27,6 +27,7 @@ from src.components.domain_training.augmentation_service import (
 def mock_embedding_service():
     """Mock embedding service for testing."""
     service = MagicMock()
+
     # Return different embeddings for different texts
     async def mock_embed_batch(texts):
         embeddings = []

@@ -191,7 +191,10 @@ async def test_stream_llm_response_convenience_function():
     mock_proxy.generate_streaming = mock_stream
 
     # Patch singleton to use our mock
-    with patch("src.domains.llm_integration.streaming_client._streaming_client", StreamingClient(proxy=mock_proxy)):
+    with patch(
+        "src.domains.llm_integration.streaming_client._streaming_client",
+        StreamingClient(proxy=mock_proxy),
+    ):
         tokens = []
         async for token in stream_llm_response("Test"):
             tokens.append(token)

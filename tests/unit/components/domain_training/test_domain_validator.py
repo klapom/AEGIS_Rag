@@ -107,9 +107,7 @@ class TestValidationCheck:
 
     def test_validation_check_score_pass(self):
         """Test score calculation for pass status."""
-        check = ValidationCheck(
-            name="test", status=ValidationStatus.PASS, message="", details={}
-        )
+        check = ValidationCheck(name="test", status=ValidationStatus.PASS, message="", details={})
         assert check.score() == 100
 
     def test_validation_check_score_warning(self):
@@ -121,9 +119,7 @@ class TestValidationCheck:
 
     def test_validation_check_score_fail(self):
         """Test score calculation for fail status."""
-        check = ValidationCheck(
-            name="test", status=ValidationStatus.FAIL, message="", details={}
-        )
+        check = ValidationCheck(name="test", status=ValidationStatus.FAIL, message="", details={})
         assert check.score() == 0
 
 
@@ -584,7 +580,13 @@ class TestValidateDomain:
             # Confidence calibration
             [{"threshold": 0.75, "avg_confidence": 0.78, "entity_count": 50}],
             # Recent activity
-            [{"recent_entities": 10, "recent_documents": 5, "last_updated": datetime.utcnow().isoformat()}],
+            [
+                {
+                    "recent_entities": 10,
+                    "recent_documents": 5,
+                    "last_updated": datetime.utcnow().isoformat(),
+                }
+            ],
         ]
 
         result = await validator.validate_domain("medical")
@@ -615,7 +617,9 @@ class TestValidateDomain:
         """
         from tenacity import RetryError
 
-        mock_domain_repo.get_domain.side_effect = DatabaseConnectionError("Neo4j", "Connection failed")
+        mock_domain_repo.get_domain.side_effect = DatabaseConnectionError(
+            "Neo4j", "Connection failed"
+        )
 
         # Expect RetryError after retry exhaustion (3 attempts)
         with pytest.raises(RetryError):

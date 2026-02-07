@@ -80,12 +80,12 @@ class ConsentCreateRequest(BaseModel):
     data_categories: List[DataCategoryEnum] = Field(
         ..., min_length=1, description="Categories of personal data"
     )
-    retention_period: Optional[int] = Field(None, ge=1, description="Retention period in days")
+    retention_period: int | None = Field(None, ge=1, description="Retention period in days")
     explicit_consent: bool = Field(True, description="Whether explicit consent was obtained")
 
     @field_validator("retention_period")
     @classmethod
-    def validate_retention_period(cls, v: Optional[int]) -> Optional[int]:
+    def validate_retention_period(cls, v: int | None) -> int | None:
         """Validate retention period is reasonable."""
         if v is not None and v > 3650:  # 10 years
             raise ValueError("Retention period cannot exceed 10 years (3650 days)")
@@ -96,7 +96,7 @@ class ConsentUpdateRequest(BaseModel):
     """Request model for updating a consent record."""
 
     withdrawn: bool = Field(False, description="Withdraw consent")
-    withdrawal_reason: Optional[str] = Field(None, description="Reason for withdrawal")
+    withdrawal_reason: str | None = Field(None, description="Reason for withdrawal")
 
 
 class DataSubjectRequestCreate(BaseModel):
@@ -104,17 +104,17 @@ class DataSubjectRequestCreate(BaseModel):
 
     request_type: RequestTypeEnum = Field(..., description="Type of request")
     user_id: str = Field(..., description="Data subject user ID")
-    details: Optional[str] = Field(None, description="Additional request details")
+    details: str | None = Field(None, description="Additional request details")
 
 
 class PIISettingsUpdate(BaseModel):
     """Request model for updating PII detection settings."""
 
-    entity_types: Optional[List[str]] = Field(None, description="PII entity types to detect")
-    confidence_threshold: Optional[float] = Field(
+    entity_types: List[str] | None = Field(None, description="PII entity types to detect")
+    confidence_threshold: float | None = Field(
         None, ge=0.0, le=1.0, description="Detection confidence threshold"
     )
-    anonymization_rules: Optional[Dict[str, str]] = Field(
+    anonymization_rules: Dict[str, str] | None = Field(
         None, description="Anonymization rules for PII categories"
     )
 
@@ -131,14 +131,14 @@ class ConsentRecord(BaseModel):
     legal_basis: LegalBasisEnum
     data_categories: List[DataCategoryEnum]
     granted_at: datetime
-    expires_at: Optional[datetime] = None
-    withdrawn_at: Optional[datetime] = None
-    withdrawal_reason: Optional[str] = None
+    expires_at: datetime | None = None
+    withdrawn_at: datetime | None = None
+    withdrawal_reason: str | None = None
     status: ConsentStatusEnum
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
     @field_serializer("granted_at", "expires_at", "withdrawn_at")
-    def serialize_datetime(self, value: Optional[datetime], _info) -> Optional[str]:
+    def serialize_datetime(self, value: datetime | None, _info) -> str | None:
         """Serialize datetime to ISO 8601 with Z suffix (Sprint 100 Fix #4)."""
         if value is None:
             return None
@@ -162,10 +162,10 @@ class DataSubjectRequestResponse(BaseModel):
     request_type: RequestTypeEnum
     user_id: str
     status: RequestStatusEnum
-    details: Optional[str] = None
+    details: str | None = None
     created_at: datetime
     updated_at: datetime
-    response_data: Optional[Dict[str, Any]] = None
+    response_data: Dict[str, Any] | None = None
 
     @field_serializer("created_at", "updated_at")
     def serialize_datetime(self, value: datetime, _info) -> str:
@@ -183,7 +183,7 @@ class ProcessingActivity(BaseModel):
     data_categories: List[DataCategoryEnum]
     data_subjects: List[str]
     recipients: List[str]
-    retention_period: Optional[str] = None
+    retention_period: str | None = None
     security_measures: List[str]
     processed_at: datetime
     metadata: Dict[str, Any] = Field(default_factory=dict)

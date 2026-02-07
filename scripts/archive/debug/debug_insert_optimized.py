@@ -2,6 +2,7 @@
 
 Sprint 32 Post-Mortem: Test the full insertion flow to find where entities get lost.
 """
+
 import asyncio
 import sys
 from pathlib import Path
@@ -52,20 +53,20 @@ async def main():
         print(f"    Success: {result.get('success', 0)}")
         print(f"    Failed: {result.get('failed', 0)}")
 
-        stats = result.get('stats', {})
+        stats = result.get("stats", {})
         print("\n    Stats:")
         print(f"      Total chunks: {stats.get('total_chunks', 0)}")
         print(f"      Total entities: {stats.get('total_entities', 0)}")
         print(f"      Total relations: {stats.get('total_relations', 0)}")
 
         # Print per-document results
-        for doc_result in result.get('results', []):
+        for doc_result in result.get("results", []):
             print(f"\n    Document {doc_result.get('doc_id', 'unknown')}:")
             print(f"      Status: {doc_result.get('status', 'unknown')}")
             print(f"      Chunks: {doc_result.get('chunks', 0)}")
             print(f"      Entities: {doc_result.get('entities', 0)}")
             print(f"      Relations: {doc_result.get('relations', 0)}")
-            if doc_result.get('error'):
+            if doc_result.get("error"):
                 print(f"      Error: {doc_result.get('error')}")
 
         # Check Neo4j after insertion
@@ -79,7 +80,9 @@ async def main():
             MATCH (n:base)
             RETURN count(n) as count
         """)
-        print(f"    Entities with :base label: {result_entities[0]['count'] if result_entities else 0}")
+        print(
+            f"    Entities with :base label: {result_entities[0]['count'] if result_entities else 0}"
+        )
 
         # Count all labels
         result_labels = await neo4j.execute_query("""
@@ -107,6 +110,7 @@ async def main():
     except Exception as e:
         print(f"\n    ERROR: {e}")
         import traceback
+
         traceback.print_exc()
 
     print("\n" + "=" * 60)

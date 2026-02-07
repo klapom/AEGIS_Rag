@@ -111,9 +111,7 @@ class TestCLARADataGenerator:
             )
         }
 
-        with patch.object(
-            generator.client, "post", new_callable=AsyncMock
-        ) as mock_post:
+        with patch.object(generator.client, "post", new_callable=AsyncMock) as mock_post:
             mock_http_response = MagicMock()
             mock_http_response.json.return_value = mock_response
             mock_http_response.raise_for_status = MagicMock()
@@ -138,9 +136,7 @@ class TestCLARADataGenerator:
         """Test handling of JSON parse errors."""
         mock_response = {"response": "Invalid JSON response"}
 
-        with patch.object(
-            generator.client, "post", new_callable=AsyncMock
-        ) as mock_post:
+        with patch.object(generator.client, "post", new_callable=AsyncMock) as mock_post:
             mock_http_response = MagicMock()
             mock_http_response.json.return_value = mock_response
             mock_http_response.raise_for_status = MagicMock()
@@ -159,9 +155,7 @@ class TestCLARADataGenerator:
     @pytest.mark.asyncio
     async def test_generate_batch_http_error(self, generator):
         """Test handling of HTTP errors."""
-        with patch.object(
-            generator.client, "post", new_callable=AsyncMock
-        ) as mock_post:
+        with patch.object(generator.client, "post", new_callable=AsyncMock) as mock_post:
             mock_post.side_effect = Exception("Connection error")
 
             examples = await generator._generate_batch(
@@ -187,9 +181,7 @@ class TestCLARADataGenerator:
             )
         }
 
-        with patch.object(
-            generator.client, "post", new_callable=AsyncMock
-        ) as mock_post:
+        with patch.object(generator.client, "post", new_callable=AsyncMock) as mock_post:
             mock_http_response = MagicMock()
             mock_http_response.json.return_value = mock_response
             mock_http_response.raise_for_status = MagicMock()

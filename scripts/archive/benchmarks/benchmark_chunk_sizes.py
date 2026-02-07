@@ -24,7 +24,7 @@ def chunk_text_by_size(text: str, max_chars: int) -> list[str]:
         return [text]
 
     chunks = []
-    paragraphs = text.split('\n\n')
+    paragraphs = text.split("\n\n")
     current_chunk = ""
 
     for para in paragraphs:
@@ -35,7 +35,7 @@ def chunk_text_by_size(text: str, max_chars: int) -> list[str]:
                 chunks.append(current_chunk.strip())
             # If paragraph itself is too long, split by sentences
             if len(para) > max_chars:
-                sentences = para.replace('. ', '.\n').split('\n')
+                sentences = para.replace(". ", ".\n").split("\n")
                 current_chunk = ""
                 for sent in sentences:
                     if len(current_chunk) + len(sent) + 1 <= max_chars:
@@ -53,28 +53,26 @@ def chunk_text_by_size(text: str, max_chars: int) -> list[str]:
     return chunks
 
 
-async def run_chunk_size_benchmark(sample_text: str, sample_id: str, chunk_sizes: list[int]) -> dict:
+async def run_chunk_size_benchmark(
+    sample_text: str, sample_id: str, chunk_sizes: list[int]
+) -> dict:
     """Run benchmark for different chunk sizes on same sample."""
     benchmark = ExtractionBenchmark(max_tokens=8192)
     results = {
         "sample_id": sample_id,
         "original_text_length": len(sample_text),
-        "chunk_size_results": []
+        "chunk_size_results": [],
     }
 
     for chunk_size in chunk_sizes:
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"Testing chunk size: {chunk_size} chars")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
 
         chunks = chunk_text_by_size(sample_text, chunk_size)
         print(f"  Split into {len(chunks)} chunks")
 
-        chunk_results = {
-            "chunk_size": chunk_size,
-            "num_chunks": len(chunks),
-            "chunks": []
-        }
+        chunk_results = {"chunk_size": chunk_size, "num_chunks": len(chunks), "chunks": []}
 
         total_entities = 0
         total_rels = 0
@@ -82,28 +80,34 @@ async def run_chunk_size_benchmark(sample_text: str, sample_id: str, chunk_sizes
         total_output_tokens = 0
 
         for i, chunk in enumerate(chunks):
-            print(f"\n  Chunk {i+1}/{len(chunks)}: {len(chunk)} chars")
+            print(f"\n  Chunk {i + 1}/{len(chunks)}: {len(chunk)} chars")
 
             start = time.time()
             chunk_id = f"{sample_id}_chunk{i}"
-            result = await benchmark.extract(chunk, chunk_id=chunk_id, strategy=ExtractionStrategy.UNIFIED)
+            result = await benchmark.extract(
+                chunk, chunk_id=chunk_id, strategy=ExtractionStrategy.UNIFIED
+            )
             elapsed_ms = (time.time() - start) * 1000
 
             # ExtractionResult has entities, typed_relationships, semantic_relations, metrics
-            entities = len(result.entities) if hasattr(result, 'entities') else 0
-            rels = len(result.typed_relationships) if hasattr(result, 'typed_relationships') else 0
-            output_tokens = result.metrics.total_output_tokens if hasattr(result, 'metrics') else 0
+            entities = len(result.entities) if hasattr(result, "entities") else 0
+            rels = len(result.typed_relationships) if hasattr(result, "typed_relationships") else 0
+            output_tokens = result.metrics.total_output_tokens if hasattr(result, "metrics") else 0
 
-            print(f"    → Entities: {entities}, Rels: {rels}, Time: {elapsed_ms:.0f}ms, Out tokens: {output_tokens}")
+            print(
+                f"    → Entities: {entities}, Rels: {rels}, Time: {elapsed_ms:.0f}ms, Out tokens: {output_tokens}"
+            )
 
-            chunk_results["chunks"].append({
-                "chunk_index": i,
-                "chunk_chars": len(chunk),
-                "entities": entities,
-                "relationships": rels,
-                "time_ms": elapsed_ms,
-                "output_tokens": output_tokens
-            })
+            chunk_results["chunks"].append(
+                {
+                    "chunk_index": i,
+                    "chunk_chars": len(chunk),
+                    "entities": entities,
+                    "relationships": rels,
+                    "time_ms": elapsed_ms,
+                    "output_tokens": output_tokens,
+                }
+            )
 
             total_entities += entities
             total_rels += rels
@@ -116,10 +120,12 @@ async def run_chunk_size_benchmark(sample_text: str, sample_id: str, chunk_sizes
             "total_time_ms": total_time_ms,
             "total_output_tokens": total_output_tokens,
             "avg_entities_per_chunk": total_entities / len(chunks) if chunks else 0,
-            "avg_time_per_chunk_ms": total_time_ms / len(chunks) if chunks else 0
+            "avg_time_per_chunk_ms": total_time_ms / len(chunks) if chunks else 0,
         }
 
-        print(f"\n  TOTALS for {chunk_size} chars: {total_entities} entities, {total_rels} rels, {total_time_ms/1000:.1f}s")
+        print(
+            f"\n  TOTALS for {chunk_size} chars: {total_entities} entities, {total_rels} rels, {total_time_ms / 1000:.1f}s"
+        )
 
         results["chunk_size_results"].append(chunk_results)
 
@@ -133,10 +139,10 @@ async def async_main():
     parser.add_argument("--step", type=int, default=500, help="Chunk size step (chars)")
     args = parser.parse_args()
 
-    print("="*80)
+    print("=" * 80)
     print("CHUNK SIZE BENCHMARK")
     print(f"Chunk sizes: {args.min_chunk} to {args.max_chunk} chars (step {args.step})")
-    print("="*80)
+    print("=" * 80)
 
     # Use Sample 8 text directly (Q1064 - Leaving Las Vegas) from previous test
     # This has known good extraction results - FULL TEXT ~7700 chars
@@ -194,19 +200,23 @@ Nicolas Cage won the Golden Globe Award for Best Actor - Motion Picture Drama an
     with open(output_file, "w") as f:
         json.dump(results, f, indent=2)
 
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print(f"Results saved to: {output_file}")
-    print(f"{'='*80}")
+    print(f"{'=' * 80}")
 
     # Print summary table
     print("\n\nSUMMARY TABLE:")
     print("-" * 100)
-    print(f"{'Chunk Size':>12} | {'Chunks':>6} | {'Entities':>8} | {'Rels':>6} | {'Time (s)':>10} | {'Ent/Chunk':>10} | {'s/Chunk':>8}")
+    print(
+        f"{'Chunk Size':>12} | {'Chunks':>6} | {'Entities':>8} | {'Rels':>6} | {'Time (s)':>10} | {'Ent/Chunk':>10} | {'s/Chunk':>8}"
+    )
     print("-" * 100)
 
     for r in results["chunk_size_results"]:
         t = r["totals"]
-        print(f"{r['chunk_size']:>12} | {r['num_chunks']:>6} | {t['total_entities']:>8} | {t['total_relationships']:>6} | {t['total_time_ms']/1000:>10.1f} | {t['avg_entities_per_chunk']:>10.1f} | {t['avg_time_per_chunk_ms']/1000:>8.1f}")
+        print(
+            f"{r['chunk_size']:>12} | {r['num_chunks']:>6} | {t['total_entities']:>8} | {t['total_relationships']:>6} | {t['total_time_ms'] / 1000:>10.1f} | {t['avg_entities_per_chunk']:>10.1f} | {t['avg_time_per_chunk_ms'] / 1000:>8.1f}"
+        )
 
     print("-" * 100)
 

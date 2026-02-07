@@ -27,7 +27,7 @@ async def main():
 
     # Load first 20 questions
     questions = []
-    with open(questions_file, "r") as f:
+    with open(questions_file) as f:
         for i, line in enumerate(f):
             if i >= 20:
                 break
@@ -44,21 +44,21 @@ async def main():
             question=q["question"],
             ground_truth=q["ground_truth"],
             contexts=[],  # Will be retrieved
-            answer="",    # Will be generated
+            answer="",  # Will be generated
             metadata={
                 "id": q["id"],
                 "doc_type": q.get("doc_type", "unknown"),
                 "question_type": q.get("question_type", "unknown"),
                 "difficulty": q.get("difficulty", "unknown"),
                 "answerable": q.get("answerable", True),
-            }
+            },
         )
         samples.append(sample)
 
     # Show sample questions
     print("📋 Sample questions:")
     for i, s in enumerate(samples[:3]):
-        print(f"   {i+1}. {s.question[:60]}...")
+        print(f"   {i + 1}. {s.question[:60]}...")
     print(f"   ... and {len(samples) - 3} more")
     print()
 
@@ -66,7 +66,7 @@ async def main():
     print("🔧 Initializing RAGAS Evaluator...")
     evaluator = RAGASEvaluator(
         namespace="ragas_phase1",  # Use phase1 namespace
-        llm_model="Nemotron3",     # Use Nemotron3 for evaluation
+        llm_model="Nemotron3",  # Use Nemotron3 for evaluation
         embedding_model="bge-m3:latest",
     )
     print(f"   ✅ Namespace: {evaluator.namespace}")
@@ -99,36 +99,45 @@ async def main():
         print(f"   Faithfulness:       {results.overall_metrics.faithfulness:.3f}")
         print(f"   Answer Relevancy:   {results.overall_metrics.answer_relevancy:.3f}")
         print()
-        print(f"   Duration:           {duration:.1f}s ({duration/len(samples):.1f}s per question)")
+        print(
+            f"   Duration:           {duration:.1f}s ({duration / len(samples):.1f}s per question)"
+        )
         print(f"   Samples evaluated:  {len(samples)}")
         print()
 
         # Save results
-        results_file = Path(__file__).parent.parent / f"data/evaluation/results/ragas_eval_20_sprint92_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        results_file = (
+            Path(__file__).parent.parent
+            / f"data/evaluation/results/ragas_eval_20_sprint92_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        )
         results_file.parent.mkdir(parents=True, exist_ok=True)
 
         with open(results_file, "w") as f:
-            json.dump({
-                "timestamp": datetime.now().isoformat(),
-                "sprint": "92",
-                "samples_count": len(samples),
-                "namespace": "ragas_phase1",
-                "metrics": {
-                    "context_precision": results.overall_metrics.context_precision,
-                    "context_recall": results.overall_metrics.context_recall,
-                    "faithfulness": results.overall_metrics.faithfulness,
-                    "answer_relevancy": results.overall_metrics.answer_relevancy,
+            json.dump(
+                {
+                    "timestamp": datetime.now().isoformat(),
+                    "sprint": "92",
+                    "samples_count": len(samples),
+                    "namespace": "ragas_phase1",
+                    "metrics": {
+                        "context_precision": results.overall_metrics.context_precision,
+                        "context_recall": results.overall_metrics.context_recall,
+                        "faithfulness": results.overall_metrics.faithfulness,
+                        "answer_relevancy": results.overall_metrics.answer_relevancy,
+                    },
+                    "duration_seconds": duration,
+                    "per_sample_results": [
+                        {
+                            "question": s.question,
+                            "ground_truth": s.ground_truth,
+                            "metadata": s.metadata,
+                        }
+                        for s in samples
+                    ],
                 },
-                "duration_seconds": duration,
-                "per_sample_results": [
-                    {
-                        "question": s.question,
-                        "ground_truth": s.ground_truth,
-                        "metadata": s.metadata,
-                    }
-                    for s in samples
-                ]
-            }, f, indent=2)
+                f,
+                indent=2,
+            )
 
         print(f"💾 Results saved to: {results_file.name}")
         print()
@@ -136,6 +145,7 @@ async def main():
     except Exception as e:
         print(f"❌ Evaluation failed: {e}")
         import traceback
+
         traceback.print_exc()
 
 

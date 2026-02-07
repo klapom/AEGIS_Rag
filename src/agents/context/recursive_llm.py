@@ -115,7 +115,7 @@ class DocumentSegment:
     id: str
     content: str
     level: int
-    parent_id: Optional[str]
+    parent_id: str | None
     start_offset: int
     end_offset: int
     relevance_score: float = 0.0
@@ -162,12 +162,12 @@ class RecursiveLLMProcessor:
         self,
         llm: BaseChatModel,
         skill_registry: SkillRegistry,
-        settings: Optional[RecursiveLLMSettings] = None,
+        settings: RecursiveLLMSettings | None = None,
         # Backward compatibility: accept old parameters
-        context_window: Optional[int] = None,
-        overlap_tokens: Optional[int] = None,
-        max_depth: Optional[int] = None,
-        relevance_threshold: Optional[float] = None,
+        context_window: int | None = None,
+        overlap_tokens: int | None = None,
+        max_depth: int | None = None,
+        relevance_threshold: float | None = None,
     ):
         """Initialize recursive LLM processor with per-level configuration.
 
@@ -256,7 +256,7 @@ class RecursiveLLMProcessor:
         self,
         document: str,
         query: str,
-        skill_context: Optional[dict[str, Any]] = None,
+        skill_context: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Recursively process large document with skill support.
 
@@ -409,7 +409,7 @@ class RecursiveLLMProcessor:
         self,
         text: str,
         level: int,
-        parent_id: Optional[str] = None,
+        parent_id: str | None = None,
     ) -> list[DocumentSegment]:
         """Segment document using level-specific configuration.
 
@@ -504,7 +504,7 @@ class RecursiveLLMProcessor:
         self,
         segments: list[DocumentSegment],
         query: str,
-        skill: Optional[LoadedSkill],
+        skill: LoadedSkill | None,
         level: int = 0,
     ) -> list[DocumentSegment]:
         """Score each segment's relevance using level-specific method.
@@ -565,7 +565,7 @@ class RecursiveLLMProcessor:
         self,
         segments: list[DocumentSegment],
         query: str,
-        skill: Optional[LoadedSkill],
+        skill: LoadedSkill | None,
     ) -> list[DocumentSegment]:
         """Score segments using LLM calls (original method, deep reasoning).
 
@@ -844,7 +844,7 @@ Score:"""
         self,
         segments: list[DocumentSegment],
         query: str,
-        skill: Optional[LoadedSkill],
+        skill: LoadedSkill | None,
     ) -> list[DocumentSegment]:
         """Score segments using adaptive method (C-LARA guided).
 
@@ -956,7 +956,7 @@ Score:"""
         segment: DocumentSegment,
         query: str,
         depth: int,
-        skill: Optional[LoadedSkill],
+        skill: LoadedSkill | None,
     ) -> dict[str, Any]:
         """Recursively explore a segment with skill support.
 
@@ -1055,7 +1055,7 @@ Summary:"""
         self,
         findings: list[dict[str, Any]],
         query: str,
-        synthesis_skill: Optional[LoadedSkill],
+        synthesis_skill: LoadedSkill | None,
     ) -> str:
         """Aggregate findings into final answer using synthesis skill.
 

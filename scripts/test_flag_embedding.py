@@ -198,9 +198,7 @@ def test_sparse_filtering(service: FlagEmbeddingService) -> None:
     result_min_weight = service_min_weight.embed_single(text)
 
     # Top-k filtering
-    service_top_k = FlagEmbeddingService(
-        sparse_min_weight=0.0, sparse_top_k=20, cache_max_size=100
-    )
+    service_top_k = FlagEmbeddingService(sparse_min_weight=0.0, sparse_top_k=20, cache_max_size=100)
     result_top_k = service_top_k.embed_single(text)
 
     print(f"No filtering: {len(result_no_filter['sparse'])} tokens")
@@ -214,9 +212,7 @@ def test_sparse_filtering(service: FlagEmbeddingService) -> None:
     print("\u2713 Test passed")
 
 
-def benchmark(
-    service: FlagEmbeddingService, num_texts: int = 1000, batch_size: int = 32
-) -> None:
+def benchmark(service: FlagEmbeddingService, num_texts: int = 1000, batch_size: int = 32) -> None:
     """Benchmark embedding performance."""
     print(f"\nBenchmark: {num_texts} texts, batch_size={batch_size}")
     print("-" * 50)

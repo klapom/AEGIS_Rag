@@ -6,6 +6,7 @@ Tests chunk sizes: 500, 1000, 1500, 2000, 2500, 3000, 3500, 4000
 
 This allows proper testing of how chunk size affects entity extraction.
 """
+
 import argparse
 import json
 import time
@@ -62,37 +63,41 @@ def load_hotpotqa_samples(num_samples: int = 10, include_large: bool = True) -> 
         include_large: If True, also create a ~10000 char combined sample for large chunk testing
     """
     print(f"Loading {num_samples} samples from HotPotQA fullwiki...")
-    ds = load_dataset('hotpot_qa', 'fullwiki', split=f'validation[:{num_samples * 3}]')
+    ds = load_dataset("hotpot_qa", "fullwiki", split=f"validation[:{num_samples * 3}]")
 
     samples = []
     raw_samples = []  # Keep raw samples for potential combination
 
     for sample in ds:
         # Combine all context sentences
-        contexts = sample.get('context', {})
+        contexts = sample.get("context", {})
         if isinstance(contexts, dict):
-            sentences = contexts.get('sentences', [])
-            total_text = ' '.join([' '.join(s) if isinstance(s, list) else s for s in sentences])
+            sentences = contexts.get("sentences", [])
+            total_text = " ".join([" ".join(s) if isinstance(s, list) else s for s in sentences])
         else:
             total_text = str(contexts)
 
-        raw_samples.append({
-            'id': sample.get('id', f'sample_{len(raw_samples)}'),
-            'question': sample.get('question', ''),
-            'answer': sample.get('answer', ''),
-            'context': total_text,
-            'context_length': len(total_text)
-        })
+        raw_samples.append(
+            {
+                "id": sample.get("id", f"sample_{len(raw_samples)}"),
+                "question": sample.get("question", ""),
+                "answer": sample.get("answer", ""),
+                "context": total_text,
+                "context_length": len(total_text),
+            }
+        )
 
         # Only keep samples with substantial text (>2000 chars for chunking tests)
         if len(total_text) >= 2000 and len(samples) < num_samples:
-            samples.append({
-                'id': sample.get('id', f'sample_{len(samples)}'),
-                'question': sample.get('question', ''),
-                'answer': sample.get('answer', ''),
-                'context': total_text,
-                'context_length': len(total_text)
-            })
+            samples.append(
+                {
+                    "id": sample.get("id", f"sample_{len(samples)}"),
+                    "question": sample.get("question", ""),
+                    "answer": sample.get("answer", ""),
+                    "context": total_text,
+                    "context_length": len(total_text),
+                }
+            )
 
     # Create a ~10000 char combined sample for large chunk testing
     if include_large:
@@ -103,25 +108,31 @@ def load_hotpotqa_samples(num_samples: int = 10, include_large: bool = True) -> 
 
         for s in raw_samples:
             if len(combined_context) < 10000:
-                combined_context += "\n\n" + s['context'] if combined_context else s['context']
-                combined_questions.append(s['question'])
-                combined_answers.append(s['answer'])
-                combined_ids.append(s['id'])
+                combined_context += "\n\n" + s["context"] if combined_context else s["context"]
+                combined_questions.append(s["question"])
+                combined_answers.append(s["answer"])
+                combined_ids.append(s["id"])
 
         if len(combined_context) >= 8000:  # Close enough to 10000
-            samples.append({
-                'id': 'combined_large_' + '_'.join(combined_ids[:3]),
-                'question': ' | '.join(combined_questions),  # Concatenate questions
-                'answer': ' | '.join(combined_answers),
-                'context': combined_context,
-                'context_length': len(combined_context),
-                'is_combined': True,
-                'source_sample_count': len(combined_ids)
-            })
-            print(f"Created combined large sample: {len(combined_context)} chars from {len(combined_ids)} samples")
+            samples.append(
+                {
+                    "id": "combined_large_" + "_".join(combined_ids[:3]),
+                    "question": " | ".join(combined_questions),  # Concatenate questions
+                    "answer": " | ".join(combined_answers),
+                    "context": combined_context,
+                    "context_length": len(combined_context),
+                    "is_combined": True,
+                    "source_sample_count": len(combined_ids),
+                }
+            )
+            print(
+                f"Created combined large sample: {len(combined_context)} chars from {len(combined_ids)} samples"
+            )
 
-    print(f"Loaded {len(samples)} samples with context lengths: "
-          f"{[s['context_length'] for s in samples]}")
+    print(
+        f"Loaded {len(samples)} samples with context lengths: "
+        f"{[s['context_length'] for s in samples]}"
+    )
     return samples
 
 
@@ -136,7 +147,7 @@ def chunk_text(text: str, chunk_size: int, overlap: int = 0) -> list[str]:
         end = start + chunk_size
         # Try to break at sentence boundary
         if end < len(text):
-            for boundary in ['. ', '.\n', '? ', '! ']:
+            for boundary in [". ", ".\n", "? ", "! "]:
                 last_boundary = text.rfind(boundary, start + chunk_size // 2, end + 100)
                 if last_boundary != -1:
                     end = last_boundary + len(boundary)
@@ -150,6 +161,7 @@ def chunk_text(text: str, chunk_size: int, overlap: int = 0) -> list[str]:
 def parse_json_array(text: str) -> list | None:
     """Try to extract a JSON array from text."""
     import re
+
     text = text.strip()
 
     # Direct parse
@@ -161,7 +173,7 @@ def parse_json_array(text: str) -> list | None:
         pass
 
     # Find JSON array
-    match = re.search(r'\[[\s\S]*\]', text)
+    match = re.search(r"\[[\s\S]*\]", text)
     if match:
         try:
             data = json.loads(match.group())
@@ -171,9 +183,9 @@ def parse_json_array(text: str) -> list | None:
             pass
 
     # Remove markdown code blocks
-    text = re.sub(r'```json\s*', '', text)
-    text = re.sub(r'```\s*', '', text)
-    match = re.search(r'\[[\s\S]*\]', text)
+    text = re.sub(r"```json\s*", "", text)
+    text = re.sub(r"```\s*", "", text)
+    match = re.search(r"\[[\s\S]*\]", text)
     if match:
         try:
             data = json.loads(match.group())
@@ -196,7 +208,7 @@ def extract_from_chunk(model: str, chunk: str, chunk_id: int, timeout: int = 180
         "relation_time": 0,
         "tokens_in": 0,
         "tokens_out": 0,
-        "error": None
+        "error": None,
     }
 
     # Entity extraction
@@ -211,9 +223,9 @@ def extract_from_chunk(model: str, chunk: str, chunk_id: int, timeout: int = 180
                 "model": model,
                 "prompt": prompt,
                 "stream": False,
-                "options": {"temperature": 0.1, "num_predict": 4096}
+                "options": {"temperature": 0.1, "num_predict": 4096},
             },
-            timeout=timeout
+            timeout=timeout,
         )
 
         if response.status_code != 200:
@@ -244,9 +256,9 @@ def extract_from_chunk(model: str, chunk: str, chunk_id: int, timeout: int = 180
                 "model": model,
                 "prompt": prompt,
                 "stream": False,
-                "options": {"temperature": 0.1, "num_predict": 4096}
+                "options": {"temperature": 0.1, "num_predict": 4096},
             },
-            timeout=timeout
+            timeout=timeout,
         )
 
         if response.status_code == 200:
@@ -266,7 +278,7 @@ def extract_from_chunk(model: str, chunk: str, chunk_id: int, timeout: int = 180
 
 def benchmark_sample_with_chunk_size(model: str, sample: dict, chunk_size: int) -> dict:
     """Run benchmark for a specific sample and chunk size."""
-    text = sample['context']
+    text = sample["context"]
     chunks = chunk_text(text, chunk_size)
 
     all_entities = []
@@ -294,8 +306,8 @@ def benchmark_sample_with_chunk_size(model: str, sample: dict, chunk_size: int) 
             unique_entities[name] = e
 
     return {
-        "sample_id": sample['id'],
-        "question": sample['question'],
+        "sample_id": sample["id"],
+        "question": sample["question"],
         "context_length": len(text),
         "chunk_size": chunk_size,
         "num_chunks": len(chunks),
@@ -313,8 +325,11 @@ def main():
     parser = argparse.ArgumentParser(description="HotPotQA Chunk-Size Benchmark")
     parser.add_argument("--model", default="gemma3:4b", help="Model to benchmark")
     parser.add_argument("--samples", type=int, default=5, help="Number of samples to test")
-    parser.add_argument("--chunk-sizes", default="500,1000,1500,2000,2500,3000,3500,4000,10000",
-                       help="Comma-separated chunk sizes (includes 10000 for large sample test)")
+    parser.add_argument(
+        "--chunk-sizes",
+        default="500,1000,1500,2000,2500,3000,3500,4000,10000",
+        help="Comma-separated chunk sizes (includes 10000 for large sample test)",
+    )
     args = parser.parse_args()
 
     chunk_sizes = [int(x) for x in args.chunk_sizes.split(",")]
@@ -340,44 +355,60 @@ def main():
             result = benchmark_sample_with_chunk_size(args.model, sample, chunk_size)
             all_results.append(result)
 
-            print(f"  Chunk {chunk_size}: {result['num_chunks']} chunks -> "
-                  f"{result['unique_entities']} entities, {result['total_relations']} relations "
-                  f"({result['total_time']:.1f}s, {result['tokens_out']} tokens out)")
+            print(
+                f"  Chunk {chunk_size}: {result['num_chunks']} chunks -> "
+                f"{result['unique_entities']} entities, {result['total_relations']} relations "
+                f"({result['total_time']:.1f}s, {result['tokens_out']} tokens out)"
+            )
 
     # Summary by chunk size
     print("\n" + "=" * 100)
     print("SUMMARY BY CHUNK SIZE")
     print("=" * 100)
 
-    print(f"\n{'Chunk Size':<12} {'Avg Chunks':<12} {'Avg Entities':<14} {'Avg Relations':<14} "
-          f"{'Avg Time (s)':<14} {'Avg Tok Out':<12}")
+    print(
+        f"\n{'Chunk Size':<12} {'Avg Chunks':<12} {'Avg Entities':<14} {'Avg Relations':<14} "
+        f"{'Avg Time (s)':<14} {'Avg Tok Out':<12}"
+    )
     print("-" * 100)
 
     for cs in chunk_sizes:
-        cs_results = [r for r in all_results if r['chunk_size'] == cs]
-        avg_chunks = sum(r['num_chunks'] for r in cs_results) / len(cs_results)
-        avg_entities = sum(r['unique_entities'] for r in cs_results) / len(cs_results)
-        avg_relations = sum(r['total_relations'] for r in cs_results) / len(cs_results)
-        avg_time = sum(r['total_time'] for r in cs_results) / len(cs_results)
-        avg_tokens = sum(r['tokens_out'] for r in cs_results) / len(cs_results)
+        cs_results = [r for r in all_results if r["chunk_size"] == cs]
+        avg_chunks = sum(r["num_chunks"] for r in cs_results) / len(cs_results)
+        avg_entities = sum(r["unique_entities"] for r in cs_results) / len(cs_results)
+        avg_relations = sum(r["total_relations"] for r in cs_results) / len(cs_results)
+        avg_time = sum(r["total_time"] for r in cs_results) / len(cs_results)
+        avg_tokens = sum(r["tokens_out"] for r in cs_results) / len(cs_results)
 
-        print(f"{cs:<12} {avg_chunks:<12.1f} {avg_entities:<14.1f} {avg_relations:<14.1f} "
-              f"{avg_time:<14.1f} {avg_tokens:<12.0f}")
+        print(
+            f"{cs:<12} {avg_chunks:<12.1f} {avg_entities:<14.1f} {avg_relations:<14.1f} "
+            f"{avg_time:<14.1f} {avg_tokens:<12.0f}"
+        )
 
     print("-" * 100)
 
     # Save results
     output_file = f"reports/benchmark_hotpotqa_{args.model.replace(':', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
     with open(output_file, "w") as f:
-        json.dump({
-            "timestamp": datetime.now().isoformat(),
-            "model": args.model,
-            "num_samples": len(samples),
-            "chunk_sizes": chunk_sizes,
-            "samples": [{"id": s['id'], "question": s['question'], "context_length": s['context_length']}
-                       for s in samples],
-            "results": all_results
-        }, f, indent=2)
+        json.dump(
+            {
+                "timestamp": datetime.now().isoformat(),
+                "model": args.model,
+                "num_samples": len(samples),
+                "chunk_sizes": chunk_sizes,
+                "samples": [
+                    {
+                        "id": s["id"],
+                        "question": s["question"],
+                        "context_length": s["context_length"],
+                    }
+                    for s in samples
+                ],
+                "results": all_results,
+            },
+            f,
+            indent=2,
+        )
 
     print(f"\nResults saved to: {output_file}")
 

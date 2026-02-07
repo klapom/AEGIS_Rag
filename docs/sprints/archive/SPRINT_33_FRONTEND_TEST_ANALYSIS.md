@@ -681,4 +681,3 @@ npm test -- AdminIndexingPage.test.tsx
 - Tests use Vitest with jsdom (browser simulation)
 - Docker services mentioned in context but not running during test execution
 - All 26 failing tests can be fixed with ~20 minutes of work
-

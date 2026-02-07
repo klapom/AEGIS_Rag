@@ -162,6 +162,7 @@ class TestToolComposerInit:
 
     def test_init_with_tools(self):
         """Test initialization with tool registry."""
+
         def echo(msg: str) -> str:
             """Echo the input message."""
             return msg
@@ -203,9 +204,11 @@ class TestToolComposerResolveInputs:
 
     def setup_method(self):
         """Set up test fixtures."""
+
         def echo_fn(x: str) -> str:
             """Echo function."""
             return x
+
         self.composer = ToolComposer(tool_registry={"echo": echo_fn})
 
     def test_resolve_direct_values(self):
@@ -269,6 +272,7 @@ class TestToolComposerExecuteChain:
     @pytest.mark.asyncio
     async def test_execute_simple_chain(self):
         """Test executing a simple chain."""
+
         # Create async tool
         async def async_echo(msg: str) -> str:
             """Echo the message."""
@@ -295,6 +299,7 @@ class TestToolComposerExecuteChain:
     @pytest.mark.asyncio
     async def test_execute_chain_with_data_passing(self):
         """Test executing chain with data passing between steps."""
+
         async def search(query: str) -> str:
             """Search for query."""
             return f"Found: {query}"
@@ -303,9 +308,7 @@ class TestToolComposerExecuteChain:
             """Summarize text."""
             return f"Summary: {text}"
 
-        composer = ToolComposer(
-            tool_registry={"search": search, "summarize": summarize}
-        )
+        composer = ToolComposer(tool_registry={"search": search, "summarize": summarize})
 
         chain = ToolChain(
             id="research",
@@ -326,6 +329,7 @@ class TestToolComposerExecuteChain:
     @pytest.mark.asyncio
     async def test_execute_chain_with_initial_context(self):
         """Test executing chain with initial context."""
+
         async def echo(msg: str) -> str:
             """Echo the message."""
             return msg
@@ -371,6 +375,7 @@ class TestToolComposerExecuteChain:
     @pytest.mark.asyncio
     async def test_execute_chain_optional_step_failure(self):
         """Test chain continues when optional step fails."""
+
         async def echo(msg: str) -> str:
             """Echo the message."""
             return msg
@@ -379,9 +384,7 @@ class TestToolComposerExecuteChain:
             """Fail tool."""
             raise ValueError("Tool failed")
 
-        composer = ToolComposer(
-            tool_registry={"echo": echo, "fail": fail_tool}
-        )
+        composer = ToolComposer(tool_registry={"echo": echo, "fail": fail_tool})
 
         chain = ToolChain(
             id="test",
@@ -404,6 +407,7 @@ class TestToolComposerExecuteChain:
     @pytest.mark.asyncio
     async def test_execute_chain_timeout(self):
         """Test chain step timeout."""
+
         async def slow_tool() -> str:
             """Slow tool."""
             await asyncio.sleep(5)
@@ -437,6 +441,7 @@ class TestToolComposerWithPolicy:
     @pytest.mark.asyncio
     async def test_execute_with_permission_denied(self):
         """Test chain fails when permission denied."""
+
         async def echo(msg: str) -> str:
             """Echo the message."""
             return msg
@@ -463,6 +468,7 @@ class TestToolComposerWithPolicy:
     @pytest.mark.asyncio
     async def test_execute_with_permission_allowed(self):
         """Test chain succeeds when permission granted."""
+
         async def echo(msg: str) -> str:
             """Echo the message."""
             return msg
@@ -497,6 +503,7 @@ class TestToolComposerMetrics:
     @pytest.mark.asyncio
     async def test_metrics_increment(self):
         """Test metrics are incremented on execution."""
+
         async def echo(msg: str) -> str:
             """Echo the message."""
             return msg
@@ -540,6 +547,7 @@ class TestCreateToolComposer:
 
     def test_create_with_custom_tools(self):
         """Test creating composer with custom tools."""
+
         def custom_tool() -> str:
             """Custom tool."""
             return "custom"
@@ -560,10 +568,11 @@ class TestSkillAwareTool:
 
     @pytest.mark.xfail(
         reason="skill_aware_tool decorator has issue with @tool(name=..., description=...) syntax",
-        strict=False
+        strict=False,
     )
     def test_decorator_creates_tool(self):
         """Test decorator creates a LangChain tool."""
+
         @skill_aware_tool(
             name="test_tool",
             description="A test tool",
@@ -573,17 +582,18 @@ class TestSkillAwareTool:
 
         # Should have tool metadata stored on the wrapper
         # The decorator stores metadata but may not expose all attributes
-        assert hasattr(my_tool, "__call__"), "Tool should be callable"
+        assert callable(my_tool), "Tool should be callable"
         # Check if we can call it
         result = my_tool("test")
         assert "Result" in str(result)
 
     @pytest.mark.xfail(
         reason="skill_aware_tool decorator has issue with @tool(name=..., description=...) syntax",
-        strict=False
+        strict=False,
     )
     def test_decorator_with_authorized_skills(self):
         """Test decorator stores authorized skills."""
+
         @skill_aware_tool(
             name="restricted_tool",
             description="Only for research",
@@ -593,6 +603,6 @@ class TestSkillAwareTool:
             return query
 
         # The decorator wraps the function and stores metadata
-        assert hasattr(my_tool, "__call__"), "Tool should be callable"
+        assert callable(my_tool), "Tool should be callable"
         # Verify it's a wrapped function
         assert callable(my_tool)

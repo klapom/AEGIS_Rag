@@ -320,9 +320,7 @@ async def test_embedding_node_empty_chunks_error(base_state):
 
 
 @pytest.mark.asyncio
-async def test_embedding_node_preserves_payload_metadata(
-    base_state, mock_multi_vector_embeddings
-):
+async def test_embedding_node_preserves_payload_metadata(base_state, mock_multi_vector_embeddings):
     """Test that all payload metadata is preserved in multi-vector mode."""
     # Mock embedding service
     mock_service = AsyncMock()

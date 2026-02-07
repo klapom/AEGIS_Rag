@@ -61,10 +61,10 @@ BEFORE (BROKEN - TIMEOUTS)
 
   test('should trigger Recursive LLM Scoring...', async ({ chatPage }) => {
     // ❌ Routes defined AFTER goto()
-    
+
     await chatPage.page.route('**/api/v1/chat/**', async (route) => {  ← Line N+10
       await new Promise(resolve => setTimeout(resolve, 800));
-      
+
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -91,10 +91,10 @@ AFTER (FIXED - PASSES)
 
   test('should trigger Recursive LLM Scoring...', async ({ chatPage }) => {
     // ✅ Routes defined BEFORE goto()
-    
+
     await chatPage.page.route('**/api/v1/chat/**', async (route) => {  ← Line N
       await new Promise(resolve => setTimeout(resolve, 800));
-      
+
       await route.fulfill({
         status: 200,
         contentType: 'application/json',

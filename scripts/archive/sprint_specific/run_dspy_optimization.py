@@ -45,9 +45,7 @@ class EntityExtractionSignature(dspy.Signature):
     """Extract named entities from document text."""
 
     text: str = dspy.InputField(desc="Document text to extract entities from")
-    domain: str = dspy.InputField(
-        desc="Document domain: technical, organizational, or scientific"
-    )
+    domain: str = dspy.InputField(desc="Document domain: technical, organizational, or scientific")
     entities: list = dspy.OutputField(
         desc="JSON array of {name, type, description} objects for each entity"
     )
@@ -110,13 +108,10 @@ class EntityRelationPipeline(dspy.Module):
         # Stage 2: Extract relations using the extracted entities
         relation_result = self.relation_extractor(
             text=text,
-            entities=entities  # Pass extracted entities as input
+            entities=entities,  # Pass extracted entities as input
         )
 
-        return dspy.Prediction(
-            entities=entity_result.entities,
-            relations=relation_result.relations
-        )
+        return dspy.Prediction(entities=entity_result.entities, relations=relation_result.relations)
 
 
 # ============================================================================
@@ -372,7 +367,12 @@ def create_sample_data() -> tuple[list[dspy.Example], list[dspy.Example]]:
             "relations": [
                 {"source": "Bill Gates", "target": "Microsoft", "type": "FOUNDED", "strength": 10},
                 {"source": "Paul Allen", "target": "Microsoft", "type": "FOUNDED", "strength": 10},
-                {"source": "Microsoft", "target": "Redmond", "type": "HEADQUARTERED_IN", "strength": 9},
+                {
+                    "source": "Microsoft",
+                    "target": "Redmond",
+                    "type": "HEADQUARTERED_IN",
+                    "strength": 9,
+                },
                 {"source": "Microsoft", "target": "GitHub", "type": "ACQUIRED", "strength": 10},
             ],
         },
@@ -692,9 +692,7 @@ class DSPyOptimizer:
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="DSPy MIPROv2 Optimization for Extraction Prompts"
-    )
+    parser = argparse.ArgumentParser(description="DSPy MIPROv2 Optimization for Extraction Prompts")
     parser.add_argument(
         "--training-data",
         type=str,
@@ -837,9 +835,7 @@ def main():
             )
 
             # Evaluate
-            entity_results = optimizer.evaluate(
-                entity_module, valset, entity_extraction_objective
-            )
+            entity_results = optimizer.evaluate(entity_module, valset, entity_extraction_objective)
             print(f"\nEntity Extraction Results:")
             print(f"  Average Score: {entity_results['avg_score']:.3f}")
             print(f"  Min Score: {entity_results['min_score']:.3f}")

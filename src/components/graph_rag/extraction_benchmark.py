@@ -48,7 +48,7 @@ class ExtractionStrategy(str, Enum):
 
     SEQUENTIAL = "sequential"  # Current: 3 LLM calls (entity, typed_rel, semantic_rel)
     UNIFIED = "unified"  # New: 1 LLM call (entity + all relations)
-    UNIFIED_TWO_PASS = "unified_two_pass"  # 2 LLM calls (entity+typed, semantic)
+    UNIFIED_TWO_PASS = "unified_two_pass"  # nosec B105 — enum value, not a password
     PARALLEL = "parallel"  # 2 parallel LLM calls (entity+typed || semantic)
 
 

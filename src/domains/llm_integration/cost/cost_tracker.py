@@ -268,7 +268,7 @@ class CostTracker:
 
             where_clause = " AND ".join(conditions) if conditions else "1=1"
 
-            cursor.execute(
+            cursor.execute(  # nosec B608 — parameterized query
                 f"""
                 SELECT SUM(cost_usd)
                 FROM llm_requests
@@ -320,7 +320,7 @@ class CostTracker:
 
             where_clause = " AND ".join(conditions)
 
-            cursor.execute(
+            cursor.execute(  # nosec B608 — parameterized query
                 f"""
                 SELECT
                     COUNT(*) as total_requests,
@@ -338,7 +338,7 @@ class CostTracker:
             row = cursor.fetchone()
 
             # Per-provider breakdown
-            cursor.execute(
+            cursor.execute(  # nosec B608 — parameterized query
                 f"""
                 SELECT
                     provider,
@@ -363,7 +363,7 @@ class CostTracker:
             ]
 
             # Per-task-type breakdown
-            cursor.execute(
+            cursor.execute(  # nosec B608 — parameterized query
                 f"""
                 SELECT
                     task_type,

@@ -44,7 +44,7 @@ async def test_context_and_show_response(context: str, length: int, prompt, llm)
 
 async def main():
     print("🔍 Narrowing Threshold: 20K-25K Characters")
-    print("="*80)
+    print("=" * 80)
 
     # Create LLM
     llm = ChatOllama(
@@ -78,14 +78,14 @@ async def main():
     # Narrow down: test every 1K from 20K to 25K
     test_lengths = [20000, 21000, 22000, 23000, 24000, 25000]
 
-    print(f"{'='*80}")
+    print(f"{'=' * 80}")
     print(f"Testing exact threshold")
-    print(f"{'='*80}\n")
+    print(f"{'=' * 80}\n")
 
     for length in test_lengths:
-        print(f"\n{'─'*80}")
+        print(f"\n{'─' * 80}")
         print(f"Testing {length:,} chars")
-        print(f"{'─'*80}")
+        print(f"{'─' * 80}")
 
         success, verdict, response_text, parsed_json = await test_context_and_show_response(
             context3, length, prompt, llm
@@ -112,7 +112,7 @@ async def main():
                 print(f"\n🔴 EXACT THRESHOLD IDENTIFIED: Between 20,000 and 21,000 characters")
                 break
 
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
 
 
 if __name__ == "__main__":

@@ -28,8 +28,15 @@ class DashboardValidator:
     REQUIRED_DASHBOARD_FIELDS = {"uid", "title", "schemaVersion", "panels"}
     REQUIRED_PANEL_FIELDS = {"id", "title", "type", "gridPos"}
     VALID_PANEL_TYPES = {
-        "timeseries", "stat", "gauge", "piechart", "table",
-        "graph", "heatmap", "histogram", "state-timeline"
+        "timeseries",
+        "stat",
+        "gauge",
+        "piechart",
+        "table",
+        "graph",
+        "heatmap",
+        "histogram",
+        "state-timeline",
     }
     REQUIRED_GRID_POS_FIELDS = {"h", "w", "x", "y"}
 
@@ -65,7 +72,7 @@ class DashboardValidator:
     def validate_json_syntax(self, file_path: Path) -> bool:
         """Validate JSON syntax."""
         try:
-            with open(file_path, 'r') as f:
+            with open(file_path) as f:
                 json.load(f)
             self.log_info(f"Valid JSON syntax")
             return True
@@ -154,8 +161,9 @@ class DashboardValidator:
                         # Basic PromQL validation
                         expr = target["expr"]
                         if not self._validate_promql(expr):
-                            self.log_warning(f"Suspicious PromQL: {expr[:50]}...",
-                                           file_name, panel.get("id"))
+                            self.log_warning(
+                                f"Suspicious PromQL: {expr[:50]}...", file_name, panel.get("id")
+                            )
 
             # Check datasource reference
             if "datasource" not in panel and "targets" in panel:
@@ -186,7 +194,7 @@ class DashboardValidator:
             return False, self._get_results()
 
         # Parse JSON
-        with open(file_path, 'r') as f:
+        with open(file_path) as f:
             dashboard = json.load(f)
 
         # Validate structure
@@ -224,9 +232,9 @@ class DashboardValidator:
     @staticmethod
     def print_summary(results: Dict[str, Tuple[bool, Dict]]):
         """Print validation summary."""
-        print("\n" + "="*80)
+        print("\n" + "=" * 80)
         print("VALIDATION SUMMARY")
-        print("="*80)
+        print("=" * 80)
 
         total = len(results)
         passed = sum(1 for valid, _ in results.values() if valid)
@@ -252,30 +260,20 @@ class DashboardValidator:
                 for warning in details["warnings"]:
                     print(f"  - {warning}")
 
-        print("\n" + "="*80)
+        print("\n" + "=" * 80)
         return failed == 0
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Validate Grafana dashboard JSON files"
-    )
+    parser = argparse.ArgumentParser(description="Validate Grafana dashboard JSON files")
     parser.add_argument(
         "--dir",
         type=Path,
         default=Path(__file__).parent.parent / "config" / "grafana" / "dashboards",
-        help="Dashboards directory (default: config/grafana/dashboards/)"
+        help="Dashboards directory (default: config/grafana/dashboards/)",
     )
-    parser.add_argument(
-        "--dashboard",
-        type=str,
-        help="Validate specific dashboard file"
-    )
-    parser.add_argument(
-        "--verbose", "-v",
-        action="store_true",
-        help="Verbose output"
-    )
+    parser.add_argument("--dashboard", type=str, help="Validate specific dashboard file")
+    parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
 
     args = parser.parse_args()
 

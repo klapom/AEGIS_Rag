@@ -32,13 +32,10 @@ class TestHotpotQAAdapter:
                 "title": ["Arthur's Magazine", "First for Women"],
                 "sentences": [
                     ["Arthur's Magazine (1844–1846) was an American literary periodical."],
-                    ["First for Women is a woman's magazine published by Bauer Media Group."]
-                ]
+                    ["First for Women is a woman's magazine published by Bauer Media Group."],
+                ],
             },
-            "supporting_facts": {
-                "title": ["Arthur's Magazine"],
-                "sent_id": [0]
-            }
+            "supporting_facts": {"title": ["Arthur's Magazine"], "sent_id": [0]},
         }
 
         result = adapter.adapt(record, record_idx=0)
@@ -58,10 +55,7 @@ class TestHotpotQAAdapter:
             "id": "test_002",
             "question": "What is something?",
             "answer": "",
-            "context": {
-                "title": ["Test"],
-                "sentences": [["Some context."]]
-            }
+            "context": {"title": ["Test"], "sentences": [["Some context."]]},
         }
 
         result = adapter.adapt(record, record_idx=0)
@@ -78,11 +72,8 @@ class TestHotpotQAAdapter:
             "level": "hard",
             "context": {
                 "title": ["Company A", "John Doe"],
-                "sentences": [
-                    ["Company A made X."],
-                    ["John Doe founded Company A."]
-                ]
-            }
+                "sentences": [["Company A made X."], ["John Doe founded Company A."]],
+            },
         }
 
         result = adapter.adapt(record, record_idx=0)
@@ -120,7 +111,9 @@ class TestRAGBenchAdapter:
         record = {
             "question": "What is X and how does it work?",
             "response": "X is Y and it works by doing Z",
-            "context": ["Some detailed context about X. X is a technology that was developed in 2020. It provides many benefits."],
+            "context": [
+                "Some detailed context about X. X is a technology that was developed in 2020. It provides many benefits."
+            ],
         }
 
         result = adapter.adapt(record, record_idx=0)
@@ -133,7 +126,10 @@ class TestRAGBenchAdapter:
         record = {
             "question": "What is X and why is it important?",
             "answer": "Y is the answer to the question",
-            "documents": ["Document 1 about X with detailed information and context.", "Document 2 about X with more details."],
+            "documents": [
+                "Document 1 about X with detailed information and context.",
+                "Document 2 about X with more details.",
+            ],
         }
 
         result = adapter.adapt(record, record_idx=0)
@@ -155,7 +151,9 @@ class TestLogQAAdapter:
             "id": "logqa_001",
             "question": "What error occurred in the log?",
             "answer": "NullPointerException",
-            "context": ["2024-01-01 10:30:45 ERROR: NullPointerException at line 42 in module UserService. The stack trace shows the error originated from the authentication handler."],
+            "context": [
+                "2024-01-01 10:30:45 ERROR: NullPointerException at line 42 in module UserService. The stack trace shows the error originated from the authentication handler."
+            ],
             "log_type": "application",
         }
 
@@ -173,7 +171,9 @@ class TestLogQAAdapter:
             "id": "logqa_002",
             "question": "What security event occurred?",
             "answer": "Unauthorized access",
-            "context": ["2024-01-01 12:00:00 SECURITY: Unauthorized access detected from IP 192.168.1.100. User attempted to access restricted resource /admin/users without proper credentials."],
+            "context": [
+                "2024-01-01 12:00:00 SECURITY: Unauthorized access detected from IP 192.168.1.100. User attempted to access restricted resource /admin/users without proper credentials."
+            ],
             "log_type": "security",
         }
 
@@ -189,7 +189,9 @@ class TestLogQAAdapter:
             "id": "logqa_003",
             "question": "How to fix the connection error?",
             "answer": "Restart the service",
-            "context": ["2024-01-01 15:00:00 ERROR: Connection refused to database server at localhost:5432. The service has been unable to establish a connection for the past 5 minutes."],
+            "context": [
+                "2024-01-01 15:00:00 ERROR: Connection refused to database server at localhost:5432. The service has been unable to establish a connection for the past 5 minutes."
+            ],
         }
 
         result = adapter.adapt(record, record_idx=0)

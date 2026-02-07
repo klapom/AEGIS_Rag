@@ -210,8 +210,7 @@ async def test_graphiti_entity_extraction_e2e(graphiti_wrapper):
     """
     # Given: Text with clear entities
     content = (
-        "Elon Musk founded SpaceX in 2002. "
-        "The company is headquartered in Hawthorne, California."
+        "Elon Musk founded SpaceX in 2002. The company is headquartered in Hawthorne, California."
     )
 
     # When: Add episode (triggers entity extraction)

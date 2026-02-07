@@ -186,16 +186,16 @@ async def test_provenance_query():
 
         print(f"\n✓ Found {len(records)} chunk(s) mentioning '{entity_id}':")
         for i, record in enumerate(records):
-            print(f"\n  Chunk {i+1}:")
+            print(f"\n  Chunk {i + 1}:")
             print(f"    - Document: {record['document_id']}")
             print(f"    - Chunk Index: {record['chunk_index']}")
             print(f"    - Tokens: {record['tokens']}")
             print(f"    - Text Preview: {record['chunk_text'][:100]}...")
 
             # Verify entity is actually in the text
-            assert (
-                entity_id in record["chunk_text"]
-            ), f"Entity '{entity_id}' should be in chunk text"
+            assert entity_id in record["chunk_text"], (
+                f"Entity '{entity_id}' should be in chunk text"
+            )
 
     await driver.close()
 

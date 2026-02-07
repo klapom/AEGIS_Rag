@@ -244,7 +244,13 @@ async def test_classification_latency_fast_path():
         mock_clara.return_value = {
             **initial_state,
             "candidates": [
-                {"domain_id": "medical", "confidence": 0.95, "reasoning": None, "matched_entity_types": [], "matched_intent": None},
+                {
+                    "domain_id": "medical",
+                    "confidence": 0.95,
+                    "reasoning": None,
+                    "matched_entity_types": [],
+                    "matched_intent": None,
+                },
             ],
             "max_confidence": 0.95,
             "latency_ms": 35.0,

@@ -143,8 +143,7 @@ async def process_sample(
                         entities = await extraction_service.extract_entities(chunk_text)
                         # Convert to dicts for deduplication
                         entity_dicts = [
-                            e.model_dump() if hasattr(e, "model_dump") else e
-                            for e in entities
+                            e.model_dump() if hasattr(e, "model_dump") else e for e in entities
                         ]
                         all_entities.extend(entity_dicts)
 
@@ -154,8 +153,7 @@ async def process_sample(
                         )
                         # Convert to dicts for deduplication
                         relation_dicts = [
-                            r.model_dump() if hasattr(r, "model_dump") else r
-                            for r in relations
+                            r.model_dump() if hasattr(r, "model_dump") else r for r in relations
                         ]
                         all_relations.extend(relation_dicts)
                     except Exception as e:
@@ -188,13 +186,17 @@ async def process_sample(
                     deduplicator = create_deduplicator_from_config(settings)
                     if deduplicator:
                         # Sprint 49.9: Now async with BGE-M3 embeddings
-                        all_entities, entity_mapping = await deduplicator.deduplicate_with_mapping(all_entities)
+                        all_entities, entity_mapping = await deduplicator.deduplicate_with_mapping(
+                            all_entities
+                        )
 
                 entities_after = len(all_entities)
                 stage.metrics["entities_after"] = entities_after
-                stage.metrics["reduction_percent"] = round(
-                    (1 - entities_after / entities_before) * 100, 1
-                ) if entities_before > 0 else 0
+                stage.metrics["reduction_percent"] = (
+                    round((1 - entities_after / entities_before) * 100, 1)
+                    if entities_before > 0
+                    else 0
+                )
                 stage.metrics["mapping_size"] = len(entity_mapping)
 
                 result["entities_deduped"] = entities_after
@@ -213,9 +215,11 @@ async def process_sample(
 
                 relations_after = len(all_relations)
                 stage.metrics["relations_after"] = relations_after
-                stage.metrics["reduction_percent"] = round(
-                    (1 - relations_after / relations_before) * 100, 1
-                ) if relations_before > 0 else 0
+                stage.metrics["reduction_percent"] = (
+                    round((1 - relations_after / relations_before) * 100, 1)
+                    if relations_before > 0
+                    else 0
+                )
 
                 result["relations_deduped"] = relations_after
                 result["relation_dedup_percent"] = stage.metrics["reduction_percent"]
@@ -308,9 +312,7 @@ async def run_evaluation(
 
 def main():
     """Main entry point."""
-    parser = argparse.ArgumentParser(
-        description="Evaluate full pipeline with different LLM models"
-    )
+    parser = argparse.ArgumentParser(description="Evaluate full pipeline with different LLM models")
     parser.add_argument(
         "--model",
         type=str,
@@ -355,7 +357,9 @@ def main():
     meta = report["metadata"]
     print("\n" + "=" * 60)
     print(f"Model: {args.model}")
-    print(f"Samples: {meta['total_samples']} (Success: {meta['successful']}, Failed: {meta['failed']})")
+    print(
+        f"Samples: {meta['total_samples']} (Success: {meta['successful']}, Failed: {meta['failed']})"
+    )
     print(f"Total Time: {meta['total_time_seconds']:.1f}s")
     print(f"Avg Time/Sample: {meta['total_time_seconds'] / meta['total_samples']:.1f}s")
     print("=" * 60)

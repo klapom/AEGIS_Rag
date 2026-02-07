@@ -241,7 +241,9 @@ def calculate_metrics(
     # Entity quality metrics
     entity_types = set(e.type for e in entities)
     entity_name_lengths = [len(e.name) for e in entities]
-    avg_name_length = sum(entity_name_lengths) / len(entity_name_lengths) if entity_name_lengths else 0
+    avg_name_length = (
+        sum(entity_name_lengths) / len(entity_name_lengths) if entity_name_lengths else 0
+    )
 
     # Relation quality metrics
     relation_types = set(r.type for r in relationships)
@@ -331,11 +333,19 @@ async def evaluate_feature(
     if result.samples:
         result.total_samples = len(result.samples)
         result.avg_entity_count = sum(s.entity_count for s in result.samples) / len(result.samples)
-        result.avg_relation_count = sum(s.relation_count for s in result.samples) / len(result.samples)
+        result.avg_relation_count = sum(s.relation_count for s in result.samples) / len(
+            result.samples
+        )
         result.avg_er_ratio = sum(s.er_ratio for s in result.samples) / len(result.samples)
-        result.avg_extraction_time_ms = sum(s.extraction_time_ms for s in result.samples) / len(result.samples)
-        result.total_coreference_resolutions = sum(s.coreference_resolutions for s in result.samples)
-        result.samples_with_coreferences = sum(1 for s in result.samples if s.coreference_resolutions > 0)
+        result.avg_extraction_time_ms = sum(s.extraction_time_ms for s in result.samples) / len(
+            result.samples
+        )
+        result.total_coreference_resolutions = sum(
+            s.coreference_resolutions for s in result.samples
+        )
+        result.samples_with_coreferences = sum(
+            1 for s in result.samples if s.coreference_resolutions > 0
+        )
 
     logger.info(
         "feature_evaluation_complete",
@@ -394,10 +404,18 @@ def print_comparison(baseline: EvalResult, feature: EvalResult):
 
     print(f"\n{'Metric':<25} {'Baseline':>15} {'Feature':>15} {'Delta':>20}")
     print("-" * 70)
-    print(f"{'Avg Entities':<25} {baseline.avg_entity_count:>15.2f} {feature.avg_entity_count:>15.2f} {delta(baseline.avg_entity_count, feature.avg_entity_count):>20}")
-    print(f"{'Avg Relations':<25} {baseline.avg_relation_count:>15.2f} {feature.avg_relation_count:>15.2f} {delta(baseline.avg_relation_count, feature.avg_relation_count):>20}")
-    print(f"{'Avg E/R Ratio':<25} {baseline.avg_er_ratio:>15.3f} {feature.avg_er_ratio:>15.3f} {delta(baseline.avg_er_ratio, feature.avg_er_ratio):>20}")
-    print(f"{'Avg Time (ms)':<25} {baseline.avg_extraction_time_ms:>15.1f} {feature.avg_extraction_time_ms:>15.1f} {delta(baseline.avg_extraction_time_ms, feature.avg_extraction_time_ms):>20}")
+    print(
+        f"{'Avg Entities':<25} {baseline.avg_entity_count:>15.2f} {feature.avg_entity_count:>15.2f} {delta(baseline.avg_entity_count, feature.avg_entity_count):>20}"
+    )
+    print(
+        f"{'Avg Relations':<25} {baseline.avg_relation_count:>15.2f} {feature.avg_relation_count:>15.2f} {delta(baseline.avg_relation_count, feature.avg_relation_count):>20}"
+    )
+    print(
+        f"{'Avg E/R Ratio':<25} {baseline.avg_er_ratio:>15.3f} {feature.avg_er_ratio:>15.3f} {delta(baseline.avg_er_ratio, feature.avg_er_ratio):>20}"
+    )
+    print(
+        f"{'Avg Time (ms)':<25} {baseline.avg_extraction_time_ms:>15.1f} {feature.avg_extraction_time_ms:>15.1f} {delta(baseline.avg_extraction_time_ms, feature.avg_extraction_time_ms):>20}"
+    )
 
     print("\n" + "=" * 70)
 
@@ -405,13 +423,15 @@ def print_comparison(baseline: EvalResult, feature: EvalResult):
 async def main():
     """Main evaluation entry point."""
     parser = argparse.ArgumentParser(description="Sprint 86 Feature Evaluation")
-    parser.add_argument("--feature", type=str, default="86.7", help="Feature to evaluate (86.5, 86.6, 86.7, 86.8)")
+    parser.add_argument(
+        "--feature", type=str, default="86.7", help="Feature to evaluate (86.5, 86.6, 86.7, 86.8)"
+    )
     parser.add_argument("--all", action="store_true", help="Run all feature evaluations")
     parser.add_argument("--samples", type=int, default=0, help="Number of samples (0=all)")
     parser.add_argument("--output", type=str, default="docs/ragas", help="Output directory")
     args = parser.parse_args()
 
-    samples = TEST_SAMPLES[:args.samples] if args.samples > 0 else TEST_SAMPLES
+    samples = TEST_SAMPLES[: args.samples] if args.samples > 0 else TEST_SAMPLES
 
     print(f"\n🔬 Sprint 86 Feature Evaluation")
     print(f"   Samples: {len(samples)}")

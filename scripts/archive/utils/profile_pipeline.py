@@ -101,9 +101,7 @@ class PipelineProfiler:
             "status": "SKIPPED",
         }
 
-    async def profile_stage_3_retrieval(
-        self, query: str, top_k: int = 10
-    ) -> dict[str, Any]:
+    async def profile_stage_3_retrieval(self, query: str, top_k: int = 10) -> dict[str, Any]:
         """Profile 4-Way Hybrid Retrieval stage.
 
         Target: ~180ms
@@ -119,7 +117,9 @@ class PipelineProfiler:
 
         start = time.perf_counter()
         result = await four_way_search(
-            query=query, top_k=top_k, use_reranking=False  # Rerank in next stage
+            query=query,
+            top_k=top_k,
+            use_reranking=False,  # Rerank in next stage
         )
         total_latency_ms = (time.perf_counter() - start) * 1000
 
@@ -279,9 +279,7 @@ class PipelineProfiler:
                     f"{name}: {latency:.1f}ms (target: {target}ms, {percentage:.1f}% of pipeline)"
                 )
             elif percentage > 30:
-                bottlenecks.append(
-                    f"{name}: {percentage:.1f}% of pipeline time ({latency:.1f}ms)"
-                )
+                bottlenecks.append(f"{name}: {percentage:.1f}% of pipeline time ({latency:.1f}ms)")
 
         return bottlenecks
 
@@ -343,9 +341,9 @@ async def main():
         # Profile single query
         query = args.query or SAMPLE_QUERIES[0]
 
-        print(f"\n{'='*80}")
+        print(f"\n{'=' * 80}")
         print(f"Profiling Pipeline: {query}")
-        print(f"{'='*80}\n")
+        print(f"{'=' * 80}\n")
 
         if args.cprofile:
             print("Running with cProfile (function-level profiling)...\n")
@@ -375,9 +373,9 @@ async def main():
 
     elif args.mode == "intensive":
         # Profile 100 queries (10 sample queries x 10 iterations)
-        print(f"\n{'='*80}")
+        print(f"\n{'=' * 80}")
         print("Intensive Profiling: 100 queries")
-        print(f"{'='*80}\n")
+        print(f"{'=' * 80}\n")
 
         all_results = []
         for iteration in range(10):
@@ -396,9 +394,9 @@ async def main():
         p99 = latencies_sorted[int(len(latencies_sorted) * 0.99)]
         mean = sum(latencies) / len(latencies)
 
-        print(f"\n{'='*80}")
+        print(f"\n{'=' * 80}")
         print("Statistics (100 queries)")
-        print(f"{'='*80}")
+        print(f"{'=' * 80}")
         print(f"Mean:   {mean:.2f}ms")
         print(f"p50:    {p50:.2f}ms (target: <500ms)")
         print(f"p95:    {p95:.2f}ms (target: <1000ms)")

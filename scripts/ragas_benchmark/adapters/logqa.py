@@ -37,24 +37,53 @@ class LogQAAdapter(DatasetAdapter):
     # Log-specific question type keywords
     LOG_QUESTION_KEYWORDS = {
         "lookup": [
-            "what error", "which error", "what exception", "error code",
-            "timestamp", "when did", "log entry", "message",
+            "what error",
+            "which error",
+            "what exception",
+            "error code",
+            "timestamp",
+            "when did",
+            "log entry",
+            "message",
         ],
         "howto": [
-            "how to fix", "how to resolve", "troubleshoot", "debug",
-            "solution for", "steps to", "remedy", "workaround",
+            "how to fix",
+            "how to resolve",
+            "troubleshoot",
+            "debug",
+            "solution for",
+            "steps to",
+            "remedy",
+            "workaround",
         ],
         "entity": [
-            "which service", "what component", "which server", "what process",
-            "which user", "what application", "source of", "origin of",
+            "which service",
+            "what component",
+            "which server",
+            "what process",
+            "which user",
+            "what application",
+            "source of",
+            "origin of",
         ],
         "multihop": [
-            "relationship between", "caused by", "led to", "correlated",
-            "sequence of", "before", "after", "following",
+            "relationship between",
+            "caused by",
+            "led to",
+            "correlated",
+            "sequence of",
+            "before",
+            "after",
+            "following",
         ],
         "policy": [
-            "should", "best practice", "recommended", "standard",
-            "compliance", "security requirement", "policy",
+            "should",
+            "best practice",
+            "recommended",
+            "standard",
+            "compliance",
+            "security requirement",
+            "policy",
         ],
     }
 
@@ -72,7 +101,7 @@ class LogQAAdapter(DatasetAdapter):
             "log_type": "log_type",
         }
 
-    def adapt(self, record: Dict[str, Any], record_idx: int = 0) -> Optional[NormalizedSample]:
+    def adapt(self, record: Dict[str, Any], record_idx: int = 0) -> NormalizedSample | None:
         """
         Transform LogQA record to NormalizedSample.
 
@@ -138,7 +167,7 @@ class LogQAAdapter(DatasetAdapter):
             self.record_drop("adaptation_error")
             return None
 
-    def _extract_answer(self, record: Dict[str, Any]) -> Optional[str]:
+    def _extract_answer(self, record: Dict[str, Any]) -> str | None:
         """Extract answer from LogQA record."""
         # Try answer field
         if "answer" in record and record["answer"]:
@@ -222,12 +251,7 @@ class LogQAAdapter(DatasetAdapter):
         # Fall back to general classification
         return self.classify_question_type(question)
 
-    def _assign_log_difficulty(
-        self,
-        question_type: str,
-        context_length: int,
-        log_type: str
-    ) -> str:
+    def _assign_log_difficulty(self, question_type: str, context_length: int, log_type: str) -> str:
         """
         Assign difficulty based on log-specific factors.
 

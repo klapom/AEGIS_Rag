@@ -178,7 +178,9 @@ async def run_ragas_metrics(samples: list[dict], results: list[dict]) -> dict[st
 
         return {
             "simplified_recall": gt_found / total if total > 0 else 0,
-            "avg_contexts": sum(r["contexts_retrieved"] for r in results) / total if total > 0 else 0,
+            "avg_contexts": sum(r["contexts_retrieved"] for r in results) / total
+            if total > 0
+            else 0,
         }
 
 
@@ -213,7 +215,9 @@ async def main():
         results.append(result)
 
         status = "✅" if result["gt_in_context"] else "❌"
-        print(f"   [{i+1}/{len(samples)}] {result['id']}: {result['contexts_retrieved']} contexts, {result['latency_ms']:.0f}ms {status}")
+        print(
+            f"   [{i + 1}/{len(samples)}] {result['id']}: {result['contexts_retrieved']} contexts, {result['latency_ms']:.0f}ms {status}"
+        )
 
     # Calculate metrics
     print("\n📊 Calculating metrics...")
@@ -223,8 +227,16 @@ async def main():
     t2rag_results = [r for r in results if r["dataset"] == "t2ragbench"]
     code_results = [r for r in results if r["dataset"] == "codeqa"]
 
-    t2rag_recall = sum(1 for r in t2rag_results if r["gt_in_context"]) / len(t2rag_results) if t2rag_results else 0
-    code_recall = sum(1 for r in code_results if r["gt_in_context"]) / len(code_results) if code_results else 0
+    t2rag_recall = (
+        sum(1 for r in t2rag_results if r["gt_in_context"]) / len(t2rag_results)
+        if t2rag_results
+        else 0
+    )
+    code_recall = (
+        sum(1 for r in code_results if r["gt_in_context"]) / len(code_results)
+        if code_results
+        else 0
+    )
 
     # Print results
     print("\n" + "=" * 60)
@@ -232,8 +244,12 @@ async def main():
     print("=" * 60)
 
     print("\n📈 Metrics by Dataset:")
-    print(f"   T2-RAGBench (Tables):  {t2rag_recall*100:.1f}% GT in context ({sum(1 for r in t2rag_results if r['gt_in_context'])}/{len(t2rag_results)})")
-    print(f"   Code QA (MBPP):        {code_recall*100:.1f}% GT in context ({sum(1 for r in code_results if r['gt_in_context'])}/{len(code_results)})")
+    print(
+        f"   T2-RAGBench (Tables):  {t2rag_recall * 100:.1f}% GT in context ({sum(1 for r in t2rag_results if r['gt_in_context'])}/{len(t2rag_results)})"
+    )
+    print(
+        f"   Code QA (MBPP):        {code_recall * 100:.1f}% GT in context ({sum(1 for r in code_results if r['gt_in_context'])}/{len(code_results)})"
+    )
 
     print("\n📊 Overall Metrics:")
     for metric, value in metrics.items():
@@ -247,15 +263,19 @@ async def main():
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     with open(output_path, "w") as f:
-        json.dump({
-            "timestamp": datetime.now().isoformat(),
-            "samples": len(samples),
-            "metrics": metrics,
-            "t2rag_recall": t2rag_recall,
-            "code_recall": code_recall,
-            "avg_latency_ms": avg_latency,
-            "results": results,
-        }, f, indent=2)
+        json.dump(
+            {
+                "timestamp": datetime.now().isoformat(),
+                "samples": len(samples),
+                "metrics": metrics,
+                "t2rag_recall": t2rag_recall,
+                "code_recall": code_recall,
+                "avg_latency_ms": avg_latency,
+                "results": results,
+            },
+            f,
+            indent=2,
+        )
 
     print(f"\n💾 Results saved to: {output_path}")
 

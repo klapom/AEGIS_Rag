@@ -34,7 +34,7 @@ class DecisionStage(BaseModel):
     stage: Literal["intent", "skills", "retrieval", "response"]
     status: Literal["completed", "in_progress", "pending", "error"]
     details: str
-    timestamp: Optional[str] = None
+    timestamp: str | None = None
 
 
 class IntentClassification(BaseModel):
@@ -51,7 +51,7 @@ class TraceListItem(BaseModel):
     query: str
     timestamp: str
     confidence: float
-    user_id: Optional[str] = None
+    user_id: str | None = None
 
 
 class DecisionTrace(BaseModel):
@@ -60,7 +60,7 @@ class DecisionTrace(BaseModel):
     trace_id: str
     query: str
     timestamp: str
-    user_id: Optional[str] = None
+    user_id: str | None = None
     intent: IntentClassification
     decision_flow: List[DecisionStage]
     confidence_overall: float
@@ -72,9 +72,9 @@ class SourceDocument(BaseModel):
 
     name: str
     relevance: float
-    page: Optional[int] = None
-    snippet: Optional[str] = None
-    confidence: Optional[Literal["high", "medium", "low"]] = None
+    page: int | None = None
+    snippet: str | None = None
+    confidence: Literal["high", "medium", "low"] | None = None
 
 
 class CertificationInfo(BaseModel):
@@ -83,10 +83,10 @@ class CertificationInfo(BaseModel):
     id: str
     name: str
     status: Literal["certified", "pending", "expired"]
-    issued_date: Optional[str] = None
-    expiry_date: Optional[str] = None
+    issued_date: str | None = None
+    expiry_date: str | None = None
     issuer: str
-    certificate_url: Optional[str] = None
+    certificate_url: str | None = None
 
 
 class CertificationStatusResponse(BaseModel):
@@ -115,7 +115,7 @@ class SkillConsideration(BaseModel):
 
     name: str
     confidence: float
-    trigger: Optional[str] = None
+    trigger: str | None = None
     selected: bool
 
 
@@ -123,8 +123,8 @@ class PerformanceMetrics(BaseModel):
     """Performance metrics for trace."""
 
     duration: int = Field(..., description="Duration in milliseconds")
-    tokens_used: Optional[int] = None
-    cost_usd: Optional[float] = None
+    tokens_used: int | None = None
+    cost_usd: float | None = None
 
 
 class TechnicalDetails(BaseModel):
@@ -143,7 +143,7 @@ class UserExplanation(BaseModel):
     summary: str
     sources: List[SourceDocument] = Field(default_factory=list)
     capabilities_used: int
-    capabilities_list: Optional[List[str]] = None
+    capabilities_list: List[str] | None = None
 
 
 class ExpertExplanation(UserExplanation):
@@ -165,7 +165,7 @@ class AuditExplanation(ExpertExplanation):
 
 @router.get("/recent", response_model=List[TraceListItem])
 async def get_recent_traces(
-    user_id: Optional[str] = Query(None, alias="userId"),
+    user_id: str | None = Query(None, alias="userId"),
     limit: int = Query(10, ge=1, le=100),
 ) -> List[TraceListItem]:
     """
@@ -403,7 +403,7 @@ async def get_explanation(
 @router.get("/attribution/{trace_id}", response_model=List[SourceDocument])
 async def get_source_attribution(
     trace_id: str,
-    claim: Optional[str] = Query(None),
+    claim: str | None = Query(None),
 ) -> List[SourceDocument]:
     """
     Get source attribution for trace.

@@ -67,7 +67,7 @@ async def model_available():
     available = await check_model_available()
     if not available:
         pytest.skip(
-            "bge-reranker-v2-m3 model not available. " "Pull with: ollama pull bge-reranker-v2-m3"
+            "bge-reranker-v2-m3 model not available. Pull with: ollama pull bge-reranker-v2-m3"
         )
     return available
 
@@ -164,7 +164,7 @@ class TestOllamaRerankerRealAPI:
         # On DGX Spark: ~50-100ms per document, so 5 docs = ~250-500ms
         assert elapsed < 2.0, f"Reranking took {elapsed:.2f}s (expected <2s)"
 
-        print(f"Reranking 5 documents took {elapsed*1000:.1f}ms")
+        print(f"Reranking 5 documents took {elapsed * 1000:.1f}ms")
 
 
 @pytest.mark.asyncio
@@ -213,5 +213,5 @@ class TestOllamaRerankerPerformance:
         # Performance check (20 documents should take <4s on DGX Spark)
         assert elapsed < 10.0, f"Reranking 20 docs took {elapsed:.2f}s (expected <10s)"
 
-        print(f"Reranking 20 documents (returned top 10) took {elapsed*1000:.1f}ms")
-        print(f"Average per document: {elapsed*1000/20:.1f}ms")
+        print(f"Reranking 20 documents (returned top 10) took {elapsed * 1000:.1f}ms")
+        print(f"Average per document: {elapsed * 1000 / 20:.1f}ms")

@@ -180,9 +180,9 @@ async def preload_all_models(models: list[str], keep_alive: str = "30m") -> list
 
 def print_summary(results: list[dict]):
     """Print summary table of preload results."""
-    console.print(f"\n[bold cyan]{'='*70}[/bold cyan]")
+    console.print(f"\n[bold cyan]{'=' * 70}[/bold cyan]")
     console.print("[bold cyan]PRELOAD SUMMARY[/bold cyan]")
-    console.print(f"[bold cyan]{'='*70}[/bold cyan]\n")
+    console.print(f"[bold cyan]{'=' * 70}[/bold cyan]\n")
 
     table = Table(show_header=True, header_style="bold magenta")
     table.add_column("Model", style="cyan", width=30)

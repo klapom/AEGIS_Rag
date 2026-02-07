@@ -179,13 +179,13 @@ print(user_explanation)
 
 # Output:
 # **How this answer was generated:**
-# 
+#
 # This response was created with high confidence using information from:
-# 
+#
 # - EU AI Act Guide (relevance: 92%)
 # - GDPR Compliance Manual (relevance: 87%)
 # - Best Practices Document (relevance: 74%)
-# 
+#
 # The system used 2 specialized capabilities to find and synthesize the relevant information.
 ```
 
@@ -198,16 +198,16 @@ print(expert_explanation)
 
 # Output:
 # **Technical Decision Trace:**
-# 
+#
 # **Query Analysis:**
 # - Retrieval mode: hybrid
 # - Chunks retrieved: 15
 # - Chunks used: 8
-# 
+#
 # **Skill Selection:**
 # - **research_agent**: 92.0% confidence (trigger: find information)
 # - **synthesis_agent**: 78.0% confidence (trigger: intent-based)
-# 
+#
 # **Confidence Metrics:**
 # - Overall confidence: 85.0%
 # - Hallucination risk: 12.0%

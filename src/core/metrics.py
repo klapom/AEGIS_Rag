@@ -158,13 +158,13 @@ def track_llm_request(
     llm_cost_usd.labels(provider=provider).inc(cost_usd)
 
     # Increment tokens
-    llm_tokens_used.labels(provider=provider, token_type="total").inc(tokens_used)
+    llm_tokens_used.labels(provider=provider, token_type="total").inc(tokens_used)  # nosec B106
 
     # Track input/output tokens separately if available
     if tokens_input is not None:
-        llm_tokens_used.labels(provider=provider, token_type="input").inc(tokens_input)
+        llm_tokens_used.labels(provider=provider, token_type="input").inc(tokens_input)  # nosec B106
     if tokens_output is not None:
-        llm_tokens_used.labels(provider=provider, token_type="output").inc(tokens_output)
+        llm_tokens_used.labels(provider=provider, token_type="output").inc(tokens_output)  # nosec B106
 
 
 def track_llm_error(

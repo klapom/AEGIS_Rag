@@ -67,7 +67,7 @@ def mock_dual_level_search():
                 "execution_time_ms": 100.0,
                 "chunks_found": 2,
                 "graph_hops_used": 1,
-            }
+            },
         )
     )
 
@@ -101,6 +101,7 @@ async def test_intent_extraction_runs_in_background(
     Sprint 92: Intent extraction should not block search execution.
     Expected: Search completes before intent extraction finishes.
     """
+
     # Slow intent extraction (1.5s)
     async def slow_intent_extraction(query):
         await asyncio.sleep(1.5)
@@ -112,9 +113,7 @@ async def test_intent_extraction_runs_in_background(
             latency_ms=1500.0,
         )
 
-    mock_query_rewriter_v2.extract_graph_intents = AsyncMock(
-        side_effect=slow_intent_extraction
-    )
+    mock_query_rewriter_v2.extract_graph_intents = AsyncMock(side_effect=slow_intent_extraction)
 
     # Create agent with mocks
     agent = GraphQueryAgent(
@@ -209,9 +208,7 @@ async def test_entity_expansion_uses_expand_entities_not_rerank(
     mock_expander.expand_entities = AsyncMock(
         return_value=(["RAG", "Retrieval", "Generation"], 1)  # (entities, hops)
     )
-    mock_expander.expand_and_rerank = AsyncMock(
-        return_value=[("RAG", 0.95), ("Retrieval", 0.85)]
-    )
+    mock_expander.expand_and_rerank = AsyncMock(return_value=[("RAG", 0.95), ("Retrieval", 0.85)])
     mock_expander_class.return_value = mock_expander
 
     # Mock Neo4j client
@@ -225,11 +222,7 @@ async def test_entity_expansion_uses_expand_entities_not_rerank(
     search.neo4j_client = mock_neo4j
 
     # Execute local_search
-    await search.local_search(
-        query="What is RAG?",
-        top_k=5,
-        namespaces=["test"]
-    )
+    await search.local_search(query="What is RAG?", top_k=5, namespaces=["test"])
 
     # Assertions
     # Sprint 92: Should call expand_entities(), NOT expand_and_rerank()
@@ -274,9 +267,7 @@ async def test_graph_search_performance_target(
 
     # Assertions
     # Sprint 92: Average execution should be < 2000ms (p95 target)
-    assert avg_time < 2000, (
-        f"Expected avg execution < 2000ms, got {avg_time:.2f}ms"
-    )
+    assert avg_time < 2000, f"Expected avg execution < 2000ms, got {avg_time:.2f}ms"
 
 
 @pytest.mark.asyncio
@@ -303,9 +294,7 @@ async def test_local_search_phase_timings_logged():
 
         # Execute local_search (logger will be called internally)
         result_entities, result_metadata = await search.local_search(
-            query="What is RAG?",
-            top_k=5,
-            namespaces=["test"]
+            query="What is RAG?", top_k=5, namespaces=["test"]
         )
 
         # Check that metadata contains phase timing fields

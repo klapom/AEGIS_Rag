@@ -272,12 +272,8 @@ class TestToolSelectionPolicy:
         # Verify state preserved
         assert loaded.epsilon == policy.epsilon
         assert loaded.total_updates == policy.total_updates
-        assert loaded.get_q_value("tool1", "context1") == policy.get_q_value(
-            "tool1", "context1"
-        )
-        assert loaded.get_q_value("tool2", "context2") == policy.get_q_value(
-            "tool2", "context2"
-        )
+        assert loaded.get_q_value("tool1", "context1") == policy.get_q_value("tool1", "context1")
+        assert loaded.get_q_value("tool2", "context2") == policy.get_q_value("tool2", "context2")
 
     def test_get_top_tools(self, policy):
         """Test getting top tools by Q-value."""

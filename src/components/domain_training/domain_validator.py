@@ -57,7 +57,7 @@ MAX_RETRY_ATTEMPTS = 3
 class ValidationStatus(str, Enum):
     """Validation status for individual checks and overall validation."""
 
-    PASS = "pass"
+    PASS = "pass"  # nosec B105 — enum value, not a password
     WARNING = "warning"
     FAIL = "fail"
 

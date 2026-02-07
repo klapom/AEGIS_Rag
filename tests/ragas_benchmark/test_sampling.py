@@ -19,7 +19,7 @@ def create_sample(
     doc_type: str = "clean_text",
     question_type: str = "lookup",
     difficulty: str = "D1",
-    idx: int = 0
+    idx: int = 0,
 ) -> NormalizedSample:
     """Helper to create test samples."""
     return NormalizedSample(
@@ -80,6 +80,7 @@ class TestAssignDifficulty:
     def test_multihop_is_hard(self):
         """Test that multihop questions get higher difficulty."""
         import random
+
         rng = random.Random(42)
 
         difficulties = [assign_difficulty("clean_text", "multihop", rng) for _ in range(10)]
@@ -91,6 +92,7 @@ class TestAssignDifficulty:
     def test_lookup_is_easier(self):
         """Test that lookup questions tend to be easier."""
         import random
+
         rng = random.Random(42)
 
         difficulties = [assign_difficulty("clean_text", "lookup", rng) for _ in range(10)]
@@ -111,20 +113,16 @@ class TestStratifiedSampling:
         # Create samples for clean_text
         for qtype in ["lookup", "definition", "howto", "multihop", "comparison"]:
             for i in range(20):
-                samples.append(create_sample(
-                    doc_type="clean_text",
-                    question_type=qtype,
-                    idx=len(samples)
-                ))
+                samples.append(
+                    create_sample(doc_type="clean_text", question_type=qtype, idx=len(samples))
+                )
 
         # Create samples for log_ticket
         for qtype in ["lookup", "howto", "entity", "multihop"]:
             for i in range(15):
-                samples.append(create_sample(
-                    doc_type="log_ticket",
-                    question_type=qtype,
-                    idx=len(samples)
-                ))
+                samples.append(
+                    create_sample(doc_type="log_ticket", question_type=qtype, idx=len(samples))
+                )
 
         return samples
 
@@ -137,10 +135,7 @@ class TestStratifiedSampling:
         }
 
         result = stratified_sample(
-            pool=sample_pool,
-            doc_type_quotas=doc_quotas,
-            qtype_quotas=qtype_quotas,
-            seed=42
+            pool=sample_pool, doc_type_quotas=doc_quotas, qtype_quotas=qtype_quotas, seed=42
         )
 
         # Should get exactly 15 samples (10 + 5)
@@ -200,12 +195,11 @@ class TestValidateDistribution:
         samples = []
         difficulties = ["D1"] * 4 + ["D2"] * 3 + ["D3"] * 3  # 40/30/30%
         for i in range(10):
-            samples.append(create_sample(
-                doc_type="clean_text",
-                question_type="lookup",
-                difficulty=difficulties[i],
-                idx=i
-            ))
+            samples.append(
+                create_sample(
+                    doc_type="clean_text", question_type="lookup", difficulty=difficulties[i], idx=i
+                )
+            )
 
         doc_quotas = {"clean_text": 10}
         qtype_quotas = {"clean_text": {"lookup": 10}}

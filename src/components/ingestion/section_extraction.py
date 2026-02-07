@@ -131,13 +131,14 @@ def _get_cached_tokenizer():
             if _TOKENIZER is None:  # Double-check locking
                 try:
                     from transformers import AutoTokenizer
-                    _TOKENIZER = AutoTokenizer.from_pretrained("BAAI/bge-m3")
+
+                    _TOKENIZER = AutoTokenizer.from_pretrained("BAAI/bge-m3")  # nosec B615
                     logger.info("section_extraction_tokenizer_cached", tokenizer="BAAI/bge-m3")
                 except Exception as e:
                     logger.warning(
                         "section_extraction_tokenizer_fallback",
                         reason="transformers not available",
-                        error=str(e)
+                        error=str(e),
                     )
     return _TOKENIZER
 

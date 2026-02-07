@@ -36,7 +36,9 @@ class TestModelRouter:
 
     def test_complex_query_selects_advanced_model(self):
         """Test that complex queries select advanced tier model."""
-        query = "Explain how graph-based retrieval compares to vector search and discuss the tradeoffs"
+        query = (
+            "Explain how graph-based retrieval compares to vector search and discuss the tradeoffs"
+        )
         intent = "exploratory"
 
         config = self.router.select_model(query, intent)
@@ -89,9 +91,7 @@ class TestModelRouter:
         assert 0 <= stats["advanced_percentage"] <= 100
         # Percentages should sum to ~100 (allow floating point precision)
         total_percentage = (
-            stats["fast_percentage"]
-            + stats["balanced_percentage"]
-            + stats["advanced_percentage"]
+            stats["fast_percentage"] + stats["balanced_percentage"] + stats["advanced_percentage"]
         )
         assert abs(total_percentage - 100.0) < 0.1
 

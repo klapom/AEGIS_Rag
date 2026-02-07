@@ -103,19 +103,23 @@ async def download_t2ragbench_samples(n_samples: int = 5) -> list[dict[str, Any]
 **Answer:** {answer}
 """
 
-            samples.append({
-                "id": f"t2rag_{i:04d}",
-                "text": doc_text,
-                "question": question,
-                "answer": str(answer),
-                "source": "t2-ragbench-finqa",
-                "doc_type": "table",
-                "metadata": {
-                    "table_rows": len(table_data) if table_data else 0,
-                    "table_cols": len(table_data[0]) if table_data and table_data[0] else 0,
+            samples.append(
+                {
+                    "id": f"t2rag_{i:04d}",
+                    "text": doc_text,
+                    "question": question,
+                    "answer": str(answer),
+                    "source": "t2-ragbench-finqa",
+                    "doc_type": "table",
+                    "metadata": {
+                        "table_rows": len(table_data) if table_data else 0,
+                        "table_cols": len(table_data[0]) if table_data and table_data[0] else 0,
+                    },
                 }
-            })
-            logger.info(f"Downloaded T2-RAGBench sample {i+1}/{n_samples}", sample_id=f"t2rag_{i:04d}")
+            )
+            logger.info(
+                f"Downloaded T2-RAGBench sample {i + 1}/{n_samples}", sample_id=f"t2rag_{i:04d}"
+            )
 
         return samples
 
@@ -163,7 +167,9 @@ async def download_code_qa_samples(n_samples: int = 5) -> list[dict[str, Any]]:
         try:
             logger.info(f"Trying dataset: {ds_name}")
             if config:
-                ds = load_dataset(ds_name, config, split=split, streaming=True, trust_remote_code=True)
+                ds = load_dataset(
+                    ds_name, config, split=split, streaming=True, trust_remote_code=True
+                )
             else:
                 ds = load_dataset(ds_name, split=split, streaming=True, trust_remote_code=True)
 
@@ -206,19 +212,24 @@ async def download_code_qa_samples(n_samples: int = 5) -> list[dict[str, Any]]:
 {answer}
 """
 
-                samples.append({
-                    "id": f"code_{len(samples):04d}",
-                    "text": doc_text,
-                    "question": question,
-                    "answer": str(answer)[:500],  # Limit answer length
-                    "source": ds_name,
-                    "doc_type": "code_config",
-                    "metadata": {
-                        "language": language,
-                        "code_length": len(code),
+                samples.append(
+                    {
+                        "id": f"code_{len(samples):04d}",
+                        "text": doc_text,
+                        "question": question,
+                        "answer": str(answer)[:500],  # Limit answer length
+                        "source": ds_name,
+                        "doc_type": "code_config",
+                        "metadata": {
+                            "language": language,
+                            "code_length": len(code),
+                        },
                     }
-                })
-                logger.info(f"Downloaded Code QA sample {len(samples)}/{n_samples}", sample_id=f"code_{len(samples)-1:04d}")
+                )
+                logger.info(
+                    f"Downloaded Code QA sample {len(samples)}/{n_samples}",
+                    sample_id=f"code_{len(samples) - 1:04d}",
+                )
 
             if len(samples) >= n_samples:
                 break
@@ -268,8 +279,11 @@ async def save_samples_as_files(samples: list[dict], output_dir: Path, prefix: s
 
 
 async def upload_files(
-    file_paths: list[Path], namespace: str, token: str, domain: str = "research",
-    delay_between_uploads: float = 7.0  # Sprint 88: Delay to avoid rate limit (10/min = 6s min)
+    file_paths: list[Path],
+    namespace: str,
+    token: str,
+    domain: str = "research",
+    delay_between_uploads: float = 7.0,  # Sprint 88: Delay to avoid rate limit (10/min = 6s min)
 ) -> dict[str, Any]:
     """Upload files via Frontend API with rate limit protection."""
     results = {
@@ -285,7 +299,9 @@ async def upload_files(
         for i, file_path in enumerate(file_paths):
             # Add delay between uploads to avoid rate limiting (10 requests/minute)
             if i > 0:
-                logger.debug(f"Waiting {delay_between_uploads}s between uploads (rate limit protection)")
+                logger.debug(
+                    f"Waiting {delay_between_uploads}s between uploads (rate limit protection)"
+                )
                 await asyncio.sleep(delay_between_uploads)
             start_time = time.time()
             try:
@@ -302,30 +318,36 @@ async def upload_files(
 
                 if response.status_code == 200:
                     result = response.json()
-                    results["success"].append({
-                        "file": file_path.name,
-                        "document_id": result.get("document_id"),
-                        "status": result.get("status"),
-                        "elapsed_ms": elapsed_ms,
-                    })
+                    results["success"].append(
+                        {
+                            "file": file_path.name,
+                            "document_id": result.get("document_id"),
+                            "status": result.get("status"),
+                            "elapsed_ms": elapsed_ms,
+                        }
+                    )
                     logger.info(
                         f"Uploaded {file_path.name}",
                         document_id=result.get("document_id"),
                         elapsed_ms=f"{elapsed_ms:.0f}ms",
                     )
                 else:
-                    results["failed"].append({
-                        "file": file_path.name,
-                        "status_code": response.status_code,
-                        "error": response.text[:200],
-                    })
+                    results["failed"].append(
+                        {
+                            "file": file_path.name,
+                            "status_code": response.status_code,
+                            "error": response.text[:200],
+                        }
+                    )
                     logger.error(f"Upload failed for {file_path.name}", status=response.status_code)
 
             except Exception as e:
-                results["failed"].append({
-                    "file": file_path.name,
-                    "error": str(e),
-                })
+                results["failed"].append(
+                    {
+                        "file": file_path.name,
+                        "error": str(e),
+                    }
+                )
                 logger.error(f"Upload error for {file_path.name}", error=str(e))
 
     return results
@@ -383,8 +405,8 @@ def generate_ragas_journey_entry(
 
 | Dataset | Type | Samples | Success | Failed | Avg Time |
 |---------|------|---------|---------|--------|----------|
-| T2-RAGBench (FinQA) | table | {len(t2rag_samples)} | {len(t2rag_results['success'])} | {len(t2rag_results['failed'])} | {t2rag_results['total_time_ms']/max(len(t2rag_results['success']),1):.0f}ms |
-| Code QA | code_config | {len(code_samples)} | {len(code_results['success'])} | {len(code_results['failed'])} | {code_results['total_time_ms']/max(len(code_results['success']),1):.0f}ms |
+| T2-RAGBench (FinQA) | table | {len(t2rag_samples)} | {len(t2rag_results["success"])} | {len(t2rag_results["failed"])} | {t2rag_results["total_time_ms"] / max(len(t2rag_results["success"]), 1):.0f}ms |
+| Code QA | code_config | {len(code_samples)} | {len(code_results["success"])} | {len(code_results["failed"])} | {code_results["total_time_ms"] / max(len(code_results["success"]), 1):.0f}ms |
 
 ### Sample Details
 
@@ -403,13 +425,13 @@ def generate_ragas_journey_entry(
 
 **T2-RAGBench:**
 - Namespace: `{NAMESPACE_T2RAG}`
-- Total time: {t2rag_results['total_time_ms']:.0f}ms
-- Document IDs: {[r['document_id'] for r in t2rag_results['success']]}
+- Total time: {t2rag_results["total_time_ms"]:.0f}ms
+- Document IDs: {[r["document_id"] for r in t2rag_results["success"]]}
 
 **Code QA:**
 - Namespace: `{NAMESPACE_CODE}`
-- Total time: {code_results['total_time_ms']:.0f}ms
-- Document IDs: {[r['document_id'] for r in code_results['success']]}
+- Total time: {code_results["total_time_ms"]:.0f}ms
+- Document IDs: {[r["document_id"] for r in code_results["success"]]}
 
 ### Next Steps
 
@@ -508,7 +530,9 @@ async def main():
     print("\n" + "=" * 60)
     print("SUMMARY")
     print("=" * 60)
-    print(f"T2-RAGBench: {len(t2rag_results['success'])}/{len(t2rag_samples)} uploaded successfully")
+    print(
+        f"T2-RAGBench: {len(t2rag_results['success'])}/{len(t2rag_samples)} uploaded successfully"
+    )
     print(f"Code QA: {len(code_results['success'])}/{len(code_samples)} uploaded successfully")
     print(f"\nNamespaces:")
     print(f"  - T2-RAGBench: {NAMESPACE_T2RAG}")

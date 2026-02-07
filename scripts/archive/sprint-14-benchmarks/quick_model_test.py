@@ -24,9 +24,9 @@ IMPORTANT: Return ONLY the JSON array, no markdown, no explanations."""
 
 def test_model(model_name: str, client: Client) -> dict:
     """Test a single model."""
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Testing: {model_name}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     start = time.perf_counter()
     try:
@@ -100,11 +100,11 @@ def main():
         time.sleep(1)  # Brief pause between models
 
     # Print comparison
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("COMPARISON TABLE")
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
     print(f"{'Model':<35} {'Entities':<12} {'Time (s)':<12} {'Status'}")
-    print(f"{'-'*35} {'-'*12} {'-'*12} {'-'*10}")
+    print(f"{'-' * 35} {'-' * 12} {'-' * 12} {'-' * 10}")
 
     for r in results:
         model_short = r["model"].split("/")[-1] if "/" in r["model"] else r["model"]
@@ -112,9 +112,9 @@ def main():
         print(f"{model_short:<35} {r['entity_count']:<12} {r['time']:<12.2f} {status}")
 
     # Show sample entities from best model
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("SAMPLE ENTITIES (from best model)")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     best = max([r for r in results if r["success"]], key=lambda x: x["entity_count"], default=None)
     if best and best.get("entities"):

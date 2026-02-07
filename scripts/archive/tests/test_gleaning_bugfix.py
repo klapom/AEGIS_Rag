@@ -168,7 +168,9 @@ async def test_gleaning_extraction():
     print("=" * 80)
 
     # Use a HotpotQA test file
-    test_file = Path("/home/admin/projects/aegisrag/AEGIS_Rag/data/hf_relation_datasets/redocred/redocred_0002.txt")
+    test_file = Path(
+        "/home/admin/projects/aegisrag/AEGIS_Rag/data/hf_relation_datasets/redocred/redocred_0002.txt"
+    )
 
     if not test_file.exists():
         print(f"  [SKIP] Test file not found: {test_file}")
@@ -231,6 +233,7 @@ async def test_gleaning_extraction():
     except Exception as e:
         print(f"\n  [FAIL] Extraction error: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
@@ -259,7 +262,9 @@ async def test_continuation_extraction():
         GraphEntity(id="a3", name="Steve Wozniak", type="PERSON", description="Co-founder"),
         GraphEntity(id="a4", name="Tim Cook", type="PERSON", description="CEO"),
         GraphEntity(id="a5", name="iPhone", type="PRODUCT", description="Smartphone"),
-        GraphEntity(id="a6", name="Beats Electronics", type="ORGANIZATION", description="Audio company"),
+        GraphEntity(
+            id="a6", name="Beats Electronics", type="ORGANIZATION", description="Audio company"
+        ),
         GraphEntity(id="a7", name="Cupertino", type="LOCATION", description="City"),
     ]
 
@@ -298,6 +303,7 @@ async def test_continuation_extraction():
     except Exception as e:
         print(f"\n  [FAIL] Error: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 

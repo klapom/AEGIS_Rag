@@ -341,10 +341,14 @@ async def test_bm25_vs_vector_vs_hybrid_full_comparison(
     save_ragas_results(hybrid_results, "reports/ragas_hybrid.json")
 
     # Assertions: Hybrid should have best overall precision and recall
-    assert hybrid_results.overall_metrics.context_precision >= max(
-        bm25_results.overall_metrics.context_precision,
-        vector_results.overall_metrics.context_precision,
-    ) - 0.05, (
+    assert (
+        hybrid_results.overall_metrics.context_precision
+        >= max(
+            bm25_results.overall_metrics.context_precision,
+            vector_results.overall_metrics.context_precision,
+        )
+        - 0.05
+    ), (
         f"Hybrid precision ({hybrid_results.overall_metrics.context_precision:.3f}) "
         f"should be competitive with BM25 ({bm25_results.overall_metrics.context_precision:.3f}) "
         f"and Vector ({vector_results.overall_metrics.context_precision:.3f})"
@@ -494,10 +498,14 @@ async def test_hybrid_excels_on_complex_queries(
     )
 
     # Hybrid should perform best (or at least competitive) on complex queries
-    assert hybrid_results.overall_metrics.context_precision >= max(
-        bm25_results.overall_metrics.context_precision,
-        vector_results.overall_metrics.context_precision,
-    ) - 0.05, (
+    assert (
+        hybrid_results.overall_metrics.context_precision
+        >= max(
+            bm25_results.overall_metrics.context_precision,
+            vector_results.overall_metrics.context_precision,
+        )
+        - 0.05
+    ), (
         f"Hybrid should excel on complex queries. "
         f"BM25: {bm25_results.overall_metrics.context_precision:.3f}, "
         f"Vector: {vector_results.overall_metrics.context_precision:.3f}, "

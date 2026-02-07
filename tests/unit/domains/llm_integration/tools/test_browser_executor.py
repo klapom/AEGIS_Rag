@@ -406,23 +406,25 @@ class TestBrowserManagement:
     @pytest.mark.asyncio
     async def test_get_browser_creates_new_instance(self):
         """Test that get_browser creates a new instance if none exists."""
-        with patch(
-            "src.domains.llm_integration.tools.builtin.browser_executor._browser_instance",
-            None,
-        ):
-            with patch(
+        with (
+            patch(
+                "src.domains.llm_integration.tools.builtin.browser_executor._browser_instance",
+                None,
+            ),
+            patch(
                 "src.domains.llm_integration.tools.builtin.browser_executor.async_playwright"
-            ) as mock_playwright:
-                mock_pw = AsyncMock()
-                mock_browser = AsyncMock()
-                mock_browser.is_connected.return_value = True
-                mock_pw.chromium.launch = AsyncMock(return_value=mock_browser)
-                mock_playwright.return_value.start = AsyncMock(return_value=mock_pw)
+            ) as mock_playwright,
+        ):
+            mock_pw = AsyncMock()
+            mock_browser = AsyncMock()
+            mock_browser.is_connected.return_value = True
+            mock_pw.chromium.launch = AsyncMock(return_value=mock_browser)
+            mock_playwright.return_value.start = AsyncMock(return_value=mock_pw)
 
-                browser = await get_browser()
+            browser = await get_browser()
 
-                assert browser is not None
-                mock_pw.chromium.launch.assert_called_once()
+            assert browser is not None
+            mock_pw.chromium.launch.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_close_browser(self):

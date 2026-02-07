@@ -238,7 +238,7 @@ Enterprise-grade Retrieval-Augmented Generation System with multi-agent orchestr
 **Runtime:**
 - Python 3.12+
 - Docker + NVIDIA Container Toolkit
-- Ollama 
+- Ollama
 - Poetry (dependency management)
 
 **GPU Requirements:**

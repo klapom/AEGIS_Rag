@@ -79,7 +79,9 @@ class TestMemoryWritePolicy:
             breakdown={},
         )
 
-        should_write, reason, returned_score = await policy.should_write(fact, importance_score=score)
+        should_write, reason, returned_score = await policy.should_write(
+            fact, importance_score=score
+        )
 
         assert should_write is True
         assert reason == "accepted"
@@ -103,7 +105,9 @@ class TestMemoryWritePolicy:
             breakdown={},
         )
 
-        should_write, reason, returned_score = await policy.should_write(fact, importance_score=score)
+        should_write, reason, returned_score = await policy.should_write(
+            fact, importance_score=score
+        )
 
         assert should_write is False
         assert "importance_score" in reason
@@ -131,7 +135,9 @@ class TestMemoryWritePolicy:
             breakdown={},
         )
 
-        should_write, reason, returned_score = await policy.should_write(fact, importance_score=score)
+        should_write, reason, returned_score = await policy.should_write(
+            fact, importance_score=score
+        )
 
         # Should still write, but trigger forgetting
         assert should_write is True
@@ -228,9 +234,21 @@ class TestMemoryWritePolicy:
     async def test_batch_write_facts(self, policy: MemoryWritePolicy):
         """Test batch_write_facts with mixed importance scores."""
         facts = [
-            {"content": "High importance 1", "created_at": datetime.now(UTC).isoformat(), "metadata": {}},
-            {"content": "Low importance", "created_at": datetime.now(UTC).isoformat(), "metadata": {}},
-            {"content": "High importance 2", "created_at": datetime.now(UTC).isoformat(), "metadata": {}},
+            {
+                "content": "High importance 1",
+                "created_at": datetime.now(UTC).isoformat(),
+                "metadata": {},
+            },
+            {
+                "content": "Low importance",
+                "created_at": datetime.now(UTC).isoformat(),
+                "metadata": {},
+            },
+            {
+                "content": "High importance 2",
+                "created_at": datetime.now(UTC).isoformat(),
+                "metadata": {},
+            },
         ]
 
         # Mock batch scoring

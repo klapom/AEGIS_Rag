@@ -362,7 +362,7 @@ class IngestionJobTracker:
 
             params.append(job_id)
 
-            query = f"UPDATE ingestion_jobs SET {', '.join(updates)} WHERE id = ?"
+            query = f"UPDATE ingestion_jobs SET {', '.join(updates)} WHERE id = ?"  # nosec B608
             cursor.execute(query, params)
             conn.commit()
 
@@ -597,7 +597,7 @@ class IngestionJobTracker:
                 return
 
             params.append(file_id)
-            query = f"UPDATE ingestion_files SET {', '.join(updates)} WHERE id = ?"
+            query = f"UPDATE ingestion_files SET {', '.join(updates)} WHERE id = ?"  # nosec B608
             cursor.execute(query, params)
             conn.commit()
 

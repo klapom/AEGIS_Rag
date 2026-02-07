@@ -91,7 +91,7 @@ class MemoryProfiler:
             Tuple of (used_mb, available_mb, percent)
         """
         try:
-            result = subprocess.run(
+            result = subprocess.run(  # nosec B603 B607 — internal nvidia-smi query
                 [
                     "nvidia-smi",
                     "--query-gpu=memory.used,memory.total",

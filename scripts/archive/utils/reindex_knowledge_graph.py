@@ -42,7 +42,9 @@ async def clear_neo4j_graph(dry_run: bool = False) -> dict:
         """
         result = await client.execute_query(count_query)
         stats = result[0] if result else {"nodes": 0, "relationships": 0}
-        logger.info("dry_run_would_delete", nodes=stats["nodes"], relationships=stats["relationships"])
+        logger.info(
+            "dry_run_would_delete", nodes=stats["nodes"], relationships=stats["relationships"]
+        )
         return {"nodes_deleted": 0, "relationships_deleted": 0, "dry_run": True, **stats}
 
     # Get counts before deletion
@@ -87,14 +89,18 @@ async def clear_qdrant_collection(dry_run: bool = False) -> dict:
         points_count = info.get("points_count", 0) if info else 0
 
         if dry_run:
-            logger.info("dry_run_would_delete_qdrant", collection=collection_name, points=points_count)
+            logger.info(
+                "dry_run_would_delete_qdrant", collection=collection_name, points=points_count
+            )
             return {"points_deleted": 0, "dry_run": True, "would_delete": points_count}
 
         # Delete and recreate collection
         await client.delete_collection(collection_name)
         await client.create_collection(collection_name, vector_size=1024)  # BGE-M3 dimension
 
-        logger.info("qdrant_collection_cleared", collection=collection_name, points_deleted=points_count)
+        logger.info(
+            "qdrant_collection_cleared", collection=collection_name, points_deleted=points_count
+        )
         return {"points_deleted": points_count}
 
     except Exception as e:

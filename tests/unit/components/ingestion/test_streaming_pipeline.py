@@ -161,7 +161,6 @@ class TestStreamingPipelineOrchestrator:
                 "src.components.ingestion.langgraph_nodes.adaptive_section_chunking"
             ) as mock_chunk,
         ):
-
             # Setup mock returns
             from src.components.ingestion.langgraph_nodes import AdaptiveChunk
 
@@ -297,7 +296,6 @@ class TestStreamingPipelineOrchestrator:
                 "src.components.ingestion.langgraph_nodes.adaptive_section_chunking"
             ) as mock_chunk,
         ):
-
             mock_extract.return_value = []
             mock_chunk.return_value = []
 

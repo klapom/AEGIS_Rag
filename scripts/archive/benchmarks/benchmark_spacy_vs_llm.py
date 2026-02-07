@@ -33,6 +33,7 @@ try:
 except OSError:
     print("Downloading en_core_web_sm...")
     import subprocess
+
     subprocess.run(["python", "-m", "spacy", "download", "en_core_web_sm"])
     nlp_en = spacy.load("en_core_web_sm")
 
@@ -56,6 +57,7 @@ TEST_FILES = [
 @dataclass
 class ExtractionResult:
     """Result of entity/relation extraction."""
+
     file: str
     approach: str  # "llm_only" or "spacy_first"
 
@@ -97,11 +99,13 @@ def extract_with_spacy(text: str) -> tuple[list[dict], float]:
     seen = set()
     for ent in doc.ents:
         if ent.text.lower() not in seen:
-            entities.append({
-                "name": ent.text,
-                "type": ent.label_,
-                "description": f"{ent.label_} entity",
-            })
+            entities.append(
+                {
+                    "name": ent.text,
+                    "type": ent.label_,
+                    "description": f"{ent.label_} entity",
+                }
+            )
             seen.add(ent.text.lower())
 
     duration_ms = (time.perf_counter() - start) * 1000
@@ -158,7 +162,7 @@ def parse_json_response(response: str) -> list[dict]:
     end_idx = response.rfind("]")
 
     if start_idx != -1 and end_idx != -1:
-        json_str = response[start_idx:end_idx + 1]
+        json_str = response[start_idx : end_idx + 1]
         try:
             result = json.loads(json_str)
             if isinstance(result, list):
@@ -175,7 +179,7 @@ def parse_json_response(response: str) -> list[dict]:
     end_idx = response.rfind("]")
 
     if start_idx != -1 and end_idx != -1:
-        json_str = response[start_idx:end_idx + 1]
+        json_str = response[start_idx : end_idx + 1]
         # Fix trailing commas
         json_str = json_str.replace(",]", "]").replace(",\n]", "]")
         try:
@@ -187,7 +191,8 @@ def parse_json_response(response: str) -> list[dict]:
 
     # Strategy 3: Extract individual JSON objects
     import re
-    objects = re.findall(r'\{[^{}]+\}', response)
+
+    objects = re.findall(r"\{[^{}]+\}", response)
     results = []
     for obj_str in objects:
         try:
@@ -367,7 +372,7 @@ async def run_benchmark():
             print(f"SKIP: {file_path.name} too short")
             continue
 
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"File: {file_path.name} ({len(text)} chars)")
         print("=" * 60)
 
@@ -378,7 +383,9 @@ async def run_benchmark():
         print(f"    Entities: {result_llm.total_entities}")
         print(f"    Relations: {result_llm.relations}")
         print(f"    ER Ratio: {result_llm.er_ratio:.2f}")
-        print(f"    Tokens: {result_llm.total_tokens} (in:{result_llm.input_tokens}, out:{result_llm.output_tokens})")
+        print(
+            f"    Tokens: {result_llm.total_tokens} (in:{result_llm.input_tokens}, out:{result_llm.output_tokens})"
+        )
         print(f"    Duration: {result_llm.total_duration_ms:.0f}ms")
 
         # Run SpaCy-First
@@ -390,8 +397,12 @@ async def run_benchmark():
         print(f"    Total Entities: {result_spacy.total_entities}")
         print(f"    Relations: {result_spacy.relations}")
         print(f"    ER Ratio: {result_spacy.er_ratio:.2f}")
-        print(f"    Tokens: {result_spacy.total_tokens} (in:{result_spacy.input_tokens}, out:{result_spacy.output_tokens})")
-        print(f"    Duration: {result_spacy.total_duration_ms:.0f}ms (SpaCy: {result_spacy.spacy_duration_ms:.0f}ms)")
+        print(
+            f"    Tokens: {result_spacy.total_tokens} (in:{result_spacy.input_tokens}, out:{result_spacy.output_tokens})"
+        )
+        print(
+            f"    Duration: {result_spacy.total_duration_ms:.0f}ms (SpaCy: {result_spacy.spacy_duration_ms:.0f}ms)"
+        )
 
     # Summary
     print("\n" + "=" * 80)
@@ -419,31 +430,51 @@ async def run_benchmark():
     print("-" * 70)
     print(f"{'Entities (SpaCy)':<25} {'-':>15} {spacy_base:>15}")
     print(f"{'Entities (LLM)':<25} {llm_entities:>15} {spacy_additional:>15}")
-    print(f"{'Entities (Total)':<25} {llm_entities:>15} {spacy_entities:>15} {spacy_entities - llm_entities:>+15}")
-    print(f"{'Relations':<25} {llm_relations:>15} {spacy_relations:>15} {spacy_relations - llm_relations:>+15}")
-    print(f"{'ER Ratio':<25} {llm_relations/max(llm_entities,1):>15.2f} {spacy_relations/max(spacy_entities,1):>15.2f}")
+    print(
+        f"{'Entities (Total)':<25} {llm_entities:>15} {spacy_entities:>15} {spacy_entities - llm_entities:>+15}"
+    )
+    print(
+        f"{'Relations':<25} {llm_relations:>15} {spacy_relations:>15} {spacy_relations - llm_relations:>+15}"
+    )
+    print(
+        f"{'ER Ratio':<25} {llm_relations / max(llm_entities, 1):>15.2f} {spacy_relations / max(spacy_entities, 1):>15.2f}"
+    )
     print("-" * 70)
-    print(f"{'Input Tokens':<25} {sum(r.input_tokens for r in results_llm):>15} {sum(r.input_tokens for r in results_spacy):>15}")
-    print(f"{'Output Tokens':<25} {sum(r.output_tokens for r in results_llm):>15} {sum(r.output_tokens for r in results_spacy):>15}")
-    print(f"{'Total Tokens':<25} {llm_tokens:>15} {spacy_tokens:>15} {spacy_tokens - llm_tokens:>+15}")
-    print(f"{'Token Savings':<25} {'-':>15} {(1 - spacy_tokens/max(llm_tokens,1))*100:>14.1f}%")
+    print(
+        f"{'Input Tokens':<25} {sum(r.input_tokens for r in results_llm):>15} {sum(r.input_tokens for r in results_spacy):>15}"
+    )
+    print(
+        f"{'Output Tokens':<25} {sum(r.output_tokens for r in results_llm):>15} {sum(r.output_tokens for r in results_spacy):>15}"
+    )
+    print(
+        f"{'Total Tokens':<25} {llm_tokens:>15} {spacy_tokens:>15} {spacy_tokens - llm_tokens:>+15}"
+    )
+    print(
+        f"{'Token Savings':<25} {'-':>15} {(1 - spacy_tokens / max(llm_tokens, 1)) * 100:>14.1f}%"
+    )
     print("-" * 70)
-    print(f"{'Total Duration (ms)':<25} {llm_duration:>15.0f} {spacy_duration:>15.0f} {spacy_duration - llm_duration:>+15.0f}")
-    print(f"{'Speedup':<25} {'-':>15} {llm_duration/max(spacy_duration,1):>14.1f}x")
+    print(
+        f"{'Total Duration (ms)':<25} {llm_duration:>15.0f} {spacy_duration:>15.0f} {spacy_duration - llm_duration:>+15.0f}"
+    )
+    print(f"{'Speedup':<25} {'-':>15} {llm_duration / max(spacy_duration, 1):>14.1f}x")
     print("=" * 80)
 
     # Per-file comparison
     print("\n" + "=" * 80)
     print("PER-FILE COMPARISON")
     print("=" * 80)
-    print(f"{'File':<20} {'LLM E/R':>10} {'SpaCy E/R':>12} {'LLM Tok':>10} {'SpaCy Tok':>10} {'Saved':>8}")
+    print(
+        f"{'File':<20} {'LLM E/R':>10} {'SpaCy E/R':>12} {'LLM Tok':>10} {'SpaCy Tok':>10} {'Saved':>8}"
+    )
     print("-" * 70)
 
     for r_llm, r_spacy in zip(results_llm, results_spacy):
         saved = (1 - r_spacy.total_tokens / max(r_llm.total_tokens, 1)) * 100
-        print(f"{r_llm.file[:20]:<20} {r_llm.total_entities:>4}/{r_llm.relations:<5} "
-              f"{r_spacy.total_entities:>4}/{r_spacy.relations:<7} "
-              f"{r_llm.total_tokens:>10} {r_spacy.total_tokens:>10} {saved:>7.1f}%")
+        print(
+            f"{r_llm.file[:20]:<20} {r_llm.total_entities:>4}/{r_llm.relations:<5} "
+            f"{r_spacy.total_entities:>4}/{r_spacy.relations:<7} "
+            f"{r_llm.total_tokens:>10} {r_spacy.total_tokens:>10} {saved:>7.1f}%"
+        )
 
     print("=" * 80)
 

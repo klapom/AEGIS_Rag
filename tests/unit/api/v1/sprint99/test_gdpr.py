@@ -23,9 +23,7 @@ class TestConsentListingEndpoint:
         self, admin_test_client, sample_consent_list_response, auth_headers
     ):
         """Test listing all GDPR consents."""
-        with patch(
-            "src.components.gdpr.get_consent_manager"
-        ) as mock_manager:
+        with patch("src.components.gdpr.get_consent_manager") as mock_manager:
             mock_manager.return_value.list_consents = AsyncMock(
                 return_value=sample_consent_list_response["items"]
             )
@@ -42,9 +40,7 @@ class TestConsentListingEndpoint:
 
     def test_list_consents_pagination(self, admin_test_client, auth_headers):
         """Test consent list pagination."""
-        with patch(
-            "src.components.gdpr.get_consent_manager"
-        ) as mock_manager:
+        with patch("src.components.gdpr.get_consent_manager") as mock_manager:
             mock_manager.return_value.list_consents = AsyncMock(return_value=[])
 
             response = admin_test_client.get(
@@ -59,9 +55,7 @@ class TestConsentListingEndpoint:
 
     def test_list_consents_filter_by_status(self, admin_test_client, auth_headers):
         """Test filtering consents by status."""
-        with patch(
-            "src.components.gdpr.get_consent_manager"
-        ) as mock_manager:
+        with patch("src.components.gdpr.get_consent_manager") as mock_manager:
             mock_manager.return_value.list_consents = AsyncMock(return_value=[])
 
             response = admin_test_client.get(
@@ -73,9 +67,7 @@ class TestConsentListingEndpoint:
 
     def test_list_consents_filter_by_legal_basis(self, admin_test_client, auth_headers):
         """Test filtering consents by legal basis."""
-        with patch(
-            "src.components.gdpr.get_consent_manager"
-        ) as mock_manager:
+        with patch("src.components.gdpr.get_consent_manager") as mock_manager:
             mock_manager.return_value.list_consents = AsyncMock(return_value=[])
 
             response = admin_test_client.get(
@@ -87,9 +79,7 @@ class TestConsentListingEndpoint:
 
     def test_list_consents_filter_by_data_category(self, admin_test_client, auth_headers):
         """Test filtering consents by data category."""
-        with patch(
-            "src.components.gdpr.get_consent_manager"
-        ) as mock_manager:
+        with patch("src.components.gdpr.get_consent_manager") as mock_manager:
             mock_manager.return_value.list_consents = AsyncMock(return_value=[])
 
             response = admin_test_client.get(
@@ -101,9 +91,7 @@ class TestConsentListingEndpoint:
 
     def test_list_consents_empty(self, admin_test_client, auth_headers):
         """Test listing when no consents exist."""
-        with patch(
-            "src.components.gdpr.get_consent_manager"
-        ) as mock_manager:
+        with patch("src.components.gdpr.get_consent_manager") as mock_manager:
             mock_manager.return_value.list_consents = AsyncMock(return_value=[])
 
             response = admin_test_client.get(
@@ -136,12 +124,8 @@ class TestCreateConsentEndpoint:
             "purpose": "Customer support",
         }
 
-        with patch(
-            "src.components.gdpr.get_consent_manager"
-        ) as mock_manager:
-            mock_manager.return_value.create_consent = AsyncMock(
-                return_value=consent_data
-            )
+        with patch("src.components.gdpr.get_consent_manager") as mock_manager:
+            mock_manager.return_value.create_consent = AsyncMock(return_value=consent_data)
 
             response = admin_test_client.post(
                 "/api/v1/gdpr/consent",
@@ -151,9 +135,7 @@ class TestCreateConsentEndpoint:
 
             assert response.status_code == 201
 
-    def test_create_consent_with_legal_basis_contract(
-        self, admin_test_client, auth_headers
-    ):
+    def test_create_consent_with_legal_basis_contract(self, admin_test_client, auth_headers):
         """Test creating consent with legal basis: contract."""
         consent_data = {
             "data_subject_id": "user_456",
@@ -162,12 +144,8 @@ class TestCreateConsentEndpoint:
             "purpose": "Contract execution",
         }
 
-        with patch(
-            "src.components.gdpr.get_consent_manager"
-        ) as mock_manager:
-            mock_manager.return_value.create_consent = AsyncMock(
-                return_value={"id": "consent_123"}
-            )
+        with patch("src.components.gdpr.get_consent_manager") as mock_manager:
+            mock_manager.return_value.create_consent = AsyncMock(return_value={"id": "consent_123"})
 
             response = admin_test_client.post(
                 "/api/v1/gdpr/consent",
@@ -188,12 +166,8 @@ class TestCreateConsentEndpoint:
             "purpose": "Regulatory compliance",
         }
 
-        with patch(
-            "src.components.gdpr.get_consent_manager"
-        ) as mock_manager:
-            mock_manager.return_value.create_consent = AsyncMock(
-                return_value={"id": "consent_123"}
-            )
+        with patch("src.components.gdpr.get_consent_manager") as mock_manager:
+            mock_manager.return_value.create_consent = AsyncMock(return_value={"id": "consent_123"})
 
             response = admin_test_client.post(
                 "/api/v1/gdpr/consent",
@@ -203,9 +177,7 @@ class TestCreateConsentEndpoint:
 
             assert response.status_code == 201
 
-    def test_create_consent_with_legal_basis_vital_interests(
-        self, admin_test_client, auth_headers
-    ):
+    def test_create_consent_with_legal_basis_vital_interests(self, admin_test_client, auth_headers):
         """Test creating consent with legal basis: vital_interests."""
         consent_data = {
             "data_subject_id": "user_abc",
@@ -214,12 +186,8 @@ class TestCreateConsentEndpoint:
             "purpose": "Emergency medical assistance",
         }
 
-        with patch(
-            "src.components.gdpr.get_consent_manager"
-        ) as mock_manager:
-            mock_manager.return_value.create_consent = AsyncMock(
-                return_value={"id": "consent_123"}
-            )
+        with patch("src.components.gdpr.get_consent_manager") as mock_manager:
+            mock_manager.return_value.create_consent = AsyncMock(return_value={"id": "consent_123"})
 
             response = admin_test_client.post(
                 "/api/v1/gdpr/consent",
@@ -229,9 +197,7 @@ class TestCreateConsentEndpoint:
 
             assert response.status_code == 201
 
-    def test_create_consent_with_legal_basis_public_task(
-        self, admin_test_client, auth_headers
-    ):
+    def test_create_consent_with_legal_basis_public_task(self, admin_test_client, auth_headers):
         """Test creating consent with legal basis: public_task."""
         consent_data = {
             "data_subject_id": "user_def",
@@ -240,12 +206,8 @@ class TestCreateConsentEndpoint:
             "purpose": "Public sector processing",
         }
 
-        with patch(
-            "src.components.gdpr.get_consent_manager"
-        ) as mock_manager:
-            mock_manager.return_value.create_consent = AsyncMock(
-                return_value={"id": "consent_123"}
-            )
+        with patch("src.components.gdpr.get_consent_manager") as mock_manager:
+            mock_manager.return_value.create_consent = AsyncMock(return_value={"id": "consent_123"})
 
             response = admin_test_client.post(
                 "/api/v1/gdpr/consent",
@@ -266,12 +228,8 @@ class TestCreateConsentEndpoint:
             "purpose": "Marketing communications",
         }
 
-        with patch(
-            "src.components.gdpr.get_consent_manager"
-        ) as mock_manager:
-            mock_manager.return_value.create_consent = AsyncMock(
-                return_value={"id": "consent_123"}
-            )
+        with patch("src.components.gdpr.get_consent_manager") as mock_manager:
+            mock_manager.return_value.create_consent = AsyncMock(return_value={"id": "consent_123"})
 
             response = admin_test_client.post(
                 "/api/v1/gdpr/consent",
@@ -320,12 +278,8 @@ class TestCreateConsentEndpoint:
             "expires_at": future_date,
         }
 
-        with patch(
-            "src.components.gdpr.get_consent_manager"
-        ) as mock_manager:
-            mock_manager.return_value.create_consent = AsyncMock(
-                return_value={"id": "consent_123"}
-            )
+        with patch("src.components.gdpr.get_consent_manager") as mock_manager:
+            mock_manager.return_value.create_consent = AsyncMock(return_value={"id": "consent_123"})
 
             response = admin_test_client.post(
                 "/api/v1/gdpr/consent",
@@ -365,12 +319,8 @@ class TestUpdateConsentEndpoint:
             "expires_at": (datetime.now(UTC) + timedelta(days=365)).isoformat(),
         }
 
-        with patch(
-            "src.components.gdpr.get_consent_manager"
-        ) as mock_manager:
-            mock_manager.return_value.update_consent = AsyncMock(
-                return_value={"status": "renewed"}
-            )
+        with patch("src.components.gdpr.get_consent_manager") as mock_manager:
+            mock_manager.return_value.update_consent = AsyncMock(return_value={"status": "renewed"})
 
             response = admin_test_client.put(
                 "/api/v1/gdpr/consent/consent_123",
@@ -384,9 +334,7 @@ class TestUpdateConsentEndpoint:
         """Test withdrawing consent."""
         update_data = {"action": "withdraw"}
 
-        with patch(
-            "src.components.gdpr.get_consent_manager"
-        ) as mock_manager:
+        with patch("src.components.gdpr.get_consent_manager") as mock_manager:
             mock_manager.return_value.update_consent = AsyncMock(
                 return_value={"status": "withdrawn"}
             )
@@ -401,9 +349,7 @@ class TestUpdateConsentEndpoint:
 
     def test_update_consent_not_found(self, admin_test_client, auth_headers):
         """Test updating non-existent consent."""
-        with patch(
-            "src.components.gdpr.get_consent_manager"
-        ) as mock_manager:
+        with patch("src.components.gdpr.get_consent_manager") as mock_manager:
             mock_manager.return_value.update_consent = AsyncMock(return_value=None)
 
             response = admin_test_client.put(
@@ -426,12 +372,8 @@ class TestDataSubjectRequestEndpoints:
             "description": "Provide all personal data",
         }
 
-        with patch(
-            "src.components.gdpr.get_rights_handler"
-        ) as mock_handler:
-            mock_handler.return_value.create_request = AsyncMock(
-                return_value={"id": "request_123"}
-            )
+        with patch("src.components.gdpr.get_rights_handler") as mock_handler:
+            mock_handler.return_value.create_request = AsyncMock(return_value={"id": "request_123"})
 
             response = admin_test_client.post(
                 "/api/v1/gdpr/request",
@@ -449,12 +391,8 @@ class TestDataSubjectRequestEndpoints:
             "description": "Delete all my data",
         }
 
-        with patch(
-            "src.components.gdpr.get_rights_handler"
-        ) as mock_handler:
-            mock_handler.return_value.create_request = AsyncMock(
-                return_value={"id": "request_123"}
-            )
+        with patch("src.components.gdpr.get_rights_handler") as mock_handler:
+            mock_handler.return_value.create_request = AsyncMock(return_value={"id": "request_123"})
 
             response = admin_test_client.post(
                 "/api/v1/gdpr/request",
@@ -472,12 +410,8 @@ class TestDataSubjectRequestEndpoints:
             "description": "Correct my email address",
         }
 
-        with patch(
-            "src.components.gdpr.get_rights_handler"
-        ) as mock_handler:
-            mock_handler.return_value.create_request = AsyncMock(
-                return_value={"id": "request_123"}
-            )
+        with patch("src.components.gdpr.get_rights_handler") as mock_handler:
+            mock_handler.return_value.create_request = AsyncMock(return_value={"id": "request_123"})
 
             response = admin_test_client.post(
                 "/api/v1/gdpr/request",
@@ -495,12 +429,8 @@ class TestDataSubjectRequestEndpoints:
             "description": "Export my data in portable format",
         }
 
-        with patch(
-            "src.components.gdpr.get_rights_handler"
-        ) as mock_handler:
-            mock_handler.return_value.create_request = AsyncMock(
-                return_value={"id": "request_123"}
-            )
+        with patch("src.components.gdpr.get_rights_handler") as mock_handler:
+            mock_handler.return_value.create_request = AsyncMock(return_value={"id": "request_123"})
 
             response = admin_test_client.post(
                 "/api/v1/gdpr/request",
@@ -518,12 +448,8 @@ class TestDataSubjectRequestEndpoints:
             "description": "Restrict processing of my data",
         }
 
-        with patch(
-            "src.components.gdpr.get_rights_handler"
-        ) as mock_handler:
-            mock_handler.return_value.create_request = AsyncMock(
-                return_value={"id": "request_123"}
-            )
+        with patch("src.components.gdpr.get_rights_handler") as mock_handler:
+            mock_handler.return_value.create_request = AsyncMock(return_value={"id": "request_123"})
 
             response = admin_test_client.post(
                 "/api/v1/gdpr/request",
@@ -541,12 +467,8 @@ class TestDataSubjectRequestEndpoints:
             "description": "Object to marketing communications",
         }
 
-        with patch(
-            "src.components.gdpr.get_rights_handler"
-        ) as mock_handler:
-            mock_handler.return_value.create_request = AsyncMock(
-                return_value={"id": "request_123"}
-            )
+        with patch("src.components.gdpr.get_rights_handler") as mock_handler:
+            mock_handler.return_value.create_request = AsyncMock(return_value={"id": "request_123"})
 
             response = admin_test_client.post(
                 "/api/v1/gdpr/request",
@@ -573,9 +495,7 @@ class TestDataSubjectRequestEndpoints:
 
     def test_approve_request_success(self, admin_test_client, auth_headers):
         """Test approving data subject request."""
-        with patch(
-            "src.components.gdpr.get_rights_handler"
-        ) as mock_handler:
+        with patch("src.components.gdpr.get_rights_handler") as mock_handler:
             mock_handler.return_value.approve_request = AsyncMock(
                 return_value={"status": "approved"}
             )
@@ -589,9 +509,7 @@ class TestDataSubjectRequestEndpoints:
 
     def test_reject_request_success(self, admin_test_client, auth_headers):
         """Test rejecting data subject request."""
-        with patch(
-            "src.components.gdpr.get_rights_handler"
-        ) as mock_handler:
+        with patch("src.components.gdpr.get_rights_handler") as mock_handler:
             mock_handler.return_value.reject_request = AsyncMock(
                 return_value={"status": "rejected"}
             )
@@ -612,9 +530,7 @@ class TestProcessingActivityEndpoint:
         self, admin_test_client, sample_processing_activity, auth_headers
     ):
         """Test listing processing activities (GDPR Art. 30)."""
-        with patch(
-            "src.components.gdpr.get_activity_logger"
-        ) as mock_logger:
+        with patch("src.components.gdpr.get_activity_logger") as mock_logger:
             mock_logger.return_value.list_activities = AsyncMock(
                 return_value=[sample_processing_activity]
             )
@@ -630,9 +546,7 @@ class TestProcessingActivityEndpoint:
 
     def test_list_processing_activities_empty(self, admin_test_client, auth_headers):
         """Test listing when no activities exist."""
-        with patch(
-            "src.components.gdpr.get_activity_logger"
-        ) as mock_logger:
+        with patch("src.components.gdpr.get_activity_logger") as mock_logger:
             mock_logger.return_value.list_activities = AsyncMock(return_value=[])
 
             response = admin_test_client.get(
@@ -646,16 +560,10 @@ class TestProcessingActivityEndpoint:
 class TestPIISettingsEndpoints:
     """Tests for PII detection settings endpoints."""
 
-    def test_get_pii_settings_success(
-        self, admin_test_client, sample_pii_settings, auth_headers
-    ):
+    def test_get_pii_settings_success(self, admin_test_client, sample_pii_settings, auth_headers):
         """Test retrieving PII detection settings."""
-        with patch(
-            "src.components.gdpr.get_pii_settings"
-        ) as mock_settings:
-            mock_settings.return_value.get_settings = AsyncMock(
-                return_value=sample_pii_settings
-            )
+        with patch("src.components.gdpr.get_pii_settings") as mock_settings:
+            mock_settings.return_value.get_settings = AsyncMock(return_value=sample_pii_settings)
 
             response = admin_test_client.get(
                 "/api/v1/gdpr/pii-settings",
@@ -677,12 +585,8 @@ class TestPIISettingsEndpoints:
             "detection_threshold": 0.9,
         }
 
-        with patch(
-            "src.components.gdpr.get_pii_settings"
-        ) as mock_settings:
-            mock_settings.return_value.update_settings = AsyncMock(
-                return_value=update_data
-            )
+        with patch("src.components.gdpr.get_pii_settings") as mock_settings:
+            mock_settings.return_value.update_settings = AsyncMock(return_value=update_data)
 
             response = admin_test_client.put(
                 "/api/v1/gdpr/pii-settings",

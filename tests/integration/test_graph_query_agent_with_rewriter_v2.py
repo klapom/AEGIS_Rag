@@ -85,13 +85,15 @@ class TestGraphQueryWithIntentExtraction:
 
         # Mock intent extraction response
         intent_response = LLMResponse(
-            content=json.dumps({
-                "graph_intents": ["entity_relationships"],
-                "entities_mentioned": ["authentication", "authorization"],
-                "relationship_types": ["RELATES_TO"],
-                "traversal_depth": None,
-                "confidence": 0.9,
-            }),
+            content=json.dumps(
+                {
+                    "graph_intents": ["entity_relationships"],
+                    "entities_mentioned": ["authentication", "authorization"],
+                    "relationship_types": ["RELATES_TO"],
+                    "traversal_depth": None,
+                    "confidence": 0.9,
+                }
+            ),
             provider="ollama",
             model="llama3.2:8b",
             tokens_used=150,
@@ -106,8 +108,18 @@ class TestGraphQueryWithIntentExtraction:
             query=query,
             answer="Authentication and authorization are related security concepts.",
             entities=[
-                {"id": "e1", "name": "authentication", "type": "CONCEPT", "description": "User identity verification"},
-                {"id": "e2", "name": "authorization", "type": "CONCEPT", "description": "Access control"},
+                {
+                    "id": "e1",
+                    "name": "authentication",
+                    "type": "CONCEPT",
+                    "description": "User identity verification",
+                },
+                {
+                    "id": "e2",
+                    "name": "authorization",
+                    "type": "CONCEPT",
+                    "description": "Access control",
+                },
             ],
             relationships=[
                 {"id": "r1", "source": "e1", "target": "e2", "type": "RELATES_TO"},
@@ -155,13 +167,15 @@ class TestGraphQueryWithIntentExtraction:
 
         # Mock intent extraction response
         intent_response = LLMResponse(
-            content=json.dumps({
-                "graph_intents": ["multi_hop"],
-                "entities_mentioned": ["RAG", "LLM performance", "retrieval quality"],
-                "relationship_types": [],
-                "traversal_depth": 2,
-                "confidence": 0.85,
-            }),
+            content=json.dumps(
+                {
+                    "graph_intents": ["multi_hop"],
+                    "entities_mentioned": ["RAG", "LLM performance", "retrieval quality"],
+                    "relationship_types": [],
+                    "traversal_depth": 2,
+                    "confidence": 0.85,
+                }
+            ),
             provider="ollama",
             model="llama3.2:8b",
             tokens_used=180,
@@ -176,9 +190,24 @@ class TestGraphQueryWithIntentExtraction:
             query=query,
             answer="RAG improves LLM performance by enhancing retrieval quality.",
             entities=[
-                {"id": "e1", "name": "RAG", "type": "CONCEPT", "description": "Retrieval-Augmented Generation"},
-                {"id": "e2", "name": "retrieval quality", "type": "METRIC", "description": "Quality of retrieved docs"},
-                {"id": "e3", "name": "LLM performance", "type": "METRIC", "description": "LLM output quality"},
+                {
+                    "id": "e1",
+                    "name": "RAG",
+                    "type": "CONCEPT",
+                    "description": "Retrieval-Augmented Generation",
+                },
+                {
+                    "id": "e2",
+                    "name": "retrieval quality",
+                    "type": "METRIC",
+                    "description": "Quality of retrieved docs",
+                },
+                {
+                    "id": "e3",
+                    "name": "LLM performance",
+                    "type": "METRIC",
+                    "description": "LLM output quality",
+                },
             ],
             relationships=[
                 {"id": "r1", "source": "e1", "target": "e2", "type": "INFLUENCES"},
@@ -221,13 +250,15 @@ class TestGraphQueryWithIntentExtraction:
 
         # Mock intent extraction response
         intent_response = LLMResponse(
-            content=json.dumps({
-                "graph_intents": ["community_discovery"],
-                "entities_mentioned": ["vector search"],
-                "relationship_types": [],
-                "traversal_depth": None,
-                "confidence": 0.88,
-            }),
+            content=json.dumps(
+                {
+                    "graph_intents": ["community_discovery"],
+                    "entities_mentioned": ["vector search"],
+                    "relationship_types": [],
+                    "traversal_depth": None,
+                    "confidence": 0.88,
+                }
+            ),
             provider="ollama",
             model="llama3.2:8b",
             tokens_used=160,
@@ -242,9 +273,24 @@ class TestGraphQueryWithIntentExtraction:
             query=query,
             answer="Found community of entities related to vector search.",
             entities=[
-                {"id": "e1", "name": "vector search", "type": "CONCEPT", "description": "Similarity search"},
-                {"id": "e2", "name": "embeddings", "type": "CONCEPT", "description": "Vector representations"},
-                {"id": "e3", "name": "Qdrant", "type": "TECHNOLOGY", "description": "Vector database"},
+                {
+                    "id": "e1",
+                    "name": "vector search",
+                    "type": "CONCEPT",
+                    "description": "Similarity search",
+                },
+                {
+                    "id": "e2",
+                    "name": "embeddings",
+                    "type": "CONCEPT",
+                    "description": "Vector representations",
+                },
+                {
+                    "id": "e3",
+                    "name": "Qdrant",
+                    "type": "TECHNOLOGY",
+                    "description": "Vector database",
+                },
             ],
             relationships=[],
             topics=[],
@@ -338,13 +384,15 @@ class TestPerformanceIntegration:
 
         # Mock intent extraction response
         intent_response = LLMResponse(
-            content=json.dumps({
-                "graph_intents": ["entity_relationships"],
-                "entities_mentioned": ["X", "Y"],
-                "relationship_types": [],
-                "traversal_depth": None,
-                "confidence": 0.9,
-            }),
+            content=json.dumps(
+                {
+                    "graph_intents": ["entity_relationships"],
+                    "entities_mentioned": ["X", "Y"],
+                    "relationship_types": [],
+                    "traversal_depth": None,
+                    "confidence": 0.9,
+                }
+            ),
             provider="ollama",
             model="llama3.2:8b",
             tokens_used=150,
@@ -403,13 +451,15 @@ class TestCypherHintUsage:
 
         # Mock intent extraction response
         intent_response = LLMResponse(
-            content=json.dumps({
-                "graph_intents": ["entity_relationships"],
-                "entities_mentioned": ["A", "B"],
-                "relationship_types": ["RELATES_TO"],
-                "traversal_depth": None,
-                "confidence": 0.9,
-            }),
+            content=json.dumps(
+                {
+                    "graph_intents": ["entity_relationships"],
+                    "entities_mentioned": ["A", "B"],
+                    "relationship_types": ["RELATES_TO"],
+                    "traversal_depth": None,
+                    "confidence": 0.9,
+                }
+            ),
             provider="ollama",
             model="llama3.2:8b",
             tokens_used=150,
@@ -474,13 +524,15 @@ class TestMultipleIntentsIntegration:
 
         # Mock intent extraction response with multiple intents
         intent_response = LLMResponse(
-            content=json.dumps({
-                "graph_intents": ["entity_relationships", "community_discovery"],
-                "entities_mentioned": ["RAG", "LLMs"],
-                "relationship_types": ["RELATES_TO"],
-                "traversal_depth": None,
-                "confidence": 0.87,
-            }),
+            content=json.dumps(
+                {
+                    "graph_intents": ["entity_relationships", "community_discovery"],
+                    "entities_mentioned": ["RAG", "LLMs"],
+                    "relationship_types": ["RELATES_TO"],
+                    "traversal_depth": None,
+                    "confidence": 0.87,
+                }
+            ),
             provider="ollama",
             model="llama3.2:8b",
             tokens_used=200,

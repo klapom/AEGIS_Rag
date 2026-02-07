@@ -42,50 +42,53 @@ def mock_embeddings():
     medical_base = np.random.rand(1024)
     finance_base = np.random.rand(1024)
 
-    return np.array([
-        medical_base + np.random.rand(1024) * 0.1,  # Medical doc 1
-        medical_base + np.random.rand(1024) * 0.1,  # Medical doc 2
-        finance_base + np.random.rand(1024) * 0.1,  # Finance doc 1
-        finance_base + np.random.rand(1024) * 0.1,  # Finance doc 2
-    ])
+    return np.array(
+        [
+            medical_base + np.random.rand(1024) * 0.1,  # Medical doc 1
+            medical_base + np.random.rand(1024) * 0.1,  # Medical doc 2
+            finance_base + np.random.rand(1024) * 0.1,  # Finance doc 1
+            finance_base + np.random.rand(1024) * 0.1,  # Finance doc 2
+        ]
+    )
 
 
 @pytest.fixture
 def mock_llm_response_medical():
     """Mock LLM response for medical domain."""
-    return json.dumps({
-        "name": "medical_records",
-        "description": "Medical domain covering diseases, treatments, and clinical terminology",
-        "entity_types": ["Disease", "Symptom", "Treatment", "Medication"],
-        "relation_types": ["TREATS", "CAUSES", "DIAGNOSED_WITH"],
-        "intent_classes": ["symptom_inquiry", "treatment_request", "diagnosis_query"],
-        "sample_entities": {
-            "Disease": ["Type 2 diabetes", "COVID-19"],
-            "Treatment": ["antiviral medications", "insulin therapy"]
-        },
-        "recommended_model_family": "medical",
-        "confidence": 0.92,
-        "reasoning": "Documents contain clinical terminology and medical concepts"
-    })
+    return json.dumps(
+        {
+            "name": "medical_records",
+            "description": "Medical domain covering diseases, treatments, and clinical terminology",
+            "entity_types": ["Disease", "Symptom", "Treatment", "Medication"],
+            "relation_types": ["TREATS", "CAUSES", "DIAGNOSED_WITH"],
+            "intent_classes": ["symptom_inquiry", "treatment_request", "diagnosis_query"],
+            "sample_entities": {
+                "Disease": ["Type 2 diabetes", "COVID-19"],
+                "Treatment": ["antiviral medications", "insulin therapy"],
+            },
+            "recommended_model_family": "medical",
+            "confidence": 0.92,
+            "reasoning": "Documents contain clinical terminology and medical concepts",
+        }
+    )
 
 
 @pytest.fixture
 def mock_llm_response_finance():
     """Mock LLM response for finance domain."""
-    return json.dumps({
-        "name": "financial_reports",
-        "description": "Financial domain for stock prices, earnings, and market data",
-        "entity_types": ["Company", "StockTicker", "Currency", "Amount"],
-        "relation_types": ["LISTED_ON", "TRADED_AT", "EARNINGS_FROM"],
-        "intent_classes": ["price_inquiry", "earnings_query"],
-        "sample_entities": {
-            "StockTicker": ["AAPL", "TSLA"],
-            "Company": ["Tesla"]
-        },
-        "recommended_model_family": "finance",
-        "confidence": 0.87,
-        "reasoning": "Documents reference stock tickers and financial metrics"
-    })
+    return json.dumps(
+        {
+            "name": "financial_reports",
+            "description": "Financial domain for stock prices, earnings, and market data",
+            "entity_types": ["Company", "StockTicker", "Currency", "Amount"],
+            "relation_types": ["LISTED_ON", "TRADED_AT", "EARNINGS_FROM"],
+            "intent_classes": ["price_inquiry", "earnings_query"],
+            "sample_entities": {"StockTicker": ["AAPL", "TSLA"], "Company": ["Tesla"]},
+            "recommended_model_family": "finance",
+            "confidence": 0.87,
+            "reasoning": "Documents reference stock tickers and financial metrics",
+        }
+    )
 
 
 class TestDomainDiscoveryService:
@@ -93,11 +96,7 @@ class TestDomainDiscoveryService:
 
     def test_initialization(self):
         """Test service initialization."""
-        service = DomainDiscoveryService(
-            llm_model="qwen3:32b",
-            min_samples=3,
-            max_samples=10
-        )
+        service = DomainDiscoveryService(llm_model="qwen3:32b", min_samples=3, max_samples=10)
 
         assert service.llm_model == "qwen3:32b"
         assert service.min_samples == 3
@@ -112,7 +111,7 @@ class TestDomainDiscoveryService:
         with pytest.raises(ValueError, match="At least 3 sample documents required"):
             await service.discover_domains(
                 sample_documents=["Doc 1", "Doc 2"],  # Only 2 docs
-                suggested_count=1
+                suggested_count=1,
             )
 
     @pytest.mark.asyncio
@@ -126,16 +125,13 @@ class TestDomainDiscoveryService:
         with patch.object(
             service.embedding_service, "embed_batch", new_callable=AsyncMock
         ) as mock_embed:
-            mock_embed.return_value = [
-                {"dense": np.random.rand(1024).tolist()} for _ in range(3)
-            ]
+            mock_embed.return_value = [{"dense": np.random.rand(1024).tolist()} for _ in range(3)]
 
             with patch.object(service, "_analyze_clusters", new_callable=AsyncMock) as mock_analyze:
                 mock_analyze.return_value = []
 
                 result = await service.discover_domains(
-                    sample_documents=many_docs,
-                    suggested_count=1
+                    sample_documents=many_docs, suggested_count=1
                 )
 
                 # Should only embed 3 documents (max_samples)
@@ -152,9 +148,7 @@ class TestDomainDiscoveryService:
             service.embedding_service, "embed_batch", new_callable=AsyncMock
         ) as mock_embed:
             # Mock BGE-M3 response
-            mock_embed.return_value = [
-                {"dense": emb.tolist()} for emb in mock_embeddings
-            ]
+            mock_embed.return_value = [{"dense": emb.tolist()} for emb in mock_embeddings]
 
             embeddings = await service._embed_documents(sample_documents)
 
@@ -192,9 +186,7 @@ class TestDomainDiscoveryService:
         assert labels[0] != labels[2]
 
     @pytest.mark.asyncio
-    async def test_analyze_single_cluster(
-        self, sample_documents, mock_llm_response_medical
-    ):
+    async def test_analyze_single_cluster(self, sample_documents, mock_llm_response_medical):
         """Test LLM analysis of a single cluster."""
         service = DomainDiscoveryService()
 
@@ -203,7 +195,7 @@ class TestDomainDiscoveryService:
 
             domain = await service._analyze_single_cluster(
                 cluster_id=0,
-                cluster_documents=sample_documents[:2]  # Medical docs
+                cluster_documents=sample_documents[:2],  # Medical docs
             )
 
             assert domain is not None
@@ -226,10 +218,7 @@ class TestDomainDiscoveryService:
 
         with patch.object(service, "_call_llm", new_callable=AsyncMock) as mock_llm:
             # Return different responses for different clusters
-            mock_llm.side_effect = [
-                mock_llm_response_medical,
-                mock_llm_response_finance
-            ]
+            mock_llm.side_effect = [mock_llm_response_medical, mock_llm_response_finance]
 
             domains = await service._analyze_clusters(sample_documents, cluster_labels)
 
@@ -258,13 +247,15 @@ class TestDomainDiscoveryService:
         """Test domain name normalization."""
         service = DomainDiscoveryService()
 
-        response = json.dumps({
-            "name": "Medical Reports & Clinical Data!",  # Invalid characters
-            "description": "Test domain",
-            "confidence": 0.8,
-            "entity_types": [],
-            "relation_types": [],
-        })
+        response = json.dumps(
+            {
+                "name": "Medical Reports & Clinical Data!",  # Invalid characters
+                "description": "Test domain",
+                "confidence": 0.8,
+                "entity_types": [],
+                "relation_types": [],
+            }
+        )
 
         domain = service._parse_llm_response(response, cluster_id=0)
 
@@ -291,8 +282,11 @@ class TestDomainDiscoveryService:
 
     @pytest.mark.asyncio
     async def test_discover_domains_full_flow(
-        self, sample_documents, mock_embeddings,
-        mock_llm_response_medical, mock_llm_response_finance
+        self,
+        sample_documents,
+        mock_embeddings,
+        mock_llm_response_medical,
+        mock_llm_response_finance,
     ):
         """Test complete discovery flow end-to-end."""
         service = DomainDiscoveryService()
@@ -300,19 +294,13 @@ class TestDomainDiscoveryService:
         with patch.object(
             service.embedding_service, "embed_batch", new_callable=AsyncMock
         ) as mock_embed:
-            mock_embed.return_value = [
-                {"dense": emb.tolist()} for emb in mock_embeddings
-            ]
+            mock_embed.return_value = [{"dense": emb.tolist()} for emb in mock_embeddings]
 
             with patch.object(service, "_call_llm", new_callable=AsyncMock) as mock_llm:
-                mock_llm.side_effect = [
-                    mock_llm_response_medical,
-                    mock_llm_response_finance
-                ]
+                mock_llm.side_effect = [mock_llm_response_medical, mock_llm_response_finance]
 
                 result = await service.discover_domains(
-                    sample_documents=sample_documents,
-                    suggested_count=2
+                    sample_documents=sample_documents, suggested_count=2
                 )
 
                 # Verify result structure
@@ -332,9 +320,7 @@ class TestDomainDiscoveryService:
                     assert "MENTIONED_IN" in domain.relation_types
 
     @pytest.mark.asyncio
-    async def test_discover_domains_single_cluster_fallback(
-        self, mock_llm_response_medical
-    ):
+    async def test_discover_domains_single_cluster_fallback(self, mock_llm_response_medical):
         """Test discovery with very similar documents (single cluster)."""
         service = DomainDiscoveryService()
 
@@ -342,7 +328,7 @@ class TestDomainDiscoveryService:
         similar_docs = [
             "Patient with diabetes",
             "Patient with hypertension",
-            "Patient with chronic pain"
+            "Patient with chronic pain",
         ]
 
         with patch.object(
@@ -351,8 +337,7 @@ class TestDomainDiscoveryService:
             # Mock similar embeddings (would cluster into 1 group)
             base_emb = np.random.rand(1024)
             mock_embed.return_value = [
-                {"dense": (base_emb + np.random.rand(1024) * 0.01).tolist()}
-                for _ in range(3)
+                {"dense": (base_emb + np.random.rand(1024) * 0.01).tolist()} for _ in range(3)
             ]
 
             with patch.object(service, "_call_llm", new_callable=AsyncMock) as mock_llm:
@@ -360,7 +345,7 @@ class TestDomainDiscoveryService:
 
                 result = await service.discover_domains(
                     sample_documents=similar_docs,
-                    suggested_count=3  # Request 3 but should get 1
+                    suggested_count=3,  # Request 3 but should get 1
                 )
 
                 # Should still work with 1 cluster
@@ -381,8 +366,7 @@ class TestDomainDiscoveryService:
             mock_llm.return_value = response_text
 
             domain = await service._analyze_single_cluster(
-                cluster_id=0,
-                cluster_documents=["Doc 1", "Doc 2"]
+                cluster_id=0, cluster_documents=["Doc 1", "Doc 2"]
             )
 
             # MENTIONED_IN should be automatically added
@@ -405,7 +389,7 @@ class TestDiscoveredDomain:
             intent_classes=["inquiry", "request"],
             sample_entities={"Person": ["Alice", "Bob"]},
             recommended_model_family="general",
-            reasoning="Test reasoning"
+            reasoning="Test reasoning",
         )
 
         assert domain.name == "test_domain"
@@ -444,7 +428,7 @@ class TestDomainDiscoveryResult:
             discovered_domains=[],
             processing_time_ms=1234.56,
             documents_analyzed=5,
-            clusters_found=2
+            clusters_found=2,
         )
 
         assert result.processing_time_ms == 1234.56

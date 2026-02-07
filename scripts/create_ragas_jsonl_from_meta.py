@@ -104,9 +104,7 @@ def main():
     """Main entry point."""
     import argparse
 
-    parser = argparse.ArgumentParser(
-        description="Create RAGAS JSONL from meta.json files"
-    )
+    parser = argparse.ArgumentParser(description="Create RAGAS JSONL from meta.json files")
     parser.add_argument(
         "--output",
         default="data/evaluation/ragas_hotpot_dataset.jsonl",

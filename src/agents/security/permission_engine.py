@@ -182,8 +182,8 @@ class PermissionEngine:
         self,
         user_id: str,
         allowed: List[str],
-        denied: Optional[List[str]] = None,
-        rate_limits: Optional[Dict[str, int]] = None,
+        denied: List[str] | None = None,
+        rate_limits: Dict[str, int] | None = None,
     ) -> None:
         """Set permission policy for a user.
 
@@ -368,7 +368,7 @@ class PermissionEngine:
         """
         return self._rate_counters.get(user_id, {}).get(skill_name, 0)
 
-    def reset_rate_counters(self, user_id: Optional[str] = None) -> None:
+    def reset_rate_counters(self, user_id: str | None = None) -> None:
         """Reset rate counters.
 
         Call this every minute to reset rate limits.

@@ -99,9 +99,9 @@ async def benchmark_batch_processing():
             {
                 "id": f"batch_{i:03d}",
                 "text": f"""
-            Document {i} discusses Entity_{i % 3} and Entity_{(i+1) % 3}.
+            Document {i} discusses Entity_{i % 3} and Entity_{(i + 1) % 3}.
             Entity_{i % 3} works with Technology_{i % 5} on Project_{i}.
-            The collaboration between Entity_{i % 3} and Entity_{(i+1) % 3} improves results.
+            The collaboration between Entity_{i % 3} and Entity_{(i + 1) % 3} improves results.
             Technology_{i % 5} enables faster processing and better accuracy.
             """
                 * 2,
@@ -173,10 +173,10 @@ async def benchmark_chunking_performance():
     std_dev = statistics.stdev(times)
 
     print("\n✓ Results (10 iterations):")
-    print(f"  - Avg Time: {avg_time*1000:.2f}ms")
-    print(f"  - Std Dev: {std_dev*1000:.2f}ms")
+    print(f"  - Avg Time: {avg_time * 1000:.2f}ms")
+    print(f"  - Std Dev: {std_dev * 1000:.2f}ms")
     print(f"  - Chunks Created: {len(chunks)}")
-    print(f"  - Throughput: {5000/avg_time:.0f} tokens/s")
+    print(f"  - Throughput: {5000 / avg_time:.0f} tokens/s")
 
     return {
         "avg_time_ms": avg_time * 1000,

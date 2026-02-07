@@ -92,9 +92,7 @@ class TestRewardLoopIntegration:
         assert result["reward"] < 0  # Failed execution should have negative reward
 
     @pytest.mark.asyncio
-    async def test_execute_with_learning_user_feedback(
-        self, agent_with_reward_loop, mock_sandbox
-    ):
+    async def test_execute_with_learning_user_feedback(self, agent_with_reward_loop, mock_sandbox):
         """Test execute_with_learning with user feedback."""
         mock_result = MagicMock()
         mock_result.success = True
@@ -119,9 +117,7 @@ class TestRewardLoopIntegration:
         assert result["reward"] < 1.0  # Should include user feedback penalty
 
     @pytest.mark.asyncio
-    async def test_execute_with_learning_q_value_update(
-        self, agent_with_reward_loop, mock_sandbox
-    ):
+    async def test_execute_with_learning_q_value_update(self, agent_with_reward_loop, mock_sandbox):
         """Test Q-value updates after execution."""
         mock_result = MagicMock()
         mock_result.success = True
@@ -221,9 +217,7 @@ class TestRewardLoopIntegration:
             agent_without_reward_loop.load_policy({})
 
     @pytest.mark.asyncio
-    async def test_tool_selection_policy_integration(
-        self, agent_with_reward_loop, mock_sandbox
-    ):
+    async def test_tool_selection_policy_integration(self, agent_with_reward_loop, mock_sandbox):
         """Test policy-based tool selection."""
         mock_result = MagicMock()
         mock_result.success = True
@@ -254,9 +248,7 @@ class TestRewardLoopIntegration:
         custom_policy.q_values[("custom_tool", "context")] = 5.0
 
         config = ActionConfig(enable_reward_loop=True)
-        agent = SecureActionAgent(
-            config=config, sandbox_backend=mock_sandbox, policy=custom_policy
-        )
+        agent = SecureActionAgent(config=config, sandbox_backend=mock_sandbox, policy=custom_policy)
 
         # Epsilon should still be 0.2 since we didn't call update_q_value
         assert agent.policy.epsilon == 0.2

@@ -457,8 +457,7 @@ class TestInMemoryAuditStorage:
                 id=f"evt-{i}",
                 timestamp=datetime.utcnow(),
                 event_type=(
-                    AuditEventType.SKILL_EXECUTED if i % 2 == 0
-                    else AuditEventType.DATA_READ
+                    AuditEventType.SKILL_EXECUTED if i % 2 == 0 else AuditEventType.DATA_READ
                 ),
                 actor_id="claude",
                 actor_type="agent",
@@ -471,9 +470,7 @@ class TestInMemoryAuditStorage:
         for event in events:
             await storage.append(event)
 
-        results = await storage.query(
-            event_types=[AuditEventType.SKILL_EXECUTED]
-        )
+        results = await storage.query(event_types=[AuditEventType.SKILL_EXECUTED])
 
         assert len(results) == 5
         assert all(e.event_type == AuditEventType.SKILL_EXECUTED for e in results)
@@ -890,6 +887,7 @@ class TestSkillAuditDecorator:
     @pytest.mark.asyncio
     async def test_decorator_logs_skill_loaded(self, manager, storage):
         """Test decorator logs skill loaded on first call."""
+
         @audit_skill(manager, skill_id="test-skill")
         async def test_function():
             return "result"
@@ -904,6 +902,7 @@ class TestSkillAuditDecorator:
     @pytest.mark.asyncio
     async def test_decorator_logs_skill_executed(self, manager, storage):
         """Test decorator logs skill executed on each call."""
+
         @audit_skill(manager, skill_id="test-skill")
         async def test_function():
             return "result"
@@ -918,6 +917,7 @@ class TestSkillAuditDecorator:
     @pytest.mark.asyncio
     async def test_decorator_logs_skill_failed(self, manager, storage):
         """Test decorator logs skill failed on exception."""
+
         @audit_skill(manager, skill_id="test-skill")
         async def test_function():
             raise ValueError("Test error")
@@ -934,6 +934,7 @@ class TestSkillAuditDecorator:
     @pytest.mark.asyncio
     async def test_decorator_captures_duration(self, manager, storage):
         """Test decorator captures execution duration."""
+
         @audit_skill(manager, skill_id="test-skill")
         async def test_function():
             return "result"
@@ -947,6 +948,7 @@ class TestSkillAuditDecorator:
     @pytest.mark.asyncio
     async def test_decorator_with_custom_actor(self, manager, storage):
         """Test decorator with custom actor ID."""
+
         @audit_skill(manager, skill_id="test-skill", actor_id="custom_actor")
         async def test_function():
             return "result"
@@ -959,6 +961,7 @@ class TestSkillAuditDecorator:
     @pytest.mark.asyncio
     async def test_decorator_returns_result(self, manager):
         """Test decorator returns function result."""
+
         @audit_skill(manager, skill_id="test-skill")
         async def test_function():
             return "expected_result"
@@ -970,6 +973,7 @@ class TestSkillAuditDecorator:
     @pytest.mark.asyncio
     async def test_decorator_logs_loaded_once(self, manager, storage):
         """Test decorator logs SKILL_LOADED only once."""
+
         @audit_skill(manager, skill_id="test-skill")
         async def test_function():
             return "result"

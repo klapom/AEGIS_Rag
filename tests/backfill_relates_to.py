@@ -61,14 +61,14 @@ async def backfill_relates_to():
                 if r.get("name")
             ]
         except Exception as e:
-            print(f"   [{idx+1}/{len(all_chunks)}] ERROR querying entities: {e}")
+            print(f"   [{idx + 1}/{len(all_chunks)}] ERROR querying entities: {e}")
             chunks_with_errors += 1
             continue
 
         # Need at least 2 entities to find relations
         if len(entities) < 2:
             print(
-                f"   [{idx+1}/{len(all_chunks)}] SKIP: {chunk_id[:8]}... ({len(entities)} entities)"
+                f"   [{idx + 1}/{len(all_chunks)}] SKIP: {chunk_id[:8]}... ({len(entities)} entities)"
             )
             chunks_skipped += 1
             continue
@@ -79,7 +79,7 @@ async def backfill_relates_to():
 
             if not relations:
                 print(
-                    f"   [{idx+1}/{len(all_chunks)}] NO RELATIONS: {chunk_id[:8]}... (0 relations from {len(entities)} entities)"
+                    f"   [{idx + 1}/{len(all_chunks)}] NO RELATIONS: {chunk_id[:8]}... (0 relations from {len(entities)} entities)"
                 )
                 chunks_skipped += 1
                 continue
@@ -91,12 +91,12 @@ async def backfill_relates_to():
             total_relations_created += relations_created
             chunks_processed += 1
             print(
-                f"   [{idx+1}/{len(all_chunks)}] OK: {chunk_id[:8]}... (+{relations_created} relations from {len(entities)} entities)"
+                f"   [{idx + 1}/{len(all_chunks)}] OK: {chunk_id[:8]}... (+{relations_created} relations from {len(entities)} entities)"
             )
 
         except Exception as e:
             print(
-                f"   [{idx+1}/{len(all_chunks)}] ERROR: {chunk_id[:8]}... - {type(e).__name__}: {e}"
+                f"   [{idx + 1}/{len(all_chunks)}] ERROR: {chunk_id[:8]}... - {type(e).__name__}: {e}"
             )
             chunks_with_errors += 1
             continue

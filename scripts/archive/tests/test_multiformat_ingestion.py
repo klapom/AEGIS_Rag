@@ -196,8 +196,12 @@ def create_pdf_file(temp_dir: Path) -> Path:
     doc = SimpleDocTemplate(str(pdf_path), pagesize=letter)
     styles = getSampleStyleSheet()
 
-    title_style = ParagraphStyle("CustomTitle", parent=styles["Heading1"], fontSize=18, spaceAfter=20)
-    heading_style = ParagraphStyle("CustomHeading", parent=styles["Heading2"], fontSize=14, spaceAfter=10, spaceBefore=15)
+    title_style = ParagraphStyle(
+        "CustomTitle", parent=styles["Heading1"], fontSize=18, spaceAfter=20
+    )
+    heading_style = ParagraphStyle(
+        "CustomHeading", parent=styles["Heading2"], fontSize=14, spaceAfter=10, spaceBefore=15
+    )
 
     story = []
     story.append(Paragraph(TEST_CONTENT["title"], title_style))
@@ -210,14 +214,18 @@ def create_pdf_file(temp_dir: Path) -> Path:
 
     story.append(Paragraph("Technology Comparison", heading_style))
     table = Table(TEST_CONTENT["table_data"])
-    table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.grey),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
-        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-        ("FONTSIZE", (0, 0), (-1, 0), 12),
-        ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
-        ("GRID", (0, 0), (-1, -1), 1, colors.black),
-    ]))
+    table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.grey),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                ("FONTSIZE", (0, 0), (-1, 0), 12),
+                ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
+                ("GRID", (0, 0), (-1, -1), 1, colors.black),
+            ]
+        )
+    )
     story.append(table)
     doc.build(story)
     print(f"[FILE] Created PDF: {pdf_path} ({pdf_path.stat().st_size} bytes)")
@@ -256,23 +264,27 @@ def upload_document(file_path: Path, namespace: str, token: str) -> dict[str, An
 
     if response.status_code == 200:
         data = response.json()
-        result.update({
-            "success": True,
-            "chunks_created": data.get("chunks_created", 0),
-            "neo4j_entities": data.get("neo4j_entities", 0),
-            "neo4j_relationships": data.get("neo4j_relationships", 0),
-            "embeddings_generated": data.get("embeddings_generated", 0),
-            "status": data.get("status", "unknown"),
-        })
+        result.update(
+            {
+                "success": True,
+                "chunks_created": data.get("chunks_created", 0),
+                "neo4j_entities": data.get("neo4j_entities", 0),
+                "neo4j_relationships": data.get("neo4j_relationships", 0),
+                "embeddings_generated": data.get("embeddings_generated", 0),
+                "status": data.get("status", "unknown"),
+            }
+        )
         print(f"[UPLOAD] SUCCESS in {duration:.2f}s")
         print(f"[UPLOAD]   Chunks: {result['chunks_created']}")
         print(f"[UPLOAD]   Entities: {result['neo4j_entities']}")
         print(f"[UPLOAD]   Relations: {result['neo4j_relationships']}")
     else:
-        result.update({
-            "success": False,
-            "error": response.text[:500],
-        })
+        result.update(
+            {
+                "success": False,
+                "error": response.text[:500],
+            }
+        )
         print(f"[UPLOAD] FAILED ({response.status_code}): {response.text[:200]}")
 
     return result
@@ -309,18 +321,20 @@ def run_tests(formats: list[str], output_file: str = None):
                 print(f"[SKIP] Unknown format: {fmt}")
                 continue
 
-            print(f"\n{'='*60}")
+            print(f"\n{'=' * 60}")
             print(f"TESTING FORMAT: {fmt.upper()}")
-            print(f"{'='*60}")
+            print(f"{'=' * 60}")
 
             # Create file
             file_path = creators[fmt](temp_path)
             if file_path is None:
-                results.append({
-                    "format": fmt,
-                    "success": False,
-                    "error": "File creation failed (missing dependency)",
-                })
+                results.append(
+                    {
+                        "format": fmt,
+                        "success": False,
+                        "error": "File creation failed (missing dependency)",
+                    }
+                )
                 continue
 
             # Upload
@@ -332,7 +346,9 @@ def run_tests(formats: list[str], output_file: str = None):
         print("\n" + "=" * 60)
         print("TEST RESULTS SUMMARY")
         print("=" * 60)
-        print(f"{'Format':<10} {'Status':<10} {'Duration':<12} {'Chunks':<8} {'Entities':<10} {'Relations':<10}")
+        print(
+            f"{'Format':<10} {'Status':<10} {'Duration':<12} {'Chunks':<8} {'Entities':<10} {'Relations':<10}"
+        )
         print("-" * 70)
 
         for r in results:
@@ -341,17 +357,23 @@ def run_tests(formats: list[str], output_file: str = None):
             chunks = str(r.get("chunks_created", "-"))
             entities = str(r.get("neo4j_entities", "-"))
             relations = str(r.get("neo4j_relationships", "-"))
-            print(f"{r['format']:<10} {status:<10} {duration:<12} {chunks:<8} {entities:<10} {relations:<10}")
+            print(
+                f"{r['format']:<10} {status:<10} {duration:<12} {chunks:<8} {entities:<10} {relations:<10}"
+            )
 
         # Save results
         if output_file:
             output_path = Path(output_file)
             output_path.parent.mkdir(parents=True, exist_ok=True)
             with open(output_path, "w") as f:
-                json.dump({
-                    "timestamp": datetime.now().isoformat(),
-                    "results": results,
-                }, f, indent=2)
+                json.dump(
+                    {
+                        "timestamp": datetime.now().isoformat(),
+                        "results": results,
+                    },
+                    f,
+                    indent=2,
+                )
             print(f"\n[SAVE] Results saved to: {output_path}")
 
         return results
@@ -359,11 +381,16 @@ def run_tests(formats: list[str], output_file: str = None):
 
 def main():
     parser = argparse.ArgumentParser(description="Multi-Format Ingestion Test")
-    parser.add_argument("--format", "-f", choices=["csv", "docx", "xlsx", "pptx", "pdf"],
-                        help="Test single format")
+    parser.add_argument(
+        "--format", "-f", choices=["csv", "docx", "xlsx", "pptx", "pdf"], help="Test single format"
+    )
     parser.add_argument("--all", "-a", action="store_true", help="Test all formats")
-    parser.add_argument("--output", "-o", default="data/test_results/multiformat_test.json",
-                        help="Output file for results")
+    parser.add_argument(
+        "--output",
+        "-o",
+        default="data/test_results/multiformat_test.json",
+        help="Output file for results",
+    )
 
     args = parser.parse_args()
 

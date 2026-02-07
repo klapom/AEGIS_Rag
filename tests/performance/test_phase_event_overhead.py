@@ -48,7 +48,7 @@ def test_phase_event_creation_performance():
 
     # Should be fast
     assert avg_time_ms < target_ms_per_event, (
-        f"PhaseEvent creation too slow: {avg_time_ms:.4f}ms " f"(target: <{target_ms_per_event}ms)"
+        f"PhaseEvent creation too slow: {avg_time_ms:.4f}ms (target: <{target_ms_per_event}ms)"
     )
 
 
@@ -120,8 +120,7 @@ def test_phase_event_serialization_performance():
     print(f"  Average: {avg_time_ms:.4f}ms per serialization")
 
     assert avg_time_ms < target_ms_per_serialization, (
-        f"Serialization too slow: {avg_time_ms:.4f}ms "
-        f"(target: <{target_ms_per_serialization}ms)"
+        f"Serialization too slow: {avg_time_ms:.4f}ms (target: <{target_ms_per_serialization}ms)"
     )
 
 
@@ -332,7 +331,7 @@ def test_reasoning_data_memory_growth():
     # Growth should be reasonable
     max_expected_bytes = empty_size + (num_events * 200)  # ~200 bytes per event
     assert full_size < max_expected_bytes, (
-        f"Memory growth too large: {full_size} bytes " f"(expected <{max_expected_bytes})"
+        f"Memory growth too large: {full_size} bytes (expected <{max_expected_bytes})"
     )
 
 

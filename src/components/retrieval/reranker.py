@@ -294,9 +294,7 @@ class CrossEncoderReranker:
             import torch
 
             device = "cuda" if torch.cuda.is_available() else "cpu"
-            logger.info(
-                "loading_cross_encoder_model", model=self.model_name, device=device
-            )
+            logger.info("loading_cross_encoder_model", model=self.model_name, device=device)
             # Note: sentence-transformers 3.4+ uses cache_dir instead of cache_folder
             try:
                 self._model = CrossEncoder(

@@ -9,7 +9,7 @@
 ## Quick Reference Table
 
 | Category | Count | SP | Priority |
-|----------|-------|----|---------| 
+|----------|-------|----|---------|
 | Domain Management | 8 features | 53 | HIGH |
 | Graph & Versioning | 5 features | 39 | MEDIUM |
 | Research & Performance | 2 features | 26 | MEDIUM |
@@ -39,7 +39,7 @@ Reason: Endpoint /api/v1/admin/domains/ returns 404
 
 ### Graph Versioning Tests
 | File | Test | SP |
-|------|------|----| 
+|------|------|----|
 | time-travel.spec.ts | Time Travel Tab (39.5) | 8 |
 | version-compare.spec.ts | Version Comparison (39.7) | 13 |
 | entity-changelog.spec.ts | Entity Changelog (39.6) | 10 |
@@ -49,7 +49,7 @@ Reason: Endpoint /api/v1/admin/domains/ returns 404
 
 ### MCP & Tool Tests
 | File | Test | SP |
-|------|------|----| 
+|------|------|----|
 | group01-mcp-tools.spec.ts | Tool Management | 8 |
 | group02-bash-execution.spec.ts | Bash Execution | 8 |
 | group12-graph-communities.spec.ts | Graph Communities | 5 |
@@ -57,14 +57,14 @@ Reason: Endpoint /api/v1/admin/domains/ returns 404
 
 ### Research & Performance Tests
 | File | Test | SP |
-|------|------|----| 
+|------|------|----|
 | group08-deep-research.spec.ts | Deep Research Multi-Step | 13 |
 | performance-regression.spec.ts | Performance Regression | 13 |
 | **Subtotal** | | **26** |
 
 ### Quality & Infrastructure Tests
 | File | Test | SP |
-|------|------|----| 
+|------|------|----|
 | visual-regression.example.spec.ts | Visual Regression Framework | 5 |
 | api-errors.spec.ts | API Error Handling | 5 |
 | citations.spec.ts | Citation Features (Tooltips + Linking) | 5 |
@@ -72,7 +72,7 @@ Reason: Endpoint /api/v1/admin/domains/ returns 404
 
 ### Admin Dashboard Tests
 | File | Test | SP |
-|------|------|----| 
+|------|------|----|
 | admin-dashboard.spec.ts | Stats Cards (46.8.9) | 5 |
 | test_domain_training_flow.spec.ts | Default Domain Seeding | 3 |
 | **Subtotal** | | **8** |

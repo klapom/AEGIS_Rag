@@ -84,11 +84,11 @@ def powerpoint_sections(sample_bbox: dict, sample_metadata: dict) -> list[Sectio
     for i in range(15):
         sections.append(
             SectionMetadata(
-                heading=f"Slide {i+1}",
+                heading=f"Slide {i + 1}",
                 level=1,
                 page_no=i + 1,
                 bbox=sample_bbox,
-                text=f"Content of slide {i+1}. " * 20,  # ~200 tokens
+                text=f"Content of slide {i + 1}. " * 20,  # ~200 tokens
                 token_count=200,
                 metadata=sample_metadata,
             )
@@ -136,11 +136,11 @@ def test_small_sections_merged(sample_bbox: dict, sample_metadata: dict) -> None
     """
     sections = [
         SectionMetadata(
-            heading=f"Section {i+1}",
+            heading=f"Section {i + 1}",
             level=1,
             page_no=i + 1,
             bbox=sample_bbox,
-            text=f"Content {i+1}. " * 10,
+            text=f"Content {i + 1}. " * 10,
             token_count=400,
             metadata=sample_metadata,
         )
@@ -263,11 +263,11 @@ def test_thematic_coherence(sample_bbox: dict, sample_metadata: dict) -> None:
     """
     sections = [
         SectionMetadata(
-            heading=f"Section {i+1}",
+            heading=f"Section {i + 1}",
             level=1,
             page_no=i + 1,
             bbox=sample_bbox,
-            text=f"Content {i+1}",
+            text=f"Content {i + 1}",
             token_count=500,
             metadata=sample_metadata,
         )
@@ -480,11 +480,11 @@ def test_chunk_overflow_triggers_flush(sample_bbox: dict, sample_metadata: dict)
     """
     sections = [
         SectionMetadata(
-            heading=f"Section {i+1}",
+            heading=f"Section {i + 1}",
             level=1,
             page_no=i + 1,
             bbox=sample_bbox,
-            text=f"Content {i+1}",
+            text=f"Content {i + 1}",
             token_count=600,
             metadata=sample_metadata,
         )
@@ -528,11 +528,11 @@ def test_realistic_powerpoint_scenario(sample_bbox: dict, sample_metadata: dict)
 
     sections = [
         SectionMetadata(
-            heading=f"Slide {i+1}",
+            heading=f"Slide {i + 1}",
             level=1,
             page_no=i + 1,
             bbox=sample_bbox,
-            text=f"Slide {i+1} content",
+            text=f"Slide {i + 1} content",
             token_count=token_counts[i],
             metadata=sample_metadata,
         )

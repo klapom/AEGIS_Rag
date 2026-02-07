@@ -155,7 +155,7 @@ class BubblewrapSandboxBackend:
             raise ValueError(f"Repository path does not exist: {repo_path}")
 
         # Workspace: tmpfs for temporary files
-        self.workspace = Path(workspace_path or "/tmp/aegis-workspace")
+        self.workspace = Path(workspace_path or "/tmp/aegis-workspace")  # nosec B108
         self.workspace.mkdir(parents=True, exist_ok=True)
 
         self.allowed_domains = allowed_domains or []
@@ -213,7 +213,7 @@ class BubblewrapSandboxBackend:
             "--dev",
             "/dev",  # Device filesystem (minimal)
             "--tmpfs",
-            "/tmp",  # Temporary filesystem (isolated)
+            "/tmp",  # Temporary filesystem (isolated)  # nosec B108
             # Repository: Read-only
             "--ro-bind",
             str(self.repo_path),

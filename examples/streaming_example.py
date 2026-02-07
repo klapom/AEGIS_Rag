@@ -47,7 +47,9 @@ async def example_basic_streaming():
     ):
         if chunk["type"] == "metadata":
             ttft = chunk["ttft_ms"]
-            print(f"\n[METADATA] TTFT: {ttft:.2f}ms, Model: {chunk['model']}, Provider: {chunk['provider']}")
+            print(
+                f"\n[METADATA] TTFT: {ttft:.2f}ms, Model: {chunk['model']}, Provider: {chunk['provider']}"
+            )
             print("-" * 80)
 
         elif chunk["type"] == "token":
@@ -56,7 +58,9 @@ async def example_basic_streaming():
 
         elif chunk["type"] == "done":
             total_latency = chunk["latency_ms"]
-            print(f"\n\n[DONE] Total tokens: {chunk['total_tokens']}, Latency: {total_latency:.2f}ms")
+            print(
+                f"\n\n[DONE] Total tokens: {chunk['total_tokens']}, Latency: {total_latency:.2f}ms"
+            )
             print(f"Tokens/second: {total_tokens / (total_latency / 1000):.2f}")
 
         elif chunk["type"] == "error":

@@ -303,7 +303,8 @@ class Settings(BaseSettings):
     #   - Input validation (Pydantic schemas)
     # Bandit B104 finding accepted by design. See BACKLOG_SPRINT_3.md:27-48
     api_host: str = Field(
-        default="0.0.0.0", description="API server host"  # noqa: S104  # nosec B104
+        default="0.0.0.0",  # nosec B104 — intentional bind-all for Docker
+        description="API server host",
     )
     api_port: int = Field(default=8000, description="API server port")
     api_workers: int = Field(default=1, description="Number of Uvicorn workers")
@@ -894,7 +895,10 @@ class Settings(BaseSettings):
         description="LLM temperature for extraction (low for consistency)",
     )
     lightrag_llm_max_tokens: int = Field(
-        default=8192, ge=100, le=32768, description="Max tokens for LLM response (Nemotron 32k context)"
+        default=8192,
+        ge=100,
+        le=32768,
+        description="Max tokens for LLM response (Nemotron 32k context)",
     )
 
     # LightRAG Embedding Configuration
@@ -1162,7 +1166,8 @@ class Settings(BaseSettings):
     )
 
     temporal_purge_schedule: str = Field(
-        default="0 2 * * *", description="Cron schedule for temporal purge job"  # 2 AM daily
+        default="0 2 * * *",
+        description="Cron schedule for temporal purge job",  # 2 AM daily
     )
 
     # Web Search Configuration (Sprint 63 Feature 63.9)

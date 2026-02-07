@@ -20,13 +20,9 @@ from datetime import datetime, UTC, timedelta
 class TestListSkillsEndpoint:
     """Tests for GET /api/v1/skills endpoint."""
 
-    def test_list_skills_success(
-        self, admin_test_client, sample_skill_list_response, auth_headers
-    ):
+    def test_list_skills_success(self, admin_test_client, sample_skill_list_response, auth_headers):
         """Test successful skills list retrieval."""
-        with patch(
-            "src.components.skill_registry.get_skill_registry"
-        ) as mock_registry:
+        with patch("src.components.skill_registry.get_skill_registry") as mock_registry:
             mock_registry.return_value.list_skills = AsyncMock(
                 return_value=sample_skill_list_response["items"]
             )
@@ -44,9 +40,7 @@ class TestListSkillsEndpoint:
 
     def test_list_skills_pagination(self, admin_test_client, auth_headers):
         """Test skills list pagination."""
-        with patch(
-            "src.components.skill_registry.get_skill_registry"
-        ) as mock_registry:
+        with patch("src.components.skill_registry.get_skill_registry") as mock_registry:
             mock_registry.return_value.list_skills = AsyncMock(return_value=[])
 
             response = admin_test_client.get(
@@ -61,9 +55,7 @@ class TestListSkillsEndpoint:
 
     def test_list_skills_filter_by_status(self, admin_test_client, auth_headers):
         """Test filtering skills by status."""
-        with patch(
-            "src.components.skill_registry.get_skill_registry"
-        ) as mock_registry:
+        with patch("src.components.skill_registry.get_skill_registry") as mock_registry:
             mock_registry.return_value.list_skills = AsyncMock(return_value=[])
 
             response = admin_test_client.get(
@@ -75,9 +67,7 @@ class TestListSkillsEndpoint:
 
     def test_list_skills_filter_by_search(self, admin_test_client, auth_headers):
         """Test searching skills by name."""
-        with patch(
-            "src.components.skill_registry.get_skill_registry"
-        ) as mock_registry:
+        with patch("src.components.skill_registry.get_skill_registry") as mock_registry:
             mock_registry.return_value.list_skills = AsyncMock(return_value=[])
 
             response = admin_test_client.get(
@@ -95,9 +85,7 @@ class TestListSkillsEndpoint:
 
     def test_list_skills_empty_result(self, admin_test_client, auth_headers):
         """Test list when no skills exist."""
-        with patch(
-            "src.components.skill_registry.get_skill_registry"
-        ) as mock_registry:
+        with patch("src.components.skill_registry.get_skill_registry") as mock_registry:
             mock_registry.return_value.list_skills = AsyncMock(return_value=[])
 
             response = admin_test_client.get(
@@ -114,16 +102,10 @@ class TestListSkillsEndpoint:
 class TestGetSkillDetailsEndpoint:
     """Tests for GET /api/v1/skills/:name endpoint."""
 
-    def test_get_skill_details_success(
-        self, admin_test_client, sample_skill_data, auth_headers
-    ):
+    def test_get_skill_details_success(self, admin_test_client, sample_skill_data, auth_headers):
         """Test successful skill details retrieval."""
-        with patch(
-            "src.components.skill_registry.get_skill_registry"
-        ) as mock_registry:
-            mock_registry.return_value.get_skill = AsyncMock(
-                return_value=sample_skill_data
-            )
+        with patch("src.components.skill_registry.get_skill_registry") as mock_registry:
+            mock_registry.return_value.get_skill = AsyncMock(return_value=sample_skill_data)
 
             response = admin_test_client.get(
                 f"/api/v1/skills/{sample_skill_data['name']}",
@@ -137,9 +119,7 @@ class TestGetSkillDetailsEndpoint:
 
     def test_get_skill_details_not_found(self, admin_test_client, auth_headers):
         """Test retrieving non-existent skill."""
-        with patch(
-            "src.components.skill_registry.get_skill_registry"
-        ) as mock_registry:
+        with patch("src.components.skill_registry.get_skill_registry") as mock_registry:
             mock_registry.return_value.get_skill = AsyncMock(return_value=None)
 
             response = admin_test_client.get(
@@ -153,12 +133,8 @@ class TestGetSkillDetailsEndpoint:
         self, admin_test_client, sample_skill_data, auth_headers
     ):
         """Test that skill details include metrics."""
-        with patch(
-            "src.components.skill_registry.get_skill_registry"
-        ) as mock_registry:
-            mock_registry.return_value.get_skill = AsyncMock(
-                return_value=sample_skill_data
-            )
+        with patch("src.components.skill_registry.get_skill_registry") as mock_registry:
+            mock_registry.return_value.get_skill = AsyncMock(return_value=sample_skill_data)
 
             response = admin_test_client.get(
                 f"/api/v1/skills/{sample_skill_data['name']}",
@@ -181,9 +157,7 @@ class TestCreateSkillEndpoint:
 
     def test_create_skill_success(self, admin_test_client, sample_skill_config, auth_headers):
         """Test successful skill creation."""
-        with patch(
-            "src.components.skill_registry.get_skill_registry"
-        ) as mock_registry:
+        with patch("src.components.skill_registry.get_skill_registry") as mock_registry:
             mock_registry.return_value.create_skill = AsyncMock(
                 return_value={"name": "new_skill", "status": "pending"}
             )
@@ -200,9 +174,7 @@ class TestCreateSkillEndpoint:
 
     def test_create_skill_duplicate(self, admin_test_client, sample_skill_config, auth_headers):
         """Test creating duplicate skill."""
-        with patch(
-            "src.components.skill_registry.get_skill_registry"
-        ) as mock_registry:
+        with patch("src.components.skill_registry.get_skill_registry") as mock_registry:
             mock_registry.return_value.create_skill = AsyncMock(
                 side_effect=ValueError("Skill already exists")
             )
@@ -219,9 +191,7 @@ class TestCreateSkillEndpoint:
         """Test creating skill without required config."""
         invalid_config = {"name": "skill"}
 
-        with patch(
-            "src.components.skill_registry.get_skill_registry"
-        ) as mock_registry:
+        with patch("src.components.skill_registry.get_skill_registry") as mock_registry:
             mock_registry.return_value.create_skill = AsyncMock(
                 side_effect=ValueError("Missing required fields")
             )
@@ -277,9 +247,7 @@ class TestUpdateSkillEndpoint:
 
     def test_update_skill_success(self, admin_test_client, sample_skill_config, auth_headers):
         """Test successful skill update."""
-        with patch(
-            "src.components.skill_registry.get_skill_registry"
-        ) as mock_registry:
+        with patch("src.components.skill_registry.get_skill_registry") as mock_registry:
             mock_registry.return_value.update_skill = AsyncMock(
                 return_value={"name": "skill", "status": "active"}
             )
@@ -294,12 +262,8 @@ class TestUpdateSkillEndpoint:
 
     def test_update_skill_activation_status(self, admin_test_client, auth_headers):
         """Test toggling skill activation status."""
-        with patch(
-            "src.components.skill_registry.get_skill_registry"
-        ) as mock_registry:
-            mock_registry.return_value.update_skill = AsyncMock(
-                return_value={"status": "inactive"}
-            )
+        with patch("src.components.skill_registry.get_skill_registry") as mock_registry:
+            mock_registry.return_value.update_skill = AsyncMock(return_value={"status": "inactive"})
 
             response = admin_test_client.put(
                 "/api/v1/skills/skill",
@@ -318,12 +282,8 @@ class TestUpdateSkillEndpoint:
             "timeout": 45,
         }
 
-        with patch(
-            "src.components.skill_registry.get_skill_registry"
-        ) as mock_registry:
-            mock_registry.return_value.update_skill = AsyncMock(
-                return_value={"name": "skill"}
-            )
+        with patch("src.components.skill_registry.get_skill_registry") as mock_registry:
+            mock_registry.return_value.update_skill = AsyncMock(return_value={"name": "skill"})
 
             response = admin_test_client.put(
                 "/api/v1/skills/skill",
@@ -335,9 +295,7 @@ class TestUpdateSkillEndpoint:
 
     def test_update_skill_not_found(self, admin_test_client, auth_headers):
         """Test updating non-existent skill."""
-        with patch(
-            "src.components.skill_registry.get_skill_registry"
-        ) as mock_registry:
+        with patch("src.components.skill_registry.get_skill_registry") as mock_registry:
             mock_registry.return_value.update_skill = AsyncMock(return_value=None)
 
             response = admin_test_client.put(
@@ -363,9 +321,7 @@ class TestDeleteSkillEndpoint:
 
     def test_delete_skill_success(self, admin_test_client, auth_headers):
         """Test successful skill deletion."""
-        with patch(
-            "src.components.skill_registry.get_skill_registry"
-        ) as mock_registry:
+        with patch("src.components.skill_registry.get_skill_registry") as mock_registry:
             mock_registry.return_value.delete_skill = AsyncMock(return_value=True)
 
             response = admin_test_client.delete(
@@ -377,9 +333,7 @@ class TestDeleteSkillEndpoint:
 
     def test_delete_skill_with_dependencies(self, admin_test_client, auth_headers):
         """Test deleting skill with tool dependencies (cascade)."""
-        with patch(
-            "src.components.skill_registry.get_skill_registry"
-        ) as mock_registry:
+        with patch("src.components.skill_registry.get_skill_registry") as mock_registry:
             mock_registry.return_value.delete_skill = AsyncMock(return_value=True)
 
             response = admin_test_client.delete(
@@ -391,9 +345,7 @@ class TestDeleteSkillEndpoint:
 
     def test_delete_skill_not_found(self, admin_test_client, auth_headers):
         """Test deleting non-existent skill."""
-        with patch(
-            "src.components.skill_registry.get_skill_registry"
-        ) as mock_registry:
+        with patch("src.components.skill_registry.get_skill_registry") as mock_registry:
             mock_registry.return_value.delete_skill = AsyncMock(return_value=False)
 
             response = admin_test_client.delete(
@@ -413,16 +365,10 @@ class TestDeleteSkillEndpoint:
 class TestSkillConfigEndpoints:
     """Tests for skill configuration endpoints."""
 
-    def test_get_skill_config_success(
-        self, admin_test_client, sample_skill_config, auth_headers
-    ):
+    def test_get_skill_config_success(self, admin_test_client, sample_skill_config, auth_headers):
         """Test retrieving skill YAML config."""
-        with patch(
-            "src.components.skill_registry.get_skill_registry"
-        ) as mock_registry:
-            mock_registry.return_value.get_config = AsyncMock(
-                return_value=sample_skill_config
-            )
+        with patch("src.components.skill_registry.get_skill_registry") as mock_registry:
+            mock_registry.return_value.get_config = AsyncMock(return_value=sample_skill_config)
 
             response = admin_test_client.get(
                 "/api/v1/skills/skill/config",
@@ -435,12 +381,8 @@ class TestSkillConfigEndpoints:
         self, admin_test_client, sample_skill_config, auth_headers
     ):
         """Test updating skill YAML config."""
-        with patch(
-            "src.components.skill_registry.get_skill_registry"
-        ) as mock_registry:
-            mock_registry.return_value.update_config = AsyncMock(
-                return_value=sample_skill_config
-            )
+        with patch("src.components.skill_registry.get_skill_registry") as mock_registry:
+            mock_registry.return_value.update_config = AsyncMock(return_value=sample_skill_config)
 
             response = admin_test_client.put(
                 "/api/v1/skills/skill/config",
@@ -470,9 +412,7 @@ class TestToolAuthorizationEndpoints:
         self, admin_test_client, sample_tool_authorization, auth_headers
     ):
         """Test listing authorized tools for skill."""
-        with patch(
-            "src.components.tool_composition.get_tool_composer"
-        ) as mock_composer:
+        with patch("src.components.tool_composition.get_tool_composer") as mock_composer:
             mock_composer.return_value.list_tools = AsyncMock(
                 return_value=[sample_tool_authorization]
             )
@@ -486,9 +426,7 @@ class TestToolAuthorizationEndpoints:
 
     def test_list_authorized_tools_empty(self, admin_test_client, auth_headers):
         """Test listing when no tools authorized."""
-        with patch(
-            "src.components.tool_composition.get_tool_composer"
-        ) as mock_composer:
+        with patch("src.components.tool_composition.get_tool_composer") as mock_composer:
             mock_composer.return_value.list_tools = AsyncMock(return_value=[])
 
             response = admin_test_client.get(
@@ -504,9 +442,7 @@ class TestToolAuthorizationEndpoints:
         self, admin_test_client, sample_tool_authorization, auth_headers
     ):
         """Test authorizing a tool for skill."""
-        with patch(
-            "src.components.tool_composition.get_tool_composer"
-        ) as mock_composer:
+        with patch("src.components.tool_composition.get_tool_composer") as mock_composer:
             mock_composer.return_value.authorize_tool = AsyncMock(
                 return_value=sample_tool_authorization
             )
@@ -537,9 +473,7 @@ class TestToolAuthorizationEndpoints:
 
     def test_remove_tool_authorization_success(self, admin_test_client, auth_headers):
         """Test removing tool authorization."""
-        with patch(
-            "src.components.tool_composition.get_tool_composer"
-        ) as mock_composer:
+        with patch("src.components.tool_composition.get_tool_composer") as mock_composer:
             mock_composer.return_value.revoke_tool = AsyncMock(return_value=True)
 
             response = admin_test_client.delete(
@@ -551,9 +485,7 @@ class TestToolAuthorizationEndpoints:
 
     def test_remove_tool_not_found(self, admin_test_client, auth_headers):
         """Test removing non-existent tool."""
-        with patch(
-            "src.components.tool_composition.get_tool_composer"
-        ) as mock_composer:
+        with patch("src.components.tool_composition.get_tool_composer") as mock_composer:
             mock_composer.return_value.revoke_tool = AsyncMock(return_value=False)
 
             response = admin_test_client.delete(
@@ -567,16 +499,10 @@ class TestToolAuthorizationEndpoints:
 class TestSkillMetricsEndpoints:
     """Tests for skill metrics endpoints."""
 
-    def test_get_skill_metrics_success(
-        self, admin_test_client, sample_skill_metrics, auth_headers
-    ):
+    def test_get_skill_metrics_success(self, admin_test_client, sample_skill_metrics, auth_headers):
         """Test retrieving skill metrics."""
-        with patch(
-            "src.components.skill_lifecycle.get_skill_lifecycle_api"
-        ) as mock_lifecycle:
-            mock_lifecycle.return_value.get_metrics = AsyncMock(
-                return_value=sample_skill_metrics
-            )
+        with patch("src.components.skill_lifecycle.get_skill_lifecycle_api") as mock_lifecycle:
+            mock_lifecycle.return_value.get_metrics = AsyncMock(return_value=sample_skill_metrics)
 
             response = admin_test_client.get(
                 "/api/v1/skills/skill/metrics",
@@ -592,9 +518,7 @@ class TestSkillMetricsEndpoints:
         self, admin_test_client, sample_activation_history, auth_headers
     ):
         """Test retrieving skill activation history."""
-        with patch(
-            "src.components.skill_lifecycle.get_skill_lifecycle_api"
-        ) as mock_lifecycle:
+        with patch("src.components.skill_lifecycle.get_skill_lifecycle_api") as mock_lifecycle:
             mock_lifecycle.return_value.get_activation_history = AsyncMock(
                 return_value=sample_activation_history
             )
@@ -611,9 +535,7 @@ class TestSkillMetricsEndpoints:
 
     def test_get_activation_history_time_range(self, admin_test_client, auth_headers):
         """Test activation history with time range filter."""
-        with patch(
-            "src.components.skill_lifecycle.get_skill_lifecycle_api"
-        ) as mock_lifecycle:
+        with patch("src.components.skill_lifecycle.get_skill_lifecycle_api") as mock_lifecycle:
             mock_lifecycle.return_value.get_activation_history = AsyncMock(
                 return_value={"events": []}
             )

@@ -288,7 +288,7 @@ class SupervisorNode:
     capabilities: list[str]
     child_supervisors: list[str] = field(default_factory=list)
     child_skills: list[str] = field(default_factory=list)
-    llm: Optional[BaseChatModel] = None
+    llm: BaseChatModel | None = None
     handoff_tools: list[Callable] = field(default_factory=list)
 
 

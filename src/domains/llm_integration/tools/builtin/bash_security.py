@@ -114,7 +114,7 @@ def sanitize_environment() -> dict[str, str]:
     """
     return {
         "PATH": "/usr/local/bin:/usr/bin:/bin",
-        "HOME": "/tmp",
+        "HOME": "/tmp",  # nosec B108 — sandboxed home directory
         "SHELL": "/bin/sh",
         "LANG": "en_US.UTF-8",
         "LC_ALL": "en_US.UTF-8",

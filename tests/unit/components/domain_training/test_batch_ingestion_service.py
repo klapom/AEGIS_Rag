@@ -121,21 +121,21 @@ class TestBatchIngestionService:
         mock_repo = AsyncMock()
         mock_repo.get_domain = AsyncMock(return_value=None)
 
-        with patch(
-            "src.components.domain_training.get_domain_repository",
-            return_value=mock_repo,
+        with (
+            patch(
+                "src.components.domain_training.get_domain_repository",
+                return_value=mock_repo,
+            ),
+            pytest.raises(ValueError, match="Domain not found"),
         ):
-            with pytest.raises(ValueError, match="Domain not found"):
-                await service.start_batch(
-                    domain_name="nonexistent_domain",
-                    documents=sample_documents,
-                    options=options,
-                )
+            await service.start_batch(
+                domain_name="nonexistent_domain",
+                documents=sample_documents,
+                options=options,
+            )
 
     @pytest.mark.asyncio
-    async def test_start_batch_creates_batch_progress(
-        self, service, sample_documents, mock_domain
-    ):
+    async def test_start_batch_creates_batch_progress(self, service, sample_documents, mock_domain):
         """Test batch creation initializes BatchProgress."""
         options = IngestionOptions()
 
@@ -180,16 +180,18 @@ class TestBatchIngestionService:
         mock_repo = AsyncMock()
         mock_repo.get_domain = AsyncMock(return_value=mock_domain)
 
-        with patch(
-            "src.components.domain_training.get_domain_repository",
-            return_value=mock_repo,
+        with (
+            patch(
+                "src.components.domain_training.get_domain_repository",
+                return_value=mock_repo,
+            ),
+            patch.object(service, "_process_batch_async", new_callable=AsyncMock),
         ):
-            with patch.object(service, "_process_batch_async", new_callable=AsyncMock):
-                batch_id = await service.start_batch(
-                    domain_name="tech_docs",
-                    documents=sample_documents,
-                    options=options,
-                )
+            batch_id = await service.start_batch(
+                domain_name="tech_docs",
+                documents=sample_documents,
+                options=options,
+            )
 
         status = await service.get_batch_status(batch_id)
 
@@ -228,7 +230,9 @@ class TestBatchIngestionService:
             mock_lightrag.extract_entities_and_relations = AsyncMock(
                 return_value={
                     "entities": [{"name": "FastAPI"}],
-                    "relations": [{"subject": "FastAPI", "predicate": "IS_A", "object": "framework"}],
+                    "relations": [
+                        {"subject": "FastAPI", "predicate": "IS_A", "object": "framework"}
+                    ],
                 }
             )
             mock_lightrag.create_mentioned_in_relation = AsyncMock()

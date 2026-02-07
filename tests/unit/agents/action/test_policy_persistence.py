@@ -35,9 +35,7 @@ class TestPolicyPersistenceManager:
 
     def test_initialization(self):
         """Test manager initialization."""
-        manager = PolicyPersistenceManager(
-            key_prefix="test:policy", default_ttl_seconds=3600
-        )
+        manager = PolicyPersistenceManager(key_prefix="test:policy", default_ttl_seconds=3600)
 
         assert manager.key_prefix == "test:policy"
         assert manager.default_ttl_seconds == 3600

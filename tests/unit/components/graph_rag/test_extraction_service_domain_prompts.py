@@ -24,9 +24,7 @@ def extraction_service():
 @pytest.mark.asyncio
 async def test_domain_trained_prompts_priority(extraction_service):
     """Test that domain-trained prompts are prioritized over generic DSPy."""
-    with patch(
-        "src.components.domain_training.get_domain_repository"
-    ) as mock_repo:
+    with patch("src.components.domain_training.get_domain_repository") as mock_repo:
         # Mock domain repository with trained prompts
         mock_domain_repo = AsyncMock()
         mock_domain_repo.get_domain = AsyncMock(
@@ -54,14 +52,13 @@ async def test_domain_trained_prompts_priority(extraction_service):
 @pytest.mark.asyncio
 async def test_generic_dspy_prompts_when_no_trained(extraction_service):
     """Test that generic DSPy prompts are used when domain has no trained prompts."""
-    with patch(
-        "src.components.domain_training.get_domain_repository"
-    ) as mock_repo, patch(
-        "src.components.graph_rag.extraction_service.USE_DSPY_PROMPTS", True
-    ), patch(
-        "src.components.graph_rag.extraction_service.get_active_extraction_prompts"
-    ) as mock_get_prompts:
-
+    with (
+        patch("src.components.domain_training.get_domain_repository") as mock_repo,
+        patch("src.components.graph_rag.extraction_service.USE_DSPY_PROMPTS", True),
+        patch(
+            "src.components.graph_rag.extraction_service.get_active_extraction_prompts"
+        ) as mock_get_prompts,
+    ):
         # Mock domain repository with NO trained prompts
         mock_domain_repo = AsyncMock()
         mock_domain_repo.get_domain = AsyncMock(
@@ -95,12 +92,12 @@ async def test_generic_dspy_prompts_when_no_trained(extraction_service):
 @pytest.mark.asyncio
 async def test_generic_dspy_prompts_when_no_domain(extraction_service):
     """Test that generic DSPy prompts are used when no domain provided."""
-    with patch(
-        "src.components.graph_rag.extraction_service.USE_DSPY_PROMPTS", True
-    ), patch(
-        "src.components.graph_rag.extraction_service.get_active_extraction_prompts"
-    ) as mock_get_prompts:
-
+    with (
+        patch("src.components.graph_rag.extraction_service.USE_DSPY_PROMPTS", True),
+        patch(
+            "src.components.graph_rag.extraction_service.get_active_extraction_prompts"
+        ) as mock_get_prompts,
+    ):
         # Mock get_active_extraction_prompts
         mock_get_prompts.return_value = (
             "DSPY ENTITY PROMPT",
@@ -121,14 +118,13 @@ async def test_generic_dspy_prompts_when_no_domain(extraction_service):
 @pytest.mark.asyncio
 async def test_fallback_to_dspy_when_domain_lookup_fails(extraction_service):
     """Test that DSPy prompts are used when domain lookup fails."""
-    with patch(
-        "src.components.domain_training.get_domain_repository"
-    ) as mock_repo, patch(
-        "src.components.graph_rag.extraction_service.USE_DSPY_PROMPTS", True
-    ), patch(
-        "src.components.graph_rag.extraction_service.get_active_extraction_prompts"
-    ) as mock_get_prompts:
-
+    with (
+        patch("src.components.domain_training.get_domain_repository") as mock_repo,
+        patch("src.components.graph_rag.extraction_service.USE_DSPY_PROMPTS", True),
+        patch(
+            "src.components.graph_rag.extraction_service.get_active_extraction_prompts"
+        ) as mock_get_prompts,
+    ):
         # Mock domain repository to raise error
         mock_domain_repo = AsyncMock()
         mock_domain_repo.get_domain = AsyncMock(side_effect=Exception("Neo4j connection failed"))
@@ -153,12 +149,10 @@ async def test_fallback_to_dspy_when_domain_lookup_fails(extraction_service):
 @pytest.mark.asyncio
 async def test_legacy_prompts_when_flag_disabled(extraction_service):
     """Test that legacy prompts are used when USE_DSPY_PROMPTS=False."""
-    with patch(
-        "src.components.domain_training.get_domain_repository"
-    ) as mock_repo, patch(
-        "src.components.graph_rag.extraction_service.USE_DSPY_PROMPTS", False
+    with (
+        patch("src.components.domain_training.get_domain_repository") as mock_repo,
+        patch("src.components.graph_rag.extraction_service.USE_DSPY_PROMPTS", False),
     ):
-
         # Mock domain repository with no trained prompts
         mock_domain_repo = AsyncMock()
         mock_domain_repo.get_domain = AsyncMock(
@@ -185,14 +179,13 @@ async def test_legacy_prompts_when_flag_disabled(extraction_service):
 @pytest.mark.asyncio
 async def test_domain_not_found_fallback(extraction_service):
     """Test fallback when domain does not exist in Neo4j."""
-    with patch(
-        "src.components.domain_training.get_domain_repository"
-    ) as mock_repo, patch(
-        "src.components.graph_rag.extraction_service.USE_DSPY_PROMPTS", True
-    ), patch(
-        "src.components.graph_rag.extraction_service.get_active_extraction_prompts"
-    ) as mock_get_prompts:
-
+    with (
+        patch("src.components.domain_training.get_domain_repository") as mock_repo,
+        patch("src.components.graph_rag.extraction_service.USE_DSPY_PROMPTS", True),
+        patch(
+            "src.components.graph_rag.extraction_service.get_active_extraction_prompts"
+        ) as mock_get_prompts,
+    ):
         # Mock domain repository returning None (domain not found)
         mock_domain_repo = AsyncMock()
         mock_domain_repo.get_domain = AsyncMock(return_value=None)

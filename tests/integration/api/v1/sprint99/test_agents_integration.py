@@ -18,9 +18,7 @@ from datetime import datetime, UTC, timedelta
 class TestMessageBusIntegration:
     """MessageBus streaming and filtering integration tests."""
 
-    def test_send_and_list_messages_flow(
-        self, integration_test_client, admin_auth_headers
-    ):
+    def test_send_and_list_messages_flow(self, integration_test_client, admin_auth_headers):
         """Test sending message and listing received messages."""
         message_data = {
             "type": "SKILL_REQUEST",
@@ -29,18 +27,14 @@ class TestMessageBusIntegration:
             "payload": {"skill": "document_analyzer"},
         }
 
-        with patch(
-            "src.components.multi_agent.get_message_bus"
-        ) as mock_bus:
+        with patch("src.components.multi_agent.get_message_bus") as mock_bus:
             # Send message
             mock_bus.return_value.send_message = AsyncMock(
                 return_value={"id": "msg_123", **message_data}
             )
 
             # List messages
-            mock_bus.return_value.list_messages = AsyncMock(
-                return_value=[message_data]
-            )
+            mock_bus.return_value.list_messages = AsyncMock(return_value=[message_data])
 
             list_response = integration_test_client.get(
                 "/api/v1/agents/messages",
@@ -52,9 +46,7 @@ class TestMessageBusIntegration:
         self, integration_test_client, admin_auth_headers, orchestration_flow_data
     ):
         """Test filtering messages by type and agent."""
-        with patch(
-            "src.components.multi_agent.get_message_bus"
-        ) as mock_bus:
+        with patch("src.components.multi_agent.get_message_bus") as mock_bus:
             mock_bus.return_value.list_messages = AsyncMock(
                 return_value=orchestration_flow_data["messages"]
             )
@@ -89,16 +81,12 @@ class TestBlackboardIntegration:
             },
         }
 
-        with patch(
-            "src.components.multi_agent.get_blackboard"
-        ) as mock_board:
+        with patch("src.components.multi_agent.get_blackboard") as mock_board:
             # Write state
             mock_board.return_value.write_state = AsyncMock(return_value=True)
 
             # Read state
-            mock_board.return_value.get_namespace = AsyncMock(
-                return_value=blackboard_state["data"]
-            )
+            mock_board.return_value.get_namespace = AsyncMock(return_value=blackboard_state["data"])
 
             read_response = integration_test_client.get(
                 "/api/v1/agents/blackboard/execution_state",
@@ -106,13 +94,9 @@ class TestBlackboardIntegration:
             )
             assert read_response.status_code == 200
 
-    def test_namespace_isolation_flow(
-        self, integration_test_client, admin_auth_headers
-    ):
+    def test_namespace_isolation_flow(self, integration_test_client, admin_auth_headers):
         """Test that namespaces are properly isolated."""
-        with patch(
-            "src.components.multi_agent.get_blackboard"
-        ) as mock_board:
+        with patch("src.components.multi_agent.get_blackboard") as mock_board:
             mock_board.return_value.get_all_namespaces = AsyncMock(
                 return_value=["namespace_1", "namespace_2", "namespace_3"]
             )
@@ -162,9 +146,7 @@ class TestOrchestrationIntegration:
             assert list_response.status_code == 200
 
             # Get trace
-            mock_orchestrator.return_value.get_trace = AsyncMock(
-                return_value=trace_data
-            )
+            mock_orchestrator.return_value.get_trace = AsyncMock(return_value=trace_data)
 
             trace_response = integration_test_client.get(
                 f"/api/v1/orchestration/{orchestration_flow_data['orchestration_id']}/trace",
@@ -174,9 +156,7 @@ class TestOrchestrationIntegration:
             data = trace_response.json()
             assert len(data["timeline"]) >= 1
 
-    def test_retrieve_orchestration_metrics_flow(
-        self, integration_test_client, admin_auth_headers
-    ):
+    def test_retrieve_orchestration_metrics_flow(self, integration_test_client, admin_auth_headers):
         """Test retrieving orchestration communication metrics."""
         metrics_data = {
             "total_messages": 150,
@@ -187,9 +167,7 @@ class TestOrchestrationIntegration:
         with patch(
             "src.components.skill_orchestration.get_skill_orchestrator"
         ) as mock_orchestrator:
-            mock_orchestrator.return_value.get_metrics = AsyncMock(
-                return_value=metrics_data
-            )
+            mock_orchestrator.return_value.get_metrics = AsyncMock(return_value=metrics_data)
 
             response = integration_test_client.get(
                 "/api/v1/orchestration/metrics",
@@ -234,13 +212,9 @@ class TestAgentHierarchyIntegration:
             "success_rate": 0.98,
         }
 
-        with patch(
-            "src.components.hierarchical_agents.get_agent_hierarchy"
-        ) as mock_hierarchy:
+        with patch("src.components.hierarchical_agents.get_agent_hierarchy") as mock_hierarchy:
             # Get hierarchy
-            mock_hierarchy.return_value.get_tree = AsyncMock(
-                return_value=hierarchy_tree
-            )
+            mock_hierarchy.return_value.get_tree = AsyncMock(return_value=hierarchy_tree)
 
             hierarchy_response = integration_test_client.get(
                 "/api/v1/agents/hierarchy",
@@ -249,9 +223,7 @@ class TestAgentHierarchyIntegration:
             assert hierarchy_response.status_code == 200
 
             # Get agent details
-            mock_hierarchy.return_value.get_agent_details = AsyncMock(
-                return_value=agent_details
-            )
+            mock_hierarchy.return_value.get_agent_details = AsyncMock(return_value=agent_details)
 
             details_response = integration_test_client.get(
                 "/api/v1/agents/worker_1/details",
@@ -259,13 +231,9 @@ class TestAgentHierarchyIntegration:
             )
             assert details_response.status_code == 200
 
-    def test_navigate_hierarchy_levels_flow(
-        self, integration_test_client, admin_auth_headers
-    ):
+    def test_navigate_hierarchy_levels_flow(self, integration_test_client, admin_auth_headers):
         """Test navigating through all hierarchy levels."""
-        with patch(
-            "src.components.hierarchical_agents.get_agent_hierarchy"
-        ) as mock_hierarchy:
+        with patch("src.components.hierarchical_agents.get_agent_hierarchy") as mock_hierarchy:
             # Get multiple agents at different levels
             mock_hierarchy.return_value.get_agent_details = AsyncMock(
                 side_effect=[
@@ -313,9 +281,7 @@ class TestTaskDelegationIntegration:
             ],
         }
 
-        with patch(
-            "src.components.hierarchical_agents.get_agent_hierarchy"
-        ) as mock_hierarchy:
+        with patch("src.components.hierarchical_agents.get_agent_hierarchy") as mock_hierarchy:
             mock_hierarchy.return_value.get_delegation_chain = AsyncMock(
                 return_value=delegation_chain
             )
@@ -328,21 +294,15 @@ class TestTaskDelegationIntegration:
             data = response.json()
             assert len(data["delegation_chain"]) == 3
 
-    def test_get_agent_current_tasks_flow(
-        self, integration_test_client, admin_auth_headers
-    ):
+    def test_get_agent_current_tasks_flow(self, integration_test_client, admin_auth_headers):
         """Test retrieving current tasks for an agent."""
         tasks_data = [
             {"task_id": "task_1", "status": "running"},
             {"task_id": "task_2", "status": "queued"},
         ]
 
-        with patch(
-            "src.components.hierarchical_agents.get_agent_hierarchy"
-        ) as mock_hierarchy:
-            mock_hierarchy.return_value.get_current_tasks = AsyncMock(
-                return_value=tasks_data
-            )
+        with patch("src.components.hierarchical_agents.get_agent_hierarchy") as mock_hierarchy:
+            mock_hierarchy.return_value.get_current_tasks = AsyncMock(return_value=tasks_data)
 
             response = integration_test_client.get(
                 "/api/v1/agents/worker_1/current-tasks",
@@ -356,9 +316,7 @@ class TestTaskDelegationIntegration:
 class TestConcurrentOrchestrationIntegration:
     """Concurrent orchestration execution integration tests."""
 
-    def test_multiple_concurrent_orchestrations(
-        self, integration_test_client, admin_auth_headers
-    ):
+    def test_multiple_concurrent_orchestrations(self, integration_test_client, admin_auth_headers):
         """Test handling multiple concurrent orchestrations."""
         orchestrations = [
             {

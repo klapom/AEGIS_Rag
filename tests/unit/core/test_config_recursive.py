@@ -66,9 +66,7 @@ class TestRecursiveLevelConfig:
 
     def test_overlap_tokens_validation_min(self):
         """Test overlap_tokens minimum (0 is valid, no explicit min)."""
-        config = RecursiveLevelConfig(
-            level=0, segment_size_tokens=16384, overlap_tokens=0
-        )
+        config = RecursiveLevelConfig(level=0, segment_size_tokens=16384, overlap_tokens=0)
         assert config.overlap_tokens == 0
 
     def test_threshold_validation_range(self):
@@ -87,33 +85,25 @@ class TestRecursiveLevelConfig:
     def test_threshold_validation_invalid_low(self):
         """Test relevance_threshold < 0.0 raises validation error."""
         with pytest.raises(ValidationError):
-            RecursiveLevelConfig(
-                level=0, segment_size_tokens=16384, relevance_threshold=-0.1
-            )
+            RecursiveLevelConfig(level=0, segment_size_tokens=16384, relevance_threshold=-0.1)
 
     def test_threshold_validation_invalid_high(self):
         """Test relevance_threshold > 1.0 raises validation error."""
         with pytest.raises(ValidationError):
-            RecursiveLevelConfig(
-                level=0, segment_size_tokens=16384, relevance_threshold=1.1
-            )
+            RecursiveLevelConfig(level=0, segment_size_tokens=16384, relevance_threshold=1.1)
 
     def test_scoring_method_valid_options(self):
         """Test scoring_method accepts all valid options."""
         methods = ["dense+sparse", "multi-vector", "llm", "adaptive"]
 
         for method in methods:
-            config = RecursiveLevelConfig(
-                level=0, segment_size_tokens=16384, scoring_method=method
-            )
+            config = RecursiveLevelConfig(level=0, segment_size_tokens=16384, scoring_method=method)
             assert config.scoring_method == method
 
     def test_scoring_method_invalid(self):
         """Test scoring_method rejects invalid values."""
         with pytest.raises(ValidationError) as exc_info:
-            RecursiveLevelConfig(
-                level=0, segment_size_tokens=16384, scoring_method="invalid"
-            )
+            RecursiveLevelConfig(level=0, segment_size_tokens=16384, scoring_method="invalid")
 
         error_str = str(exc_info.value).lower()
         assert "dense+sparse" in error_str or "scoring" in error_str
@@ -215,12 +205,8 @@ class TestRecursiveLLMSettings:
     def test_custom_levels(self):
         """Test providing custom level configurations."""
         custom_levels = [
-            RecursiveLevelConfig(
-                level=0, segment_size_tokens=20000, scoring_method="dense+sparse"
-            ),
-            RecursiveLevelConfig(
-                level=1, segment_size_tokens=10000, scoring_method="multi-vector"
-            ),
+            RecursiveLevelConfig(level=0, segment_size_tokens=20000, scoring_method="dense+sparse"),
+            RecursiveLevelConfig(level=1, segment_size_tokens=10000, scoring_method="multi-vector"),
         ]
         settings = RecursiveLLMSettings(
             max_depth=2,
@@ -257,6 +243,7 @@ class TestRecursiveLLMSettings:
 
         # But processor should reject it
         from src.agents.context.recursive_llm import RecursiveLLMProcessor
+
         with pytest.raises(ValueError):
             RecursiveLLMProcessor(
                 llm=MagicMock(),
@@ -272,9 +259,7 @@ class TestRecursiveLLMSettings:
         settings = RecursiveLLMSettings(
             max_depth=5,  # Request 5 levels
             levels=[
-                RecursiveLevelConfig(
-                    level=0, segment_size_tokens=16384
-                ),  # Only 1 level
+                RecursiveLevelConfig(level=0, segment_size_tokens=16384),  # Only 1 level
             ],
         )
 
@@ -381,18 +366,10 @@ class TestRecursiveLevelConfigIntegration:
     def test_mixed_scoring_methods(self):
         """Test levels can have different scoring methods."""
         levels = [
-            RecursiveLevelConfig(
-                level=0, segment_size_tokens=16384, scoring_method="dense+sparse"
-            ),
-            RecursiveLevelConfig(
-                level=1, segment_size_tokens=8192, scoring_method="multi-vector"
-            ),
-            RecursiveLevelConfig(
-                level=2, segment_size_tokens=4096, scoring_method="llm"
-            ),
-            RecursiveLevelConfig(
-                level=3, segment_size_tokens=2048, scoring_method="adaptive"
-            ),
+            RecursiveLevelConfig(level=0, segment_size_tokens=16384, scoring_method="dense+sparse"),
+            RecursiveLevelConfig(level=1, segment_size_tokens=8192, scoring_method="multi-vector"),
+            RecursiveLevelConfig(level=2, segment_size_tokens=4096, scoring_method="llm"),
+            RecursiveLevelConfig(level=3, segment_size_tokens=2048, scoring_method="adaptive"),
         ]
 
         settings = RecursiveLLMSettings(levels=levels)
@@ -450,6 +427,5 @@ class TestRecursiveLevelConfigIntegration:
         # Verify level hierarchy
         for i in range(len(settings.levels) - 1):
             assert (
-                settings.levels[i].segment_size_tokens
-                > settings.levels[i + 1].segment_size_tokens
+                settings.levels[i].segment_size_tokens > settings.levels[i + 1].segment_size_tokens
             )

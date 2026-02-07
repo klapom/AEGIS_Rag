@@ -322,9 +322,9 @@ class TestClassificationAccuracyBenchmark:
         accuracy = (correct / total) * 100
 
         # Print benchmark results
-        print(f"\n{'='*70}")
+        print(f"\n{'=' * 70}")
         print("Intent Classification Accuracy Benchmark (Real LLM)")
-        print(f"{'='*70}")
+        print(f"{'=' * 70}")
         print("Model: llama3.2:3b")
         print("Temperature: 0.0")
         print(f"Total queries: {total}")
@@ -334,7 +334,7 @@ class TestClassificationAccuracyBenchmark:
         for r in results:
             status = "✓" if r["correct"] else "✗"
             print(f"{status} {r['query'][:50]:50} → {r['intent']:8} (expected: {r['acceptable']})")
-        print(f"{'='*70}\n")
+        print(f"{'=' * 70}\n")
 
         # We expect at least 75% accuracy (6/8 correct)
         assert accuracy >= 75.0, f"Accuracy {accuracy:.1f}% below 75% threshold"

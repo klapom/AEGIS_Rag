@@ -133,9 +133,9 @@ Christopher Nolan is acquainted with Tom Cruise.
         print(f"  - Orphaned chunks: {len(consistency_data['orphaned_chunks'])}")
 
         # Consistency score should be reasonable (>= 0.7 for healthy system)
-        assert (
-            consistency_data["consistency_score"] >= 0.7
-        ), f"Consistency score too low: {consistency_data['consistency_score']}"
+        assert consistency_data["consistency_score"] >= 0.7, (
+            f"Consistency score too low: {consistency_data['consistency_score']}"
+        )
 
         print("✓ Feature 49.6: Index Consistency Validation - PASSED")
 
@@ -208,9 +208,9 @@ Christopher Nolan is acquainted with Tom Cruise.
 
             # If semantic deduplication worked, we should have 1-2 acting types max
             # (not 4 separate types)
-            assert (
-                len(acting_variants) <= 2
-            ), f"Expected deduplication of acting relations, but found {len(acting_variants)}: {acting_variants}"
+            assert len(acting_variants) <= 2, (
+                f"Expected deduplication of acting relations, but found {len(acting_variants)}: {acting_variants}"
+            )
 
             print(
                 f"✓ Feature 49.7: Semantic deduplication reduced acting relations to: {acting_variants}"
@@ -223,9 +223,9 @@ Christopher Nolan is acquainted with Tom Cruise.
                 if any(keyword in rt.upper() for keyword in ["WORK", "EMPLOY", "AFFILIATED"])
             ]
 
-            assert (
-                len(working_variants) <= 2
-            ), f"Expected deduplication of working relations, but found {len(working_variants)}: {working_variants}"
+            assert len(working_variants) <= 2, (
+                f"Expected deduplication of working relations, but found {len(working_variants)}: {working_variants}"
+            )
 
             print(
                 f"✓ Feature 49.7: Semantic deduplication reduced working relations to: {working_variants}"
@@ -300,9 +300,9 @@ Christopher Nolan is acquainted with Tom Cruise.
             # Sprint 49.5: All MENTIONED_IN should have source_chunk_id
             if total_mentioned > 0:
                 coverage_percent = (with_chunk_id / total_mentioned) * 100
-                assert (
-                    coverage_percent >= 95
-                ), f"Expected >= 95% MENTIONED_IN with source_chunk_id, got {coverage_percent:.1f}%"
+                assert coverage_percent >= 95, (
+                    f"Expected >= 95% MENTIONED_IN with source_chunk_id, got {coverage_percent:.1f}%"
+                )
                 print(f"✓ Feature 49.5: {coverage_percent:.1f}% MENTIONED_IN have source_chunk_id")
 
             # Check RELATES_TO relationships (if any)
@@ -345,9 +345,9 @@ Christopher Nolan is acquainted with Tom Cruise.
                 print(f"  source_chunk_id: {record['source_chunk_id'][:30]}...")
 
                 # source_chunk_id should match chunk_id
-                assert (
-                    record["source_chunk_id"] == record["chunk"]
-                ), "source_chunk_id should match the target chunk's chunk_id"
+                assert record["source_chunk_id"] == record["chunk"], (
+                    "source_chunk_id should match the target chunk's chunk_id"
+                )
                 print("✓ Provenance data integrity verified")
 
         print("\n✅ Feature 49.5: Provenance Tracking - PASSED")

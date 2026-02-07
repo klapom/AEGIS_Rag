@@ -276,7 +276,10 @@ class TestRerankWeightLoading:
         # Factual should be default (not learned, due to missing field)
         factual_weights = INTENT_RERANK_WEIGHTS["factual"]
         # Check if it's the default factual weight (0.7, 0.2, 0.1)
-        assert factual_weights.semantic_weight == DEFAULT_INTENT_RERANK_WEIGHTS["factual"].semantic_weight
+        assert (
+            factual_weights.semantic_weight
+            == DEFAULT_INTENT_RERANK_WEIGHTS["factual"].semantic_weight
+        )
 
     def test_load_weights_invalid_constraint(self, tmp_path):
         """Test loading with weights that don't sum to 1.0."""

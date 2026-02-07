@@ -18,7 +18,7 @@
 ## Quick Summary
 
 | Category | Count | SP | Priority |
-|----------|-------|----|---------| 
+|----------|-------|----|---------|
 | Domain Management | 8 | 53 | HIGH |
 | Graph & Versioning | 5 | 39 | MEDIUM |
 | Research & Performance | 2 | 26 | MEDIUM |

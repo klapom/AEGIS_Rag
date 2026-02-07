@@ -356,7 +356,7 @@ Verification:"""
         Returns:
             Formatted contexts string
         """
-        return "\n\n".join(f"[{i+1}] {ctx}" for i, ctx in enumerate(contexts))
+        return "\n\n".join(f"[{i + 1}] {ctx}" for i, ctx in enumerate(contexts))
 
     def _log_check(
         self,

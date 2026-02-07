@@ -283,6 +283,7 @@ class TestExtractionServiceCascadeFallback:
         self, extraction_service: ExtractionService
     ) -> None:
         """Test _extract_with_timeout completes within timeout."""
+
         async def fast_extraction() -> list[GraphEntity]:
             await asyncio.sleep(0.1)
             return [
@@ -297,7 +298,7 @@ class TestExtractionServiceCascadeFallback:
                 )
             ]
 
-        from src.config.extraction_cascade import CascadeRankConfig, ExtractionMethod
+        from src.config.extraction_cascade import CascadeRankConfig
 
         rank_config = CascadeRankConfig(
             rank=1,
@@ -321,11 +322,12 @@ class TestExtractionServiceCascadeFallback:
         self, extraction_service: ExtractionService
     ) -> None:
         """Test _extract_with_timeout raises TimeoutError on timeout."""
+
         async def slow_extraction() -> list[GraphEntity]:
             await asyncio.sleep(2)  # Longer than timeout
             return []
 
-        from src.config.extraction_cascade import CascadeRankConfig, ExtractionMethod
+        from src.config.extraction_cascade import CascadeRankConfig
 
         rank_config = CascadeRankConfig(
             rank=1,

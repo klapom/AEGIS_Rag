@@ -519,7 +519,9 @@ class TestEvaluateResponse:
         harness._llm_proxy = mock_proxy
 
         query = "What is RAG?"
-        answer = "RAG is Retrieval Augmented Generation [1]. It combines retrieval and generation [2]."
+        answer = (
+            "RAG is Retrieval Augmented Generation [1]. It combines retrieval and generation [2]."
+        )
         sources = [
             {"chunk_id": "c1", "text": "RAG definition"},
             {"chunk_id": "c2", "text": "RAG architecture"},

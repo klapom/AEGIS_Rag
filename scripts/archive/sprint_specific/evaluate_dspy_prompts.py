@@ -30,6 +30,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 try:
     import dspy
+
     DSPY_AVAILABLE = True
 except ImportError:
     DSPY_AVAILABLE = False
@@ -155,8 +156,7 @@ def validate_relation_for_pipeline(relation: dict) -> tuple[bool, list[str]]:
 
 
 def validate_extraction_output(
-    entities: list[dict],
-    relations: list[dict]
+    entities: list[dict], relations: list[dict]
 ) -> tuple[bool, list[str]]:
     """
     Validate complete extraction output for pipeline compatibility.
@@ -181,7 +181,9 @@ def validate_extraction_output(
         if not is_valid:
             all_valid = False
         for error in errors:
-            all_errors.append(f"Relation[{i}] ({relation.get('source', '?')} -> {relation.get('target', '?')}): {error}")
+            all_errors.append(
+                f"Relation[{i}] ({relation.get('source', '?')} -> {relation.get('target', '?')}): {error}"
+            )
 
     return all_valid, all_errors
 
@@ -200,7 +202,9 @@ def repair_json_string(json_str: str) -> str:
     json_str = re.sub(r"```\s*", "", json_str)
 
     # Remove common prefixes
-    json_str = re.sub(r"^(Entities|Relations|Output|Here are).*?:", "", json_str, flags=re.IGNORECASE)
+    json_str = re.sub(
+        r"^(Entities|Relations|Output|Here are).*?:", "", json_str, flags=re.IGNORECASE
+    )
 
     # Fix trailing commas
     json_str = re.sub(r",\s*]", "]", json_str)
@@ -351,9 +355,9 @@ class ExtractionRunner:
                 "options": {
                     "temperature": 0.1,
                     "num_predict": 4096,
-                }
+                },
             },
-            timeout=120
+            timeout=120,
         )
 
         latency_ms = (time.time() - start) * 1000
@@ -382,7 +386,9 @@ class ExtractionRunner:
             }
             f.write(json.dumps(log_dict) + "\n")
 
-    def run_baseline(self, text: str, domain: str, test_id: str) -> tuple[list[dict], list[dict], RequestLog]:
+    def run_baseline(
+        self, text: str, domain: str, test_id: str
+    ) -> tuple[list[dict], list[dict], RequestLog]:
         """Run baseline extraction (generic prompts)."""
         timestamp = datetime.now().isoformat()
         all_errors = []
@@ -397,7 +403,9 @@ class ExtractionRunner:
             all_errors.append("Failed to parse entity JSON")
 
         # Relation extraction
-        entity_summary = json.dumps([{"name": e.get("name"), "type": e.get("type")} for e in entities])
+        entity_summary = json.dumps(
+            [{"name": e.get("name"), "type": e.get("type")} for e in entities]
+        )
         relation_prompt = BASELINE_RELATION_PROMPT.format(text=text, entities=entity_summary)
         relation_response, relation_latency = self._call_ollama(relation_prompt)
 
@@ -434,7 +442,7 @@ class ExtractionRunner:
         text: str,
         domain: str,
         test_id: str,
-        pipeline_path: str = "data/dspy_prompts/pipeline_gptoss/pipeline_extraction_20260113_060510.json"
+        pipeline_path: str = "data/dspy_prompts/pipeline_gptoss/pipeline_extraction_20260113_060510.json",
     ) -> tuple[list[dict], list[dict], RequestLog]:
         """Run optimized extraction (DSPy pipeline)."""
         timestamp = datetime.now().isoformat()
@@ -478,12 +486,16 @@ class ExtractionRunner:
 
         # Get entity extractor config - note the correct key format
         entity_predictor = state.get("entity_extractor.predict", {})
-        entity_instruction = entity_predictor.get("signature", {}).get("instructions", "Extract named entities from document text.")
+        entity_instruction = entity_predictor.get("signature", {}).get(
+            "instructions", "Extract named entities from document text."
+        )
         entity_demos = entity_predictor.get("demos", [])
 
         # Get relation extractor config
         relation_predictor = state.get("relation_extractor.predict", {})
-        relation_instruction = relation_predictor.get("signature", {}).get("instructions", "Extract relationships between entities.")
+        relation_instruction = relation_predictor.get("signature", {}).get(
+            "instructions", "Extract relationships between entities."
+        )
         relation_demos = relation_predictor.get("demos", [])
 
         # Build optimized entity prompt with DSPy signature format
@@ -508,12 +520,16 @@ class ExtractionRunner:
                     entity_prompt += f"Domain: {demo_domain}\n"
                     if demo.get("reasoning"):
                         entity_prompt += f"Reasoning: {demo['reasoning'][:200]}...\n"
-                    entity_prompt += f"Entities: {json.dumps(demo_entities[:4], ensure_ascii=False)}\n\n---\n\n"
+                    entity_prompt += (
+                        f"Entities: {json.dumps(demo_entities[:4], ensure_ascii=False)}\n\n---\n\n"
+                    )
 
         # Add the actual query
         entity_prompt += f"Text: {text}\n"
         entity_prompt += f"Domain: {domain}\n"
-        entity_prompt += "Reasoning: Let's think step by step in order to identify all named entities.\n"
+        entity_prompt += (
+            "Reasoning: Let's think step by step in order to identify all named entities.\n"
+        )
         entity_prompt += "Entities:"
 
         # Call LLM for entities
@@ -526,7 +542,9 @@ class ExtractionRunner:
             all_errors.append("Failed to parse entity JSON from optimized prompt")
 
         # Build optimized relation prompt with DSPy format
-        entity_names_json = json.dumps([{"name": e.get("name"), "type": e.get("type")} for e in entities], ensure_ascii=False)
+        entity_names_json = json.dumps(
+            [{"name": e.get("name"), "type": e.get("type")} for e in entities], ensure_ascii=False
+        )
 
         relation_prompt = f"{relation_instruction}\n\n---\n\n"
 
@@ -552,7 +570,9 @@ class ExtractionRunner:
         # Add the actual query
         relation_prompt += f"Text: {text}\n"
         relation_prompt += f"Entities: {entity_names_json}\n"
-        relation_prompt += "Reasoning: Let's think step by step to find relationships between entities.\n"
+        relation_prompt += (
+            "Reasoning: Let's think step by step to find relationships between entities.\n"
+        )
         relation_prompt += "Relations:"
 
         # Call LLM for relations
@@ -708,6 +728,7 @@ def compute_f1(predicted: list[dict], gold: list[dict], key: str = "name") -> di
 
 def compute_relation_f1(predicted: list[dict], gold: list[dict]) -> dict:
     """Compute F1 for relations (source-type-target tuples)."""
+
     def relation_key(r):
         return (r.get("source", "").lower(), r.get("type", "").upper(), r.get("target", "").lower())
 
@@ -749,15 +770,33 @@ def create_sample_test_data() -> list[dict]:
             "text": "TensorFlow is an open-source machine learning framework developed by Google Brain team. It was released in November 2015 and supports both Python and C++ programming languages.",
             "domain": "technical",
             "entities": [
-                {"name": "TensorFlow", "type": "SOFTWARE", "description": "Open-source ML framework"},
-                {"name": "Google Brain", "type": "ORGANIZATION", "description": "AI research team at Google"},
+                {
+                    "name": "TensorFlow",
+                    "type": "SOFTWARE",
+                    "description": "Open-source ML framework",
+                },
+                {
+                    "name": "Google Brain",
+                    "type": "ORGANIZATION",
+                    "description": "AI research team at Google",
+                },
                 {"name": "November 2015", "type": "DATE", "description": "TensorFlow release date"},
                 {"name": "Python", "type": "LANGUAGE", "description": "Programming language"},
                 {"name": "C++", "type": "LANGUAGE", "description": "Programming language"},
             ],
             "relations": [
-                {"source": "Google Brain", "target": "TensorFlow", "type": "DEVELOPED", "strength": 10},
-                {"source": "TensorFlow", "target": "November 2015", "type": "RELEASED_ON", "strength": 10},
+                {
+                    "source": "Google Brain",
+                    "target": "TensorFlow",
+                    "type": "DEVELOPED",
+                    "strength": 10,
+                },
+                {
+                    "source": "TensorFlow",
+                    "target": "November 2015",
+                    "type": "RELEASED_ON",
+                    "strength": 10,
+                },
                 {"source": "TensorFlow", "target": "Python", "type": "SUPPORTS", "strength": 9},
                 {"source": "TensorFlow", "target": "C++", "type": "SUPPORTS", "strength": 9},
             ],
@@ -771,14 +810,28 @@ def create_sample_test_data() -> list[dict]:
                 {"name": "Paul Allen", "type": "PERSON", "description": "Co-founder of Microsoft"},
                 {"name": "1975", "type": "DATE", "description": "Year Microsoft was founded"},
                 {"name": "Albuquerque", "type": "LOCATION", "description": "City in New Mexico"},
-                {"name": "Redmond", "type": "LOCATION", "description": "Microsoft headquarters location"},
+                {
+                    "name": "Redmond",
+                    "type": "LOCATION",
+                    "description": "Microsoft headquarters location",
+                },
             ],
             "relations": [
                 {"source": "Bill Gates", "target": "Microsoft", "type": "FOUNDED", "strength": 10},
                 {"source": "Paul Allen", "target": "Microsoft", "type": "FOUNDED", "strength": 10},
                 {"source": "Microsoft", "target": "1975", "type": "FOUNDED_IN", "strength": 10},
-                {"source": "Microsoft", "target": "Albuquerque", "type": "FOUNDED_IN", "strength": 9},
-                {"source": "Microsoft", "target": "Redmond", "type": "HEADQUARTERED_IN", "strength": 9},
+                {
+                    "source": "Microsoft",
+                    "target": "Albuquerque",
+                    "type": "FOUNDED_IN",
+                    "strength": 9,
+                },
+                {
+                    "source": "Microsoft",
+                    "target": "Redmond",
+                    "type": "HEADQUARTERED_IN",
+                    "strength": 9,
+                },
             ],
         },
     ]
@@ -806,23 +859,35 @@ def run_ab_test(
     runner = ExtractionRunner(model=model)
 
     results = []
-    baseline_metrics = {"entity_f1": [], "relation_f1": [], "pipeline_compatible": [], "latency_ms": []}
-    optimized_metrics = {"entity_f1": [], "relation_f1": [], "pipeline_compatible": [], "latency_ms": []}
+    baseline_metrics = {
+        "entity_f1": [],
+        "relation_f1": [],
+        "pipeline_compatible": [],
+        "latency_ms": [],
+    }
+    optimized_metrics = {
+        "entity_f1": [],
+        "relation_f1": [],
+        "pipeline_compatible": [],
+        "latency_ms": [],
+    }
 
     for i, sample in enumerate(test_data):
-        test_id = f"test_{i+1:03d}"
+        test_id = f"test_{i + 1:03d}"
         text = sample["text"]
         domain = sample.get("domain", "technical")
         gold_entities = sample.get("entities", [])
         gold_relations = sample.get("relations", [])
 
-        print(f"\n--- Test {i+1}/{len(test_data)}: {test_id} ---")
+        print(f"\n--- Test {i + 1}/{len(test_data)}: {test_id} ---")
         print(f"Text: {text[:100]}...")
         print(f"Gold entities: {len(gold_entities)}, Gold relations: {len(gold_relations)}")
 
         # Run baseline
         print("\n[BASELINE] Running...")
-        baseline_entities, baseline_relations, baseline_log = runner.run_baseline(text, domain, test_id)
+        baseline_entities, baseline_relations, baseline_log = runner.run_baseline(
+            text, domain, test_id
+        )
 
         print(f"  Entities: {len(baseline_entities)}, Relations: {len(baseline_relations)}")
         print(f"  Pipeline compatible: {baseline_log.pipeline_compatible}")
@@ -843,8 +908,11 @@ def run_ab_test(
         # Run optimized
         print("\n[OPTIMIZED] Running...")
         opt_entities, opt_relations, opt_log = runner.run_optimized(
-            text, domain, test_id,
-            pipeline_path or "data/dspy_prompts/pipeline_gptoss/pipeline_extraction_20260113_060510.json"
+            text,
+            domain,
+            test_id,
+            pipeline_path
+            or "data/dspy_prompts/pipeline_gptoss/pipeline_extraction_20260113_060510.json",
         )
 
         print(f"  Entities: {len(opt_entities)}, Relations: {len(opt_relations)}")
@@ -864,21 +932,26 @@ def run_ab_test(
         print(f"  Entity F1: {o_entity_f1['f1']:.2f}, Relation F1: {o_relation_f1['f1']:.2f}")
 
         # Store result
-        results.append(TestResult(
-            test_id=test_id,
-            text=text,
-            domain=domain,
-            gold_entities=gold_entities,
-            gold_relations=gold_relations,
-            baseline_result={"entities": baseline_entities, "relations": baseline_relations},
-            optimized_result={"entities": opt_entities, "relations": opt_relations},
-            baseline_log=baseline_log,
-            optimized_log=opt_log,
-        ))
+        results.append(
+            TestResult(
+                test_id=test_id,
+                text=text,
+                domain=domain,
+                gold_entities=gold_entities,
+                gold_relations=gold_relations,
+                baseline_result={"entities": baseline_entities, "relations": baseline_relations},
+                optimized_result={"entities": opt_entities, "relations": opt_relations},
+                baseline_log=baseline_log,
+                optimized_log=opt_log,
+            )
+        )
 
     # Compute aggregate metrics
-    def avg(lst): return sum(lst) / len(lst) if lst else 0.0
-    def pct(lst): return sum(lst) / len(lst) * 100 if lst else 0.0
+    def avg(lst):
+        return sum(lst) / len(lst) if lst else 0.0
+
+    def pct(lst):
+        return sum(lst) / len(lst) * 100 if lst else 0.0
 
     print("\n" + "=" * 70)
     print("AGGREGATE RESULTS")

@@ -540,9 +540,9 @@ async def main():
 
 def print_summary_table(results: dict, mode: str):
     """Print summary table of evaluation results."""
-    console.print(f"\n[bold cyan]{'='*70}[/bold cyan]")
+    console.print(f"\n[bold cyan]{'=' * 70}[/bold cyan]")
     console.print("[bold cyan]EVALUATION SUMMARY[/bold cyan]")
-    console.print(f"[bold cyan]{'='*70}[/bold cyan]\n")
+    console.print(f"[bold cyan]{'=' * 70}[/bold cyan]\n")
 
     if mode in ["all", "extraction"]:
         table = Table(

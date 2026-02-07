@@ -47,9 +47,7 @@ class TestReflectionBasics:
     """Test basic reflection functionality."""
 
     @pytest.mark.asyncio
-    async def test_reflect_on_answer(
-        self, reflection_skill, mock_llm, sample_contexts
-    ):
+    async def test_reflect_on_answer(self, reflection_skill, mock_llm, sample_contexts):
         """Test reflecting on an answer."""
         # Mock LLM response
         mock_response = MagicMock()
@@ -76,9 +74,7 @@ The answer is factually correct but incomplete. It doesn't explain the detailed 
         assert result.improved_answer is None
 
     @pytest.mark.asyncio
-    async def test_reflect_high_score(
-        self, reflection_skill, mock_llm, sample_contexts
-    ):
+    async def test_reflect_high_score(self, reflection_skill, mock_llm, sample_contexts):
         """Test reflection on high-quality answer."""
         # Mock LLM response with high score
         mock_response = MagicMock()
@@ -100,9 +96,7 @@ The answer is comprehensive, accurate, and well-structured.
         assert len(result.issues) == 0
 
     @pytest.mark.asyncio
-    async def test_reflect_handles_dict_response(
-        self, reflection_skill, mock_llm, sample_contexts
-    ):
+    async def test_reflect_handles_dict_response(self, reflection_skill, mock_llm, sample_contexts):
         """Test reflection handles dict response from LLM."""
         # Mock LLM response as dict (AegisLLMProxy format)
         mock_llm.ainvoke.return_value = {
@@ -189,9 +183,7 @@ class TestAnswerImprovement:
     """Test answer improvement functionality."""
 
     @pytest.mark.asyncio
-    async def test_improve_answer(
-        self, reflection_skill, mock_llm, sample_contexts
-    ):
+    async def test_improve_answer(self, reflection_skill, mock_llm, sample_contexts):
         """Test improving an answer."""
         # Initial reflection result
         initial_result = ReflectionResult(
@@ -229,9 +221,7 @@ class TestAnswerImprovement:
         assert result.improved_answer is not None
 
     @pytest.mark.asyncio
-    async def test_improve_already_confident(
-        self, reflection_skill, mock_llm, sample_contexts
-    ):
+    async def test_improve_already_confident(self, reflection_skill, mock_llm, sample_contexts):
         """Test improvement skipped if already confident."""
         # High-confidence reflection
         high_score_result = ReflectionResult(

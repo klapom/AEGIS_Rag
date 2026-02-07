@@ -97,7 +97,7 @@ class CertificationCheck:
     passed: bool
     level_required: CertificationLevel
     message: str
-    details: Optional[Dict[str, Any]] = None
+    details: Dict[str, Any] | None = None
 
 
 @dataclass

@@ -88,7 +88,7 @@ def check_router_prefix(file_path: str) -> tuple[bool, list[str]]:
                                             f"Line {node.lineno}: Router prefix should be RELATIVE, "
                                             f"not absolute.\n"
                                             f'   Found: APIRouter(prefix="{prefix}")\n'
-                                            f"   Use: APIRouter(prefix=\"{prefix.split('/')[-1]}\")\n"
+                                            f'   Use: APIRouter(prefix="{prefix.split("/")[-1]}")\n'
                                             f'   Add "/api/v1" in main.py: '
                                             f'app.include_router(router, prefix="/api/v1")'
                                         )

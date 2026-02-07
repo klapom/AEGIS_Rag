@@ -47,35 +47,25 @@ class TestFormatTool:
 
     def test_format_simple(self):
         """Test simple template formatting."""
-        result = format_tool.invoke({
-            "template": "Hello, {name}!",
-            "values": {"name": "World"}
-        })
+        result = format_tool.invoke({"template": "Hello, {name}!", "values": {"name": "World"}})
         assert result == "Hello, World!"
 
     def test_format_multiple_values(self):
         """Test formatting with multiple values."""
-        result = format_tool.invoke({
-            "template": "{item}: {count} units",
-            "values": {"item": "Apple", "count": 5}
-        })
+        result = format_tool.invoke(
+            {"template": "{item}: {count} units", "values": {"item": "Apple", "count": 5}}
+        )
         assert result == "Apple: 5 units"
 
     def test_format_missing_key(self):
         """Test formatting with missing key returns original."""
-        result = format_tool.invoke({
-            "template": "Hello, {name}!",
-            "values": {}
-        })
+        result = format_tool.invoke({"template": "Hello, {name}!", "values": {}})
         # Should return unformatted on missing key
         assert result == "Hello, {name}!"
 
     def test_format_empty_template(self):
         """Test formatting empty template."""
-        result = format_tool.invoke({
-            "template": "",
-            "values": {"name": "test"}
-        })
+        result = format_tool.invoke({"template": "", "values": {"name": "test"}})
         assert result == ""
 
 
@@ -175,26 +165,24 @@ class TestTemplateTool:
 
     def test_template_simple(self):
         """Test simple template rendering."""
-        result = template_tool.invoke({
-            "template": "Hello, {{ name }}!",
-            "context": {"name": "World"}
-        })
+        result = template_tool.invoke(
+            {"template": "Hello, {{ name }}!", "context": {"name": "World"}}
+        )
         assert result == "Hello, World!"
 
     def test_template_multiple_vars(self):
         """Test template with multiple variables."""
-        result = template_tool.invoke({
-            "template": "{{ greeting }}, {{ name }}!",
-            "context": {"greeting": "Hi", "name": "Alice"}
-        })
+        result = template_tool.invoke(
+            {
+                "template": "{{ greeting }}, {{ name }}!",
+                "context": {"greeting": "Hi", "name": "Alice"},
+            }
+        )
         assert result == "Hi, Alice!"
 
     def test_template_missing_var(self):
         """Test template with missing variable keeps placeholder."""
-        result = template_tool.invoke({
-            "template": "Hello, {{ name }}!",
-            "context": {}
-        })
+        result = template_tool.invoke({"template": "Hello, {{ name }}!", "context": {}})
         assert "{{ name }}" in result
 
 
@@ -267,7 +255,7 @@ class TestFromJsonTool:
 
     def test_from_json_list(self):
         """Test parsing JSON list."""
-        result = from_json_tool.invoke({"json_str": '[1, 2, 3]'})
+        result = from_json_tool.invoke({"json_str": "[1, 2, 3]"})
         assert result == [1, 2, 3]
 
     def test_from_json_invalid(self):
@@ -291,11 +279,7 @@ class TestTruncateTool:
 
     def test_truncate_custom_suffix(self):
         """Test truncating with custom suffix."""
-        result = truncate_tool.invoke({
-            "text": "Hello World",
-            "max_length": 5,
-            "suffix": "[...]"
-        })
+        result = truncate_tool.invoke({"text": "Hello World", "max_length": 5, "suffix": "[...]"})
         assert result == "Hello[...]"
 
 
@@ -304,30 +288,19 @@ class TestReplaceTool:
 
     def test_replace_all(self):
         """Test replacing all occurrences."""
-        result = replace_tool.invoke({
-            "text": "hello world world",
-            "old": "world",
-            "new": "earth"
-        })
+        result = replace_tool.invoke({"text": "hello world world", "old": "world", "new": "earth"})
         assert result == "hello earth earth"
 
     def test_replace_limited(self):
         """Test replacing limited occurrences."""
-        result = replace_tool.invoke({
-            "text": "hello world world",
-            "old": "world",
-            "new": "earth",
-            "count": 1
-        })
+        result = replace_tool.invoke(
+            {"text": "hello world world", "old": "world", "new": "earth", "count": 1}
+        )
         assert result == "hello earth world"
 
     def test_replace_no_match(self):
         """Test replacing with no matches."""
-        result = replace_tool.invoke({
-            "text": "hello",
-            "old": "world",
-            "new": "earth"
-        })
+        result = replace_tool.invoke({"text": "hello", "old": "world", "new": "earth"})
         assert result == "hello"
 
 
@@ -349,6 +322,7 @@ class TestGetBuiltinTools:
     def test_all_tools_callable(self):
         """Test that all tools are callable or StructuredTool."""
         from langchain_core.tools import BaseTool
+
         tools = get_builtin_tools()
         for name, tool in tools.items():
             # Tools are either callables or BaseTool instances (which are callable)

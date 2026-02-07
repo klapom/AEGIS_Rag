@@ -157,7 +157,9 @@ class RelationExtractor:
         self.retry_max_wait = retry_max_wait
 
         # Sprint 124: Log model source for debugging
-        model_source = "LIGHTRAG_LLM_MODEL env" if os.environ.get("LIGHTRAG_LLM_MODEL") else "default"
+        model_source = (
+            "LIGHTRAG_LLM_MODEL env" if os.environ.get("LIGHTRAG_LLM_MODEL") else "default"
+        )
         logger.info(
             "relation_extractor_initialized",
             model=model,
@@ -492,7 +494,7 @@ Answer:"""
         # Format existing relations
         rel_strs = []
         for rel in existing_relations:
-            rel_strs.append(f'- {rel.get("source", "?")} -> {rel.get("target", "?")}')
+            rel_strs.append(f"- {rel.get('source', '?')} -> {rel.get('target', '?')}")
         existing_list = "\n".join(rel_strs) if rel_strs else "(none)"
 
         # Format entities

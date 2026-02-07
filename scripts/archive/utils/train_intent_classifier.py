@@ -207,9 +207,7 @@ Examples:
     # Recommendations
     print("\nNext Steps:")
     if metrics["quality_gates_passed"]:
-        print(
-            f"  1. Test model: python scripts/validate_intent_model.py --model {args.output}"
-        )
+        print(f"  1. Test model: python scripts/validate_intent_model.py --model {args.output}")
         print(
             "  2. Integrate: Update src/components/retrieval/intent_classifier.py (Feature 67.12)"
         )

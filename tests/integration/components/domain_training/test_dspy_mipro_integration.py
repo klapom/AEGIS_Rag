@@ -134,9 +134,7 @@ async def test_mipro_relation_extraction_real_training():
         {
             "text": "FastAPI is built on top of Starlette for web routing.",
             "entities": ["FastAPI", "Starlette"],
-            "relations": [
-                {"subject": "FastAPI", "predicate": "built_on", "object": "Starlette"}
-            ],
+            "relations": [{"subject": "FastAPI", "predicate": "built_on", "object": "Starlette"}],
         },
         {
             "text": "Docker was developed by Docker Inc. and released in 2013.",

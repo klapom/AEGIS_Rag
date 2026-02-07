@@ -178,9 +178,9 @@ class TestLocalVsCloudVLMMetadata:
         actual_fields = set(local_metadata.keys())
 
         # Verify all expected fields are present
-        assert expected_fields.issubset(
-            actual_fields
-        ), f"Missing fields: {expected_fields - actual_fields}"
+        assert expected_fields.issubset(actual_fields), (
+            f"Missing fields: {expected_fields - actual_fields}"
+        )
 
 
 class TestLocalVsCloudCostTracking:

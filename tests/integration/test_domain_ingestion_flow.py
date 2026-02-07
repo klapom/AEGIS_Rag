@@ -54,7 +54,6 @@ class TestDomainAwareIngestionFlow:
         with patch(
             "src.components.domain_training.domain_classifier.get_domain_classifier"
         ) as mock_get_classifier:
-
             mock_classifier = AsyncMock()
             mock_classifier.is_loaded.return_value = False
             mock_classifier.load_domains = AsyncMock()
@@ -302,7 +301,6 @@ class TestDeploymentProfileImpact:
         with patch(
             "src.components.domain_training.domain_seeder.get_active_domains"
         ) as mock_get_active:
-
             # All possible predictions from classifier
             all_predictions = [
                 {"domain": "medicine_health", "score": 0.85},
@@ -316,9 +314,7 @@ class TestDeploymentProfileImpact:
 
             # Filter to active only
             active_predictions = [
-                p
-                for p in all_predictions
-                if p["domain"] in mock_get_active.return_value
+                p for p in all_predictions if p["domain"] in mock_get_active.return_value
             ]
 
             assert len(active_predictions) == 2
@@ -332,10 +328,7 @@ class TestDomainExtractionPrompts:
     @pytest.mark.asyncio
     async def test_domain_trained_prompts_used_for_ingestion(self):
         """Test that domain-trained prompts are used during ingestion."""
-        with patch(
-            "src.components.domain_training.get_domain_repository"
-        ) as mock_repo:
-
+        with patch("src.components.domain_training.get_domain_repository") as mock_repo:
             # Medicine domain has trained prompts
             mock_domain_repo = AsyncMock()
             mock_domain_repo.get_domain.return_value = {
@@ -358,12 +351,12 @@ class TestDomainExtractionPrompts:
     @pytest.mark.asyncio
     async def test_generic_prompts_when_no_domain_trained(self):
         """Test fallback to generic prompts when domain has no training."""
-        with patch(
-            "src.components.domain_training.get_domain_repository"
-        ) as mock_repo, patch(
-            "src.components.graph_rag.extraction_service.get_active_extraction_prompts"
-        ) as mock_generic:
-
+        with (
+            patch("src.components.domain_training.get_domain_repository") as mock_repo,
+            patch(
+                "src.components.graph_rag.extraction_service.get_active_extraction_prompts"
+            ) as mock_generic,
+        ):
             # New domain without training
             mock_domain_repo = AsyncMock()
             mock_domain_repo.get_domain.return_value = {
@@ -389,12 +382,12 @@ class TestDomainExtractionPrompts:
     @pytest.mark.asyncio
     async def test_prompt_selection_respects_use_dspy_flag(self):
         """Test that prompt selection respects USE_DSPY_PROMPTS flag."""
-        with patch(
-            "src.components.graph_rag.extraction_service.USE_DSPY_PROMPTS", True
-        ), patch(
-            "src.components.graph_rag.extraction_service.get_active_extraction_prompts"
-        ) as mock_dspy:
-
+        with (
+            patch("src.components.graph_rag.extraction_service.USE_DSPY_PROMPTS", True),
+            patch(
+                "src.components.graph_rag.extraction_service.get_active_extraction_prompts"
+            ) as mock_dspy,
+        ):
             mock_dspy.return_value = (
                 "DSPy entity prompt",
                 "DSPy relation prompt",
@@ -415,7 +408,6 @@ class TestDomainIngestionErrorHandling:
         with patch(
             "src.components.domain_training.domain_classifier.get_domain_classifier"
         ) as mock_get_classifier:
-
             # Classifier fails
             mock_classifier = AsyncMock()
             mock_classifier.is_loaded.return_value = False
@@ -446,7 +438,6 @@ class TestDomainIngestionErrorHandling:
         with patch(
             "src.components.domain_training.domain_seeder.get_active_domains"
         ) as mock_get_active:
-
             # User provides invalid domain
             provided_domain = "nonexistent_domain"
 

@@ -379,4 +379,3 @@ pytest tests/e2e/test_document_ingestion_with_vlm_e2e.py -m "not slow"
 
 **Last Updated:** 2025-11-13
 **Status:** COMPLETE - Ready for Integration Testing
-

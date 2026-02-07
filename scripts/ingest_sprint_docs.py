@@ -90,13 +90,15 @@ def chunk_text(text: str, chunk_size: int = CHUNK_SIZE, overlap: int = CHUNK_OVE
             if header_match:
                 section = header_match.group(1)[:50]  # Limit length
 
-            chunks.append({
-                "content": chunk_text,
-                "chunk_index": chunk_index,
-                "section": section,
-                "char_start": start,
-                "char_end": end,
-            })
+            chunks.append(
+                {
+                    "content": chunk_text,
+                    "chunk_index": chunk_index,
+                    "section": section,
+                    "char_start": start,
+                    "char_end": end,
+                }
+            )
             chunk_index += 1
 
         # Move forward with overlap
@@ -135,13 +137,13 @@ def main():
     )
     args = parser.parse_args()
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("Sprint Documents Ingestion")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     print(f"Source: {DOCS_DIR}")
     print(f"Namespace: {args.namespace}")
     print(f"Dry run: {args.dry_run}")
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
 
     # Find all Sprint Plan files
     sprint_files = sorted(DOCS_DIR.glob("SPRINT_*.md"))
@@ -165,24 +167,28 @@ def main():
         file_tokens = estimate_tokens(content)
 
         print(f"  📄 {file_path.name}")
-        print(f"     Sprint: {sprint_num or 'N/A'} | Chunks: {len(chunks)} | Tokens: ~{file_tokens:,}")
+        print(
+            f"     Sprint: {sprint_num or 'N/A'} | Chunks: {len(chunks)} | Tokens: ~{file_tokens:,}"
+        )
 
         for chunk in chunks:
-            chunk.update({
-                "source": file_path.name,
-                "sprint_number": sprint_num,
-                "document_type": "sprint_plan",
-                "namespace": args.namespace,
-                "uploaded_at": datetime.now().isoformat(),
-                "token_count": estimate_tokens(chunk["content"]),
-            })
+            chunk.update(
+                {
+                    "source": file_path.name,
+                    "sprint_number": sprint_num,
+                    "document_type": "sprint_plan",
+                    "namespace": args.namespace,
+                    "uploaded_at": datetime.now().isoformat(),
+                    "token_count": estimate_tokens(chunk["content"]),
+                }
+            )
             all_chunks.append(chunk)
 
     total_tokens = sum(c["token_count"] for c in all_chunks)
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Total: {len(sprint_files)} files | {len(all_chunks)} chunks | ~{total_tokens:,} tokens")
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
 
     if args.dry_run:
         print("✓ Dry run complete. Use without --dry-run to index.")
@@ -270,9 +276,9 @@ def main():
         progress = (i + len(batch)) / len(all_chunks) * 100
         print(f"  Progress: {progress:.1f}% ({total_indexed}/{len(all_chunks)} chunks)")
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"✅ Successfully indexed {total_indexed} chunks into {collection_name}")
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
 
     # Verify
     collection_info = qdrant.get_collection(collection_name)

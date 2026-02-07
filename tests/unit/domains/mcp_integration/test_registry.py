@@ -55,7 +55,9 @@ def registry_service(mock_connection_manager):
 class TestMCPRegistryService:
     """Test suite for MCPRegistryService."""
 
-    async def test_initialize_creates_default_servers(self, registry_service, mock_connection_manager):
+    async def test_initialize_creates_default_servers(
+        self, registry_service, mock_connection_manager
+    ):
         """Test that initialize creates bash and python tool servers."""
         await registry_service.initialize()
 

@@ -76,8 +76,7 @@ class TestUnanswerableGenerator:
 
         # Should ask about what's NOT in the document
         assert any(
-            word in result.question.lower()
-            for word in ["not", "absent", "missing", "cannot"]
+            word in result.question.lower() for word in ["not", "absent", "missing", "cannot"]
         )
 
     def test_cross_domain(self, generator, sample):
@@ -169,25 +168,29 @@ class TestUnanswerableIntegration:
         """Test generation from mixed doc_type samples."""
         samples = []
         for i in range(10):
-            samples.append(NormalizedSample(
-                id=f"clean_{i}",
-                question="What is X?",
-                ground_truth="X is Y",
-                contexts=["Context about X"],
-                doc_type="clean_text",
-                question_type="definition",
-                difficulty="D1",
-            ))
+            samples.append(
+                NormalizedSample(
+                    id=f"clean_{i}",
+                    question="What is X?",
+                    ground_truth="X is Y",
+                    contexts=["Context about X"],
+                    doc_type="clean_text",
+                    question_type="definition",
+                    difficulty="D1",
+                )
+            )
         for i in range(10):
-            samples.append(NormalizedSample(
-                id=f"log_{i}",
-                question="What error occurred?",
-                ground_truth="NullPointer",
-                contexts=["ERROR: NullPointer at line 42"],
-                doc_type="log_ticket",
-                question_type="lookup",
-                difficulty="D2",
-            ))
+            samples.append(
+                NormalizedSample(
+                    id=f"log_{i}",
+                    question="What error occurred?",
+                    ground_truth="NullPointer",
+                    contexts=["ERROR: NullPointer at line 42"],
+                    doc_type="log_ticket",
+                    question_type="lookup",
+                    difficulty="D2",
+                )
+            )
 
         generator = UnanswerableGenerator(seed=42)
         unanswerables = generator.generate_batch(samples, target_count=10)

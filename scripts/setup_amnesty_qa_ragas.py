@@ -186,7 +186,9 @@ def main():
     print("SETUP COMPLETE")
     print("=" * 80)
     print("\nNext steps:")
-    print("1. Ingest contexts: bash scripts/upload_ragas_documents.sh amnesty_qa data/amnesty_qa_contexts")
+    print(
+        "1. Ingest contexts: bash scripts/upload_ragas_documents.sh amnesty_qa data/amnesty_qa_contexts"
+    )
     print("2. Run evaluation: poetry run python scripts/run_ragas_evaluation.py \\")
     print("                      --dataset data/evaluation/ragas_amnesty_small.jsonl \\")
     print("                      --namespace amnesty_qa \\")

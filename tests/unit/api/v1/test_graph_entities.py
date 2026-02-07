@@ -198,9 +198,7 @@ class TestListEntities:
             "src.components.graph_rag.neo4j_client.get_neo4j_client",
             return_value=mock_neo4j_client,
         ):
-            request = EntityListRequest(
-                entity_type="PERSON", page=1, page_size=50
-            )
+            request = EntityListRequest(entity_type="PERSON", page=1, page_size=50)
             response = await list_entities(request)
 
             assert len(response.entities) == 1
@@ -220,9 +218,7 @@ class TestListEntities:
             "src.components.graph_rag.neo4j_client.get_neo4j_client",
             return_value=mock_neo4j_client,
         ):
-            request = EntityListRequest(
-                namespace_id="research", page=1, page_size=50
-            )
+            request = EntityListRequest(namespace_id="research", page=1, page_size=50)
             response = await list_entities(request)
 
             assert all(e.namespace_id == "research" for e in response.entities)
@@ -294,9 +290,7 @@ class TestListEntities:
     @pytest.mark.asyncio
     async def test_list_entities_database_error(self, mock_neo4j_client):
         """Test entity list when database query fails."""
-        mock_neo4j_client.execute_read.side_effect = Exception(
-            "Neo4j connection failed"
-        )
+        mock_neo4j_client.execute_read.side_effect = Exception("Neo4j connection failed")
 
         with patch(
             "src.components.graph_rag.neo4j_client.get_neo4j_client",
@@ -380,7 +374,9 @@ class TestGetEntityDetail:
             assert "not found" in exc_info.value.detail.lower()
 
     @pytest.mark.asyncio
-    async def test_get_entity_detail_no_relationships(self, mock_neo4j_client, sample_entity_results):
+    async def test_get_entity_detail_no_relationships(
+        self, mock_neo4j_client, sample_entity_results
+    ):
         """Test entity detail for entity with no relationships."""
         mock_neo4j_client.execute_read.side_effect = [
             [sample_entity_results[2]],  # Entity (has relation_count=7 in data)
@@ -430,9 +426,7 @@ class TestGetEntityDetail:
     @pytest.mark.asyncio
     async def test_get_entity_detail_database_error(self, mock_neo4j_client):
         """Test entity detail when database query fails."""
-        mock_neo4j_client.execute_read.side_effect = Exception(
-            "Neo4j query timeout"
-        )
+        mock_neo4j_client.execute_read.side_effect = Exception("Neo4j query timeout")
 
         with patch(
             "src.components.graph_rag.neo4j_client.get_neo4j_client",
@@ -505,9 +499,7 @@ class TestDeleteEntity:
             "src.components.graph_rag.neo4j_client.get_neo4j_client",
             return_value=mock_neo4j_client,
         ):
-            response = await delete_entity(
-                "albert_einstein", namespace_id="research"
-            )
+            response = await delete_entity("albert_einstein", namespace_id="research")
 
             assert response.status == "success"
             assert response.affected_relations == 10
@@ -570,9 +562,7 @@ class TestDeleteEntity:
     @pytest.mark.asyncio
     async def test_delete_entity_database_error(self, mock_neo4j_client):
         """Test deletion when database query fails."""
-        mock_neo4j_client.execute_read.side_effect = Exception(
-            "Neo4j connection lost"
-        )
+        mock_neo4j_client.execute_read.side_effect = Exception("Neo4j connection lost")
 
         with patch(
             "src.components.graph_rag.neo4j_client.get_neo4j_client",
@@ -633,16 +623,13 @@ class TestListRelations:
             "src.components.graph_rag.neo4j_client.get_neo4j_client",
             return_value=mock_neo4j_client,
         ):
-            request = RelationListRequest(
-                entity_id="albert_einstein", page=1, page_size=50
-            )
+            request = RelationListRequest(entity_id="albert_einstein", page=1, page_size=50)
             response = await list_relations(request)
 
             assert len(response.relations) == 2
             # All relations should involve albert_einstein
             assert all(
-                r.source_entity_id == "albert_einstein"
-                or r.target_entity_id == "albert_einstein"
+                r.source_entity_id == "albert_einstein" or r.target_entity_id == "albert_einstein"
                 for r in response.relations
             )
 
@@ -660,9 +647,7 @@ class TestListRelations:
             "src.components.graph_rag.neo4j_client.get_neo4j_client",
             return_value=mock_neo4j_client,
         ):
-            request = RelationListRequest(
-                relation_type="DISCOVERED", page=1, page_size=50
-            )
+            request = RelationListRequest(relation_type="DISCOVERED", page=1, page_size=50)
             response = await list_relations(request)
 
             assert len(response.relations) == 1
@@ -727,9 +712,7 @@ class TestListRelations:
     @pytest.mark.asyncio
     async def test_list_relations_database_error(self, mock_neo4j_client):
         """Test relation list when database query fails."""
-        mock_neo4j_client.execute_read.side_effect = Exception(
-            "Neo4j server unreachable"
-        )
+        mock_neo4j_client.execute_read.side_effect = Exception("Neo4j server unreachable")
 
         with patch(
             "src.components.graph_rag.neo4j_client.get_neo4j_client",
@@ -840,9 +823,7 @@ class TestDeleteRelation:
     @pytest.mark.asyncio
     async def test_delete_relation_database_error(self, mock_neo4j_client):
         """Test deletion when database query fails."""
-        mock_neo4j_client.execute_read.side_effect = Exception(
-            "Neo4j lock timeout"
-        )
+        mock_neo4j_client.execute_read.side_effect = Exception("Neo4j lock timeout")
 
         with patch(
             "src.components.graph_rag.neo4j_client.get_neo4j_client",

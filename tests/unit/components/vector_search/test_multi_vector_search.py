@@ -137,9 +137,7 @@ class TestMultiVectorHybridSearch:
 
         # Verify Qdrant query_points called
         assert multi_vector_search.qdrant_client.async_client.query_points.called
-        call_kwargs = (
-            multi_vector_search.qdrant_client.async_client.query_points.call_args.kwargs
-        )
+        call_kwargs = multi_vector_search.qdrant_client.async_client.query_points.call_args.kwargs
         assert call_kwargs["collection_name"] == "test_collection"
         assert call_kwargs["limit"] == 10
         assert len(call_kwargs["prefetch"]) == 2  # Dense + sparse
@@ -155,7 +153,9 @@ class TestMultiVectorHybridSearch:
         assert results[0]["section_headings"] == ["Introduction", "RAG Overview"]
 
     @pytest.mark.asyncio
-    async def test_hybrid_search_with_namespace_filter(self, multi_vector_search, mock_qdrant_results):
+    async def test_hybrid_search_with_namespace_filter(
+        self, multi_vector_search, mock_qdrant_results
+    ):
         """Test hybrid search with namespace filtering."""
         multi_vector_search.qdrant_client.async_client.query_points.return_value = (
             mock_qdrant_results
@@ -168,9 +168,7 @@ class TestMultiVectorHybridSearch:
         )
 
         # Verify namespace filter applied
-        call_kwargs = (
-            multi_vector_search.qdrant_client.async_client.query_points.call_args.kwargs
-        )
+        call_kwargs = multi_vector_search.qdrant_client.async_client.query_points.call_args.kwargs
         assert call_kwargs["prefetch"][0].filter is not None
         assert len(results) == 2
 
@@ -351,7 +349,8 @@ class TestMultiVectorHybridSearch:
 
             # Get second instance (should be same)
             search2 = get_multi_vector_search(
-                qdrant_client=None, collection_name="test2"  # Config ignored
+                qdrant_client=None,
+                collection_name="test2",  # Config ignored
             )
 
             assert search1 is search2
@@ -419,8 +418,6 @@ class TestMultiVectorSearchEdgeCases:
         )
 
         # Verify prefetch limit passed correctly
-        call_kwargs = (
-            multi_vector_search.qdrant_client.async_client.query_points.call_args.kwargs
-        )
+        call_kwargs = multi_vector_search.qdrant_client.async_client.query_points.call_args.kwargs
         assert call_kwargs["prefetch"][0].limit == 1000
         assert call_kwargs["prefetch"][1].limit == 1000

@@ -197,9 +197,7 @@ def mock_multi_vector_model():
         # Return mock output with dense and sparse components
         return {
             "dense_vecs": np.random.randn(len(texts), 1024).astype(np.float32),
-            "sparse_vecs": [
-                {0: 0.5, 1: 0.3, 2: 0.2} for _ in texts
-            ],
+            "sparse_vecs": [{0: 0.5, 1: 0.3, 2: 0.2} for _ in texts],
         }
 
     model.encode.side_effect = encode_side_effect
@@ -467,7 +465,9 @@ def sample_embedding_vectors():
     doc_embeddings = {
         "doc_0": np.random.randn(1024).astype(np.float32) / 100,  # Random
         "doc_1": np.random.randn(1024).astype(np.float32) / 100,  # Random
-        "doc_2": (query_embedding + np.random.randn(1024).astype(np.float32) * 0.1),  # Similar to query
+        "doc_2": (
+            query_embedding + np.random.randn(1024).astype(np.float32) * 0.1
+        ),  # Similar to query
         "doc_3": np.random.randn(1024).astype(np.float32) / 100,  # Random
     }
 
@@ -483,5 +483,6 @@ def cleanup_temp_models(tmp_path):
     yield tmp_path
     # Cleanup after test
     import shutil
+
     if tmp_path.exists():
         shutil.rmtree(tmp_path, ignore_errors=True)

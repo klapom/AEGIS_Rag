@@ -67,6 +67,7 @@ def print_success(message: str) -> None:
 # TEST 1: Domain Repository Imports and Exports
 # ============================================================================
 
+
 def test_domain_repository_imports() -> bool:
     """Test 1: Verify DomainRepository can be imported."""
     print_section("TEST 1: Domain Repository Imports & Exports")
@@ -78,10 +79,11 @@ def test_domain_repository_imports() -> bool:
             DomainRepository,
             get_domain_repository,
         )
+
         print_test(
             "Import DomainRepository class",
             True,
-            f"Successfully imported: {DomainRepository.__name__}"
+            f"Successfully imported: {DomainRepository.__name__}",
         )
     except ImportError as e:
         print_test("Import DomainRepository class", False, str(e))
@@ -89,10 +91,9 @@ def test_domain_repository_imports() -> bool:
 
     try:
         from src.components.domain_training import get_domain_repository
+
         print_test(
-            "Import get_domain_repository() function",
-            True,
-            "Singleton factory function available"
+            "Import get_domain_repository() function", True, "Singleton factory function available"
         )
     except ImportError as e:
         print_test("Import get_domain_repository() function", False, str(e))
@@ -101,14 +102,11 @@ def test_domain_repository_imports() -> bool:
     # Check that singleton works
     try:
         from src.components.domain_training import get_domain_repository
+
         repo1 = get_domain_repository()
         repo2 = get_domain_repository()
         is_singleton = repo1 is repo2
-        print_test(
-            "Singleton pattern works",
-            is_singleton,
-            f"Same instance: {is_singleton}"
-        )
+        print_test("Singleton pattern works", is_singleton, f"Same instance: {is_singleton}")
         if not is_singleton:
             all_passed = False
     except Exception as e:
@@ -122,6 +120,7 @@ def test_domain_repository_imports() -> bool:
 # TEST 2: Domain Classifier Imports and Exports
 # ============================================================================
 
+
 def test_domain_classifier_imports() -> bool:
     """Test 2: Verify DomainClassifier can be imported."""
     print_section("TEST 2: Domain Classifier Imports & Exports")
@@ -134,20 +133,17 @@ def test_domain_classifier_imports() -> bool:
             get_domain_classifier,
             reset_classifier,
         )
+
         print_test(
             "Import DomainClassifier class",
             True,
-            f"Successfully imported: {DomainClassifier.__name__}"
+            f"Successfully imported: {DomainClassifier.__name__}",
         )
         print_test(
-            "Import get_domain_classifier() function",
-            True,
-            "Singleton factory function available"
+            "Import get_domain_classifier() function", True, "Singleton factory function available"
         )
         print_test(
-            "Import reset_classifier() function",
-            True,
-            "Reset function for testing available"
+            "Import reset_classifier() function", True, "Reset function for testing available"
         )
     except ImportError as e:
         print_test("Import DomainClassifier and related", False, str(e))
@@ -156,6 +152,7 @@ def test_domain_classifier_imports() -> bool:
     # Check classifier properties
     try:
         from src.components.domain_training import get_domain_classifier
+
         classifier = get_domain_classifier()
 
         # Check for key methods
@@ -165,25 +162,15 @@ def test_domain_classifier_imports() -> bool:
         has_is_loaded = hasattr(classifier, "is_loaded")
 
         print_test(
-            "Has load_domains() method",
-            has_load_domains,
-            "Async method for loading domains"
+            "Has load_domains() method", has_load_domains, "Async method for loading domains"
         )
         print_test(
-            "Has classify_document() method",
-            has_classify,
-            "Method for classifying documents"
+            "Has classify_document() method", has_classify, "Method for classifying documents"
         )
         print_test(
-            "Has get_loaded_domains() method",
-            has_get_loaded,
-            "Returns list of loaded domain names"
+            "Has get_loaded_domains() method", has_get_loaded, "Returns list of loaded domain names"
         )
-        print_test(
-            "Has is_loaded() method",
-            has_is_loaded,
-            "Status check for classifier readiness"
-        )
+        print_test("Has is_loaded() method", has_is_loaded, "Status check for classifier readiness")
 
         if not (has_load_domains and has_classify and has_get_loaded and has_is_loaded):
             all_passed = False
@@ -199,6 +186,7 @@ def test_domain_classifier_imports() -> bool:
 # TEST 3: DSPy Optimizer Imports
 # ============================================================================
 
+
 def test_dspy_optimizer_imports() -> bool:
     """Test 3: Verify DSPyOptimizer can be imported."""
     print_section("TEST 3: DSPy Optimizer Imports")
@@ -211,20 +199,13 @@ def test_dspy_optimizer_imports() -> bool:
             EntityExtractionSignature,
             RelationExtractionSignature,
         )
+
         print_test(
-            "Import DSPyOptimizer class",
-            True,
-            f"Successfully imported: {DSPyOptimizer.__name__}"
+            "Import DSPyOptimizer class", True, f"Successfully imported: {DSPyOptimizer.__name__}"
         )
+        print_test("Import EntityExtractionSignature", True, "DSPy signature for entity extraction")
         print_test(
-            "Import EntityExtractionSignature",
-            True,
-            "DSPy signature for entity extraction"
-        )
-        print_test(
-            "Import RelationExtractionSignature",
-            True,
-            "DSPy signature for relation extraction"
+            "Import RelationExtractionSignature", True, "DSPy signature for relation extraction"
         )
     except ImportError as e:
         print_test("Import DSPy classes", False, str(e))
@@ -239,20 +220,16 @@ def test_dspy_optimizer_imports() -> bool:
         has_optimize_entity = hasattr(DSPyOptimizer, "optimize_entity_extraction")
         has_optimize_relation = hasattr(DSPyOptimizer, "optimize_relation_extraction")
 
-        print_test(
-            "DSPyOptimizer has __init__ method",
-            has_init,
-            "Constructor available"
-        )
+        print_test("DSPyOptimizer has __init__ method", has_init, "Constructor available")
         print_test(
             "DSPyOptimizer has optimize_entity_extraction() method",
             has_optimize_entity,
-            "Async method for entity extraction"
+            "Async method for entity extraction",
         )
         print_test(
             "DSPyOptimizer has optimize_relation_extraction() method",
             has_optimize_relation,
-            "Async method for relation extraction"
+            "Async method for relation extraction",
         )
 
         if not (has_init and has_optimize_entity and has_optimize_relation):
@@ -269,6 +246,7 @@ def test_dspy_optimizer_imports() -> bool:
 # TEST 4: Prompt Extractor Imports
 # ============================================================================
 
+
 def test_prompt_extractor_imports() -> bool:
     """Test 4: Verify prompt extraction functions."""
     print_section("TEST 4: Prompt Extractor Imports")
@@ -281,21 +259,18 @@ def test_prompt_extractor_imports() -> bool:
             format_prompt_for_production,
             save_prompt_template,
         )
+
         print_test(
             "Import extract_prompt_from_dspy_result() function",
             True,
-            "Function for extracting DSPy prompts"
+            "Function for extracting DSPy prompts",
         )
         print_test(
             "Import format_prompt_for_production() function",
             True,
-            "Function for formatting prompts"
+            "Function for formatting prompts",
         )
-        print_test(
-            "Import save_prompt_template() function",
-            True,
-            "Function for saving templates"
-        )
+        print_test("Import save_prompt_template() function", True, "Function for saving templates")
     except ImportError as e:
         print_test("Import prompt extractor functions", False, str(e))
         all_passed = False
@@ -306,6 +281,7 @@ def test_prompt_extractor_imports() -> bool:
 # ============================================================================
 # TEST 5: Training Progress Tracker Imports
 # ============================================================================
+
 
 def test_training_progress_imports() -> bool:
     """Test 5: Verify training progress tracking imports."""
@@ -319,21 +295,14 @@ def test_training_progress_imports() -> bool:
             TrainingPhase,
             TrainingProgressTracker,
         )
+
         print_test(
             "Import TrainingProgressTracker class",
             True,
-            f"Successfully imported: {TrainingProgressTracker.__name__}"
+            f"Successfully imported: {TrainingProgressTracker.__name__}",
         )
-        print_test(
-            "Import TrainingPhase enum",
-            True,
-            "Training phase constants"
-        )
-        print_test(
-            "Import ProgressEvent class",
-            True,
-            "Event model for progress updates"
-        )
+        print_test("Import TrainingPhase enum", True, "Training phase constants")
+        print_test("Import ProgressEvent class", True, "Event model for progress updates")
     except ImportError as e:
         print_test("Import training progress classes", False, str(e))
         all_passed = False
@@ -350,11 +319,7 @@ def test_training_progress_imports() -> bool:
         ]
 
         for phase_name, exists in phases:
-            print_test(
-                f"TrainingPhase.{phase_name} defined",
-                exists,
-                "Phase constant available"
-            )
+            print_test(f"TrainingPhase.{phase_name} defined", exists, "Phase constant available")
             if not exists:
                 all_passed = False
 
@@ -369,6 +334,7 @@ def test_training_progress_imports() -> bool:
 # TEST 6: Additional Components
 # ============================================================================
 
+
 def test_additional_components() -> bool:
     """Test 6: Verify domain discovery and augmentation components."""
     print_section("TEST 6: Additional Components (Discovery, Augmentation)")
@@ -382,20 +348,13 @@ def test_additional_components() -> bool:
             DomainSuggestion,
             get_domain_discovery_service,
         )
+
         print_test(
-            "Import DomainDiscoveryService class",
-            True,
-            "Service for auto-discovering domains"
+            "Import DomainDiscoveryService class", True, "Service for auto-discovering domains"
         )
+        print_test("Import DomainSuggestion model", True, "Model for domain suggestions")
         print_test(
-            "Import DomainSuggestion model",
-            True,
-            "Model for domain suggestions"
-        )
-        print_test(
-            "Import get_domain_discovery_service() function",
-            True,
-            "Singleton factory function"
+            "Import get_domain_discovery_service() function", True, "Singleton factory function"
         )
     except ImportError as e:
         print_test("Import domain discovery components", False, str(e))
@@ -407,15 +366,12 @@ def test_additional_components() -> bool:
             TrainingDataAugmenter,
             get_training_data_augmenter,
         )
+
         print_test(
-            "Import TrainingDataAugmenter class",
-            True,
-            "Service for augmenting training data"
+            "Import TrainingDataAugmenter class", True, "Service for augmenting training data"
         )
         print_test(
-            "Import get_training_data_augmenter() function",
-            True,
-            "Singleton factory function"
+            "Import get_training_data_augmenter() function", True, "Singleton factory function"
         )
     except ImportError as e:
         print_test("Import augmentation components", False, str(e))
@@ -429,20 +385,15 @@ def test_additional_components() -> bool:
             IngestionItem,
             get_grouped_ingestion_processor,
         )
+
         print_test(
-            "Import GroupedIngestionProcessor class",
-            True,
-            "Service for grouped batch ingestion"
+            "Import GroupedIngestionProcessor class", True, "Service for grouped batch ingestion"
         )
         print_test(
-            "Import IngestionItem and IngestionBatch models",
-            True,
-            "Data models for ingestion"
+            "Import IngestionItem and IngestionBatch models", True, "Data models for ingestion"
         )
         print_test(
-            "Import get_grouped_ingestion_processor() function",
-            True,
-            "Singleton factory function"
+            "Import get_grouped_ingestion_processor() function", True, "Singleton factory function"
         )
     except ImportError as e:
         print_test("Import ingestion components", False, str(e))
@@ -454,16 +405,11 @@ def test_additional_components() -> bool:
             DomainAnalyzer,
             get_domain_analyzer,
         )
+
         print_test(
-            "Import DomainAnalyzer class",
-            True,
-            "Service for analyzing domain characteristics"
+            "Import DomainAnalyzer class", True, "Service for analyzing domain characteristics"
         )
-        print_test(
-            "Import get_domain_analyzer() function",
-            True,
-            "Singleton factory function"
-        )
+        print_test("Import get_domain_analyzer() function", True, "Singleton factory function")
     except ImportError as e:
         print_test("Import analyzer components", False, str(e))
         all_passed = False
@@ -475,6 +421,7 @@ def test_additional_components() -> bool:
 # TEST 7: API Endpoint Registration
 # ============================================================================
 
+
 def test_api_endpoint_registration() -> bool:
     """Test 7: Verify API endpoints are registered."""
     print_section("TEST 7: API Endpoint Registration")
@@ -484,10 +431,9 @@ def test_api_endpoint_registration() -> bool:
     # Check that API router is importable
     try:
         from src.api.v1.domain_training import router as domain_training_router
+
         print_test(
-            "Import domain_training API router",
-            True,
-            "FastAPI router successfully imported"
+            "Import domain_training API router", True, "FastAPI router successfully imported"
         )
 
         # Verify router has expected attributes
@@ -497,12 +443,12 @@ def test_api_endpoint_registration() -> bool:
         print_test(
             "Router has prefix attribute",
             has_prefix,
-            f"Prefix: {domain_training_router.prefix if has_prefix else 'N/A'}"
+            f"Prefix: {domain_training_router.prefix if has_prefix else 'N/A'}",
         )
         print_test(
             "Router has tags attribute",
             has_tags,
-            f"Tags: {domain_training_router.tags if has_tags else 'N/A'}"
+            f"Tags: {domain_training_router.tags if has_tags else 'N/A'}",
         )
 
     except ImportError as e:
@@ -516,17 +462,13 @@ def test_api_endpoint_registration() -> bool:
 
         # Check if router is included
         included = any(
-            r.path == domain_training_router.prefix
-            for r in getattr(app, "routes", [])
-        ) or any(
-            domain_training_router.prefix in str(r.path)
-            for r in getattr(app, "routes", [])
-        )
+            r.path == domain_training_router.prefix for r in getattr(app, "routes", [])
+        ) or any(domain_training_router.prefix in str(r.path) for r in getattr(app, "routes", []))
 
         print_test(
             "Router is included in main FastAPI app",
             included or "domain" in str(app.routes),
-            "Domain training endpoints registered"
+            "Domain training endpoints registered",
         )
 
     except Exception as e:
@@ -536,10 +478,9 @@ def test_api_endpoint_registration() -> bool:
     # Check for domain discovery router
     try:
         from src.api.v1.admin.domain_discovery import router as discovery_router
+
         print_test(
-            "Import domain_discovery admin router",
-            True,
-            "Domain discovery endpoints available"
+            "Import domain_discovery admin router", True, "Domain discovery endpoints available"
         )
     except ImportError as e:
         print_test("Import domain_discovery admin router", False, str(e))
@@ -553,6 +494,7 @@ def test_api_endpoint_registration() -> bool:
 # TEST 8: Component Initialization
 # ============================================================================
 
+
 async def test_component_initialization() -> bool:
     """Test 8: Verify components can be initialized."""
     print_section("TEST 8: Component Initialization")
@@ -562,12 +504,13 @@ async def test_component_initialization() -> bool:
     # Test DomainRepository initialization
     try:
         from src.components.domain_training import get_domain_repository
+
         repo = get_domain_repository()
         has_neo4j_client = hasattr(repo, "neo4j_client")
         print_test(
             "DomainRepository initializes successfully",
             True,
-            f"Instance created, has neo4j_client: {has_neo4j_client}"
+            f"Instance created, has neo4j_client: {has_neo4j_client}",
         )
     except Exception as e:
         print_test("DomainRepository initialization", False, str(e))
@@ -576,6 +519,7 @@ async def test_component_initialization() -> bool:
     # Test DomainClassifier initialization
     try:
         from src.components.domain_training import get_domain_classifier, reset_classifier
+
         reset_classifier()  # Reset for clean test
         classifier = get_domain_classifier()
 
@@ -584,7 +528,7 @@ async def test_component_initialization() -> bool:
         print_test(
             "DomainClassifier initializes successfully",
             True,
-            f"Instance created, domains loaded: {is_loaded} (expected False initially)"
+            f"Instance created, domains loaded: {is_loaded} (expected False initially)",
         )
 
         # Check model loading works
@@ -594,12 +538,10 @@ async def test_component_initialization() -> bool:
             print_test(
                 "Embedding model can be loaded",
                 model_loaded,
-                "BGE-M3 model initialization successful"
+                "BGE-M3 model initialization successful",
             )
         except ImportError:
-            print_info(
-                "sentence-transformers not available (expected in test environment)"
-            )
+            print_info("sentence-transformers not available (expected in test environment)")
 
     except Exception as e:
         print_test("DomainClassifier initialization", False, str(e))
@@ -608,12 +550,13 @@ async def test_component_initialization() -> bool:
     # Test DSPyOptimizer initialization
     try:
         from src.components.domain_training import DSPyOptimizer
+
         optimizer = DSPyOptimizer(llm_model="qwen3:32b")
         has_llm_model = hasattr(optimizer, "llm_model")
         print_test(
             "DSPyOptimizer initializes successfully",
             True,
-            f"Instance created, llm_model: {optimizer.llm_model if has_llm_model else 'N/A'}"
+            f"Instance created, llm_model: {optimizer.llm_model if has_llm_model else 'N/A'}",
         )
     except Exception as e:
         print_test("DSPyOptimizer initialization", False, str(e))
@@ -623,10 +566,7 @@ async def test_component_initialization() -> bool:
     try:
         from src.components.domain_training import TrainingProgressTracker
 
-        tracker = TrainingProgressTracker(
-            training_run_id="test-run-123",
-            domain_name="test_domain"
-        )
+        tracker = TrainingProgressTracker(training_run_id="test-run-123", domain_name="test_domain")
 
         has_tracking_id = hasattr(tracker, "training_run_id")
         has_domain_name = hasattr(tracker, "domain_name")
@@ -635,7 +575,7 @@ async def test_component_initialization() -> bool:
         print_test(
             "TrainingProgressTracker initializes successfully",
             True,
-            f"Instance created, has required methods: {has_enter_phase}"
+            f"Instance created, has required methods: {has_enter_phase}",
         )
 
     except Exception as e:
@@ -648,6 +588,7 @@ async def test_component_initialization() -> bool:
 # ============================================================================
 # TEST 9: Global Exports Check
 # ============================================================================
+
 
 def test_module_exports() -> bool:
     """Test 9: Verify __all__ exports are correctly defined."""
@@ -696,11 +637,7 @@ def test_module_exports() -> bool:
             missing = expected - module_exports
             extra = module_exports - expected
 
-            print_test(
-                "__all__ is defined",
-                True,
-                f"Total exports: {len(module_exports)}"
-            )
+            print_test("__all__ is defined", True, f"Total exports: {len(module_exports)}")
 
             if missing:
                 print_error(f"Missing from __all__: {missing}")
@@ -720,7 +657,7 @@ def test_module_exports() -> bool:
             print_test(
                 f"Export '{export_name}' is accessible",
                 has_export,
-                "" if has_export else "Not found in module"
+                "" if has_export else "Not found in module",
             )
             if not has_export:
                 all_passed = False
@@ -736,6 +673,7 @@ def test_module_exports() -> bool:
 # TEST 10: Integration with Vector Search
 # ============================================================================
 
+
 def test_vector_search_integration() -> bool:
     """Test 10: Verify integration with vector search components."""
     print_section("TEST 10: Vector Search Integration")
@@ -745,11 +683,8 @@ def test_vector_search_integration() -> bool:
     # Check that EmbeddingService is available
     try:
         from src.components.vector_search import EmbeddingService
-        print_test(
-            "EmbeddingService is available",
-            True,
-            "For domain description embeddings"
-        )
+
+        print_test("EmbeddingService is available", True, "For domain description embeddings")
     except ImportError as e:
         print_test("EmbeddingService availability", False, str(e))
         all_passed = False
@@ -757,6 +692,7 @@ def test_vector_search_integration() -> bool:
     # Check that DomainClassifier can use embeddings
     try:
         from src.components.domain_training import DomainClassifier
+
         classifier = DomainClassifier()
 
         # Check for embedding model attribute
@@ -766,12 +702,12 @@ def test_vector_search_integration() -> bool:
         print_test(
             "DomainClassifier has embedding_model attribute",
             has_embedding_model,
-            "For BGE-M3 embeddings"
+            "For BGE-M3 embeddings",
         )
         print_test(
             "DomainClassifier has _load_embedding_model method",
             has_load_method,
-            "Lazy loading mechanism"
+            "Lazy loading mechanism",
         )
 
     except Exception as e:
@@ -784,6 +720,7 @@ def test_vector_search_integration() -> bool:
 # ============================================================================
 # TEST 11: Configuration and Environment
 # ============================================================================
+
 
 def test_configuration() -> bool:
     """Test 11: Verify configuration is available."""
@@ -806,7 +743,7 @@ def test_configuration() -> bool:
             print_test(
                 f"Setting '{setting_name}' is configured",
                 has_setting,
-                f"Value: {value}" if has_setting else "Not configured"
+                f"Value: {value}" if has_setting else "Not configured",
             )
             if not has_setting:
                 all_passed = False
@@ -821,6 +758,7 @@ def test_configuration() -> bool:
 # ============================================================================
 # Main Test Runner
 # ============================================================================
+
 
 async def run_all_tests() -> dict[str, bool]:
     """Run all tests and return results."""
@@ -906,6 +844,7 @@ def main() -> int:
     except Exception as e:
         print_error(f"Test execution failed: {e}")
         import traceback
+
         traceback.print_exc()
         return 1
 

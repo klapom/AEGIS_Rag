@@ -62,6 +62,7 @@ def print_success(message: str) -> None:
 # File Structure Validation
 # ============================================================================
 
+
 def validate_domain_training_files() -> bool:
     """Test 1: Verify all domain training files exist."""
     print_section("TEST 1: Domain Training File Structure")
@@ -88,11 +89,7 @@ def validate_domain_training_files() -> bool:
     for file_path, description in required_files.items():
         full_path = f"/home/admin/projects/aegisrag/AEGIS_Rag/{file_path}"
         exists = os.path.isfile(full_path)
-        print_test(
-            f"{file_path}",
-            exists,
-            description if exists else "File not found"
-        )
+        print_test(f"{file_path}", exists, description if exists else "File not found")
         if not exists:
             all_passed = False
 
@@ -102,6 +99,7 @@ def validate_domain_training_files() -> bool:
 # ============================================================================
 # Module Exports Validation
 # ============================================================================
+
 
 def check_file_content(file_path: str, pattern: str) -> bool:
     """Check if file contains pattern."""
@@ -122,11 +120,7 @@ def validate_module_exports() -> bool:
 
     # Check __all__ is defined
     has_all = check_file_content(init_file, r"^__all__\s*=\s*\[")
-    print_test(
-        "Module has __all__ defined",
-        has_all,
-        "Explicit exports list present"
-    )
+    print_test("Module has __all__ defined", has_all, "Explicit exports list present")
 
     if has_all:
         expected_exports = [
@@ -178,6 +172,7 @@ def validate_module_exports() -> bool:
 # Class and Function Definitions
 # ============================================================================
 
+
 def validate_domain_repository_structure() -> bool:
     """Test 3: Verify DomainRepository structure."""
     print_section("TEST 3: DomainRepository Structure")
@@ -190,11 +185,7 @@ def validate_domain_repository_structure() -> bool:
 
     # Check class definition
     has_class = "class DomainRepository:" in content
-    print_test(
-        "DomainRepository class defined",
-        has_class,
-        "Main class present"
-    )
+    print_test("DomainRepository class defined", has_class, "Main class present")
 
     if has_class:
         # Check key methods
@@ -214,11 +205,7 @@ def validate_domain_repository_structure() -> bool:
 
         for method_name, description in methods:
             has_method = f"def {method_name}(" in content
-            print_test(
-                f"Has {method_name}() method",
-                has_method,
-                description
-            )
+            print_test(f"Has {method_name}() method", has_method, description)
             if not has_method:
                 all_passed = False
 
@@ -227,7 +214,7 @@ def validate_domain_repository_structure() -> bool:
     print_test(
         "Has get_domain_repository() singleton function",
         has_get_function,
-        "Global instance factory"
+        "Global instance factory",
     )
 
     return all_passed
@@ -245,11 +232,7 @@ def validate_domain_classifier_structure() -> bool:
 
     # Check class definition
     has_class = "class DomainClassifier:" in content
-    print_test(
-        "DomainClassifier class defined",
-        has_class,
-        "Main class present"
-    )
+    print_test("DomainClassifier class defined", has_class, "Main class present")
 
     if has_class:
         # Check key methods
@@ -266,11 +249,7 @@ def validate_domain_classifier_structure() -> bool:
 
         for method_name, description in methods:
             has_method = f"def {method_name}(" in content
-            print_test(
-                f"Has {method_name}() method",
-                has_method,
-                description
-            )
+            print_test(f"Has {method_name}() method", has_method, description)
             if not has_method:
                 all_passed = False
 
@@ -281,13 +260,9 @@ def validate_domain_classifier_structure() -> bool:
     print_test(
         "Has get_domain_classifier() singleton function",
         has_get_function,
-        "Global instance factory"
+        "Global instance factory",
     )
-    print_test(
-        "Has reset_classifier() reset function",
-        has_reset_function,
-        "For testing purposes"
-    )
+    print_test("Has reset_classifier() reset function", has_reset_function, "For testing purposes")
 
     if not (has_get_function and has_reset_function):
         all_passed = False
@@ -300,18 +275,16 @@ def validate_dspy_optimizer_structure() -> bool:
     print_section("TEST 5: DSPyOptimizer Structure")
 
     all_passed = True
-    file_path = "/home/admin/projects/aegisrag/AEGIS_Rag/src/components/domain_training/dspy_optimizer.py"
+    file_path = (
+        "/home/admin/projects/aegisrag/AEGIS_Rag/src/components/domain_training/dspy_optimizer.py"
+    )
 
     with open(file_path) as f:
         content = f.read()
 
     # Check class definition
     has_class = "class DSPyOptimizer:" in content
-    print_test(
-        "DSPyOptimizer class defined",
-        has_class,
-        "Main class present"
-    )
+    print_test("DSPyOptimizer class defined", has_class, "Main class present")
 
     if has_class:
         # Check key methods
@@ -323,11 +296,7 @@ def validate_dspy_optimizer_structure() -> bool:
 
         for method_name, description in methods:
             has_method = f"def {method_name}(" in content
-            print_test(
-                f"Has {method_name}() method",
-                has_method,
-                description
-            )
+            print_test(f"Has {method_name}() method", has_method, description)
             if not has_method:
                 all_passed = False
 
@@ -336,14 +305,10 @@ def validate_dspy_optimizer_structure() -> bool:
     has_relation_sig = "class RelationExtractionSignature" in content
 
     print_test(
-        "Has EntityExtractionSignature DSPy signature",
-        has_entity_sig,
-        "DSPy signature class"
+        "Has EntityExtractionSignature DSPy signature", has_entity_sig, "DSPy signature class"
     )
     print_test(
-        "Has RelationExtractionSignature DSPy signature",
-        has_relation_sig,
-        "DSPy signature class"
+        "Has RelationExtractionSignature DSPy signature", has_relation_sig, "DSPy signature class"
     )
 
     if not (has_entity_sig and has_relation_sig):
@@ -355,6 +320,7 @@ def validate_dspy_optimizer_structure() -> bool:
 # ============================================================================
 # API Endpoint Validation
 # ============================================================================
+
 
 def validate_api_endpoints() -> bool:
     """Test 6: Verify API endpoint registration."""
@@ -368,27 +334,26 @@ def validate_api_endpoints() -> bool:
 
     # Check router definition
     has_router = "router = APIRouter" in content
-    print_test(
-        "APIRouter defined",
-        has_router,
-        "FastAPI router instance"
-    )
+    print_test("APIRouter defined", has_router, "FastAPI router instance")
 
     if has_router:
         # Expected endpoints (decorators)
         endpoints = [
-            ("@router.post(\"/\",", "POST /admin/domains - Create domain"),
-            ("@router.get(\"/\",", "GET /admin/domains - List domains"),
-            ("@router.get(\"/available-models\",", "GET /admin/domains/available-models"),
-            ("@router.get(\"/{domain_name}\",", "GET /admin/domains/{name}"),
-            ("@router.post(\"/{domain_name}/train\",", "POST /admin/domains/{name}/train"),
-            ("@router.get(\"/{domain_name}/training-status\",", "GET /admin/domains/{name}/training-status"),
-            ("@router.get(\"/{domain_name}/training-stream\",", "GET stream endpoint"),
-            ("@router.delete(\"/{domain_name}\",", "DELETE /admin/domains/{name}"),
-            ("@router.post(\"/classify\",", "POST /admin/domains/classify"),
-            ("@router.post(\"/discover\",", "POST /admin/domains/discover"),
-            ("@router.post(\"/ingest-batch\",", "POST /admin/domains/ingest-batch"),
-            ("@router.post(\"/augment\",", "POST /admin/domains/augment"),
+            ('@router.post("/",', "POST /admin/domains - Create domain"),
+            ('@router.get("/",', "GET /admin/domains - List domains"),
+            ('@router.get("/available-models",', "GET /admin/domains/available-models"),
+            ('@router.get("/{domain_name}",', "GET /admin/domains/{name}"),
+            ('@router.post("/{domain_name}/train",', "POST /admin/domains/{name}/train"),
+            (
+                '@router.get("/{domain_name}/training-status",',
+                "GET /admin/domains/{name}/training-status",
+            ),
+            ('@router.get("/{domain_name}/training-stream",', "GET stream endpoint"),
+            ('@router.delete("/{domain_name}",', "DELETE /admin/domains/{name}"),
+            ('@router.post("/classify",', "POST /admin/domains/classify"),
+            ('@router.post("/discover",', "POST /admin/domains/discover"),
+            ('@router.post("/ingest-batch",', "POST /admin/domains/ingest-batch"),
+            ('@router.post("/augment",', "POST /admin/domains/augment"),
         ]
 
         for decorator, description in endpoints:
@@ -396,7 +361,7 @@ def validate_api_endpoints() -> bool:
             print_test(
                 f"Endpoint defined: {description}",
                 has_endpoint,
-                "" if has_endpoint else "Not found"
+                "" if has_endpoint else "Not found",
             )
             if not has_endpoint:
                 all_passed = False
@@ -415,20 +380,16 @@ def validate_main_app_integration() -> bool:
         content = f.read()
 
     # Check router import
-    has_import = "from src.api.v1.domain_training import router as domain_training_router" in content
-    print_test(
-        "domain_training router imported",
-        has_import,
-        "Import statement present"
+    has_import = (
+        "from src.api.v1.domain_training import router as domain_training_router" in content
     )
+    print_test("domain_training router imported", has_import, "Import statement present")
 
     # Note: Router inclusion in app is typically done via app.include_router()
     # Check if routers are included (may be in lifespan or elsewhere)
     has_router_ref = "domain_training_router" in content
     print_test(
-        "domain_training_router referenced in main",
-        has_router_ref,
-        "Router is used in application"
+        "domain_training_router referenced in main", has_router_ref, "Router is used in application"
     )
 
     return all_passed
@@ -437,6 +398,7 @@ def validate_main_app_integration() -> bool:
 # ============================================================================
 # Configuration Validation
 # ============================================================================
+
 
 def validate_configuration() -> bool:
     """Test 8: Verify configuration requirements."""
@@ -459,11 +421,7 @@ def validate_configuration() -> bool:
 
     for setting_name, description in settings:
         has_setting = setting_name in content
-        print_test(
-            f"Setting '{setting_name}' configured",
-            has_setting,
-            description
-        )
+        print_test(f"Setting '{setting_name}' configured", has_setting, description)
         if not has_setting:
             all_passed = False
 
@@ -473,6 +431,7 @@ def validate_configuration() -> bool:
 # ============================================================================
 # Test File Validation
 # ============================================================================
+
 
 def validate_test_structure() -> bool:
     """Test 9: Verify test file structure."""
@@ -492,11 +451,7 @@ def validate_test_structure() -> bool:
     for file_path, description in test_files.items():
         full_path = f"/home/admin/projects/aegisrag/AEGIS_Rag/{file_path}"
         exists = os.path.isfile(full_path)
-        print_test(
-            f"{file_path}",
-            exists,
-            description if exists else "Test file not found"
-        )
+        print_test(f"{file_path}", exists, description if exists else "Test file not found")
         if not exists:
             all_passed = False
 
@@ -506,6 +461,7 @@ def validate_test_structure() -> bool:
 # ============================================================================
 # Documentation Validation
 # ============================================================================
+
 
 def validate_documentation() -> bool:
     """Test 10: Verify documentation files."""
@@ -523,9 +479,7 @@ def validate_documentation() -> bool:
         full_path = f"/home/admin/projects/aegisrag/AEGIS_Rag/{file_path}"
         exists = os.path.isfile(full_path)
         print_test(
-            f"{file_path}",
-            exists,
-            description if exists else "Documentation file not found"
+            f"{file_path}", exists, description if exists else "Documentation file not found"
         )
 
     return all_passed
@@ -534,6 +488,7 @@ def validate_documentation() -> bool:
 # ============================================================================
 # Code Quality Checks
 # ============================================================================
+
 
 def check_code_quality() -> bool:
     """Test 11: Basic code quality checks."""
@@ -549,27 +504,15 @@ def check_code_quality() -> bool:
 
     # Check docstring
     has_docstring = '"""' in content[:200]  # Check first 200 chars
-    print_test(
-        "Module has docstring",
-        has_docstring,
-        "Documentation present"
-    )
+    print_test("Module has docstring", has_docstring, "Documentation present")
 
     # Check imports organized
     imports_before_all = content.find("import") < content.find("__all__")
-    print_test(
-        "Imports before __all__",
-        imports_before_all,
-        "Proper organization"
-    )
+    print_test("Imports before __all__", imports_before_all, "Proper organization")
 
     # Check type hints used
     has_type_hints = "from typing" in content or "->" in content
-    print_test(
-        "Type hints used",
-        has_type_hints,
-        "Type annotations present"
-    )
+    print_test("Type hints used", has_type_hints, "Type annotations present")
 
     return all_passed
 
@@ -577,6 +520,7 @@ def check_code_quality() -> bool:
 # ============================================================================
 # Sprint Requirements Validation
 # ============================================================================
+
 
 def validate_sprint_requirements() -> bool:
     """Test 12: Verify Sprint 45/46 feature requirements."""
@@ -587,39 +531,43 @@ def validate_sprint_requirements() -> bool:
     features = {
         "45.1 Domain Registry": {
             "file": "src/components/domain_training/domain_repository.py",
-            "required": ["DomainRepository", "get_domain_repository"]
+            "required": ["DomainRepository", "get_domain_repository"],
         },
         "45.2 DSPy Optimization": {
             "file": "src/components/domain_training/dspy_optimizer.py",
-            "required": ["DSPyOptimizer", "EntityExtractionSignature", "RelationExtractionSignature"]
+            "required": [
+                "DSPyOptimizer",
+                "EntityExtractionSignature",
+                "RelationExtractionSignature",
+            ],
         },
         "45.3 API Endpoints": {
             "file": "src/api/v1/domain_training.py",
-            "required": ["router", "@router.post", "@router.get", "@router.delete"]
+            "required": ["router", "@router.post", "@router.get", "@router.delete"],
         },
         "45.5 Progress Tracking": {
             "file": "src/components/domain_training/training_progress.py",
-            "required": ["TrainingProgressTracker", "TrainingPhase", "ProgressEvent"]
+            "required": ["TrainingProgressTracker", "TrainingPhase", "ProgressEvent"],
         },
         "45.6 Domain Classifier": {
             "file": "src/components/domain_training/domain_classifier.py",
-            "required": ["DomainClassifier", "get_domain_classifier"]
+            "required": ["DomainClassifier", "get_domain_classifier"],
         },
         "45.9 Domain Discovery": {
             "file": "src/components/domain_training/domain_discovery.py",
-            "required": ["DomainDiscoveryService", "DomainSuggestion"]
+            "required": ["DomainDiscoveryService", "DomainSuggestion"],
         },
         "45.10 Grouped Ingestion": {
             "file": "src/components/domain_training/grouped_ingestion.py",
-            "required": ["GroupedIngestionProcessor", "IngestionItem", "IngestionBatch"]
+            "required": ["GroupedIngestionProcessor", "IngestionItem", "IngestionBatch"],
         },
         "45.11 Data Augmentation": {
             "file": "src/components/domain_training/data_augmentation.py",
-            "required": ["TrainingDataAugmenter", "get_training_data_augmenter"]
+            "required": ["TrainingDataAugmenter", "get_training_data_augmenter"],
         },
         "46.4 Domain Analyzer": {
             "file": "src/components/domain_training/domain_analyzer.py",
-            "required": ["DomainAnalyzer", "get_domain_analyzer"]
+            "required": ["DomainAnalyzer", "get_domain_analyzer"],
         },
     }
 
@@ -635,15 +583,13 @@ def validate_sprint_requirements() -> bool:
             content = f.read()
 
         # Check all required items are present
-        all_present = all(req in content for req in details['required'])
+        all_present = all(req in content for req in details["required"])
         print_test(
-            feature_name,
-            all_present,
-            f"Required items: {', '.join(details['required'][:2])}..."
+            feature_name, all_present, f"Required items: {', '.join(details['required'][:2])}..."
         )
 
         if not all_present:
-            missing = [r for r in details['required'] if r not in content]
+            missing = [r for r in details["required"] if r not in content]
             print_info(f"Missing: {', '.join(missing)}")
             all_passed = False
 
@@ -653,6 +599,7 @@ def validate_sprint_requirements() -> bool:
 # ============================================================================
 # Main Test Runner
 # ============================================================================
+
 
 def run_all_tests() -> dict[str, bool]:
     """Run all static analysis tests."""
@@ -736,7 +683,9 @@ def main() -> int:
         print("")
         print("To run manual domain testing:")
         print("  1. After dependencies installed:")
-        print("       PYTHONPATH=/home/admin/projects/aegisrag/AEGIS_Rag python3 scripts/manual_domain_testing.py")
+        print(
+            "       PYTHONPATH=/home/admin/projects/aegisrag/AEGIS_Rag python3 scripts/manual_domain_testing.py"
+        )
         print("")
 
         return 0 if all_passed else 1
@@ -744,6 +693,7 @@ def main() -> int:
     except Exception as e:
         print_error(f"Test execution failed: {e}")
         import traceback
+
         traceback.print_exc()
         return 1
 

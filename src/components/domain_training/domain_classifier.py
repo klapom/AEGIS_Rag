@@ -141,7 +141,8 @@ class DomainClassifier:
 
                 # Compute embedding
                 embedding = self.embedding_model.encode(
-                    description, normalize_embeddings=True  # Normalize for cosine similarity
+                    description,
+                    normalize_embeddings=True,  # Normalize for cosine similarity
                 )
 
                 self._domain_embeddings[domain_name] = np.array(embedding, dtype=np.float32)
@@ -213,7 +214,8 @@ class DomainClassifier:
 
         # Compute document embedding
         doc_embedding = self.embedding_model.encode(
-            sampled_text, normalize_embeddings=True  # Normalize for cosine similarity
+            sampled_text,
+            normalize_embeddings=True,  # Normalize for cosine similarity
         )
         doc_embedding = np.array(doc_embedding, dtype=np.float32)
 

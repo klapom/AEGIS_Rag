@@ -52,10 +52,10 @@ NAMESPACE_MBPP = "ragas_phase2_mbpp"
 # Token management - refresh every 10 minutes to avoid 30-minute expiration
 TOKEN_REFRESH_INTERVAL = 600  # 10 minutes in seconds
 _token_timestamp: float = 0
-_current_token: Optional[str] = None
+_current_token: str | None = None
 
 
-async def get_auth_token(force_refresh: bool = False) -> Optional[str]:
+async def get_auth_token(force_refresh: bool = False) -> str | None:
     """Get authentication token with automatic refresh.
 
     Sprint 88 Fix: Token expires after 30 minutes. Refresh every 10 minutes
@@ -115,7 +115,7 @@ async def upload_document(
             return metrics
 
         # Read file content
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             content = f.read()
         metrics["characters_count"] = len(content)
 
@@ -150,7 +150,7 @@ async def upload_document(
 async def ingest_phase(
     phase: int,
     max_samples: int = -1,
-    output_file: Optional[Path] = None,
+    output_file: Path | None = None,
 ) -> list[dict[str, Any]]:
     """Ingest documents for a specific phase.
 
@@ -177,7 +177,9 @@ async def ingest_phase(
             metrics = await upload_document(file_path, NAMESPACE_T2RAG, "financial")
             all_metrics.append(metrics)
             status = "✅" if metrics["status"] == "success" else "❌"
-            print(f"   [{i+1}/{len(files_t2rag)}] {file_path.name}: {metrics['ingestion_time_ms']}ms {status}")
+            print(
+                f"   [{i + 1}/{len(files_t2rag)}] {file_path.name}: {metrics['ingestion_time_ms']}ms {status}"
+            )
 
         # Process MBPP
         print(f"\n💻 Processing MBPP ({len(files_mbpp)} files)...")
@@ -187,7 +189,9 @@ async def ingest_phase(
             metrics = await upload_document(file_path, NAMESPACE_MBPP, "programming")
             all_metrics.append(metrics)
             status = "✅" if metrics["status"] == "success" else "❌"
-            print(f"   [{i+1}/{len(files_mbpp)}] {file_path.name}: {metrics['ingestion_time_ms']}ms {status}")
+            print(
+                f"   [{i + 1}/{len(files_mbpp)}] {file_path.name}: {metrics['ingestion_time_ms']}ms {status}"
+            )
 
         return all_metrics
     else:
@@ -203,14 +207,16 @@ async def ingest_phase(
         metrics = await upload_document(file_path, namespace, domain)
         all_metrics.append(metrics)
         status = "✅" if metrics["status"] == "success" else "❌"
-        print(f"   [{i+1}/{len(files)}] {file_path.name}: {metrics['ingestion_time_ms']}ms {status}")
+        print(
+            f"   [{i + 1}/{len(files)}] {file_path.name}: {metrics['ingestion_time_ms']}ms {status}"
+        )
 
         # Save progress every 50 documents
         if output_file and (i + 1) % 50 == 0:
             with open(output_file, "w", encoding="utf-8") as f:
                 for m in all_metrics:
                     f.write(json.dumps(m) + "\n")
-            print(f"   💾 Progress saved ({i+1} documents)")
+            print(f"   💾 Progress saved ({i + 1} documents)")
 
     return all_metrics
 
@@ -219,7 +225,9 @@ async def main():
     """Main ingestion flow."""
     parser = argparse.ArgumentParser(description="Ingest RAGAS benchmark samples")
     parser.add_argument("--phase", type=int, default=0, help="Phase to ingest (1, 2, or 0 for all)")
-    parser.add_argument("--max-samples", type=int, default=-1, help="Max samples per phase (-1 for all)")
+    parser.add_argument(
+        "--max-samples", type=int, default=-1, help="Max samples per phase (-1 for all)"
+    )
     args = parser.parse_args()
 
     print("\n" + "=" * 60)

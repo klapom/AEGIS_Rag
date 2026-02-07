@@ -19,7 +19,10 @@ class TestCypherLabelEscaping:
 
         assert result == "`Dataset Processing`"
         # Verify it can be used in Cypher query
-        assert f"MERGE (e:base:{result} {{id: $id}})" == "MERGE (e:base:`Dataset Processing` {id: $id})"
+        assert (
+            f"MERGE (e:base:{result} {{id: $id}})"
+            == "MERGE (e:base:`Dataset Processing` {id: $id})"
+        )
 
     def test_entity_type_with_colon(self):
         """Entity types with colons should be wrapped in backticks."""

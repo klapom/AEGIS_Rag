@@ -80,8 +80,8 @@ async def test_cost_calculation_accuracy():
     expected = (10000 / 1_000_000) * 0.05 + (5000 / 1_000_000) * 0.2
     assert abs(cost - expected) < 0.0001, f"Expected ${expected:.6f}, got ${cost:.6f}"
 
-    print(f"✓ Input tokens: 10,000 @ $0.05/M = ${(10000/1_000_000)*0.05:.6f}")
-    print(f"✓ Output tokens: 5,000 @ $0.2/M = ${(5000/1_000_000)*0.2:.6f}")
+    print(f"✓ Input tokens: 10,000 @ $0.05/M = ${(10000 / 1_000_000) * 0.05:.6f}")
+    print(f"✓ Output tokens: 5,000 @ $0.2/M = ${(5000 / 1_000_000) * 0.2:.6f}")
     print(f"✓ Total cost: ${cost:.6f}")
     print("✓ Test 2 PASSED\n")
 

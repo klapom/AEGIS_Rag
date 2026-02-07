@@ -38,7 +38,7 @@ class ConsentStore:
 
         self._consents[consent.data_subject_id].append(consent)
 
-    async def get(self, consent_id: str) -> Optional[ConsentRecord]:
+    async def get(self, consent_id: str) -> ConsentRecord | None:
         """Get consent record by ID.
 
         Args:
@@ -56,7 +56,7 @@ class ConsentStore:
     async def get_consents(
         self,
         data_subject_id: str,
-        data_category: Optional[DataCategory] = None,
+        data_category: DataCategory | None = None,
     ) -> List[ConsentRecord]:
         """Get consent records for a data subject.
 
@@ -155,7 +155,7 @@ class ProcessingLog:
         """
         self._records.append(record)
 
-    async def get(self, record_id: str) -> Optional[DataProcessingRecord]:
+    async def get(self, record_id: str) -> DataProcessingRecord | None:
         """Get processing record by ID.
 
         Args:
@@ -172,8 +172,8 @@ class ProcessingLog:
     async def get_by_subject(
         self,
         data_subject_id: str,
-        start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
     ) -> List[DataProcessingRecord]:
         """Get processing records for a data subject.
 
@@ -198,8 +198,8 @@ class ProcessingLog:
     async def get_by_purpose(
         self,
         purpose: str,
-        start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
     ) -> List[DataProcessingRecord]:
         """Get processing records by purpose.
 
@@ -223,8 +223,8 @@ class ProcessingLog:
 
     async def get_all(
         self,
-        start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
     ) -> List[DataProcessingRecord]:
         """Get all processing records.
 

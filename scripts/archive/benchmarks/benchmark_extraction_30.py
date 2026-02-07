@@ -33,6 +33,7 @@ logger = structlog.get_logger(__name__)
 @dataclass
 class BenchmarkSample:
     """A single benchmark sample."""
+
     sample_id: str
     question: str
     context: str
@@ -43,6 +44,7 @@ class BenchmarkSample:
 @dataclass
 class StrategyResult:
     """Aggregated results for a single strategy."""
+
     strategy: str
     samples_processed: int
     total_time_ms: float
@@ -65,7 +67,8 @@ def load_wikiqa_samples(num_samples: int = 30) -> list[BenchmarkSample]:
     """Load samples from RAGAS WikiQA dataset."""
     try:
         from datasets import load_dataset
-        ds = load_dataset('explodinggradients/ragas-wikiqa', split='train')
+
+        ds = load_dataset("explodinggradients/ragas-wikiqa", split="train")
 
         samples = []
         # Distribute samples evenly across dataset
@@ -77,23 +80,25 @@ def load_wikiqa_samples(num_samples: int = 30) -> list[BenchmarkSample]:
 
             item = ds[i]
             # Combine contexts into single text
-            contexts = item.get('context', [])
+            contexts = item.get("context", [])
             if isinstance(contexts, list):
                 context_text = "\n\n".join(contexts)
             else:
                 context_text = str(contexts)
 
             # Determine domain from question content
-            question = item.get('question', '')
+            question = item.get("question", "")
             domain = _classify_domain(question)
 
-            samples.append(BenchmarkSample(
-                sample_id=item.get('question_id', f'Q{i}'),
-                question=question,
-                context=context_text,
-                text_length=len(context_text),
-                domain=domain,
-            ))
+            samples.append(
+                BenchmarkSample(
+                    sample_id=item.get("question_id", f"Q{i}"),
+                    question=question,
+                    context=context_text,
+                    text_length=len(context_text),
+                    domain=domain,
+                )
+            )
 
         return samples
 
@@ -106,22 +111,29 @@ def _classify_domain(question: str) -> str:
     """Classify question into a domain category."""
     question_lower = question.lower()
 
-    if any(kw in question_lower for kw in ['war', 'battle', 'military', 'army', 'navy']):
-        return 'history_military'
-    elif any(kw in question_lower for kw in ['president', 'government', 'election', 'political', 'congress']):
-        return 'politics'
-    elif any(kw in question_lower for kw in ['science', 'research', 'study', 'experiment', 'theory']):
-        return 'science'
-    elif any(kw in question_lower for kw in ['company', 'business', 'market', 'economy', 'trade']):
-        return 'business'
-    elif any(kw in question_lower for kw in ['sport', 'game', 'team', 'player', 'championship']):
-        return 'sports'
-    elif any(kw in question_lower for kw in ['music', 'film', 'movie', 'actor', 'singer', 'art']):
-        return 'entertainment'
-    elif any(kw in question_lower for kw in ['country', 'city', 'nation', 'population', 'geography']):
-        return 'geography'
+    if any(kw in question_lower for kw in ["war", "battle", "military", "army", "navy"]):
+        return "history_military"
+    elif any(
+        kw in question_lower
+        for kw in ["president", "government", "election", "political", "congress"]
+    ):
+        return "politics"
+    elif any(
+        kw in question_lower for kw in ["science", "research", "study", "experiment", "theory"]
+    ):
+        return "science"
+    elif any(kw in question_lower for kw in ["company", "business", "market", "economy", "trade"]):
+        return "business"
+    elif any(kw in question_lower for kw in ["sport", "game", "team", "player", "championship"]):
+        return "sports"
+    elif any(kw in question_lower for kw in ["music", "film", "movie", "actor", "singer", "art"]):
+        return "entertainment"
+    elif any(
+        kw in question_lower for kw in ["country", "city", "nation", "population", "geography"]
+    ):
+        return "geography"
     else:
-        return 'general'
+        return "general"
 
 
 async def run_strategy_benchmark(
@@ -152,7 +164,9 @@ async def run_strategy_benchmark(
 
     for i, sample in enumerate(samples):
         try:
-            logger.info(f"[{strategy.value}] Processing {i+1}/{len(samples)}: {sample.sample_id} ({sample.text_length} chars)")
+            logger.info(
+                f"[{strategy.value}] Processing {i + 1}/{len(samples)}: {sample.sample_id} ({sample.text_length} chars)"
+            )
 
             if progress_callback:
                 progress_callback(strategy.value, i + 1, len(samples))
@@ -177,18 +191,20 @@ async def run_strategy_benchmark(
             result.total_output_tokens += metrics.total_output_tokens
 
             # Store per-sample metrics
-            result.per_sample_metrics.append({
-                'sample_id': sample.sample_id,
-                'domain': sample.domain,
-                'text_length': sample.text_length,
-                'time_ms': metrics.total_time_ms,
-                'entities': metrics.entities_extracted,
-                'typed_rels': metrics.typed_relations_extracted,
-                'semantic_rels': metrics.semantic_relations_extracted,
-                'llm_calls': metrics.llm_calls,
-                'input_tokens': metrics.total_input_tokens,
-                'output_tokens': metrics.total_output_tokens,
-            })
+            result.per_sample_metrics.append(
+                {
+                    "sample_id": sample.sample_id,
+                    "domain": sample.domain,
+                    "text_length": sample.text_length,
+                    "time_ms": metrics.total_time_ms,
+                    "entities": metrics.entities_extracted,
+                    "typed_rels": metrics.typed_relations_extracted,
+                    "semantic_rels": metrics.semantic_relations_extracted,
+                    "llm_calls": metrics.llm_calls,
+                    "input_tokens": metrics.total_input_tokens,
+                    "output_tokens": metrics.total_output_tokens,
+                }
+            )
 
             if metrics.errors:
                 result.errors.extend(metrics.errors)
@@ -245,8 +261,21 @@ def print_comparison_report(
 
     # Calculate improvements
     speedup = seq.avg_time_ms / uni.avg_time_ms if uni.avg_time_ms > 0 else 0
-    call_reduction = ((seq.avg_llm_calls - uni.avg_llm_calls) / seq.avg_llm_calls * 100) if seq.avg_llm_calls > 0 else 0
-    token_reduction = ((seq.total_input_tokens + seq.total_output_tokens) - (uni.total_input_tokens + uni.total_output_tokens)) / (seq.total_input_tokens + seq.total_output_tokens) * 100 if (seq.total_input_tokens + seq.total_output_tokens) > 0 else 0
+    call_reduction = (
+        ((seq.avg_llm_calls - uni.avg_llm_calls) / seq.avg_llm_calls * 100)
+        if seq.avg_llm_calls > 0
+        else 0
+    )
+    token_reduction = (
+        (
+            (seq.total_input_tokens + seq.total_output_tokens)
+            - (uni.total_input_tokens + uni.total_output_tokens)
+        )
+        / (seq.total_input_tokens + seq.total_output_tokens)
+        * 100
+        if (seq.total_input_tokens + seq.total_output_tokens) > 0
+        else 0
+    )
 
     headers = f"{'Metric':<30} {'SEQUENTIAL':<18} {'UNIFIED':<18} {'Improvement':<15}"
     print(headers)
@@ -254,12 +283,20 @@ def print_comparison_report(
 
     # Time metrics
     print(f"{'Samples Processed':<30} {seq.samples_processed:<18} {uni.samples_processed:<18}")
-    print(f"{'Total Time (s)':<30} {seq.total_time_ms/1000:<18.1f} {uni.total_time_ms/1000:<18.1f} {(seq.total_time_ms - uni.total_time_ms)/1000:.1f}s saved")
-    print(f"{'Avg Time/Sample (ms)':<30} {seq.avg_time_ms:<18.1f} {uni.avg_time_ms:<18.1f} {speedup:.2f}x faster")
+    print(
+        f"{'Total Time (s)':<30} {seq.total_time_ms / 1000:<18.1f} {uni.total_time_ms / 1000:<18.1f} {(seq.total_time_ms - uni.total_time_ms) / 1000:.1f}s saved"
+    )
+    print(
+        f"{'Avg Time/Sample (ms)':<30} {seq.avg_time_ms:<18.1f} {uni.avg_time_ms:<18.1f} {speedup:.2f}x faster"
+    )
 
     # LLM calls
-    print(f"{'Total LLM Calls':<30} {seq.total_llm_calls:<18} {uni.total_llm_calls:<18} {seq.total_llm_calls - uni.total_llm_calls} fewer")
-    print(f"{'Avg LLM Calls/Sample':<30} {seq.avg_llm_calls:<18.1f} {uni.avg_llm_calls:<18.1f} {call_reduction:.0f}% reduction")
+    print(
+        f"{'Total LLM Calls':<30} {seq.total_llm_calls:<18} {uni.total_llm_calls:<18} {seq.total_llm_calls - uni.total_llm_calls} fewer"
+    )
+    print(
+        f"{'Avg LLM Calls/Sample':<30} {seq.avg_llm_calls:<18.1f} {uni.avg_llm_calls:<18.1f} {call_reduction:.0f}% reduction"
+    )
 
     # Quality metrics
     print(f"\n{'--- QUALITY METRICS ---':<30}")
@@ -267,13 +304,19 @@ def print_comparison_report(
     print(f"{'Avg Entities/Sample':<30} {seq.avg_entities:<18.1f} {uni.avg_entities:<18.1f}")
     print(f"{'Total Typed Relations':<30} {seq.total_typed_rels:<18} {uni.total_typed_rels:<18}")
     print(f"{'Avg Typed Rels/Sample':<30} {seq.avg_typed_rels:<18.1f} {uni.avg_typed_rels:<18.1f}")
-    print(f"{'Total Semantic Relations':<30} {seq.total_semantic_rels:<18} {uni.total_semantic_rels:<18}")
-    print(f"{'Avg Semantic Rels/Sample':<30} {seq.avg_semantic_rels:<18.1f} {uni.avg_semantic_rels:<18.1f}")
+    print(
+        f"{'Total Semantic Relations':<30} {seq.total_semantic_rels:<18} {uni.total_semantic_rels:<18}"
+    )
+    print(
+        f"{'Avg Semantic Rels/Sample':<30} {seq.avg_semantic_rels:<18.1f} {uni.avg_semantic_rels:<18.1f}"
+    )
 
     # Token usage
     print(f"\n{'--- TOKEN USAGE ---':<30}")
     print(f"{'Total Input Tokens':<30} {seq.total_input_tokens:<18} {uni.total_input_tokens:<18}")
-    print(f"{'Total Output Tokens':<30} {seq.total_output_tokens:<18} {uni.total_output_tokens:<18}")
+    print(
+        f"{'Total Output Tokens':<30} {seq.total_output_tokens:<18} {uni.total_output_tokens:<18}"
+    )
     seq_total = seq.total_input_tokens + seq.total_output_tokens
     uni_total = uni.total_input_tokens + uni.total_output_tokens
     print(f"{'Total Tokens':<30} {seq_total:<18} {uni_total:<18} {token_reduction:.1f}% reduction")
@@ -291,12 +334,20 @@ def print_comparison_report(
     print("📈 KEY FINDINGS")
     print("=" * 80)
 
-    print(f"\n✅ UNIFIED is {speedup:.2f}x faster ({seq.avg_time_ms:.0f}ms → {uni.avg_time_ms:.0f}ms)")
-    print(f"✅ {call_reduction:.0f}% fewer LLM calls ({seq.avg_llm_calls:.1f} → {uni.avg_llm_calls:.1f})")
+    print(
+        f"\n✅ UNIFIED is {speedup:.2f}x faster ({seq.avg_time_ms:.0f}ms → {uni.avg_time_ms:.0f}ms)"
+    )
+    print(
+        f"✅ {call_reduction:.0f}% fewer LLM calls ({seq.avg_llm_calls:.1f} → {uni.avg_llm_calls:.1f})"
+    )
     print(f"✅ {token_reduction:.1f}% token reduction")
 
     entity_ratio = uni.avg_entities / seq.avg_entities if seq.avg_entities > 0 else 1.0
-    rel_ratio = (uni.avg_typed_rels + uni.avg_semantic_rels) / (seq.avg_typed_rels + seq.avg_semantic_rels) if (seq.avg_typed_rels + seq.avg_semantic_rels) > 0 else 1.0
+    rel_ratio = (
+        (uni.avg_typed_rels + uni.avg_semantic_rels) / (seq.avg_typed_rels + seq.avg_semantic_rels)
+        if (seq.avg_typed_rels + seq.avg_semantic_rels) > 0
+        else 1.0
+    )
 
     if entity_ratio >= 0.9:
         print(f"✅ Entity quality maintained ({entity_ratio:.0%} of SEQUENTIAL)")
@@ -337,66 +388,79 @@ def save_results_json(
     """Save detailed results to JSON."""
 
     results = {
-        'metadata': {
-            'timestamp': datetime.now().isoformat(),
-            'total_samples': len(samples),
-            'domains': list(set(s.domain for s in samples)),
+        "metadata": {
+            "timestamp": datetime.now().isoformat(),
+            "total_samples": len(samples),
+            "domains": list(set(s.domain for s in samples)),
         },
-        'samples': [
+        "samples": [
             {
-                'sample_id': s.sample_id,
-                'domain': s.domain,
-                'text_length': s.text_length,
-                'question': s.question[:100],
+                "sample_id": s.sample_id,
+                "domain": s.domain,
+                "text_length": s.text_length,
+                "question": s.question[:100],
             }
             for s in samples
         ],
-        'sequential': {
-            'strategy': sequential_result.strategy,
-            'samples_processed': sequential_result.samples_processed,
-            'total_time_ms': sequential_result.total_time_ms,
-            'avg_time_ms': sequential_result.avg_time_ms,
-            'total_entities': sequential_result.total_entities,
-            'avg_entities': sequential_result.avg_entities,
-            'total_typed_rels': sequential_result.total_typed_rels,
-            'avg_typed_rels': sequential_result.avg_typed_rels,
-            'total_semantic_rels': sequential_result.total_semantic_rels,
-            'avg_semantic_rels': sequential_result.avg_semantic_rels,
-            'total_llm_calls': sequential_result.total_llm_calls,
-            'avg_llm_calls': sequential_result.avg_llm_calls,
-            'total_input_tokens': sequential_result.total_input_tokens,
-            'total_output_tokens': sequential_result.total_output_tokens,
-            'errors': sequential_result.errors,
-            'per_sample': sequential_result.per_sample_metrics,
+        "sequential": {
+            "strategy": sequential_result.strategy,
+            "samples_processed": sequential_result.samples_processed,
+            "total_time_ms": sequential_result.total_time_ms,
+            "avg_time_ms": sequential_result.avg_time_ms,
+            "total_entities": sequential_result.total_entities,
+            "avg_entities": sequential_result.avg_entities,
+            "total_typed_rels": sequential_result.total_typed_rels,
+            "avg_typed_rels": sequential_result.avg_typed_rels,
+            "total_semantic_rels": sequential_result.total_semantic_rels,
+            "avg_semantic_rels": sequential_result.avg_semantic_rels,
+            "total_llm_calls": sequential_result.total_llm_calls,
+            "avg_llm_calls": sequential_result.avg_llm_calls,
+            "total_input_tokens": sequential_result.total_input_tokens,
+            "total_output_tokens": sequential_result.total_output_tokens,
+            "errors": sequential_result.errors,
+            "per_sample": sequential_result.per_sample_metrics,
         },
-        'unified': {
-            'strategy': unified_result.strategy,
-            'samples_processed': unified_result.samples_processed,
-            'total_time_ms': unified_result.total_time_ms,
-            'avg_time_ms': unified_result.avg_time_ms,
-            'total_entities': unified_result.total_entities,
-            'avg_entities': unified_result.avg_entities,
-            'total_typed_rels': unified_result.total_typed_rels,
-            'avg_typed_rels': unified_result.avg_typed_rels,
-            'total_semantic_rels': unified_result.total_semantic_rels,
-            'avg_semantic_rels': unified_result.avg_semantic_rels,
-            'total_llm_calls': unified_result.total_llm_calls,
-            'avg_llm_calls': unified_result.avg_llm_calls,
-            'total_input_tokens': unified_result.total_input_tokens,
-            'total_output_tokens': unified_result.total_output_tokens,
-            'errors': unified_result.errors,
-            'per_sample': unified_result.per_sample_metrics,
+        "unified": {
+            "strategy": unified_result.strategy,
+            "samples_processed": unified_result.samples_processed,
+            "total_time_ms": unified_result.total_time_ms,
+            "avg_time_ms": unified_result.avg_time_ms,
+            "total_entities": unified_result.total_entities,
+            "avg_entities": unified_result.avg_entities,
+            "total_typed_rels": unified_result.total_typed_rels,
+            "avg_typed_rels": unified_result.avg_typed_rels,
+            "total_semantic_rels": unified_result.total_semantic_rels,
+            "avg_semantic_rels": unified_result.avg_semantic_rels,
+            "total_llm_calls": unified_result.total_llm_calls,
+            "avg_llm_calls": unified_result.avg_llm_calls,
+            "total_input_tokens": unified_result.total_input_tokens,
+            "total_output_tokens": unified_result.total_output_tokens,
+            "errors": unified_result.errors,
+            "per_sample": unified_result.per_sample_metrics,
         },
-        'comparison': {
-            'speedup': sequential_result.avg_time_ms / unified_result.avg_time_ms if unified_result.avg_time_ms > 0 else 0,
-            'call_reduction_pct': ((sequential_result.avg_llm_calls - unified_result.avg_llm_calls) / sequential_result.avg_llm_calls * 100) if sequential_result.avg_llm_calls > 0 else 0,
-            'entity_ratio': unified_result.avg_entities / sequential_result.avg_entities if sequential_result.avg_entities > 0 else 1.0,
-            'relation_ratio': (unified_result.avg_typed_rels + unified_result.avg_semantic_rels) / (sequential_result.avg_typed_rels + sequential_result.avg_semantic_rels) if (sequential_result.avg_typed_rels + sequential_result.avg_semantic_rels) > 0 else 1.0,
+        "comparison": {
+            "speedup": sequential_result.avg_time_ms / unified_result.avg_time_ms
+            if unified_result.avg_time_ms > 0
+            else 0,
+            "call_reduction_pct": (
+                (sequential_result.avg_llm_calls - unified_result.avg_llm_calls)
+                / sequential_result.avg_llm_calls
+                * 100
+            )
+            if sequential_result.avg_llm_calls > 0
+            else 0,
+            "entity_ratio": unified_result.avg_entities / sequential_result.avg_entities
+            if sequential_result.avg_entities > 0
+            else 1.0,
+            "relation_ratio": (unified_result.avg_typed_rels + unified_result.avg_semantic_rels)
+            / (sequential_result.avg_typed_rels + sequential_result.avg_semantic_rels)
+            if (sequential_result.avg_typed_rels + sequential_result.avg_semantic_rels) > 0
+            else 1.0,
         },
     }
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(output_path, 'w') as f:
+    with open(output_path, "w") as f:
         json.dump(results, f, indent=2)
 
     logger.info(f"Results saved to {output_path}")
@@ -408,7 +472,9 @@ async def main():
 
     parser = argparse.ArgumentParser(description="Extended extraction benchmark")
     parser.add_argument("--samples", type=int, default=30, help="Number of samples to benchmark")
-    parser.add_argument("--strategy", type=str, default=None, help="Single strategy to test (sequential/unified)")
+    parser.add_argument(
+        "--strategy", type=str, default=None, help="Single strategy to test (sequential/unified)"
+    )
     parser.add_argument("--output", type=str, default=None, help="Output JSON path")
 
     args = parser.parse_args()
@@ -440,7 +506,9 @@ async def main():
         strategy = ExtractionStrategy(args.strategy)
         print(f"\n🔬 Running {strategy.value.upper()} benchmark...")
         result = await run_strategy_benchmark(samples, strategy, progress)
-        print(f"\n✅ {strategy.value.upper()} complete: {result.avg_time_ms:.0f}ms avg, {result.avg_entities:.1f} entities avg")
+        print(
+            f"\n✅ {strategy.value.upper()} complete: {result.avg_time_ms:.0f}ms avg, {result.avg_entities:.1f} entities avg"
+        )
 
     else:
         # Full comparison
@@ -462,11 +530,17 @@ async def main():
         print_comparison_report(sequential_result, unified_result, samples)
 
         # Save results
-        output_path = Path(args.output) if args.output else Path(f"reports/extraction_benchmark_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json")
+        output_path = (
+            Path(args.output)
+            if args.output
+            else Path(
+                f"reports/extraction_benchmark_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+            )
+        )
         save_results_json(sequential_result, unified_result, samples, output_path)
 
     total_time = time.time() - start_time
-    print(f"\n⏱️ Total benchmark time: {total_time:.1f}s ({total_time/60:.1f}min)")
+    print(f"\n⏱️ Total benchmark time: {total_time:.1f}s ({total_time / 60:.1f}min)")
 
 
 if __name__ == "__main__":

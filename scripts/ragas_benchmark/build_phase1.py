@@ -55,8 +55,7 @@ from scripts.ragas_benchmark.config import (
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -66,51 +65,33 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description="Build RAGAS Phase 1 benchmark dataset",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=__doc__
+        epilog=__doc__,
     )
 
     parser.add_argument(
-        "--output",
-        default="data/evaluation/ragas_phase1_500.jsonl",
-        help="Output JSONL file path"
+        "--output", default="data/evaluation/ragas_phase1_500.jsonl", help="Output JSONL file path"
     )
     parser.add_argument(
         "--manifest",
         default="data/evaluation/ragas_phase1_manifest.csv",
-        help="Output manifest CSV path"
+        help="Output manifest CSV path",
     )
     parser.add_argument(
         "--report",
         default="data/evaluation/ragas_phase1_stats.md",
-        help="Output statistics report path"
+        help="Output statistics report path",
     )
-    parser.add_argument(
-        "--seed",
-        type=int,
-        default=42,
-        help="Random seed for reproducibility"
-    )
+    parser.add_argument("--seed", type=int, default=42, help="Random seed for reproducibility")
     parser.add_argument(
         "--max-samples-per-dataset",
         type=int,
         default=5000,
-        help="Maximum samples to load per dataset"
+        help="Maximum samples to load per dataset",
     )
+    parser.add_argument("--dry-run", action="store_true", help="Load and sample without exporting")
+    parser.add_argument("--verbose", "-v", action="store_true", help="Enable verbose logging")
     parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Load and sample without exporting"
-    )
-    parser.add_argument(
-        "--verbose",
-        "-v",
-        action="store_true",
-        help="Enable verbose logging"
-    )
-    parser.add_argument(
-        "--skip-unanswerables",
-        action="store_true",
-        help="Skip unanswerable generation"
+        "--skip-unanswerables", action="store_true", help="Skip unanswerable generation"
     )
 
     return parser.parse_args()
@@ -135,7 +116,9 @@ def main():
     print("=" * 60)
     print(f"Seed: {args.seed}")
     print(f"Output: {args.output}")
-    print(f"Target: {PHASE1_ANSWERABLE_COUNT} answerable + {PHASE1_UNANSWERABLE_COUNT} unanswerable")
+    print(
+        f"Target: {PHASE1_ANSWERABLE_COUNT} answerable + {PHASE1_UNANSWERABLE_COUNT} unanswerable"
+    )
     print("=" * 60)
 
     # Initialize components
@@ -155,7 +138,7 @@ def main():
         hotpotqa_samples = loader.load_dataset(
             "hotpot_qa",
             max_samples=args.max_samples_per_dataset,
-            progress_callback=progress_callback
+            progress_callback=progress_callback,
         )
         print(f"  ✓ HotpotQA: {len(hotpotqa_samples)} samples")
         all_samples.extend(hotpotqa_samples)
@@ -174,9 +157,7 @@ def main():
         print(f"\n  Loading RAGBench {display_name}...")
         try:
             subset_samples = loader.load_dataset(
-                config_name,
-                max_samples=500,
-                progress_callback=progress_callback
+                config_name, max_samples=500, progress_callback=progress_callback
             )
             print(f"  ✓ RAGBench {display_name}: {len(subset_samples)} samples")
             all_samples.extend(subset_samples)
@@ -188,9 +169,7 @@ def main():
     print("\n  Loading RAGBench Emanual (as log_ticket)...")
     try:
         emanual_samples = loader.load_dataset(
-            "ragbench_emanual",
-            max_samples=1000,
-            progress_callback=progress_callback
+            "ragbench_emanual", max_samples=1000, progress_callback=progress_callback
         )
         print(f"  ✓ RAGBench Emanual: {len(emanual_samples)} samples")
         all_samples.extend(emanual_samples)
@@ -202,8 +181,7 @@ def main():
 
     if len(all_samples) < PHASE1_ANSWERABLE_COUNT:
         logger.error(
-            f"Not enough samples loaded ({len(all_samples)}) "
-            f"for target ({PHASE1_ANSWERABLE_COUNT})"
+            f"Not enough samples loaded ({len(all_samples)}) for target ({PHASE1_ANSWERABLE_COUNT})"
         )
         print("\n✗ ERROR: Insufficient samples. Aborting.")
         return 1
@@ -217,7 +195,7 @@ def main():
         pool=all_samples,
         doc_type_quotas=DOC_TYPE_QUOTAS_PHASE1,
         qtype_quotas=QUESTION_TYPE_QUOTAS_PHASE1,
-        seed=args.seed
+        seed=args.seed,
     )
 
     print(f"  ✓ Sampled {len(sampled)} answerable samples")
@@ -227,11 +205,7 @@ def main():
     # =========================================================================
     print("\n[3/5] Rebalancing difficulty distribution...")
 
-    sampled = rebalance_difficulty(
-        sampled,
-        DIFFICULTY_DISTRIBUTION,
-        seed=args.seed
-    )
+    sampled = rebalance_difficulty(sampled, DIFFICULTY_DISTRIBUTION, seed=args.seed)
 
     print(f"  ✓ Difficulty rebalanced")
 
@@ -242,10 +216,7 @@ def main():
         print(f"\n[4/5] Generating {PHASE1_UNANSWERABLE_COUNT} unanswerable questions...")
 
         generator = UnanswerableGenerator(seed=args.seed)
-        unanswerables = generator.generate_batch(
-            sampled,
-            target_count=PHASE1_UNANSWERABLE_COUNT
-        )
+        unanswerables = generator.generate_batch(sampled, target_count=PHASE1_UNANSWERABLE_COUNT)
 
         print(f"  ✓ Generated {len(unanswerables)} unanswerables")
         print(f"    Method distribution: {generator.get_stats()['by_method']}")
@@ -270,7 +241,7 @@ def main():
         [s for s in final_samples if s.answerable],  # Only validate answerables
         DOC_TYPE_QUOTAS_PHASE1,
         QUESTION_TYPE_QUOTAS_PHASE1,
-        tolerance_pct=10.0  # Allow 10% tolerance
+        tolerance_pct=10.0,  # Allow 10% tolerance
     )
 
     if is_valid:
@@ -303,9 +274,7 @@ def main():
     # Export statistics report
     report_path = Path(args.report)
     export_statistics_report(
-        final_samples,
-        str(report_path),
-        dataset_name="RAGAS Phase 1 (500 samples)"
+        final_samples, str(report_path), dataset_name="RAGAS Phase 1 (500 samples)"
     )
     print(f"  ✓ Report: {report_path}")
 

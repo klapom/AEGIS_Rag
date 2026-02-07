@@ -88,9 +88,21 @@ logger = structlog.get_logger(__name__)
 
 # 15 Universal Entity Types (ADR-060 Standard)
 UNIVERSAL_ENTITY_TYPES = {
-    "PERSON", "ORGANIZATION", "LOCATION", "EVENT", "DATE_TIME",
-    "CONCEPT", "TECHNOLOGY", "PRODUCT", "METRIC", "DOCUMENT",
-    "PROCESS", "MATERIAL", "REGULATION", "QUANTITY", "FIELD"
+    "PERSON",
+    "ORGANIZATION",
+    "LOCATION",
+    "EVENT",
+    "DATE_TIME",
+    "CONCEPT",
+    "TECHNOLOGY",
+    "PRODUCT",
+    "METRIC",
+    "DOCUMENT",
+    "PROCESS",
+    "MATERIAL",
+    "REGULATION",
+    "QUANTITY",
+    "FIELD",
 }
 
 # Sprint 126: Cache for domain sub-type mappings loaded from seed_domains.yaml
@@ -99,19 +111,34 @@ _domain_mappings_loaded = False
 # 21 Universal Relation Types (ADR-060 Standard)
 UNIVERSAL_RELATION_TYPES = {
     # Structural (4)
-    "PART_OF", "CONTAINS", "INSTANCE_OF", "TYPE_OF",
+    "PART_OF",
+    "CONTAINS",
+    "INSTANCE_OF",
+    "TYPE_OF",
     # Organizational (5)
-    "EMPLOYS", "MANAGES", "FOUNDED_BY", "OWNS", "LOCATED_IN",
+    "EMPLOYS",
+    "MANAGES",
+    "FOUNDED_BY",
+    "OWNS",
+    "LOCATED_IN",
     # Causal (4)
-    "CAUSES", "ENABLES", "REQUIRES", "LEADS_TO",
+    "CAUSES",
+    "ENABLES",
+    "REQUIRES",
+    "LEADS_TO",
     # Temporal (2)
-    "PRECEDES", "FOLLOWS",
+    "PRECEDES",
+    "FOLLOWS",
     # Functional (4)
-    "USES", "CREATES", "IMPLEMENTS", "DEPENDS_ON",
+    "USES",
+    "CREATES",
+    "IMPLEMENTS",
+    "DEPENDS_ON",
     # Semantic (2)
-    "SIMILAR_TO", "ASSOCIATED_WITH",
+    "SIMILAR_TO",
+    "ASSOCIATED_WITH",
     # Fallback (1)
-    "RELATED_TO"
+    "RELATED_TO",
 }
 
 # Entity Type Mapping for Unknown Types (ADR-060 Standard)
@@ -125,65 +152,54 @@ ENTITY_TYPE_ALIASES = {
     "AGENCY": "ORGANIZATION",
     "TEAM": "ORGANIZATION",
     "LAB": "ORGANIZATION",
-
     # Location aliases
     "PLACE": "LOCATION",
     "CITY": "LOCATION",
     "COUNTRY": "LOCATION",
     "GPE": "LOCATION",
     "REGION": "LOCATION",
-
     # Technology aliases
     "TOOL": "TECHNOLOGY",
     "SOFTWARE": "TECHNOLOGY",
     "FRAMEWORK": "TECHNOLOGY",
     "PLATFORM": "TECHNOLOGY",
     "PROGRAMMING_LANGUAGE": "TECHNOLOGY",
-
     # Process/Method aliases
     "ALGORITHM": "PROCESS",
     "METHOD": "PROCESS",
     "TECHNIQUE": "PROCESS",
     "PROCEDURE": "PROCESS",
-
     # Document aliases
     "PAPER": "DOCUMENT",
     "REPORT": "DOCUMENT",
     "PUBLICATION": "DOCUMENT",
     "STANDARD": "DOCUMENT",
-
     # Regulation aliases
     "LAW": "REGULATION",
     "POLICY": "REGULATION",
     "RULE": "REGULATION",
-
     # Concept aliases
     "FIELD": "CONCEPT",
     "TOPIC": "CONCEPT",
     "THEORY": "CONCEPT",
     "IDEA": "CONCEPT",
-
     # Product aliases
     "DEVICE": "PRODUCT",
     "HARDWARE": "PRODUCT",
     "SERVICE": "PRODUCT",
-
     # Metric aliases
     "BENCHMARK": "METRIC",
     "SCORE": "METRIC",
     "MEASUREMENT": "METRIC",
     "KPI": "METRIC",
-
     # Material aliases
     "SUBSTANCE": "MATERIAL",
     "CHEMICAL": "MATERIAL",
     "COMPOUND": "MATERIAL",
-
     # Date aliases
     "DATE": "DATE_TIME",
     "TIME": "DATE_TIME",
     "PERIOD": "DATE_TIME",
-
     # Model aliases (domain-specific)
     "MODEL": "PRODUCT",
     "ARCHITECTURE": "CONCEPT",
@@ -195,25 +211,21 @@ RELATION_TYPE_ALIASES = {
     # Legacy aliases
     "RELATES_TO": "RELATED_TO",
     "ASSOCIATED": "ASSOCIATED_WITH",
-
     # Common variations
     "WORKS_AT": "EMPLOYS",  # Inverse - parser will swap subject/object
     "FOUNDED": "FOUNDED_BY",  # Inverse
     "BASED_IN": "LOCATED_IN",
     "HEADQUARTERED_IN": "LOCATED_IN",
     "OPERATES_IN": "LOCATED_IN",
-
     # Functional aliases
     "DEVELOPED": "CREATES",
     "BUILT": "CREATES",
     "PRODUCED": "CREATES",
     "INVENTED": "CREATES",
-
     # Knowledge aliases
     "BASED_ON": "DEPENDS_ON",
     "EXTENDS": "TYPE_OF",
     "DERIVED_FROM": "TYPE_OF",
-
     # Legacy action types (map to closest universal type)
     "MODIFIES": "USES",
     "READS": "USES",
@@ -341,7 +353,7 @@ def _load_domain_type_mappings():
             _domain_mappings_loaded = True
             return
 
-        with open(yaml_path, "r", encoding="utf-8") as f:
+        with open(yaml_path, encoding="utf-8") as f:
             catalog = yaml.safe_load(f)
 
         added_count = 0
@@ -351,7 +363,10 @@ def _load_domain_type_mappings():
                 for sub_type, universal_type in mapping.items():
                     sub_upper = sub_type.upper().strip()
                     uni_upper = universal_type.upper().strip()
-                    if sub_upper not in ENTITY_TYPE_ALIASES and sub_upper not in UNIVERSAL_ENTITY_TYPES:
+                    if (
+                        sub_upper not in ENTITY_TYPE_ALIASES
+                        and sub_upper not in UNIVERSAL_ENTITY_TYPES
+                    ):
                         ENTITY_TYPE_ALIASES[sub_upper] = uni_upper
                         added_count += 1
 
@@ -926,9 +941,13 @@ def _extract_json_objects_individually(
                         }
                         # Add subject/object types if present (S-P-O format)
                         if "subject_type" in obj:
-                            validated_relation["subject_type"] = validate_entity_type(obj["subject_type"])
+                            validated_relation["subject_type"] = validate_entity_type(
+                                obj["subject_type"]
+                            )
                         if "object_type" in obj:
-                            validated_relation["object_type"] = validate_entity_type(obj["object_type"])
+                            validated_relation["object_type"] = validate_entity_type(
+                                obj["object_type"]
+                            )
 
                         objects.append(validated_relation)
 
@@ -945,9 +964,13 @@ def _extract_json_objects_individually(
                         }
                         # Add subject/object types if present (S-P-O format)
                         if "subject_type" in obj:
-                            validated_relation["subject_type"] = validate_entity_type(obj["subject_type"])
+                            validated_relation["subject_type"] = validate_entity_type(
+                                obj["subject_type"]
+                            )
                         if "object_type" in obj:
-                            validated_relation["object_type"] = validate_entity_type(obj["object_type"])
+                            validated_relation["object_type"] = validate_entity_type(
+                                obj["object_type"]
+                            )
 
                         objects.append(validated_relation)
                 else:
@@ -1117,8 +1140,7 @@ class ExtractionService:
                         yaml_config = await get_domain_config(domain)
 
                         if yaml_config and (
-                            yaml_config.get("entity_sub_types")
-                            or yaml_config.get("relation_hints")
+                            yaml_config.get("entity_sub_types") or yaml_config.get("relation_hints")
                         ):
                             from src.prompts.extraction_prompts import (
                                 get_domain_enriched_extraction_prompts,
@@ -1127,20 +1149,14 @@ class ExtractionService:
                             logger.info(
                                 "using_domain_enriched_prompts",
                                 domain=domain,
-                                entity_sub_types=len(
-                                    yaml_config.get("entity_sub_types", [])
-                                ),
-                                relation_hints=len(
-                                    yaml_config.get("relation_hints", [])
-                                ),
+                                entity_sub_types=len(yaml_config.get("entity_sub_types", [])),
+                                relation_hints=len(yaml_config.get("relation_hints", [])),
                                 source="seed_domains_yaml",
                             )
                             return get_domain_enriched_extraction_prompts(
                                 domain=domain,
                                 entity_sub_types=yaml_config.get("entity_sub_types"),
-                                entity_sub_type_mapping=yaml_config.get(
-                                    "entity_sub_type_mapping"
-                                ),
+                                entity_sub_type_mapping=yaml_config.get("entity_sub_type_mapping"),
                                 relation_hints=yaml_config.get("relation_hints"),
                             )
                         else:
@@ -1316,36 +1332,54 @@ class ExtractionService:
                             if "source" in item and "target" in item and "type" in item:
                                 # Standard format - validate and normalize
                                 validated_relation = {
-                                    "source": validate_entity_name_length(item["source"], max_words=4),
-                                    "target": validate_entity_name_length(item["target"], max_words=4),
+                                    "source": validate_entity_name_length(
+                                        item["source"], max_words=4
+                                    ),
+                                    "target": validate_entity_name_length(
+                                        item["target"], max_words=4
+                                    ),
                                     "type": validate_relation_type(item["type"]),
                                     "description": item.get("description", ""),
                                     "strength": item.get("strength", 5),
                                 }
                                 # Add subject/object types if present (S-P-O format)
                                 if "subject_type" in item:
-                                    validated_relation["subject_type"] = validate_entity_type(item["subject_type"])
+                                    validated_relation["subject_type"] = validate_entity_type(
+                                        item["subject_type"]
+                                    )
                                 if "object_type" in item:
-                                    validated_relation["object_type"] = validate_entity_type(item["object_type"])
+                                    validated_relation["object_type"] = validate_entity_type(
+                                        item["object_type"]
+                                    )
 
                                 valid_items.append(validated_relation)
 
                             elif "subject" in item and "object" in item:
                                 # S-P-O format or generic prompt - map to standard format
-                                relation_type = item.get("relation") or item.get("predicate", "RELATED_TO")
+                                relation_type = item.get("relation") or item.get(
+                                    "predicate", "RELATED_TO"
+                                )
 
                                 validated_relation = {
-                                    "source": validate_entity_name_length(item["subject"], max_words=4),
-                                    "target": validate_entity_name_length(item["object"], max_words=4),
+                                    "source": validate_entity_name_length(
+                                        item["subject"], max_words=4
+                                    ),
+                                    "target": validate_entity_name_length(
+                                        item["object"], max_words=4
+                                    ),
                                     "type": validate_relation_type(relation_type),
                                     "description": item.get("description", relation_type),
                                     "strength": item.get("strength", 5),
                                 }
                                 # Add subject/object types if present (S-P-O format)
                                 if "subject_type" in item:
-                                    validated_relation["subject_type"] = validate_entity_type(item["subject_type"])
+                                    validated_relation["subject_type"] = validate_entity_type(
+                                        item["subject_type"]
+                                    )
                                 if "object_type" in item:
-                                    validated_relation["object_type"] = validate_entity_type(item["object_type"])
+                                    validated_relation["object_type"] = validate_entity_type(
+                                        item["object_type"]
+                                    )
 
                                 valid_items.append(validated_relation)
 
@@ -1387,11 +1421,13 @@ class ExtractionService:
                         )
                         name = validate_entity_name_length(item.strip(), max_words=4)
                         if name and len(name) > 1:
-                            valid_items.append({
-                                "name": name,
-                                "type": "UNKNOWN",
-                                "description": f"Legacy entity from old DSPy prompt (needs retraining)",
-                            })
+                            valid_items.append(
+                                {
+                                    "name": name,
+                                    "type": "UNKNOWN",
+                                    "description": f"Legacy entity from old DSPy prompt (needs retraining)",
+                                }
+                            )
                     else:
                         logger.warning(
                             f"invalid_{data_type}_type",
@@ -2263,7 +2299,11 @@ class ExtractionService:
                 # Get source/target (handle both formats)
                 source = rel_dict.get("source") or rel_dict.get("subject", "")
                 target = rel_dict.get("target") or rel_dict.get("object", "")
-                rel_type = rel_dict.get("type") or rel_dict.get("relation") or rel_dict.get("predicate", "RELATES_TO")
+                rel_type = (
+                    rel_dict.get("type")
+                    or rel_dict.get("relation")
+                    or rel_dict.get("predicate", "RELATES_TO")
+                )
 
                 logger.info(
                     "parse_relationship_response_processing",
@@ -2969,7 +3009,7 @@ class ExtractionService:
                 f"{prompt}\n\n"
                 f"Entities:\n{entity_list}\n\n"
                 f"Text:\n{text}\n\n"
-                f"Output (valid JSON with \"relations\" array of {{\"subject\", \"relation\", \"object\", \"description\", \"strength\"}}):"
+                f'Output (valid JSON with "relations" array of {{"subject", "relation", "object", "description", "strength"}}):'
             )
 
         # Create LLM task with rank-specific model
@@ -3017,7 +3057,11 @@ class ExtractionService:
                     # Sprint 125: Handle both old {source,target,type} and new S-P-O {subject,relation,object} formats
                     source = rel_dict.get("source") or rel_dict.get("subject", "")
                     target = rel_dict.get("target") or rel_dict.get("object", "")
-                    rel_type = rel_dict.get("type") or rel_dict.get("relation") or rel_dict.get("predicate", "RELATED_TO")
+                    rel_type = (
+                        rel_dict.get("type")
+                        or rel_dict.get("relation")
+                        or rel_dict.get("predicate", "RELATED_TO")
+                    )
                     relationship = GraphRelationship(
                         id=str(uuid.uuid4()),
                         source=source,
@@ -3417,7 +3461,11 @@ class ExtractionService:
                     # Sprint 125: Handle both old {source,target,type} and new S-P-O {subject,relation,object} formats
                     source = rel_dict.get("source") or rel_dict.get("subject", "")
                     target = rel_dict.get("target") or rel_dict.get("object", "")
-                    rel_type = rel_dict.get("type") or rel_dict.get("relation") or rel_dict.get("predicate", "RELATES_TO")
+                    rel_type = (
+                        rel_dict.get("type")
+                        or rel_dict.get("relation")
+                        or rel_dict.get("predicate", "RELATES_TO")
+                    )
 
                     # Skip duplicates
                     key = (source.lower(), target.lower(), rel_type.upper())
@@ -3663,7 +3711,7 @@ class ExtractionService:
 
                 logger.info(
                     "batch_extraction_progress",
-                    progress=f"{i+1}/{len(documents)}",
+                    progress=f"{i + 1}/{len(documents)}",
                 )
 
             except Exception as e:

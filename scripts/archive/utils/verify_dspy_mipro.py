@@ -125,9 +125,7 @@ async def verify_progress_tracking():
             if len(progress_calls) % 3 == 1:  # Print every 3rd update
                 print(f"  Progress: {progress:.1f}% - {message}")
 
-        training_data = [
-            {"text": f"Sample {i}", "entities": [f"Entity{i}"]} for i in range(1, 7)
-        ]
+        training_data = [{"text": f"Sample {i}", "entities": [f"Entity{i}"]} for i in range(1, 7)]
 
         await optimizer.optimize_entity_extraction(
             training_data=training_data, progress_callback=progress_callback

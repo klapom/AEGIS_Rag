@@ -15,9 +15,9 @@ from src.evaluation.ragas_evaluator import RAGASEvaluator, BenchmarkSample
 
 
 async def main():
-    print("="*80)
+    print("=" * 80)
     print("🎯 AEGIS RAG - Full RAGAS Evaluation (Sprint 75)")
-    print("="*80)
+    print("=" * 80)
     print()
     print("Configuration:")
     print("  Model:        gpt-oss:20b (fastest, 100% success rate)")
@@ -27,7 +27,7 @@ async def main():
     print("  Namespace:    default")
     print("  Top-K:        5 contexts per query")
     print()
-    print("="*80)
+    print("=" * 80)
     print()
 
     # Load dataset
@@ -36,7 +36,7 @@ async def main():
     print(f"📥 Loading dataset from: {dataset_path}")
 
     samples = []
-    with open(dataset_path, 'r', encoding='utf-8') as f:
+    with open(dataset_path, encoding="utf-8") as f:
         for line_num, line in enumerate(f, start=1):
             try:
                 data = json.loads(line)
@@ -52,8 +52,8 @@ async def main():
     intents = {}
     difficulties = {}
     for s in samples:
-        intent = s.metadata.get('intent', 'unknown')
-        difficulty = s.metadata.get('difficulty', 'unknown')
+        intent = s.metadata.get("intent", "unknown")
+        difficulty = s.metadata.get("difficulty", "unknown")
         intents[intent] = intents.get(intent, 0) + 1
         difficulties[difficulty] = difficulties.get(difficulty, 0) + 1
 
@@ -68,15 +68,15 @@ async def main():
         namespace="default",
         llm_model="gpt-oss:20b",  # Sprint 75: Best performer (9s avg, 100% success)
         embedding_model="bge-m3:latest",  # Ignored, uses native service
-        metrics=["context_precision", "context_recall", "faithfulness", "answer_relevancy"]
+        metrics=["context_precision", "context_recall", "faithfulness", "answer_relevancy"],
     )
     print("✅ Evaluator initialized")
     print()
 
     # Run evaluation
-    print("="*80)
+    print("=" * 80)
     print("🚀 Starting RAGAS Evaluation...")
-    print("="*80)
+    print("=" * 80)
     print()
 
     start_time = datetime.now()
@@ -93,9 +93,9 @@ async def main():
         duration = (end_time - start_time).total_seconds()
 
         print()
-        print("="*80)
+        print("=" * 80)
         print("✅ RAGAS Evaluation Complete!")
-        print("="*80)
+        print("=" * 80)
         print()
 
         # Display results
@@ -108,21 +108,23 @@ async def main():
 
         print(f"📈 Performance:")
         print(f"   Total Samples:      {results.sample_count}")
-        print(f"   Duration:           {duration:.1f}s ({duration/60:.1f} minutes)")
-        print(f"   Avg per Sample:     {duration/results.sample_count:.1f}s")
+        print(f"   Duration:           {duration:.1f}s ({duration / 60:.1f} minutes)")
+        print(f"   Avg per Sample:     {duration / results.sample_count:.1f}s")
         print()
 
         # Per-intent breakdown
         if results.per_intent_metrics:
             print("📋 Per-Intent Breakdown:")
             print(f"   {'Intent':<15} {'Samples':<10} {'CP':<8} {'CR':<8} {'Faith':<8} {'AR':<8}")
-            print("   " + "-"*65)
+            print("   " + "-" * 65)
             for im in results.per_intent_metrics:
-                print(f"   {im.intent:<15} {im.sample_count:<10} "
-                      f"{im.metrics.context_precision:<8.3f} "
-                      f"{im.metrics.context_recall:<8.3f} "
-                      f"{im.metrics.faithfulness:<8.3f} "
-                      f"{im.metrics.answer_relevancy:<8.3f}")
+                print(
+                    f"   {im.intent:<15} {im.sample_count:<10} "
+                    f"{im.metrics.context_precision:<8.3f} "
+                    f"{im.metrics.context_recall:<8.3f} "
+                    f"{im.metrics.faithfulness:<8.3f} "
+                    f"{im.metrics.answer_relevancy:<8.3f}"
+                )
             print()
 
         # Generate report
@@ -136,9 +138,9 @@ async def main():
         print()
 
         # Success criteria check
-        print("="*80)
+        print("=" * 80)
         print("🎯 Success Criteria Check (Sprint 75 Targets)")
-        print("="*80)
+        print("=" * 80)
         print()
 
         targets = {
@@ -157,9 +159,11 @@ async def main():
             if not passed:
                 all_passed = False
 
-            print(f"   {status} {metric.replace('_', ' ').title():<25} "
-                  f"Target: {target:.2f}   Actual: {actual:.3f}   "
-                  f"{'PASS' if passed else 'FAIL'}")
+            print(
+                f"   {status} {metric.replace('_', ' ').title():<25} "
+                f"Target: {target:.2f}   Actual: {actual:.3f}   "
+                f"{'PASS' if passed else 'FAIL'}"
+            )
 
         print()
         if all_passed:
@@ -172,12 +176,13 @@ async def main():
 
     except Exception as e:
         print()
-        print("="*80)
+        print("=" * 80)
         print("❌ RAGAS Evaluation Failed!")
-        print("="*80)
+        print("=" * 80)
         print()
         print(f"Error: {e}")
         import traceback
+
         traceback.print_exc()
         return None
 

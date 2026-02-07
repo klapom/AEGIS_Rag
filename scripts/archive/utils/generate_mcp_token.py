@@ -60,14 +60,11 @@ def get_jwt_secret() -> str:
     secret = os.getenv("MCP_JWT_SECRET")
     if not secret:
         raise ValueError(
-            "MCP_JWT_SECRET environment variable not set. "
-            "Generate with: openssl rand -hex 32"
+            "MCP_JWT_SECRET environment variable not set. Generate with: openssl rand -hex 32"
         )
 
     if len(secret) < 32:
-        raise ValueError(
-            f"MCP_JWT_SECRET too short: {len(secret)} chars (min 32 required)"
-        )
+        raise ValueError(f"MCP_JWT_SECRET too short: {len(secret)} chars (min 32 required)")
 
     return secret
 
@@ -264,7 +261,7 @@ Examples:
         print()
         print("Usage in requests:")
         print(f'  curl -H "Authorization: Bearer {token[:20]}..." \\')
-        print('       http://localhost:8000/api/v1/mcp/servers')
+        print("       http://localhost:8000/api/v1/mcp/servers")
         print()
 
         # Return token for piping to other commands

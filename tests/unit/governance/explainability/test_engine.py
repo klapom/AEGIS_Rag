@@ -663,9 +663,7 @@ async def test_get_attribution_for_claim_unsupported(
 
 
 @pytest.mark.asyncio
-async def test_get_attribution_for_claim_trace_not_found(
-    explainability_engine, mock_llm
-):
+async def test_get_attribution_for_claim_trace_not_found(explainability_engine, mock_llm):
     """Test claim attribution when trace not found."""
     attributions = await explainability_engine.get_attribution_for_claim(
         response="test response",
@@ -738,9 +736,7 @@ async def test_get_attribution_for_claim_llm_parsing_failure(
 @pytest.mark.asyncio
 async def test_explain_nonexistent_trace(explainability_engine):
     """Test explanation for nonexistent trace."""
-    explanation = await explainability_engine.explain(
-        "nonexistent_trace", ExplanationLevel.USER
-    )
+    explanation = await explainability_engine.explain("nonexistent_trace", ExplanationLevel.USER)
     assert explanation == "Trace not found"
 
 

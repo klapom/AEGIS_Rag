@@ -314,8 +314,7 @@ chunking, embedding, and graph extraction.
 
         # Look for logs/progress section
         logs_section = page.locator(
-            "[data-testid*='log'], .logs-section, .progress-logs, "
-            "[role='log'], .console, .terminal"
+            "[data-testid*='log'], .logs-section, .progress-logs, [role='log'], .console, .terminal"
         )
 
         if await logs_section.count() > 0:
@@ -323,7 +322,7 @@ chunking, embedding, and graph extraction.
 
             # Get log entries
             log_entries = page.locator(
-                "[role='log'] li, .log-entry, .log-line, " "[data-testid='log-entry']"
+                "[role='log'] li, .log-entry, .log-line, [data-testid='log-entry']"
             )
 
             entry_count = await log_entries.count()

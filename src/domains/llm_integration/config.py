@@ -67,8 +67,7 @@ class LLMProxyConfig(BaseModel):
 
         if not config_path.exists():
             raise FileNotFoundError(
-                f"Configuration file not found: {config_path}\n"
-                f"Please create config/llm_config.yml"
+                f"Configuration file not found: {config_path}\nPlease create config/llm_config.yml"
             )
 
         # Load YAML
@@ -150,8 +149,7 @@ class LLMProxyConfig(BaseModel):
         """
         if provider not in self.providers:
             raise ValueError(
-                f"Provider '{provider}' not configured. "
-                f"Available: {list(self.providers.keys())}"
+                f"Provider '{provider}' not configured. Available: {list(self.providers.keys())}"
             )
         return self.providers[provider]
 

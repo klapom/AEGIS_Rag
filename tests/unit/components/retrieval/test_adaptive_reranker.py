@@ -120,9 +120,7 @@ class TestCrossEncoderRerankerAdaptive:
     """Test CrossEncoderReranker with adaptive weights."""
 
     @pytest.mark.asyncio
-    async def test_adaptive_reranking_factual_query(
-        self, mock_intent_classifier, sample_documents
-    ):
+    async def test_adaptive_reranking_factual_query(self, mock_intent_classifier, sample_documents):
         """Test adaptive reranking for factual queries."""
         reranker = CrossEncoderReranker(use_adaptive_weights=True)
         reranker._intent_classifier = mock_intent_classifier
@@ -152,9 +150,7 @@ class TestCrossEncoderRerankerAdaptive:
         assert results[0].doc_id == "doc3"
 
     @pytest.mark.asyncio
-    async def test_adaptive_reranking_keyword_query(
-        self, mock_intent_classifier, sample_documents
-    ):
+    async def test_adaptive_reranking_keyword_query(self, mock_intent_classifier, sample_documents):
         """Test adaptive reranking for keyword queries."""
         reranker = CrossEncoderReranker(use_adaptive_weights=True)
         reranker._intent_classifier = mock_intent_classifier
@@ -287,9 +283,7 @@ class TestAdaptiveRerankingIntegration:
     """Integration tests for adaptive reranking."""
 
     @pytest.mark.asyncio
-    async def test_end_to_end_factual_vs_summary(
-        self, mock_intent_classifier, sample_documents
-    ):
+    async def test_end_to_end_factual_vs_summary(self, mock_intent_classifier, sample_documents):
         """Test that factual and summary queries produce different rankings."""
         reranker = CrossEncoderReranker(use_adaptive_weights=True)
         reranker._intent_classifier = mock_intent_classifier

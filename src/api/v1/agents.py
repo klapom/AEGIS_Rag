@@ -421,7 +421,9 @@ async def get_agent_hierarchy() -> AgentHierarchyResponse:
         # Initialize SkillOrchestrator to access supervisor hierarchy
         # In production, this would be a singleton or injected dependency
         orchestrator = SkillOrchestrator(
-            skill_manager=None, message_bus=None, llm=None  # Minimal init for hierarchy access
+            skill_manager=None,
+            message_bus=None,
+            llm=None,  # Minimal init for hierarchy access
         )
 
         nodes: list[HierarchyNode] = []

@@ -64,15 +64,15 @@ Generated: {timestamp}
 | Metric | Value | Status |
 |--------|-------|--------|
 | Overall Status | {status} | {status_emoji} |
-| Test Coverage | {args.coverage or 'N/A'}% | {'✅' if args.coverage and float(args.coverage) >= 80 else '⚠️'} |
-| High Complexity Functions | {args.complexity or 0} | {'✅' if not args.complexity or int(args.complexity) <= 20 else '⚠️'} |
-| Security Issues (High) | {args.security_high or 0} | {'✅' if not args.security_high or int(args.security_high) == 0 else '❌'} |
+| Test Coverage | {args.coverage or "N/A"}% | {"✅" if args.coverage and float(args.coverage) >= 80 else "⚠️"} |
+| High Complexity Functions | {args.complexity or 0} | {"✅" if not args.complexity or int(args.complexity) <= 20 else "⚠️"} |
+| Security Issues (High) | {args.security_high or 0} | {"✅" if not args.security_high or int(args.security_high) == 0 else "❌"} |
 
 ## Detailed Metrics
 
 ### Code Complexity
-- **High complexity functions (CC > 10):** {args.complexity or 'N/A'}
-- **Average Maintainability Index:** {args.maintainability or 'N/A'}
+- **High complexity functions (CC > 10):** {args.complexity or "N/A"}
+- **Average Maintainability Index:** {args.maintainability or "N/A"}
 
 ### Code Quality
 - **Code duplications:** {args.duplicates or 0}
@@ -86,8 +86,8 @@ Generated: {timestamp}
 - **Dependency vulnerabilities:** {args.dep_vulns or 0}
 
 ### Size Metrics
-- **Source LOC:** {args.loc or 'N/A'}
-- **Test LOC:** {args.test_loc or 'N/A'}
+- **Source LOC:** {args.loc or "N/A"}
+- **Test LOC:** {args.test_loc or "N/A"}
 - **Test/Code Ratio:** {test_ratio:.2f}
 
 ## Recommendations

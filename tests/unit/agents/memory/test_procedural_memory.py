@@ -324,9 +324,7 @@ class TestProceduralMemoryStore:
     @pytest.mark.asyncio
     async def test_clear_history(self, procedural_store, mock_redis):
         """Test clearing execution history."""
-        mock_redis.client.smembers = AsyncMock(
-            side_effect=[{"trace_1", "trace_2"}, {"trace_3"}]
-        )
+        mock_redis.client.smembers = AsyncMock(side_effect=[{"trace_1", "trace_2"}, {"trace_3"}])
         mock_redis.client.delete = AsyncMock()
 
         deleted = await procedural_store.clear_history("web_search")

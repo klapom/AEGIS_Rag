@@ -106,7 +106,7 @@ class BubblewrapSandboxBackend:
     def __init__(
         self,
         repo_path: str,
-        workspace_path: str = "/tmp/aegis-workspace",
+        workspace_path: str = "/tmp/aegis-workspace",  # nosec B108
         timeout: int = 30,
         seccomp_profile: str | None = None,
         output_limit: int = 32768,  # 32KB
@@ -181,7 +181,7 @@ class BubblewrapSandboxBackend:
             str(self.workspace),
             "/workspace",
             "--tmpfs",
-            "/tmp",
+            "/tmp",  # nosec B108 — sandbox mount point
             "--proc",
             "/proc",
             "--dev",
@@ -339,7 +339,7 @@ class BubblewrapSandboxBackend:
         start_time = datetime.utcnow()
 
         try:
-            result = subprocess.run(
+            result = subprocess.run(  # nosec B603 — sandboxed via bubblewrap
                 self._build_bwrap_command(command),
                 capture_output=True,
                 text=True,
@@ -433,7 +433,7 @@ class BubblewrapSandboxBackend:
         else:
             actual_path = f"/repo/{file_path}"
 
-        result = self.execute(f"sed -n '{offset+1},{offset+limit}p' '{actual_path}'")
+        result = self.execute(f"sed -n '{offset + 1},{offset + limit}p' '{actual_path}'")
         return result.stdout if result.exit_code == 0 else f"Error: {result.stderr}"
 
     def write(self, file_path: str, content: str) -> WriteResult:

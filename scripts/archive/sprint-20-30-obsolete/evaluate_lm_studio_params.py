@@ -239,12 +239,12 @@ async def evaluate_config(
     total_configs: int,
 ) -> list[dict]:
     """Evaluate a single configuration on all questions."""
-    console.print(f"\n[bold cyan]{'='*70}[/bold cyan]")
+    console.print(f"\n[bold cyan]{'=' * 70}[/bold cyan]")
     console.print(
         f"[bold cyan]Configuration {config_num}/{total_configs}: {config['name']}[/bold cyan]"
     )
     console.print(f"[bold cyan]{config['description']}[/bold cyan]")
-    console.print(f"[bold cyan]{'='*70}[/bold cyan]")
+    console.print(f"[bold cyan]{'=' * 70}[/bold cyan]")
 
     results = []
 
@@ -291,9 +291,9 @@ def calculate_config_metrics(results: list[dict]) -> dict:
 
 def print_comparison_table(all_results: dict[str, list[dict]]):
     """Print comparison table of all configurations."""
-    console.print(f"\n[bold cyan]{'='*70}[/bold cyan]")
+    console.print(f"\n[bold cyan]{'=' * 70}[/bold cyan]")
     console.print("[bold cyan]PARAMETER EVALUATION SUMMARY[/bold cyan]")
-    console.print(f"[bold cyan]{'='*70}[/bold cyan]\n")
+    console.print(f"[bold cyan]{'=' * 70}[/bold cyan]\n")
 
     table = Table(
         show_header=True, header_style="bold magenta", title="LM Studio Parameter Comparison"

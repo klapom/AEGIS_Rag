@@ -31,7 +31,6 @@ async def async_client():
         patch("src.agents.followup_generator.get_aegis_llm_proxy") as mock_get_llm_proxy_followup,
         patch("src.api.v1.title_generator.get_aegis_llm_proxy") as mock_get_llm_proxy_title,
     ):
-
         # Configure graph mock
         mock_graph = AsyncMock()
         mock_graph.ainvoke = AsyncMock()
@@ -59,7 +58,6 @@ async def async_client():
             ) as mock_generate_followup,
             patch("src.api.v1.title_generator.generate_conversation_title") as mock_generate_title,
         ):
-
             # Configure coordinator mock
             mock_coordinator = AsyncMock()
             mock_coordinator.process_query = AsyncMock()

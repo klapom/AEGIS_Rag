@@ -212,9 +212,7 @@ async def main():
     print(f"Can research use browser (with policy)? {can_use}")
 
     # Try unauthorized access
-    can_use_denied = await check_tool_permission(
-        mapper_with_policy, "synthesis", "browser"
-    )
+    can_use_denied = await check_tool_permission(mapper_with_policy, "synthesis", "browser")
     print(f"Can synthesis use browser (with policy)? {can_use_denied}\n")
 
     print("=== Example Complete ===")

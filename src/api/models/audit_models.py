@@ -77,9 +77,9 @@ class AuditEvent(BaseModel):
     action: str = Field(..., description="Human-readable action description")
     outcome: OutcomeEnum
     metadata: Dict[str, Any] = Field(default_factory=dict)
-    context_hash: Optional[str] = None
-    output_hash: Optional[str] = None
-    previous_hash: Optional[str] = None
+    context_hash: str | None = None
+    output_hash: str | None = None
+    previous_hash: str | None = None
     event_hash: str = Field(..., description="SHA-256 hash of event")
 
     @field_serializer("timestamp")

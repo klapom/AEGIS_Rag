@@ -49,13 +49,13 @@ Implementation approach:
 ```python
 class CLARADataGenerator:
     """Generate intent classification training data using Qwen2.5:7b."""
-    
+
     async def generate_examples(self) -> list[IntentExample]:
         """Generate 1000 labeled examples across 5 intent classes."""
-        
+
     def validate_dataset(self, examples: list[IntentExample]) -> dict:
         """Validate quality: class balance, confidence, duplicates."""
-        
+
     async def save_dataset(self, examples: list[IntentExample], path: str):
         """Save to JSONL format."""
 ```
@@ -177,17 +177,17 @@ training_args = {
 class LLMTrainedIntentClassifier:
     def __init__(self):
         self.model = SetFitModel.from_pretrained("models/intent_classifier_v1")
-        
+
     async def classify(self, query: str) -> tuple[Intent, float]:
         """Classify with fine-tuned SetFit model."""
         probs = self.model.predict_proba([query])[0]
         best_idx = np.argmax(probs)
         confidence = float(probs[best_idx])
-        
+
         # Low confidence → LLM fallback
         if confidence < 0.80:
             return await self._llm_few_shot_classify(query)
-            
+
         return self.intent_mapping[best_idx], confidence
 ```
 

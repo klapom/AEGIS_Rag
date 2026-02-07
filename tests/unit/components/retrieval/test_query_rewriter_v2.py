@@ -49,13 +49,15 @@ class TestGraphIntentExtraction:
         # Arrange
         query = "How is authentication related to authorization?"
         llm_response = LLMResponse(
-            content=json.dumps({
-                "graph_intents": ["entity_relationships"],
-                "entities_mentioned": ["authentication", "authorization"],
-                "relationship_types": ["RELATES_TO"],
-                "traversal_depth": None,
-                "confidence": 0.9,
-            }),
+            content=json.dumps(
+                {
+                    "graph_intents": ["entity_relationships"],
+                    "entities_mentioned": ["authentication", "authorization"],
+                    "relationship_types": ["RELATES_TO"],
+                    "traversal_depth": None,
+                    "confidence": 0.9,
+                }
+            ),
             provider="ollama",
             model="llama3.2:8b",
             tokens_used=150,
@@ -83,13 +85,15 @@ class TestGraphIntentExtraction:
         # Arrange
         query = "How does RAG influence LLM performance through retrieval quality?"
         llm_response = LLMResponse(
-            content=json.dumps({
-                "graph_intents": ["multi_hop"],
-                "entities_mentioned": ["RAG", "LLM performance", "retrieval quality"],
-                "relationship_types": [],
-                "traversal_depth": 2,
-                "confidence": 0.85,
-            }),
+            content=json.dumps(
+                {
+                    "graph_intents": ["multi_hop"],
+                    "entities_mentioned": ["RAG", "LLM performance", "retrieval quality"],
+                    "relationship_types": [],
+                    "traversal_depth": 2,
+                    "confidence": 0.85,
+                }
+            ),
             provider="ollama",
             model="llama3.2:8b",
             tokens_used=180,
@@ -113,13 +117,15 @@ class TestGraphIntentExtraction:
         # Arrange
         query = "Find all entities related to vector search"
         llm_response = LLMResponse(
-            content=json.dumps({
-                "graph_intents": ["community_discovery"],
-                "entities_mentioned": ["vector search"],
-                "relationship_types": [],
-                "traversal_depth": None,
-                "confidence": 0.88,
-            }),
+            content=json.dumps(
+                {
+                    "graph_intents": ["community_discovery"],
+                    "entities_mentioned": ["vector search"],
+                    "relationship_types": [],
+                    "traversal_depth": None,
+                    "confidence": 0.88,
+                }
+            ),
             provider="ollama",
             model="llama3.2:8b",
             tokens_used=160,
@@ -143,13 +149,15 @@ class TestGraphIntentExtraction:
         # Arrange
         query = "How has the RAG architecture evolved over time?"
         llm_response = LLMResponse(
-            content=json.dumps({
-                "graph_intents": ["temporal_patterns"],
-                "entities_mentioned": ["RAG architecture"],
-                "relationship_types": [],
-                "traversal_depth": None,
-                "confidence": 0.82,
-            }),
+            content=json.dumps(
+                {
+                    "graph_intents": ["temporal_patterns"],
+                    "entities_mentioned": ["RAG architecture"],
+                    "relationship_types": [],
+                    "traversal_depth": None,
+                    "confidence": 0.82,
+                }
+            ),
             provider="ollama",
             model="llama3.2:8b",
             tokens_used=170,
@@ -172,13 +180,15 @@ class TestGraphIntentExtraction:
         # Arrange
         query = "What is the definition of RAG?"
         llm_response = LLMResponse(
-            content=json.dumps({
-                "graph_intents": ["attribute_search"],
-                "entities_mentioned": ["RAG"],
-                "relationship_types": [],
-                "traversal_depth": None,
-                "confidence": 0.92,
-            }),
+            content=json.dumps(
+                {
+                    "graph_intents": ["attribute_search"],
+                    "entities_mentioned": ["RAG"],
+                    "relationship_types": [],
+                    "traversal_depth": None,
+                    "confidence": 0.92,
+                }
+            ),
             provider="ollama",
             model="llama3.2:8b",
             tokens_used=140,
@@ -202,13 +212,15 @@ class TestGraphIntentExtraction:
         # Arrange
         query = "How are RAG and LLMs connected and what communities do they belong to?"
         llm_response = LLMResponse(
-            content=json.dumps({
-                "graph_intents": ["entity_relationships", "community_discovery"],
-                "entities_mentioned": ["RAG", "LLMs"],
-                "relationship_types": ["RELATES_TO"],
-                "traversal_depth": None,
-                "confidence": 0.87,
-            }),
+            content=json.dumps(
+                {
+                    "graph_intents": ["entity_relationships", "community_discovery"],
+                    "entities_mentioned": ["RAG", "LLMs"],
+                    "relationship_types": ["RELATES_TO"],
+                    "traversal_depth": None,
+                    "confidence": 0.87,
+                }
+            ),
             provider="ollama",
             model="llama3.2:8b",
             tokens_used=200,
@@ -234,13 +246,15 @@ class TestCypherHintGeneration:
         # Arrange
         query = "How is X related to Y?"
         llm_response = LLMResponse(
-            content=json.dumps({
-                "graph_intents": ["entity_relationships"],
-                "entities_mentioned": ["X", "Y"],
-                "relationship_types": ["RELATES_TO"],
-                "traversal_depth": None,
-                "confidence": 0.9,
-            }),
+            content=json.dumps(
+                {
+                    "graph_intents": ["entity_relationships"],
+                    "entities_mentioned": ["X", "Y"],
+                    "relationship_types": ["RELATES_TO"],
+                    "traversal_depth": None,
+                    "confidence": 0.9,
+                }
+            ),
             provider="ollama",
             model="llama3.2:8b",
             tokens_used=150,
@@ -266,13 +280,15 @@ class TestCypherHintGeneration:
         # Arrange
         query = "Find path from A to B"
         llm_response = LLMResponse(
-            content=json.dumps({
-                "graph_intents": ["multi_hop"],
-                "entities_mentioned": ["A", "B"],
-                "relationship_types": [],
-                "traversal_depth": 3,
-                "confidence": 0.85,
-            }),
+            content=json.dumps(
+                {
+                    "graph_intents": ["multi_hop"],
+                    "entities_mentioned": ["A", "B"],
+                    "relationship_types": [],
+                    "traversal_depth": 3,
+                    "confidence": 0.85,
+                }
+            ),
             provider="ollama",
             model="llama3.2:8b",
             tokens_used=160,
@@ -297,13 +313,15 @@ class TestCypherHintGeneration:
         # Arrange
         query = "Find community around RAG"
         llm_response = LLMResponse(
-            content=json.dumps({
-                "graph_intents": ["community_discovery"],
-                "entities_mentioned": ["RAG"],
-                "relationship_types": [],
-                "traversal_depth": None,
-                "confidence": 0.88,
-            }),
+            content=json.dumps(
+                {
+                    "graph_intents": ["community_discovery"],
+                    "entities_mentioned": ["RAG"],
+                    "relationship_types": [],
+                    "traversal_depth": None,
+                    "confidence": 0.88,
+                }
+            ),
             provider="ollama",
             model="llama3.2:8b",
             tokens_used=150,
@@ -399,10 +417,12 @@ class TestErrorHandling:
         # Arrange
         query = "Test query"
         llm_response = LLMResponse(
-            content=json.dumps({
-                "graph_intents": ["entity_relationships"],
-                # Missing: entities_mentioned, relationship_types, etc.
-            }),
+            content=json.dumps(
+                {
+                    "graph_intents": ["entity_relationships"],
+                    # Missing: entities_mentioned, relationship_types, etc.
+                }
+            ),
             provider="ollama",
             model="llama3.2:8b",
             tokens_used=100,
@@ -428,13 +448,15 @@ class TestPerformance:
         # Arrange
         query = "Test query"
         llm_response = LLMResponse(
-            content=json.dumps({
-                "graph_intents": ["entity_relationships"],
-                "entities_mentioned": ["A"],
-                "relationship_types": [],
-                "traversal_depth": None,
-                "confidence": 0.8,
-            }),
+            content=json.dumps(
+                {
+                    "graph_intents": ["entity_relationships"],
+                    "entities_mentioned": ["A"],
+                    "relationship_types": [],
+                    "traversal_depth": None,
+                    "confidence": 0.8,
+                }
+            ),
             provider="ollama",
             model="llama3.2:8b",
             tokens_used=150,
@@ -475,18 +497,22 @@ class TestSingletonAndFactory:
     @pytest.mark.asyncio
     async def test_extract_graph_intents_convenience_function(self):
         """Test extract_graph_intents convenience function."""
-        with patch("src.components.retrieval.query_rewriter_v2.get_aegis_llm_proxy") as mock_get_proxy:
+        with patch(
+            "src.components.retrieval.query_rewriter_v2.get_aegis_llm_proxy"
+        ) as mock_get_proxy:
             with patch("src.components.retrieval.query_rewriter_v2._query_rewriter_v2", None):
                 mock_llm = AsyncMock()
                 mock_get_proxy.return_value = mock_llm
                 mock_llm.generate.return_value = LLMResponse(
-                    content=json.dumps({
-                        "graph_intents": ["entity_relationships"],
-                        "entities_mentioned": ["A"],
-                        "relationship_types": [],
-                        "traversal_depth": None,
-                        "confidence": 0.8,
-                    }),
+                    content=json.dumps(
+                        {
+                            "graph_intents": ["entity_relationships"],
+                            "entities_mentioned": ["A"],
+                            "relationship_types": [],
+                            "traversal_depth": None,
+                            "confidence": 0.8,
+                        }
+                    ),
                     provider="ollama",
                     model="llama3.2:8b",
                     tokens_used=150,
@@ -510,13 +536,15 @@ class TestCypherHintQuality:
         # Arrange
         query = "How is A related to B?"
         llm_response = LLMResponse(
-            content=json.dumps({
-                "graph_intents": ["entity_relationships"],
-                "entities_mentioned": ["A", "B"],
-                "relationship_types": ["RELATES_TO"],
-                "traversal_depth": None,
-                "confidence": 0.9,
-            }),
+            content=json.dumps(
+                {
+                    "graph_intents": ["entity_relationships"],
+                    "entities_mentioned": ["A", "B"],
+                    "relationship_types": ["RELATES_TO"],
+                    "traversal_depth": None,
+                    "confidence": 0.9,
+                }
+            ),
             provider="ollama",
             model="llama3.2:8b",
             tokens_used=150,
@@ -542,13 +570,15 @@ class TestCypherHintQuality:
         # Arrange
         query = "Test query"
         llm_response = LLMResponse(
-            content=json.dumps({
-                "graph_intents": [],
-                "entities_mentioned": [],
-                "relationship_types": [],
-                "traversal_depth": None,
-                "confidence": 0.5,
-            }),
+            content=json.dumps(
+                {
+                    "graph_intents": [],
+                    "entities_mentioned": [],
+                    "relationship_types": [],
+                    "traversal_depth": None,
+                    "confidence": 0.5,
+                }
+            ),
             provider="ollama",
             model="llama3.2:8b",
             tokens_used=100,
@@ -568,13 +598,15 @@ class TestCypherHintQuality:
         # Arrange
         query = "How is 'auth-system' related to 'user-mgmt'?"
         llm_response = LLMResponse(
-            content=json.dumps({
-                "graph_intents": ["entity_relationships"],
-                "entities_mentioned": ["auth-system", "user-mgmt"],
-                "relationship_types": [],
-                "traversal_depth": None,
-                "confidence": 0.85,
-            }),
+            content=json.dumps(
+                {
+                    "graph_intents": ["entity_relationships"],
+                    "entities_mentioned": ["auth-system", "user-mgmt"],
+                    "relationship_types": [],
+                    "traversal_depth": None,
+                    "confidence": 0.85,
+                }
+            ),
             provider="ollama",
             model="llama3.2:8b",
             tokens_used=150,

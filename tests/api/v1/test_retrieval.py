@@ -275,7 +275,6 @@ def test_ingest_success(client, temp_test_dir):
         patch("src.api.v1.retrieval.DocumentIngestionPipeline") as mock_pipeline_class,
         patch("src.api.v1.retrieval.get_hybrid_search") as mock_get_search,
     ):
-
         mock_pipeline = MagicMock()
         mock_pipeline.index_documents = AsyncMock(
             return_value={
@@ -360,7 +359,6 @@ def test_ingest_custom_parameters(client, temp_test_dir):
         patch("src.api.v1.retrieval.DocumentIngestionPipeline") as mock_pipeline_class,
         patch("src.api.v1.retrieval.get_hybrid_search"),
     ):
-
         mock_pipeline = MagicMock()
         mock_pipeline.index_documents = AsyncMock(
             return_value={
@@ -470,7 +468,6 @@ def test_get_stats_success(client):
         patch("src.api.v1.retrieval.DocumentIngestionPipeline") as mock_pipeline_class,
         patch("src.api.v1.retrieval.get_hybrid_search") as mock_get_search,
     ):
-
         mock_pipeline = MagicMock()
         mock_pipeline.get_collection_stats = AsyncMock(
             return_value={
@@ -503,7 +500,6 @@ def test_get_stats_bm25_not_fitted(client):
         patch("src.api.v1.retrieval.DocumentIngestionPipeline") as mock_pipeline_class,
         patch("src.api.v1.retrieval.get_hybrid_search") as mock_get_search,
     ):
-
         mock_pipeline = MagicMock()
         mock_pipeline.get_collection_stats = AsyncMock(return_value={})
         mock_pipeline_class.return_value = mock_pipeline
@@ -582,7 +578,6 @@ def test_ingest_chunk_size_validation(client, temp_test_dir, chunk_size, should_
         patch("src.api.v1.retrieval.DocumentIngestionPipeline") as mock_pipeline_class,
         patch("src.api.v1.retrieval.get_hybrid_search"),
     ):
-
         if should_pass:
             mock_pipeline = MagicMock()
             mock_pipeline.index_documents = AsyncMock(

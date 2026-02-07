@@ -58,9 +58,7 @@ class TestClaimExtraction:
     """Test claim extraction from answers."""
 
     @pytest.mark.asyncio
-    async def test_extract_claims_multiple(
-        self, hallucination_monitor, mock_llm
-    ):
+    async def test_extract_claims_multiple(self, hallucination_monitor, mock_llm):
         """Test extracting multiple claims from answer."""
         # Mock LLM response
         mock_response = MagicMock()
@@ -79,9 +77,7 @@ class TestClaimExtraction:
         assert claims[2].text == "The Moon orbits the Earth"
 
     @pytest.mark.asyncio
-    async def test_extract_claims_single(
-        self, hallucination_monitor, mock_llm
-    ):
+    async def test_extract_claims_single(self, hallucination_monitor, mock_llm):
         """Test extracting single claim."""
         # Mock LLM response
         mock_response = MagicMock()
@@ -95,9 +91,7 @@ class TestClaimExtraction:
         assert claims[0].text == "Water freezes at 0°C"
 
     @pytest.mark.asyncio
-    async def test_extract_claims_bullet_format(
-        self, hallucination_monitor, mock_llm
-    ):
+    async def test_extract_claims_bullet_format(self, hallucination_monitor, mock_llm):
         """Test extracting claims with bullet points."""
         # Mock LLM response with bullets
         mock_response = MagicMock()
@@ -114,14 +108,10 @@ class TestClaimExtraction:
         assert claims[1].text == "Second claim"
 
     @pytest.mark.asyncio
-    async def test_extract_claims_handles_dict_response(
-        self, hallucination_monitor, mock_llm
-    ):
+    async def test_extract_claims_handles_dict_response(self, hallucination_monitor, mock_llm):
         """Test claim extraction handles dict response."""
         # Mock dict response (AegisLLMProxy format)
-        mock_llm.ainvoke.return_value = {
-            "content": "1. Claim one\n2. Claim two"
-        }
+        mock_llm.ainvoke.return_value = {"content": "1. Claim one\n2. Claim two"}
 
         answer = "Test answer."
         claims = await hallucination_monitor._extract_claims(answer)
@@ -133,9 +123,7 @@ class TestClaimVerification:
     """Test claim verification against contexts."""
 
     @pytest.mark.asyncio
-    async def test_verify_supported_claim(
-        self, hallucination_monitor, mock_llm, sample_contexts
-    ):
+    async def test_verify_supported_claim(self, hallucination_monitor, mock_llm, sample_contexts):
         """Test verifying supported claim."""
         # Mock LLM response (claim is supported)
         mock_response = MagicMock()
@@ -145,9 +133,7 @@ REASONING: The claim directly matches the context statement."""
         mock_llm.ainvoke.return_value = mock_response
 
         claim = Claim(text="The Earth is a sphere", index=0)
-        verification = await hallucination_monitor._verify_claim(
-            claim, sample_contexts
-        )
+        verification = await hallucination_monitor._verify_claim(claim, sample_contexts)
 
         assert isinstance(verification, ClaimVerification)
         assert verification.claim == claim
@@ -156,9 +142,7 @@ REASONING: The claim directly matches the context statement."""
         assert len(verification.reasoning) > 0
 
     @pytest.mark.asyncio
-    async def test_verify_unsupported_claim(
-        self, hallucination_monitor, mock_llm, sample_contexts
-    ):
+    async def test_verify_unsupported_claim(self, hallucination_monitor, mock_llm, sample_contexts):
         """Test verifying unsupported claim."""
         # Mock LLM response (claim is NOT supported)
         mock_response = MagicMock()
@@ -168,9 +152,7 @@ REASONING: The contexts state Earth is a sphere, not flat."""
         mock_llm.ainvoke.return_value = mock_response
 
         claim = Claim(text="The Earth is flat", index=0)
-        verification = await hallucination_monitor._verify_claim(
-            claim, sample_contexts
-        )
+        verification = await hallucination_monitor._verify_claim(claim, sample_contexts)
 
         assert verification.is_supported is False
         assert "none" in verification.evidence.lower()
@@ -186,9 +168,7 @@ REASONING: The contexts state Earth is a sphere, not flat."""
         }
 
         claim = Claim(text="Test claim", index=0)
-        verification = await hallucination_monitor._verify_claim(
-            claim, sample_contexts
-        )
+        verification = await hallucination_monitor._verify_claim(claim, sample_contexts)
 
         assert verification.is_supported is True
 
@@ -197,9 +177,7 @@ class TestHallucinationCheck:
     """Test full hallucination check."""
 
     @pytest.mark.asyncio
-    async def test_check_no_hallucinations(
-        self, hallucination_monitor, mock_llm, sample_contexts
-    ):
+    async def test_check_no_hallucinations(self, hallucination_monitor, mock_llm, sample_contexts):
         """Test checking answer with no hallucinations."""
         # Mock claim extraction
         extract_response = MagicMock()
@@ -207,9 +185,7 @@ class TestHallucinationCheck:
 
         # Mock verification (all supported)
         verify_response = MagicMock()
-        verify_response.content = (
-            "SUPPORTED: yes\nEVIDENCE: Test\nREASONING: Test"
-        )
+        verify_response.content = "SUPPORTED: yes\nEVIDENCE: Test\nREASONING: Test"
 
         mock_llm.ainvoke.side_effect = [
             extract_response,
@@ -237,14 +213,10 @@ class TestHallucinationCheck:
 
         # Mock verification (one supported, one not)
         verify_supported = MagicMock()
-        verify_supported.content = (
-            "SUPPORTED: yes\nEVIDENCE: Test\nREASONING: Test"
-        )
+        verify_supported.content = "SUPPORTED: yes\nEVIDENCE: Test\nREASONING: Test"
 
         verify_unsupported = MagicMock()
-        verify_unsupported.content = (
-            "SUPPORTED: no\nEVIDENCE: none\nREASONING: Contradicts context"
-        )
+        verify_unsupported.content = "SUPPORTED: no\nEVIDENCE: none\nREASONING: Contradicts context"
 
         mock_llm.ainvoke.side_effect = [
             extract_response,
@@ -260,9 +232,7 @@ class TestHallucinationCheck:
         assert "Earth is flat" in report.unsupported_claims
 
     @pytest.mark.asyncio
-    async def test_check_all_hallucinations(
-        self, hallucination_monitor, mock_llm, sample_contexts
-    ):
+    async def test_check_all_hallucinations(self, hallucination_monitor, mock_llm, sample_contexts):
         """Test checking answer with all hallucinations."""
         # Mock claim extraction
         extract_response = MagicMock()
@@ -270,9 +240,7 @@ class TestHallucinationCheck:
 
         # Mock verification (all unsupported)
         verify_unsupported = MagicMock()
-        verify_unsupported.content = (
-            "SUPPORTED: no\nEVIDENCE: none\nREASONING: Not in contexts"
-        )
+        verify_unsupported.content = "SUPPORTED: no\nEVIDENCE: none\nREASONING: Not in contexts"
 
         mock_llm.ainvoke.side_effect = [
             extract_response,
@@ -287,9 +255,7 @@ class TestHallucinationCheck:
         assert len(report.unsupported_claims) == 2
 
     @pytest.mark.asyncio
-    async def test_check_empty_answer(
-        self, hallucination_monitor, mock_llm, sample_contexts
-    ):
+    async def test_check_empty_answer(self, hallucination_monitor, mock_llm, sample_contexts):
         """Test checking empty answer."""
         # Mock empty claim extraction
         extract_response = MagicMock()
@@ -317,9 +283,7 @@ class TestMetricsTracking:
         assert metrics["claims_unsupported"] == 0
 
     @pytest.mark.asyncio
-    async def test_metrics_after_check(
-        self, hallucination_monitor, mock_llm, sample_contexts
-    ):
+    async def test_metrics_after_check(self, hallucination_monitor, mock_llm, sample_contexts):
         """Test metrics updated after check."""
         # Mock claim extraction
         extract_response = MagicMock()
@@ -327,14 +291,10 @@ class TestMetricsTracking:
 
         # Mock verification (one supported, one not)
         verify_supported = MagicMock()
-        verify_supported.content = (
-            "SUPPORTED: yes\nEVIDENCE: Test\nREASONING: Test"
-        )
+        verify_supported.content = "SUPPORTED: yes\nEVIDENCE: Test\nREASONING: Test"
 
         verify_unsupported = MagicMock()
-        verify_unsupported.content = (
-            "SUPPORTED: no\nEVIDENCE: none\nREASONING: Not supported"
-        )
+        verify_unsupported.content = "SUPPORTED: no\nEVIDENCE: none\nREASONING: Not supported"
 
         mock_llm.ainvoke.side_effect = [
             extract_response,
@@ -351,27 +311,21 @@ class TestMetricsTracking:
         assert metrics["claims_unsupported"] == 1
 
     @pytest.mark.asyncio
-    async def test_metrics_multiple_checks(
-        self, hallucination_monitor, mock_llm, sample_contexts
-    ):
+    async def test_metrics_multiple_checks(self, hallucination_monitor, mock_llm, sample_contexts):
         """Test metrics accumulate over multiple checks."""
         # First check
         extract_response1 = MagicMock()
         extract_response1.content = "1. Claim one"
 
         verify_supported = MagicMock()
-        verify_supported.content = (
-            "SUPPORTED: yes\nEVIDENCE: Test\nREASONING: Test"
-        )
+        verify_supported.content = "SUPPORTED: yes\nEVIDENCE: Test\nREASONING: Test"
 
         # Second check
         extract_response2 = MagicMock()
         extract_response2.content = "1. Claim two\n2. Claim three"
 
         verify_unsupported = MagicMock()
-        verify_unsupported.content = (
-            "SUPPORTED: no\nEVIDENCE: none\nREASONING: Not supported"
-        )
+        verify_unsupported.content = "SUPPORTED: no\nEVIDENCE: none\nREASONING: Not supported"
 
         mock_llm.ainvoke.side_effect = [
             extract_response1,
@@ -412,47 +366,37 @@ class TestLogging:
     """Test comprehensive logging."""
 
     @pytest.mark.asyncio
-    async def test_log_check_pass(
-        self, hallucination_monitor, mock_llm, sample_contexts
-    ):
+    async def test_log_check_pass(self, hallucination_monitor, mock_llm, sample_contexts):
         """Test logging for PASS verdict (score < 0.1)."""
         # Mock all supported claims
         extract_response = MagicMock()
         extract_response.content = "1. Claim one"
 
         verify_supported = MagicMock()
-        verify_supported.content = (
-            "SUPPORTED: yes\nEVIDENCE: Test\nREASONING: Test"
-        )
+        verify_supported.content = "SUPPORTED: yes\nEVIDENCE: Test\nREASONING: Test"
 
         mock_llm.ainvoke.side_effect = [extract_response, verify_supported]
 
-        report = await hallucination_monitor.check(
-            "Test answer", sample_contexts
-        )
+        report = await hallucination_monitor.check("Test answer", sample_contexts)
 
         # Verify verdict is PASS
         assert report.hallucination_score < 0.1
 
     @pytest.mark.asyncio
-    async def test_log_check_warn(
-        self, hallucination_monitor, mock_llm, sample_contexts
-    ):
+    async def test_log_check_warn(self, hallucination_monitor, mock_llm, sample_contexts):
         """Test logging for WARN verdict (0.1 <= score < 0.3)."""
         # Mock 2 claims, 1 unsupported (score = 0.5, but we need 0.1-0.3)
         extract_response = MagicMock()
-        extract_response.content = "1. Claim one\n2. Claim two\n3. Claim three\n4. Claim four\n5. Claim five"
+        extract_response.content = (
+            "1. Claim one\n2. Claim two\n3. Claim three\n4. Claim four\n5. Claim five"
+        )
 
         # 1 unsupported out of 5 = 0.2 (WARN)
         verify_supported = MagicMock()
-        verify_supported.content = (
-            "SUPPORTED: yes\nEVIDENCE: Test\nREASONING: Test"
-        )
+        verify_supported.content = "SUPPORTED: yes\nEVIDENCE: Test\nREASONING: Test"
 
         verify_unsupported = MagicMock()
-        verify_unsupported.content = (
-            "SUPPORTED: no\nEVIDENCE: none\nREASONING: Not supported"
-        )
+        verify_unsupported.content = "SUPPORTED: no\nEVIDENCE: none\nREASONING: Not supported"
 
         mock_llm.ainvoke.side_effect = [
             extract_response,
@@ -463,26 +407,20 @@ class TestLogging:
             verify_unsupported,
         ]
 
-        report = await hallucination_monitor.check(
-            "Test answer", sample_contexts
-        )
+        report = await hallucination_monitor.check("Test answer", sample_contexts)
 
         # Verify verdict is WARN
         assert 0.1 <= report.hallucination_score < 0.3
 
     @pytest.mark.asyncio
-    async def test_log_check_fail(
-        self, hallucination_monitor, mock_llm, sample_contexts
-    ):
+    async def test_log_check_fail(self, hallucination_monitor, mock_llm, sample_contexts):
         """Test logging for FAIL verdict (score >= 0.3)."""
         # Mock majority unsupported
         extract_response = MagicMock()
         extract_response.content = "1. Claim one\n2. Claim two"
 
         verify_unsupported = MagicMock()
-        verify_unsupported.content = (
-            "SUPPORTED: no\nEVIDENCE: none\nREASONING: Not supported"
-        )
+        verify_unsupported.content = "SUPPORTED: no\nEVIDENCE: none\nREASONING: Not supported"
 
         mock_llm.ainvoke.side_effect = [
             extract_response,
@@ -490,9 +428,7 @@ class TestLogging:
             verify_unsupported,
         ]
 
-        report = await hallucination_monitor.check(
-            "Test answer", sample_contexts
-        )
+        report = await hallucination_monitor.check("Test answer", sample_contexts)
 
         # Verify verdict is FAIL
         assert report.hallucination_score >= 0.3

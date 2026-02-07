@@ -596,9 +596,7 @@ class AegisLLMProxy:
         except Exception as e:
             # Sprint 126: In vLLM engine mode, don't try Ollama fallback
             engine_mode = await self._get_engine_mode()
-            skip_ollama_fallback = (
-                self._skip_ollama_fallback_in_ingestion or engine_mode == "vllm"
-            )
+            skip_ollama_fallback = self._skip_ollama_fallback_in_ingestion or engine_mode == "vllm"
 
             # Sprint 125.3: In INGESTION mode or vLLM-only mode, don't try Ollama fallback
             if skip_ollama_fallback:
@@ -1209,8 +1207,9 @@ class AegisLLMProxy:
             logger.info("vllm_streaming_start", model=self._vllm_model)
             messages = [{"role": "user", "content": task.prompt}]
             try:
-                async with httpx.AsyncClient() as client:
-                    async with client.stream(
+                async with (
+                    httpx.AsyncClient() as client,
+                    client.stream(
                         "POST",
                         f"{self._vllm_base_url}/v1/chat/completions",
                         json={
@@ -1221,24 +1220,25 @@ class AegisLLMProxy:
                             "stream": True,
                         },
                         timeout=120.0,
-                    ) as response:
-                        response.raise_for_status()
-                        async for line in response.aiter_lines():
-                            if not line.startswith("data: "):
-                                continue
-                            data_str = line[6:]  # Strip "data: " prefix
-                            if data_str.strip() == "[DONE]":
-                                break
-                            try:
-                                import json as _json
+                    ) as response,
+                ):
+                    response.raise_for_status()
+                    async for line in response.aiter_lines():
+                        if not line.startswith("data: "):
+                            continue
+                        data_str = line[6:]  # Strip "data: " prefix
+                        if data_str.strip() == "[DONE]":
+                            break
+                        try:
+                            import json as _json
 
-                                chunk_data = _json.loads(data_str)
-                                delta = chunk_data["choices"][0].get("delta", {})
-                                content = delta.get("content", "")
-                                if content:
-                                    yield {"content": content}
-                            except (ValueError, KeyError):
-                                continue
+                            chunk_data = _json.loads(data_str)
+                            delta = chunk_data["choices"][0].get("delta", {})
+                            content = delta.get("content", "")
+                            if content:
+                                yield {"content": content}
+                        except (ValueError, KeyError):
+                            continue
                 return
             except Exception as e:
                 logger.error("vllm_streaming_failed", error=str(e))

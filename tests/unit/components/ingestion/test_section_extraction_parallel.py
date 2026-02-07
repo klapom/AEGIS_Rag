@@ -35,6 +35,7 @@ class TestGetCachedTokenizer:
         """Test tokenizer is loaded on first call."""
         # Reset module state
         import src.components.ingestion.section_extraction as mod
+
         mod._TOKENIZER = None
 
         mock_tokenizer = MagicMock()
@@ -49,6 +50,7 @@ class TestGetCachedTokenizer:
     def test_get_cached_tokenizer_second_call_cached(self):
         """Test tokenizer is cached and reused on subsequent calls."""
         import src.components.ingestion.section_extraction as mod
+
         mod._TOKENIZER = None
 
         with patch("transformers.AutoTokenizer") as mock_auto:
@@ -67,6 +69,7 @@ class TestGetCachedTokenizer:
     def test_get_cached_tokenizer_thread_safety(self):
         """Test tokenizer caching is thread-safe (double-check locking)."""
         import src.components.ingestion.section_extraction as mod
+
         mod._TOKENIZER = None
 
         with patch("transformers.AutoTokenizer") as mock_auto:
@@ -107,12 +110,11 @@ class TestGetCachedTokenizer:
     def test_get_cached_tokenizer_load_failure(self):
         """Test graceful fallback when tokenizer loading fails."""
         import src.components.ingestion.section_extraction as mod
+
         mod._TOKENIZER = None
 
         with patch("transformers.AutoTokenizer") as mock_auto:
-            mock_auto.from_pretrained.side_effect = ImportError(
-                "transformers not available"
-            )
+            mock_auto.from_pretrained.side_effect = ImportError("transformers not available")
 
             tokenizer = _get_cached_tokenizer()
 
@@ -122,12 +124,11 @@ class TestGetCachedTokenizer:
     def test_get_cached_tokenizer_model_not_found(self):
         """Test handling of missing model error."""
         import src.components.ingestion.section_extraction as mod
+
         mod._TOKENIZER = None
 
         with patch("transformers.AutoTokenizer") as mock_auto:
-            mock_auto.from_pretrained.side_effect = OSError(
-                "Can't connect to HuggingFace"
-            )
+            mock_auto.from_pretrained.side_effect = OSError("Can't connect to HuggingFace")
 
             tokenizer = _get_cached_tokenizer()
 
@@ -283,35 +284,35 @@ class TestBatchTokenizeParallel:
         mock_tokenizer = MagicMock()
         mock_tokenizer.encode.return_value = ["token"]
 
-        with patch(
-            "src.components.ingestion.section_extraction._get_cached_tokenizer",
-            return_value=mock_tokenizer,
+        with (
+            patch(
+                "src.components.ingestion.section_extraction._get_cached_tokenizer",
+                return_value=mock_tokenizer,
+            ),
+            patch(
+                "src.components.ingestion.section_extraction.ThreadPoolExecutor"
+            ) as mock_executor_class,
         ):
-            with patch("src.components.ingestion.section_extraction.ThreadPoolExecutor") as mock_executor_class:
-                mock_executor = MagicMock()
-                mock_executor_class.return_value.__enter__ = MagicMock(
-                    return_value=mock_executor
-                )
-                mock_executor_class.return_value.__exit__ = MagicMock(
-                    return_value=False
-                )
-                mock_executor.submit.side_effect = [
-                    MagicMock(result=lambda: (0, 1)),
-                    MagicMock(result=lambda: (1, 1)),
-                    MagicMock(result=lambda: (2, 1)),
-                ]
+            mock_executor = MagicMock()
+            mock_executor_class.return_value.__enter__ = MagicMock(return_value=mock_executor)
+            mock_executor_class.return_value.__exit__ = MagicMock(return_value=False)
+            mock_executor.submit.side_effect = [
+                MagicMock(result=lambda: (0, 1)),
+                MagicMock(result=lambda: (1, 1)),
+                MagicMock(result=lambda: (2, 1)),
+            ]
 
-                # Patch as_completed to return futures immediately
-                with patch(
-                    "src.components.ingestion.section_extraction.as_completed"
-                ) as mock_as_completed:
-                    futures = [MagicMock(result=lambda: (i, 1)) for i in range(3)]
-                    mock_as_completed.return_value = futures
+            # Patch as_completed to return futures immediately
+            with patch(
+                "src.components.ingestion.section_extraction.as_completed"
+            ) as mock_as_completed:
+                futures = [MagicMock(result=lambda: (i, 1)) for i in range(3)]
+                mock_as_completed.return_value = futures
 
-                    token_counts = _batch_tokenize_parallel(texts, max_workers=8)
+                token_counts = _batch_tokenize_parallel(texts, max_workers=8)
 
-                    # Verify ThreadPoolExecutor was called with correct max_workers
-                    mock_executor_class.assert_called_once_with(max_workers=8)
+                # Verify ThreadPoolExecutor was called with correct max_workers
+                mock_executor_class.assert_called_once_with(max_workers=8)
 
     def test_batch_tokenize_long_text(self):
         """Test tokenization of long documents."""
@@ -447,6 +448,7 @@ class TestProfilingStatsWithParallel:
 
         # Manually set some stats (normally done in section extraction)
         from src.components.ingestion import section_extraction
+
         section_extraction._PROFILING_STATS["total_extraction_time_ms"] = 100.0
         section_extraction._PROFILING_STATS["total_tokenization_time_ms"] = 50.0
         section_extraction._PROFILING_STATS["total_texts_processed"] = 200

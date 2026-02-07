@@ -441,4 +441,3 @@ npx playwright show-report
 - Tests use proper timeout handling for async operations
 - All tests follow Page Object Model pattern
 - Tests are isolated and can run in any order
-

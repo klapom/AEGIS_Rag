@@ -162,9 +162,9 @@ async def test_container_reuse_across_documents__same_container__no_memory_leaks
 
         # Verify: Parse times similar (no degradation)
         # Allow 2x variance (performance can fluctuate)
-        assert (
-            parsed2.parse_time_ms < parsed1.parse_time_ms * 2
-        ), f"Performance degraded: doc1={parsed1.parse_time_ms}ms, doc2={parsed2.parse_time_ms}ms"
+        assert parsed2.parse_time_ms < parsed1.parse_time_ms * 2, (
+            f"Performance degraded: doc1={parsed1.parse_time_ms}ms, doc2={parsed2.parse_time_ms}ms"
+        )
 
     finally:
         # Cleanup

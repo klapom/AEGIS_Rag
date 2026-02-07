@@ -36,7 +36,11 @@ class TestSynthesizeResearchFindings:
         # Execute
         contexts = [
             {"text": "OMNITRACKER is a workflow system", "score": 0.9, "source_channel": "vector"},
-            {"text": "OMNITRACKER integrates with SAP", "score": 0.8, "source_channel": "graph_global"},
+            {
+                "text": "OMNITRACKER integrates with SAP",
+                "score": 0.8,
+                "source_channel": "graph_global",
+            },
         ]
 
         result = await synthesize_research_findings(
