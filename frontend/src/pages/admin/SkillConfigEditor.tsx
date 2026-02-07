@@ -24,6 +24,7 @@ import {
 } from '../../api/skills';
 import type { ConfigValidationResult, SkillDetail, ResolvedToolsResponse } from '../../types/skills';
 import yaml from 'js-yaml';
+import { AdminNavigationBar } from '../../components/admin/AdminNavigationBar';
 
 export function SkillConfigEditor() {
   const { skillName } = useParams<{ skillName: string }>();
@@ -169,6 +170,9 @@ export function SkillConfigEditor() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="mb-4">
+        <AdminNavigationBar />
+      </div>
       {/* Header */}
       <header className="bg-white dark:bg-gray-800 border-b-2 border-gray-200 dark:border-gray-700 px-6 py-4">
         <div className="max-w-7xl mx-auto">

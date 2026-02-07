@@ -12,6 +12,7 @@ import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, RefreshCw, Clock, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
 import { getSkill } from '../../api/skills';
 import type { SkillDetail } from '../../types/skills';
+import { AdminNavigationBar } from '../../components/admin/AdminNavigationBar';
 
 interface LogEntry {
   timestamp: string;
@@ -110,6 +111,9 @@ export function SkillLogs() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="mb-4">
+        <AdminNavigationBar />
+      </div>
       {/* Header */}
       <header className="bg-white dark:bg-gray-800 border-b-2 border-gray-200 dark:border-gray-700 px-6 py-4">
         <div className="max-w-7xl mx-auto">

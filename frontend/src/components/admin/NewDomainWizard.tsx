@@ -46,6 +46,8 @@ export function NewDomainWizard({ onClose }: NewDomainWizardProps) {
         name: config.name,
         description: config.description,
         llm_model: config.llm_model || undefined,
+        entity_sub_type_mapping: config.entity_sub_type_mapping,
+        relation_hints: config.relation_hints,
       });
 
       // Start training with optional log path (Feature 45.13)

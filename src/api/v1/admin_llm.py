@@ -518,3 +518,121 @@ async def update_llm_config(config_update: LLMConfigAPI) -> LLMConfigAPI:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to update LLM configuration: {str(e)}",
         ) from e
+
+
+# ============================================================================
+# Sprint 126: LLM Engine Mode (vLLM / Ollama / Auto)
+# ============================================================================
+
+REDIS_KEY_LLM_ENGINE_MODE = "aegis:llm_engine_mode"
+VALID_ENGINE_MODES = ["vllm", "ollama", "auto"]
+
+
+class LLMEngineModeRequest(BaseModel):
+    """Request to set the LLM engine mode."""
+
+    engine_mode: str = Field(
+        ...,
+        description="LLM engine mode: 'vllm' (all requests via vLLM), "
+        "'ollama' (all requests via Ollama), 'auto' (extraction→vLLM, chat→Ollama)",
+    )
+
+
+class LLMEngineModeResponse(BaseModel):
+    """Response with current LLM engine mode."""
+
+    engine_mode: str = Field(..., description="Current engine mode")
+    vllm_healthy: bool = Field(False, description="Whether vLLM is reachable")
+    ollama_healthy: bool = Field(False, description="Whether Ollama is reachable")
+
+
+@router.get(
+    "/llm/engine",
+    response_model=LLMEngineModeResponse,
+    summary="Get LLM engine mode",
+    description="Get the current LLM engine routing mode (vllm/ollama/auto)",
+)
+async def get_llm_engine_mode() -> LLMEngineModeResponse:
+    """Get current LLM engine mode from Redis.
+
+    Sprint 126: Configurable LLM engine routing.
+    """
+    import redis.asyncio as aioredis
+
+    engine_mode = "auto"  # Default
+    try:
+        redis_client = aioredis.from_url(
+            f"redis://{settings.redis_host}:{settings.redis_port}/0",
+            decode_responses=True,
+        )
+        stored = await redis_client.get(REDIS_KEY_LLM_ENGINE_MODE)
+        if stored and stored in VALID_ENGINE_MODES:
+            engine_mode = stored
+        await redis_client.close()
+    except Exception as e:
+        logger.warning("redis_engine_mode_read_failed", error=str(e))
+
+    # Health checks
+    vllm_healthy = False
+    ollama_healthy = False
+    try:
+        async with httpx.AsyncClient(timeout=3.0) as client:
+            resp = await client.get(f"{settings.vllm_base_url}/health")
+            vllm_healthy = resp.status_code == 200
+    except Exception:
+        pass
+    try:
+        async with httpx.AsyncClient(timeout=3.0) as client:
+            resp = await client.head(f"{settings.ollama_base_url}")
+            ollama_healthy = resp.status_code == 200
+    except Exception:
+        pass
+
+    return LLMEngineModeResponse(
+        engine_mode=engine_mode,
+        vllm_healthy=vllm_healthy,
+        ollama_healthy=ollama_healthy,
+    )
+
+
+@router.put(
+    "/llm/engine",
+    summary="Set LLM engine mode",
+    description="Set the LLM engine routing mode (vllm/ollama/auto). Takes effect immediately.",
+)
+async def set_llm_engine_mode(request: LLMEngineModeRequest) -> dict:
+    """Set LLM engine mode in Redis (hot-reloadable, no restart needed).
+
+    Sprint 126: Configurable LLM engine routing.
+    """
+    import redis.asyncio as aioredis
+
+    mode = request.engine_mode.lower().strip()
+    if mode not in VALID_ENGINE_MODES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid engine mode: '{mode}'. Valid: {VALID_ENGINE_MODES}",
+        )
+
+    try:
+        redis_client = aioredis.from_url(
+            f"redis://{settings.redis_host}:{settings.redis_port}/0",
+            decode_responses=True,
+        )
+        await redis_client.set(REDIS_KEY_LLM_ENGINE_MODE, mode)
+        await redis_client.close()
+
+        logger.info("llm_engine_mode_updated", engine_mode=mode)
+
+        return {
+            "status": "success",
+            "engine_mode": mode,
+            "message": f"LLM engine mode set to '{mode}'. Takes effect immediately.",
+        }
+
+    except Exception as e:
+        logger.error("llm_engine_mode_update_failed", error=str(e), exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to set engine mode: {str(e)}",
+        ) from e

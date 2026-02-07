@@ -11,8 +11,7 @@
  */
 
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { BarChart3, Search, Layers, ArrowLeft } from 'lucide-react';
+import { BarChart3, Search, Layers } from 'lucide-react';
 import { MemoryStatsCard } from '../../components/admin/MemoryStatsCard';
 import { MemorySearchPanel } from '../../components/admin/MemorySearchPanel';
 import { ConsolidationControl } from '../../components/admin/ConsolidationControl';
@@ -102,13 +101,6 @@ export function MemoryManagementPage() {
 
       {/* Page Header */}
       <div className="bg-white dark:bg-gray-800 border-b-2 border-gray-200 dark:border-gray-700 px-6 py-6">
-        <Link
-          to="/admin"
-          className="inline-flex items-center gap-1 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 mb-4"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Admin
-        </Link>
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Memory Management</h1>

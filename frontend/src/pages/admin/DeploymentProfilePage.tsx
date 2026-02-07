@@ -7,8 +7,9 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { ArrowLeft, Check, Loader2, AlertTriangle } from 'lucide-react';
+import { Check, Loader2, AlertTriangle } from 'lucide-react';
+import { apiClient } from '../../lib/api';
+import { AdminNavigationBar } from '../../components/admin/AdminNavigationBar';
 
 interface Domain {
   domain_id: string;
@@ -80,22 +81,33 @@ export function DeploymentProfilePage() {
       setError(null);
 
       try {
-        // Load current deployment profile
-        const profileResponse = await fetch('/api/v1/admin/deployment-profile');
-        if (profileResponse.ok) {
-          const profileData = await profileResponse.json();
+        // Load current deployment profile (under retrieval router prefix)
+        try {
+          const profileData = await apiClient.get<{
+            profile_name: string;
+            active_domains: string[];
+          }>('/api/v1/retrieval/admin/deployment-profile');
           setSelectedProfile(profileData.profile_name || 'general');
           if (profileData.profile_name === 'custom') {
             setCustomDomains(profileData.active_domains || []);
           }
+        } catch {
+          // No profile set yet — use default
         }
 
         // Load available domains
-        const domainsResponse = await fetch('/api/v1/admin/domains');
-        if (domainsResponse.ok) {
-          const domainsData = await domainsResponse.json();
-          setAvailableDomains(domainsData.domains || []);
-        }
+        // Sprint 117.8: API returns ApiResponse wrapper { success, data: [...] }
+        interface ApiDomainResponse { success: boolean; data: Array<Record<string, string>> }
+        const domainsData = await apiClient.get<ApiDomainResponse>('/api/v1/admin/domains/');
+        const rawDomains = Array.isArray(domainsData) ? domainsData : (domainsData.data || []);
+        const mapped: Domain[] = rawDomains.map((d: Record<string, string>) => ({
+          domain_id: d.name || d.id,
+          domain_name: d.name,
+          ddc_code: d.ddc_code || '',
+          description: d.description || '',
+          status: d.status || 'active',
+        }));
+        setAvailableDomains(mapped);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load data');
       } finally {
@@ -112,18 +124,9 @@ export function DeploymentProfilePage() {
     setSuccessMessage(null);
 
     try {
-      const response = await fetch('/api/v1/admin/deployment-profile', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          profile_name: selectedProfile,
-          active_domains: selectedProfile === 'custom' ? customDomains : undefined,
-        }),
+      await apiClient.put('/api/v1/retrieval/admin/deployment-profile', {
+        profile_name: selectedProfile,
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to save deployment profile');
-      }
 
       setSuccessMessage('Deployment profile saved successfully!');
       setTimeout(() => setSuccessMessage(null), 3000);
@@ -171,14 +174,10 @@ export function DeploymentProfilePage() {
 
   return (
     <div className="p-6 max-w-5xl mx-auto" data-testid="deployment-profile-page">
-      {/* Back Link */}
-      <Link
-        to="/admin"
-        className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 mb-4"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Back to Admin
-      </Link>
+      {/* Navigation Bar */}
+      <div className="mb-4">
+        <AdminNavigationBar />
+      </div>
 
       {/* Header */}
       <div className="mb-6">

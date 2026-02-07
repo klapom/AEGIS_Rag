@@ -11,12 +11,13 @@
 
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Radio, Shield } from 'lucide-react';
+import { Radio, Shield } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { MessageBusMonitor } from '../../components/agent/MessageBusMonitor';
 import { BlackboardViewer } from '../../components/agent/BlackboardViewer';
 import { OrchestrationTimeline } from '../../components/agent/OrchestrationTimeline';
 import { CommunicationMetrics } from '../../components/agent/CommunicationMetrics';
+import { AdminNavigationBar } from '../../components/admin/AdminNavigationBar';
 
 /**
  * AgentCommunicationPage provides real-time monitoring of agent communication.
@@ -69,13 +70,9 @@ export function AgentCommunicationPage() {
       {/* Header */}
       <header className="bg-white dark:bg-gray-800 border-b-2 border-gray-200 dark:border-gray-700 px-6 py-4">
         <div className="max-w-7xl mx-auto">
-          <Link
-            to="/admin"
-            className="inline-flex items-center gap-1 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 mb-3"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Admin
-          </Link>
+          <div className="mb-4">
+            <AdminNavigationBar />
+          </div>
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
               <Radio className="w-6 h-6 text-blue-600 dark:text-blue-400" />

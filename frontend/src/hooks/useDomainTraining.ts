@@ -20,6 +20,8 @@ export interface Domain {
   status: 'pending' | 'training' | 'ready' | 'failed';
   created_at?: string;
   updated_at?: string;
+  entity_sub_type_mapping?: Record<string, string>;
+  relation_hints?: string[];
 }
 
 // Training sample format - matches API directly
@@ -50,6 +52,15 @@ export interface CreateDomainRequest {
   name: string;
   description: string;
   llm_model?: string;
+  entity_sub_type_mapping?: Record<string, string>;
+  relation_hints?: string[];
+}
+
+export interface UpdateDomainRequest {
+  description?: string;
+  llm_model?: string;
+  entity_sub_type_mapping?: Record<string, string>;
+  relation_hints?: string[];
 }
 
 export interface DomainsResponse {
@@ -163,6 +174,40 @@ export function useCreateDomain() {
       setIsLoading(false);
     }
   }, []);
+
+  return { mutateAsync, isLoading, error };
+}
+
+/**
+ * Update an existing domain
+ * Sprint 126: Domain sub-type mapping + relation hints
+ *
+ * Calls PUT /admin/domains/{domain_id}
+ */
+export function useUpdateDomain() {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const mutateAsync = useCallback(
+    async (domainId: string, data: UpdateDomainRequest): Promise<Domain> => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const response = await apiClient.put<Domain>(
+          `/api/v1/admin/domains/${domainId}`,
+          data
+        );
+        return response;
+      } catch (err) {
+        const error = err instanceof Error ? err : new Error('Failed to update domain');
+        setError(error);
+        throw error;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
 
   return { mutateAsync, isLoading, error };
 }

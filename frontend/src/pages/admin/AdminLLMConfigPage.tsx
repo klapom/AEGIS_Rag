@@ -17,9 +17,10 @@
  * - Responsive design with dark mode support
  */
 
-import { useState, useEffect } from 'react';
-import { Settings, RefreshCw, CheckCircle, AlertCircle, Cpu, ArrowLeft, FileText, Wrench } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect, useCallback } from 'react';
+import { Settings, RefreshCw, CheckCircle, AlertCircle, Cpu, FileText, Wrench, Zap, Server, Monitor } from 'lucide-react';
+import { apiClient } from '../../lib/api';
+import { AdminNavigationBar } from '../../components/admin/AdminNavigationBar';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
@@ -275,6 +276,47 @@ export function AdminLLMConfigPage() {
   const [isSavingToolsConfig, setIsSavingToolsConfig] = useState(false);
   const [toolsConfigSaveStatus, setToolsConfigSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
+  // Sprint 126: LLM Engine Mode State
+  const [engineMode, setEngineMode] = useState<'vllm' | 'ollama' | 'auto'>('auto');
+  const [vllmHealthy, setVllmHealthy] = useState(false);
+  const [ollamaHealthy, setOllamaHealthy] = useState(false);
+  const [isSavingEngine, setIsSavingEngine] = useState(false);
+  const [engineSaveStatus, setEngineSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
+
+  // Sprint 126: Fetch engine mode from backend
+  const fetchEngineMode = useCallback(async () => {
+    try {
+      const data = await apiClient.get<{
+        engine_mode: string;
+        vllm_healthy: boolean;
+        ollama_healthy: boolean;
+      }>('/api/v1/admin/llm/engine');
+      setEngineMode(data.engine_mode as 'vllm' | 'ollama' | 'auto');
+      setVllmHealthy(data.vllm_healthy);
+      setOllamaHealthy(data.ollama_healthy);
+    } catch (err) {
+      console.error('Failed to fetch engine mode:', err);
+    }
+  }, []);
+
+  // Sprint 126: Save engine mode
+  const handleSaveEngineMode = async (mode: 'vllm' | 'ollama' | 'auto') => {
+    setIsSavingEngine(true);
+    setEngineSaveStatus('idle');
+    try {
+      await apiClient.put('/api/v1/admin/llm/engine', { engine_mode: mode });
+      setEngineMode(mode);
+      setEngineSaveStatus('success');
+      setTimeout(() => setEngineSaveStatus('idle'), 3000);
+    } catch (err) {
+      console.error('Failed to save engine mode:', err);
+      setEngineSaveStatus('error');
+      setTimeout(() => setEngineSaveStatus('idle'), 3000);
+    } finally {
+      setIsSavingEngine(false);
+    }
+  };
+
   // Sprint 64 Feature 64.6: Fetch LLM config from backend
   const fetchLLMConfig = async () => {
     try {
@@ -357,8 +399,9 @@ export function AdminLLMConfigPage() {
     fetchOllamaModels();
     fetchSummaryModelConfig();
     fetchToolsConfig();  // Sprint 70 Feature 70.7
+    fetchEngineMode();   // Sprint 126: LLM Engine Mode
     initializeConfig();
-  }, []);
+  }, [fetchEngineMode]);
 
   const fetchOllamaModels = async () => {
     setIsRefreshing(true);
@@ -566,14 +609,10 @@ export function AdminLLMConfigPage() {
       data-testid="llm-config-page"
     >
       <div className="max-w-4xl mx-auto p-4">
-        {/* Back Link */}
-        <Link
-          to="/admin"
-          className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 mb-4"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Admin
-        </Link>
+        {/* Admin Navigation */}
+        <div className="mb-4">
+          <AdminNavigationBar />
+        </div>
 
         {/* Header */}
         <div className="mb-4">
@@ -611,6 +650,96 @@ export function AdminLLMConfigPage() {
             </p>
           </div>
         )}
+
+        {/* Sprint 126: LLM Engine Mode */}
+        <div className="bg-white dark:bg-gray-800 rounded-md shadow-sm p-4 mb-4" data-testid="engine-mode-section">
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-1.5">
+            <Zap className="w-4 h-4" />
+            LLM Engine Mode
+          </h2>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+            Select which inference engine handles LLM requests. Change takes effect immediately.
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+            {/* vLLM Option */}
+            <div
+              className={`border rounded-md p-3 cursor-pointer transition-colors ${
+                engineMode === 'vllm'
+                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30'
+                  : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
+              }`}
+              onClick={() => handleSaveEngineMode('vllm')}
+              data-testid="engine-mode-vllm"
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <Zap className="w-4 h-4 text-blue-600" />
+                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">vLLM</span>
+                <span className={`ml-auto w-2 h-2 rounded-full ${vllmHealthy ? 'bg-green-500' : 'bg-red-400'}`} title={vllmHealthy ? 'Healthy' : 'Unreachable'} />
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                All requests via vLLM. High throughput (256+ batch), no GPU conflict.
+              </p>
+            </div>
+
+            {/* Ollama Option */}
+            <div
+              className={`border rounded-md p-3 cursor-pointer transition-colors ${
+                engineMode === 'ollama'
+                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30'
+                  : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
+              }`}
+              onClick={() => handleSaveEngineMode('ollama')}
+              data-testid="engine-mode-ollama"
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <Server className="w-4 h-4 text-green-600" />
+                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Ollama</span>
+                <span className={`ml-auto w-2 h-2 rounded-full ${ollamaHealthy ? 'bg-green-500' : 'bg-red-400'}`} title={ollamaHealthy ? 'Healthy' : 'Unreachable'} />
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                All requests via Ollama. GGUF models, max 4 concurrent.
+              </p>
+            </div>
+
+            {/* Auto Option */}
+            <div
+              className={`border rounded-md p-3 cursor-pointer transition-colors ${
+                engineMode === 'auto'
+                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30'
+                  : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
+              }`}
+              onClick={() => handleSaveEngineMode('auto')}
+              data-testid="engine-mode-auto"
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <Monitor className="w-4 h-4 text-purple-600" />
+                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Auto</span>
+                <span className={`ml-auto w-2 h-2 rounded-full ${(vllmHealthy || ollamaHealthy) ? 'bg-green-500' : 'bg-red-400'}`} />
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Chat via Ollama, extraction via vLLM. Dual engine.
+              </p>
+            </div>
+          </div>
+
+          {/* Save Status */}
+          {isSavingEngine && (
+            <p className="text-xs text-blue-600 flex items-center gap-1">
+              <RefreshCw className="w-3 h-3 animate-spin" /> Saving...
+            </p>
+          )}
+          {engineSaveStatus === 'success' && (
+            <p className="text-xs text-green-600 flex items-center gap-1">
+              <CheckCircle className="w-3 h-3" /> Engine mode saved. Active immediately.
+            </p>
+          )}
+          {engineSaveStatus === 'error' && (
+            <p className="text-xs text-red-600 flex items-center gap-1">
+              <AlertCircle className="w-3 h-3" /> Failed to save engine mode.
+            </p>
+          )}
+        </div>
 
         {/* Use Case Model Assignment */}
         <div className="bg-white dark:bg-gray-800 rounded-md shadow-sm p-4 mb-4">

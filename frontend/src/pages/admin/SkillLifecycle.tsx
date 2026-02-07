@@ -17,6 +17,7 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft, Activity, AlertTriangle, TrendingUp, RefreshCw } from 'lucide-react';
 import { getLifecycleMetrics } from '../../api/skills';
 import type { LifecycleDashboardMetrics } from '../../types/skills';
+import { AdminNavigationBar } from '../../components/admin/AdminNavigationBar';
 
 export function SkillLifecycleDashboard() {
   // Data state
@@ -57,6 +58,9 @@ export function SkillLifecycleDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="mb-4">
+        <AdminNavigationBar />
+      </div>
       {/* Header */}
       <header className="bg-white dark:bg-gray-800 border-b-2 border-gray-200 dark:border-gray-700 px-6 py-4">
         <div className="max-w-7xl mx-auto">

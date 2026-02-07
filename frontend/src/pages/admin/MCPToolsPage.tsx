@@ -14,8 +14,8 @@
  */
 
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Wrench, Server, Activity, Shield, Terminal } from 'lucide-react';
+import { Wrench, Server, Activity, Shield, Terminal } from 'lucide-react';
+import { AdminNavigationBar } from '../../components/admin/AdminNavigationBar';
 import { MCPHealthMonitor } from '../../components/admin/MCPHealthMonitor';
 import { MCPServerList } from '../../components/admin/MCPServerList';
 import { MCPToolExecutionPanel } from '../../components/admin/MCPToolExecutionPanel';
@@ -39,7 +39,6 @@ type TabView = 'servers' | 'tools' | 'permissions' | 'bash';
  * - Single column on mobile with tab navigation
  */
 export function MCPToolsPage() {
-  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabView>('servers');
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
 
@@ -58,19 +57,14 @@ export function MCPToolsPage() {
       data-testid="mcp-tools-page"
     >
       <div className="max-w-7xl mx-auto py-8 px-6 space-y-6">
+        {/* Navigation Bar */}
+        <div className="mb-4">
+          <AdminNavigationBar />
+        </div>
+
         {/* Header */}
         <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-4">
-            <button
-              onClick={() => navigate('/admin')}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
-              data-testid="back-to-admin-button"
-              aria-label="Back to Admin Dashboard"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              <span>Back to Admin</span>
-            </button>
-          </div>
 
           {/* Mobile Tab Navigation */}
           <div className="flex sm:hidden bg-gray-100 dark:bg-gray-800 rounded-lg p-1">

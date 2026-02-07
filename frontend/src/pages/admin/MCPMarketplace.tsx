@@ -5,8 +5,7 @@
  */
 
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Store, RefreshCw, ArrowLeft } from 'lucide-react';
+import { Store, RefreshCw } from 'lucide-react';
 import { AdminNavigationBar } from '../../components/admin/AdminNavigationBar';
 import { MCPServerBrowser } from '../../components/admin/MCPServerBrowser';
 import { MCPServerInstaller } from '../../components/admin/MCPServerInstaller';
@@ -66,18 +65,6 @@ export const MCPMarketplace: React.FC = () => {
       {/* Sprint 112: Admin Navigation Bar */}
       <div className="max-w-7xl mx-auto mb-4">
         <AdminNavigationBar />
-      </div>
-
-      {/* Back to Admin Link */}
-      <div className="max-w-7xl mx-auto mb-4">
-        <Link
-          to="/admin"
-          className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 transition-colors"
-          data-testid="back-to-admin-link"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Admin Dashboard
-        </Link>
       </div>
 
       {/* Header */}

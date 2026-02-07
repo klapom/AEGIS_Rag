@@ -10,8 +10,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Network, Shield, AlertCircle } from 'lucide-react';
+import { Network, Shield, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import { AdminNavigationBar } from '../../components/admin/AdminNavigationBar';
 import { AgentHierarchyD3 } from '../../components/agent/AgentHierarchyD3';
 import { AgentDetailsPanel } from '../../components/agent/AgentDetailsPanel';
 import { DelegationChainTracer } from '../../components/agent/DelegationChainTracer';
@@ -127,13 +128,9 @@ export function AgentHierarchyPage() {
       {/* Header */}
       <header className="bg-white dark:bg-gray-800 border-b-2 border-gray-200 dark:border-gray-700 px-6 py-4">
         <div className="max-w-7xl mx-auto">
-          <Link
-            to="/admin"
-            className="inline-flex items-center gap-1 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 mb-3"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Admin
-          </Link>
+          <div className="mb-4">
+            <AdminNavigationBar />
+          </div>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">

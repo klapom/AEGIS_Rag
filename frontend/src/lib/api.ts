@@ -220,6 +220,43 @@ export class ApiClient {
   }
 
   /**
+   * Generic PUT request
+   */
+  async put<T>(endpoint: string, data?: unknown): Promise<T> {
+    const controller = createTimeoutController();
+    try {
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        method: 'PUT',
+        headers: this.getHeaders(),
+        body: data ? JSON.stringify(data) : undefined,
+        signal: controller.signal,
+      });
+      return this.handleResponse<T>(response);
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new ApiError(
+          'Request timed out. The server is busy.',
+          504,
+          null,
+          true
+        );
+      }
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        throw new ApiError(
+          `Cannot connect to server at ${API_BASE_URL}. Please check if the backend is running.`,
+          503,
+          null,
+          true
+        );
+      }
+      throw error;
+    }
+  }
+
+  /**
    * Generic PATCH request
    */
   async patch<T>(endpoint: string, data?: unknown): Promise<T> {

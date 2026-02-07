@@ -12,8 +12,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Database, Shield } from 'lucide-react';
+import { Database, Shield } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import { AdminNavigationBar } from '../../components/admin/AdminNavigationBar';
 import { GraphStatisticsCard } from '../../components/admin/GraphStatisticsCard';
 import { CommunityOperationsCard } from '../../components/admin/CommunityOperationsCard';
 import {
@@ -146,13 +147,11 @@ export function AdminGraphOperationsPage() {
       {/* Header */}
       <header className="bg-white dark:bg-gray-800 border-b-2 border-gray-200 dark:border-gray-700 px-6 py-4">
         <div className="max-w-7xl mx-auto">
-          <Link
-            to="/admin"
-            className="inline-flex items-center gap-1 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 mb-3"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Admin
-          </Link>
+          {/* Navigation Bar */}
+          <div className="mb-4">
+            <AdminNavigationBar />
+          </div>
+
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
               <Database className="w-6 h-6 text-blue-600 dark:text-blue-400" />

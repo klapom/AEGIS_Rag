@@ -12,6 +12,7 @@ import { useState } from 'react';
 import {
   useTrainingStatus,
   useDeleteDomain,
+  useUpdateDomain,
   useDomainStats,
   useReindexDomain,
   useValidateDomain,
@@ -46,6 +47,12 @@ export function DomainDetailDialog({ domain, isOpen, onClose, onDeleted }: Domai
     domain?.name || '',
     isOpen && !!domain
   );
+
+  // Update domain (Sprint 126: sub-type mapping + relation hints)
+  const { mutateAsync: updateDomain, isLoading: isUpdating } = useUpdateDomain();
+  const [editingMapping, setEditingMapping] = useState(false);
+  const [draftMapping, setDraftMapping] = useState<Record<string, string>>({});
+  const [draftHints, setDraftHints] = useState<string>('');
 
   // Delete functionality
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -396,6 +403,86 @@ export function DomainDetailDialog({ domain, isOpen, onClose, onDeleted }: Domai
             </div>
           </section>
 
+          {/* Entity Sub-Type Mapping & Relation Hints (Sprint 126) */}
+          <section data-testid="domain-mapping-section">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-gray-700">Entity Type Mapping & Relation Hints</h3>
+              {!editingMapping ? (
+                <button
+                  onClick={() => {
+                    setDraftMapping(domainDetails?.entity_sub_type_mapping || {});
+                    setDraftHints((domainDetails?.relation_hints || []).join('\n'));
+                    setEditingMapping(true);
+                  }}
+                  className="px-3 py-1 text-xs font-medium text-blue-600 border border-blue-300 rounded hover:bg-blue-50"
+                  data-testid="edit-mapping-button"
+                >
+                  Edit
+                </button>
+              ) : (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setEditingMapping(false)}
+                    className="px-3 py-1 text-xs font-medium text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
+                    data-testid="cancel-mapping-button"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (!domain.name) return;
+                      try {
+                        const hints = draftHints.split('\n').filter((l) => l.trim() !== '');
+                        await updateDomain(domain.name, {
+                          entity_sub_type_mapping: Object.keys(draftMapping).length > 0 ? draftMapping : undefined,
+                          relation_hints: hints.length > 0 ? hints : undefined,
+                        });
+                        setEditingMapping(false);
+                        setOperationMessage({ type: 'success', text: 'Mapping updated successfully. Changes take effect on next extraction.' });
+                      } catch (err) {
+                        setOperationMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to save mapping' });
+                      }
+                    }}
+                    disabled={isUpdating}
+                    className="px-3 py-1 text-xs font-medium text-white bg-blue-600 rounded hover:bg-blue-700 disabled:opacity-50"
+                    data-testid="save-mapping-button"
+                  >
+                    {isUpdating ? 'Saving...' : 'Save'}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="bg-gray-50 rounded-lg p-4 space-y-4">
+              {/* Sub-Type Mapping */}
+              <div>
+                <p className="text-xs font-medium text-gray-500 mb-2">Entity Sub-Type → Universal Type</p>
+                {editingMapping ? (
+                  <DraftMappingEditor mapping={draftMapping} onChange={setDraftMapping} />
+                ) : (
+                  <MappingDisplay mapping={domainDetails?.entity_sub_type_mapping || {}} />
+                )}
+              </div>
+
+              {/* Relation Hints */}
+              <div>
+                <p className="text-xs font-medium text-gray-500 mb-2">Relation Hints</p>
+                {editingMapping ? (
+                  <textarea
+                    value={draftHints}
+                    onChange={(e) => setDraftHints(e.target.value)}
+                    placeholder="One relation verb per line"
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded text-sm font-mono focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    data-testid="edit-relation-hints"
+                  />
+                ) : (
+                  <HintsDisplay hints={domainDetails?.relation_hints || []} />
+                )}
+              </div>
+            </div>
+          </section>
+
           {/* Training Status Section */}
           <section>
             <h3 className="text-sm font-semibold text-gray-700 mb-3">Training Status</h3>
@@ -570,4 +657,119 @@ function formatDate(dateStr: string): string {
   } catch {
     return dateStr;
   }
+}
+
+/** Read-only display of entity sub-type mapping */
+function MappingDisplay({ mapping }: { mapping: Record<string, string> }) {
+  const entries = Object.entries(mapping);
+  if (entries.length === 0) {
+    return <p className="text-sm text-gray-400 italic">No mappings configured (using YAML defaults)</p>;
+  }
+  return (
+    <div className="flex flex-wrap gap-2" data-testid="mapping-display">
+      {entries.map(([sub, universal]) => (
+        <span
+          key={sub}
+          className="inline-flex items-center gap-1 px-2 py-1 bg-white border border-gray-200 rounded text-xs font-mono"
+        >
+          <span className="text-gray-700">{sub}</span>
+          <span className="text-gray-400">→</span>
+          <span className="text-blue-600 font-medium">{universal}</span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/** Read-only display of relation hints */
+function HintsDisplay({ hints }: { hints: string[] }) {
+  if (hints.length === 0) {
+    return <p className="text-sm text-gray-400 italic">No relation hints configured (using YAML defaults)</p>;
+  }
+  return (
+    <div className="flex flex-wrap gap-1.5" data-testid="hints-display">
+      {hints.map((hint, idx) => (
+        <span
+          key={idx}
+          className="px-2 py-0.5 bg-purple-50 border border-purple-200 rounded text-xs font-mono text-purple-700"
+        >
+          {hint}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/** Inline editor for entity sub-type mapping in the detail dialog */
+const UNIVERSAL_TYPES = [
+  'PERSON', 'ORGANIZATION', 'LOCATION', 'EVENT', 'CONCEPT',
+  'TECHNOLOGY', 'DOCUMENT', 'METRIC', 'TEMPORAL', 'MATERIAL',
+  'PROCESS', 'REGULATION', 'PRODUCT', 'SERVICE', 'INFRASTRUCTURE',
+];
+
+function DraftMappingEditor({
+  mapping,
+  onChange,
+}: {
+  mapping: Record<string, string>;
+  onChange: (m: Record<string, string>) => void;
+}) {
+  const entries = Object.entries(mapping);
+  return (
+    <div className="space-y-2">
+      {entries.map(([key, value], idx) => (
+        <div key={idx} className="flex items-center gap-2">
+          <input
+            type="text"
+            value={key}
+            onChange={(e) => {
+              const sanitized = e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, '');
+              const next: Record<string, string> = {};
+              for (const [k, v] of Object.entries(mapping)) {
+                next[k === key ? sanitized : k] = v;
+              }
+              onChange(next);
+            }}
+            placeholder="SUB_TYPE"
+            className="flex-1 px-2 py-1 border border-gray-300 rounded text-xs font-mono focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            data-testid={`draft-mapping-key-${idx}`}
+          />
+          <span className="text-gray-400 text-xs">→</span>
+          <select
+            value={value}
+            onChange={(e) => onChange({ ...mapping, [key]: e.target.value })}
+            className="flex-1 px-2 py-1 border border-gray-300 rounded text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            data-testid={`draft-mapping-value-${idx}`}
+          >
+            {UNIVERSAL_TYPES.map((t) => (
+              <option key={t} value={t}>{t}</option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={() => {
+              const next = { ...mapping };
+              delete next[key];
+              onChange(next);
+            }}
+            className="p-1 text-red-500 hover:bg-red-50 rounded"
+            aria-label="Remove"
+            data-testid={`draft-mapping-remove-${idx}`}
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={() => onChange({ ...mapping, '': 'CONCEPT' })}
+        className="px-2 py-1 text-xs text-blue-600 border border-blue-300 rounded hover:bg-blue-50"
+        data-testid="draft-add-mapping"
+      >
+        + Add
+      </button>
+    </div>
+  );
 }

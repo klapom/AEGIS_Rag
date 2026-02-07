@@ -7,8 +7,8 @@
  */
 
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
 import { IngestionJobList } from '../../components/admin/IngestionJobList';
+import { AdminNavigationBar } from '../../components/admin/AdminNavigationBar';
 
 /**
  * IngestionJobsPage - Main page for ingestion job monitoring
@@ -29,18 +29,10 @@ export function IngestionJobsPage() {
       data-testid="ingestion-jobs-page"
     >
       <div className="max-w-6xl mx-auto py-8 px-6 space-y-6">
-        {/* Header with Back Button */}
-        <header className="flex items-center gap-4">
-          <button
-            onClick={() => navigate('/admin')}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
-            data-testid="back-to-admin"
-            aria-label="Back to Admin Dashboard"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            <span>Back to Admin</span>
-          </button>
-        </header>
+        {/* Admin Navigation */}
+        <div className="mb-4">
+          <AdminNavigationBar />
+        </div>
 
         <div className="space-y-2">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">

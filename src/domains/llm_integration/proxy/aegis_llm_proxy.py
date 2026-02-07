@@ -169,12 +169,18 @@ class AegisLLMProxy:
         self._vllm_health_checked_at: float = 0.0
         self._vllm_health_cache_ttl: int = 30  # seconds
 
+        # Sprint 126: LLM Engine Mode caching (from Redis)
+        self._engine_mode_cache: str = "auto"
+        self._engine_mode_checked_at: float = 0.0
+        self._engine_mode_cache_ttl: int = 30  # seconds
+
         # Load vLLM configuration from settings
         from src.core.config import settings
 
         self._vllm_enabled = settings.vllm_enabled
         self._vllm_base_url = settings.vllm_base_url
         self._vllm_model = settings.vllm_model
+        self._redis_url = f"redis://{settings.redis_host}:{settings.redis_port}/0"
 
         # Sprint 125 Feature 125.3: Strict Docker profile separation
         # Load AEGIS_MODE to determine which LLM server is running
@@ -269,6 +275,39 @@ class AegisLLMProxy:
             self._vllm_health_checked_at = current_time
             return False
 
+    async def _get_engine_mode(self) -> str:
+        """Get LLM engine mode from Redis with 30s cache.
+
+        Sprint 126: Hot-reloadable engine mode (vllm/ollama/auto).
+
+        Returns:
+            Engine mode string: 'vllm', 'ollama', or 'auto'
+        """
+        current_time = time.time()
+        if (
+            current_time - self._engine_mode_checked_at < self._engine_mode_cache_ttl
+            and self._engine_mode_checked_at > 0
+        ):
+            return self._engine_mode_cache
+
+        try:
+            import redis.asyncio as aioredis
+
+            redis_client = aioredis.from_url(self._redis_url, decode_responses=True)
+            stored = await redis_client.get("aegis:llm_engine_mode")
+            await redis_client.close()
+
+            if stored and stored in ("vllm", "ollama", "auto"):
+                self._engine_mode_cache = stored
+            else:
+                self._engine_mode_cache = "auto"
+        except Exception as e:
+            logger.debug("engine_mode_redis_read_failed", error=str(e))
+            # Keep cached value on error
+
+        self._engine_mode_checked_at = current_time
+        return self._engine_mode_cache
+
     def _get_cache_ttl(self, task: LLMTask) -> int:
         """
         Get cache TTL (time-to-live) in seconds for task type.
@@ -343,24 +382,41 @@ class AegisLLMProxy:
                 yield chunk
 
         except Exception as e:
-            # Provider error → try local as last resort
+            # Sprint 126: Check engine mode for fallback decision
+            engine_mode = await self._get_engine_mode()
+            fallback_provider = "vllm" if engine_mode == "vllm" else "local_ollama"
+
+            # Don't fallback to the same provider that just failed
+            if provider == fallback_provider:
+                logger.critical(
+                    "streaming_provider_failed_no_fallback",
+                    task_id=str(task.id),
+                    provider=provider,
+                    engine_mode=engine_mode,
+                    error=str(e),
+                )
+                raise LLMExecutionError(
+                    f"LLM provider {provider} failed (engine_mode={engine_mode})"
+                ) from e
+
+            # Provider error → try fallback
             logger.error(
                 "streaming_provider_error_fallback",
                 provider=provider,
                 error=str(e),
-                fallback="local_ollama",
+                fallback=fallback_provider,
                 task_id=str(task.id),
             )
 
             try:
                 async for chunk in self._execute_streaming(
-                    provider="local_ollama",
+                    provider=fallback_provider,
                     task=task,
                 ):
                     yield chunk
 
             except Exception as local_error:
-                # Even local failed → raise error
+                # Even fallback failed → raise error
                 logger.critical(
                     "streaming_all_providers_failed",
                     task_id=str(task.id),
@@ -538,8 +594,14 @@ class AegisLLMProxy:
             return result
 
         except Exception as e:
-            # Sprint 125.3: In INGESTION mode, don't try Ollama fallback (it's stopped)
-            if self._skip_ollama_fallback_in_ingestion:
+            # Sprint 126: In vLLM engine mode, don't try Ollama fallback
+            engine_mode = await self._get_engine_mode()
+            skip_ollama_fallback = (
+                self._skip_ollama_fallback_in_ingestion or engine_mode == "vllm"
+            )
+
+            # Sprint 125.3: In INGESTION mode or vLLM-only mode, don't try Ollama fallback
+            if skip_ollama_fallback:
                 logger.error(
                     "provider_error_no_fallback_ingestion_mode",
                     provider=provider,
@@ -684,6 +746,22 @@ class AegisLLMProxy:
             provider, reason = self._route_task(task)
             # → ("local_ollama", "sensitive_data_local_only")
         """
+        # Sprint 126: Check engine mode override (hot-reloadable from Redis)
+        engine_mode = await self._get_engine_mode()
+
+        # Determine the "local" provider based on engine mode
+        # In 'vllm' mode, all local routing goes to vLLM; in 'ollama' mode, to Ollama
+        if engine_mode == "vllm":
+            local_provider = "vllm"
+            local_reason_suffix = "engine_vllm"
+        elif engine_mode == "ollama":
+            local_provider = "local_ollama"
+            local_reason_suffix = "engine_ollama"
+        else:
+            # 'auto' mode: original dual-engine behavior
+            local_provider = "local_ollama"
+            local_reason_suffix = "engine_auto"
+
         # PRIORITY 1: Data Privacy (PII/HIPAA always local)
         # Sprint 125: vLLM is also LOCAL (runs on same DGX Spark), so allow it for
         # CONFIDENTIAL/PII/HIPAA data — only cloud providers are blocked.
@@ -709,17 +787,17 @@ class AegisLLMProxy:
             logger.info(
                 "routing_data_privacy",
                 classification=task.data_classification,
-                provider="local_ollama",
+                provider=local_provider,
             )
-            return ("local_ollama", "sensitive_data_local_only")
+            return (local_provider, f"sensitive_data_local_only_{local_reason_suffix}")
 
-        # PRIORITY 2: Task Type (embeddings always local)
+        # PRIORITY 2: Task Type (embeddings always local — handled by FlagEmbedding, not LLM)
         if task.task_type == TaskType.EMBEDDING:
-            return ("local_ollama", "embeddings_local_only")
+            return (local_provider, f"embeddings_local_only_{local_reason_suffix}")
 
         # PRIORITY 2.3: Sprint 125.2 - Extraction tasks → vLLM (if enabled and healthy)
-        # vLLM supports 256+ concurrent requests vs Ollama's max 4
-        if task.task_type == TaskType.EXTRACTION and self._vllm_enabled:
+        # In 'vllm' engine mode, ALL tasks already go to vLLM; in 'auto', only extraction
+        if engine_mode == "auto" and task.task_type == TaskType.EXTRACTION and self._vllm_enabled:
             # Check vLLM health (with 30s cache)
             is_healthy = await self._check_vllm_health()
             if is_healthy:
@@ -800,7 +878,8 @@ class AegisLLMProxy:
                 return ("alibaba_cloud", "batch_processing")
 
         # DEFAULT: TIER 1 (Local) - 70% of tasks
-        return ("local_ollama", "default_local")
+        # Sprint 126: Route to configured engine (vllm/ollama/auto)
+        return (local_provider, f"default_local_{local_reason_suffix}")
 
     async def _call_vllm(
         self,
@@ -1125,16 +1204,45 @@ class AegisLLMProxy:
         Raises:
             Exception: If provider execution fails
         """
-        # Sprint 125.2: vLLM doesn't support streaming - fall back to regular execution
+        # Sprint 126: vLLM streaming via OpenAI-compatible SSE
         if provider == "vllm":
-            logger.warning(
-                "vllm_streaming_not_supported",
-                fallback="non_streaming_execution",
-            )
-            response = await self._call_vllm(task)
-            # Yield entire response as single chunk
-            yield {"content": response.content}
-            return
+            logger.info("vllm_streaming_start", model=self._vllm_model)
+            messages = [{"role": "user", "content": task.prompt}]
+            try:
+                async with httpx.AsyncClient() as client:
+                    async with client.stream(
+                        "POST",
+                        f"{self._vllm_base_url}/v1/chat/completions",
+                        json={
+                            "model": self._vllm_model,
+                            "messages": messages,
+                            "temperature": task.temperature,
+                            "max_tokens": task.max_tokens,
+                            "stream": True,
+                        },
+                        timeout=120.0,
+                    ) as response:
+                        response.raise_for_status()
+                        async for line in response.aiter_lines():
+                            if not line.startswith("data: "):
+                                continue
+                            data_str = line[6:]  # Strip "data: " prefix
+                            if data_str.strip() == "[DONE]":
+                                break
+                            try:
+                                import json as _json
+
+                                chunk_data = _json.loads(data_str)
+                                delta = chunk_data["choices"][0].get("delta", {})
+                                content = delta.get("content", "")
+                                if content:
+                                    yield {"content": content}
+                            except (ValueError, KeyError):
+                                continue
+                return
+            except Exception as e:
+                logger.error("vllm_streaming_failed", error=str(e))
+                raise
         model = self._get_model_for_provider(provider, task)
 
         # Map internal provider name to LLMProvider enum

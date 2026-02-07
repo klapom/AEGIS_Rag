@@ -1,7 +1,7 @@
 # AEGIS RAG Technology Stack
 
 **Project:** AEGIS RAG (Agentic Enterprise Graph Intelligence System)
-**Last Updated:** 2026-02-06 (Sprint 125: vLLM Dual-Engine, Domain-Aware Extraction)
+**Last Updated:** 2026-02-07 (Sprint 126: LLM Engine Mode, Community Batch, Domain Sub-Types)
 
 ---
 
@@ -212,6 +212,21 @@ pip install --break-system-packages <package>
 | Max Concurrent | 4 | 256+ | 256+ | 64× |
 | Batching | Sequential | Continuous | Continuous | Unlimited |
 | **Extraction Use Case** | 4 parallel uploads (bottleneck) | 256+ parallel uploads | 256+ parallel uploads | **64×** |
+
+**LLM Engine Mode (Sprint 126+ / ADR-062):**
+
+Runtime-selectable engine mode stored in Redis (`aegis:llm_engine_mode`):
+
+| Mode | Ollama | vLLM | Use Case |
+|------|--------|------|----------|
+| `ollama` | ✅ Active | ❌ Disabled | Chat, generation, low-latency queries |
+| `vllm` | ❌ Disabled | ✅ Active | High-throughput extraction, bulk ingestion |
+| `auto` (default) | ✅ Active | ✅ Both | Dual-engine (if VRAM permits) |
+
+- **Hot-Reload:** PUT `/api/v1/admin/llm/engine` — no container restart needed (30s Redis cache)
+- **Startup:** api/main.py reads `LLM_ENGINE_MODE` from `.env`, stores in Redis
+- **Routing:** AegisLLMProxy._route_task() honors mode, falls back gracefully
+- **Admin UI:** 3-card selector on AdminLLMConfigPage with live health status
 
 **Start/Stop:**
 ```bash
@@ -703,10 +718,14 @@ Fixed critical issues blocking LightRAG global queries:
 | **2** | Qdrant | <50ms | Semantic long-term memory | Permanent |
 | **3** | Graphiti + Neo4j | <200ms | Episodic, bi-temporal relationships | Temporal (versioned) |
 
-**Memory Consolidation (APScheduler 3.10.0):**
+**Scheduled Jobs (APScheduler 3.10.0):**
 - `consolidate_redis_to_qdrant`: Every 1 hour
 - `consolidate_conversations_to_graphiti`: Every 1 hour
 - `cleanup_old_sessions`: Every 24 hours
+- `community_detection_batch`: Daily at 5:00 AM (Sprint 126+, `GRAPH_COMMUNITY_DETECTION_MODE=scheduled`)
+  - Manual trigger: POST `/api/v1/admin/community-detection/trigger`
+  - Status check: GET `/api/v1/admin/community-detection/status`
+  - **85% faster ingestion** when enabled (732s → ~107s per document)
 
 ---
 

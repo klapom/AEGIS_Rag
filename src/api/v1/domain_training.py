@@ -1028,10 +1028,31 @@ async def update_domain(
 
         logger.info("domain_updated_successfully", name=domain_name)
 
+        # Convert Neo4j datetime fields for JSON serialization
+        training_metrics = None
+        if updated_domain.get("training_metrics"):
+            try:
+                training_metrics = eval(updated_domain["training_metrics"])
+            except Exception:
+                training_metrics = {}
+
+        domain_response = DomainResponse(
+            id=updated_domain["id"],
+            name=updated_domain["name"],
+            description=updated_domain["description"],
+            status=updated_domain["status"],
+            llm_model=updated_domain["llm_model"],
+            training_metrics=training_metrics,
+            created_at=str(updated_domain["created_at"]),
+            trained_at=str(updated_domain["trained_at"]) if updated_domain.get("trained_at") else None,
+            entity_sub_type_mapping=_parse_json_field(updated_domain.get("entity_sub_type_mapping"), {}),
+            relation_hints=_parse_json_field(updated_domain.get("relation_hints"), []),
+        )
+
         return {
             "success": True,
             "message": f"Domain '{domain_name}' updated successfully",
-            "domain": updated_domain,
+            "domain": domain_response.model_dump(),
         }
 
     except ValueError as e:

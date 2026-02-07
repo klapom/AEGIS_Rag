@@ -1563,18 +1563,29 @@ After implementing comprehensive logging (Sprint 83), we expect to discover addi
 | 113 | 36 | 2,692 | ✅ |
 | **114** | **18** | **2,710** | ✅ **Complete** |
 | **115** | **48** | **2,758** | ✅ **Complete** |
-| **116 (Planned)** | **36** | **2,794** | 📋 |
-| **117 (Planned)** | **47** | **2,841** | 📋 |
-| **118 (Planned)** | **23** | **2,864** | 📋 |
-| **Total** | **2,864** | - | - |
+| **116** | **36** | **2,794** | ✅ **Complete** |
+| **117** | **47** | **2,841** | ✅ **Complete** |
+| **118** | **40** | **2,881** | ✅ **Complete** |
+| **119** | **71** | **2,952** | ✅ **Complete** |
+| **120** | **64** | **3,016** | ✅ **Complete** |
+| **121** | **44** | **3,060** | ✅ **Complete** |
+| **122** | **26** | **3,086** | ✅ **Complete** |
+| **123** | **21** | **3,107** | ✅ **Complete** |
+| **124** | **36** | **3,143** | ✅ **Complete** |
+| **125** | **45** | **3,188** | ✅ **Complete** |
+| **126** | **14** | **3,202** | ✅ **Complete** |
+| **127 (Planned)** | **8** | **3,210** | 📋 |
+| **128 (Planned)** | **18** | **3,228** | 📋 |
+| **Total** | **3,228** | - | - |
 
 ---
 
 ## Current Sprint Status
 
-**Current Sprint:** 115 🔄 **In Progress** (Started 2026-01-20)
-**Previous Sprint:** 114 ✅ **Complete** (2026-01-20)
-**Focus:** E2E Test Stabilization & Performance Optimization
+**Current Sprint:** 126 ✅ **Complete** (2026-02-07)
+**Previous Sprint:** 125 ✅ **Complete** (2026-02-06)
+**Next Sprint:** 127 📝 **Planned** (LightRAG Removal — Direct Neo4j Architecture)
+**Focus:** LLM Engine Mode + Domain Sub-Type Pipeline + Community Batch + Admin UI Polish
 
 ### Sprint 114 Summary (Complete) ✅
 
@@ -2034,23 +2045,47 @@ Sprint 117.1 (Domain CRUD) - Foundation
 
 ---
 
-## Sprint 126 📝 **Planned** (after Sprint 125)
+## Sprint 126 ✅ **Complete** (2026-02-07)
 
-**Status:** 📝 PLANNED
-**Focus:** RAGAS Phase 1 Benchmark + vLLM Performance Evaluation
-**Story Points:** 13 SP (estimated)
+**Status:** ✅ COMPLETE
+**Focus:** LLM Engine Mode + Domain Sub-Type Pipeline + Community Batch + Admin UI Polish
+**Story Points:** 14 SP delivered (8 features)
 **Predecessor:** Sprint 125
 
-**Features:**
+**Features Completed:**
 
 | # | Feature | SP | Status |
 |---|---------|-----|--------|
-| 126.1 | RAGAS Phase 1 Ingestion Completion (498 docs via vLLM) | 8 | 📝 |
-| 126.2 | Performance Benchmark + RAGAS Evaluation | 5 | 📝 |
+| 126.1 | Runtime LLM Engine Mode (vLLM/Ollama/Auto, ADR-062) | 2 | ✅ |
+| 126.2 | DeploymentProfilePage Save Bug Fix | 1 | ✅ |
+| 126.3 | Community Detection as Nightly Batch Job (APScheduler) | 2 | ✅ |
+| 126.4 | DSPy EntityExtractionSignature Fix (list[str] → list[dict]) | 2 | ✅ |
+| 126.5 | NULL Relation-Type Backfill (1,021 legacy relations patched) | 1 | ✅ |
+| 126.6 | Domain Sub-Type Pipeline (YAML defaults → Neo4j overrides → CRUD) | 3 | ✅ |
+| 126.7 | AdminNavigationBar on ~28 Admin Pages | 1 | ✅ |
+| 126.8 | Domain Seeding into Neo4j (35 domains) | 2 | ✅ |
 
-**Rationale:** Moved from Sprint 125 to benchmark AFTER all extraction improvements (S-P-O triples, domain-aware prompts, vLLM engine) are complete. Running RAGAS on old extraction quality would produce misleading baselines.
+**Key Achievements:**
+- ✅ **ADR-062:** LLM Engine Mode Configuration (hot-reload via Redis, graceful degradation)
+- ✅ `/api/v1/admin/llm/engine` GET/PUT endpoints + 3-card Admin UI selector
+- ✅ **Community Batch Mode:** Skip during ingestion (`GRAPH_COMMUNITY_DETECTION_MODE=scheduled`), APScheduler cron at 5 AM daily, manual trigger API. **85% faster ingestion** (732s → ~107s/doc)
+- ✅ **DSPy Fix:** EntityExtractionSig/RelationExtractionSig now produce typed dicts matching ADR-060 universal types (was list[str], now list[dict])
+- ✅ **NULL Backfill:** 1,021 NULL relations → 212 specific types + 809 RELATED_TO (0 NULL remaining)
+- ✅ **Domain Sub-Type Pipeline:** Entity sub_type preserved through extraction → Neo4j. 253 entity + 43 relation aliases from seed_domains.yaml. 4-tier prompt priority (trained → domain-enriched → generic → legacy). Cache invalidation on PUT /domains/{name}
+- ✅ DeploymentProfilePage save fixed (URL, JSON body, auth token)
+- ✅ AdminNavigationBar on all ~28 admin pages
+- ✅ All 35 domains seeded into Neo4j with ontology references
 
-**See:** `docs/sprints/SPRINT_125_PLAN.md` (moved features section)
+**Technical Details:**
+- **Engine Routing:** AegisLLMProxy._route_task() honors mode, falls back gracefully
+- **Startup:** api/main.py reads engine mode, skips unnecessary warmups
+- **Hot-Reload:** 30s Redis cache prevents thundering herd on mode changes
+- **Domain Storage:** `:Domain` nodes with entity_sub_type_mapping + relation_hints
+- **Community API:** POST `/api/v1/admin/community-detection/trigger`, GET `/status`
+- **Sub-Type Flow:** LLM → domain-specific sub_type (e.g., DISEASE) → mapped to universal type (CONCEPT) → sub_type preserved as Neo4j property
+
+**Commits:** `6763a8b`, `d4e015a`
+**See:** `docs/adr/ADR-062-llm-engine-mode-configuration.md`, `docs/DECISION_LOG.md` (Sprint 126 section)
 
 ---
 

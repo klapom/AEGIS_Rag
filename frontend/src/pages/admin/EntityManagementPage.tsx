@@ -12,13 +12,12 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   Database,
   Search,
   Eye,
   Trash2,
-  ArrowLeft,
   ChevronLeft,
   ChevronRight,
   Network,
@@ -68,14 +67,6 @@ export function EntityManagementPage() {
 
       {/* Page Header */}
       <div className="bg-white dark:bg-gray-800 border-b-2 border-gray-200 dark:border-gray-700 px-6 py-6">
-        <Link
-          to="/admin"
-          className="inline-flex items-center gap-1 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 mb-4"
-          data-testid="back-to-admin-link"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Admin
-        </Link>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Database className="w-8 h-8 text-blue-600 dark:text-blue-400" />

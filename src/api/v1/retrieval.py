@@ -1052,7 +1052,7 @@ async def get_deployment_profile(
 
 @router.put("/admin/deployment-profile")
 async def set_deployment_profile_endpoint(
-    profile_name: str = Form(...),
+    request: Request,
     current_user: str | None = Depends(get_current_user),
 ) -> dict[str, Any]:
     """Set deployment profile (activates relevant domains).
@@ -1079,6 +1079,10 @@ async def set_deployment_profile_endpoint(
             get_active_domains,
             set_deployment_profile,
         )
+
+        # Accept both JSON body and form data
+        body = await request.json()
+        profile_name = body.get("profile_name", "")
 
         # Set profile (validates against seed catalog)
         success = await set_deployment_profile(profile_name)

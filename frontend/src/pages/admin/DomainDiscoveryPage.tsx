@@ -8,6 +8,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DomainAutoDiscovery, type DomainSuggestion } from '../../components/admin/DomainAutoDiscovery';
+import { AdminNavigationBar } from '../../components/admin/AdminNavigationBar';
 
 export function DomainDiscoveryPage() {
   const navigate = useNavigate();
@@ -36,6 +37,9 @@ export function DomainDiscoveryPage() {
 
   return (
     <div className="p-6" data-testid="domain-discovery-page">
+      <div className="mb-4">
+        <AdminNavigationBar />
+      </div>
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
           Domain Auto-Discovery

@@ -8,10 +8,10 @@
  */
 
 import { useState, lazy, Suspense } from 'react';
-import { Link } from 'react-router-dom';
 import { Info } from 'lucide-react';
 import { useDomains } from '../../hooks/useDomainTraining';
 import { DomainList } from '../../components/admin/DomainList';
+import { AdminNavigationBar } from '../../components/admin/AdminNavigationBar';
 
 // Sprint 65 Feature 65.2.1: Lazy load NewDomainWizard to reduce initial bundle size
 // This component is only loaded when user clicks "New Domain" button
@@ -33,16 +33,10 @@ export function DomainTrainingPage() {
 
   return (
     <div className="p-6 max-w-6xl mx-auto" data-testid="domain-training-page">
-      {/* Back Link */}
-      <Link
-        to="/admin"
-        className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 mb-4"
-      >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-        </svg>
-        Back to Admin
-      </Link>
+      {/* Admin Navigation */}
+      <div className="mb-4">
+        <AdminNavigationBar />
+      </div>
 
       {/* Under Development Banner (Feature 64.2) */}
       <div

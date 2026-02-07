@@ -659,6 +659,7 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
 **Sprint 121 Complete:** Technical Debt Consolidation (44 SP, 5 TDs resolved) — ChunkingService removed (**-1,727 lines**), parallel section extraction (tokenizer singleton + ThreadPool), ingestion **77% faster** (170s→38.5s), LLM tool detection default, Entity CRUD API (**GDPR Art. 17**) + EntityManagementPage frontend.
 **Sprint 120 Performance Fix:** Ollama 0.13.4→**0.15.2** + `OLLAMA_NEW_ENGINE=true` — Nemotron3 Nano (`nemotron_h_moe` Hybrid: Mamba SSM + MoE) jetzt GPU-beschleunigt (**3→74 tok/s, 24×**), Reranker CPU→CUDA (**17.8s→335ms**), Singleton-Fixes. E2E warm: **2min→~1s**. Details: [CLAUDE_zusatzinfos.md](docs/CLAUDE_zusatzinfos.md)
 **Sprint 125 Complete:** vLLM dual-engine (ADR-059, port 8001), S-P-O extraction (15+22 universal types, ADR-060), domain taxonomy (35 DDC+FORD domains), domain-aware ingestion (BGE-M3 classification → domain prompts), domain-aware frontend (detection, profiles, filter), 45 SP (100%).
+**Sprint 126 Complete:** LLM Engine Mode (ADR-062, vLLM/Ollama/Auto hot-reload via Redis), community detection as nightly batch job (**85% faster ingestion**, 732s→107s/doc), DSPy EntityExtractionSig fix (list[str]→list[dict]), NULL relation backfill (1,021→0), domain sub-type pipeline (253 entity + 43 relation aliases, 4-tier prompt priority), AdminNavigationBar on ~28 pages, 35 domains seeded into Neo4j, 14 SP (100%).
 
 ---
 

@@ -18,7 +18,8 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Globe, Camera, Code, PlayCircle, StopCircle, AlertCircle } from 'lucide-react';
+import { Globe, Camera, Code, PlayCircle, StopCircle, AlertCircle } from 'lucide-react';
+import { AdminNavigationBar } from '../../components/admin/AdminNavigationBar';
 
 interface BrowserSession {
   status: 'idle' | 'active' | 'error';
@@ -226,18 +227,14 @@ export function BrowserToolsPage() {
       data-testid="browser-tools-page"
     >
       <div className="max-w-7xl mx-auto py-8 px-6 space-y-6">
+        {/* Admin Navigation */}
+        <div className="mb-4">
+          <AdminNavigationBar />
+        </div>
+
         {/* Header */}
         <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-4">
-            <button
-              onClick={() => navigate('/admin')}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
-              data-testid="back-to-admin-button"
-              aria-label="Back to Admin Dashboard"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              <span>Back to Admin</span>
-            </button>
           </div>
 
           {/* Session Controls */}

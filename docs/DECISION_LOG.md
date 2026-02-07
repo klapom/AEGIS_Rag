@@ -949,7 +949,102 @@
 
 ---
 
-**Last Updated:** 2026-02-06 (Sprint 125)
-**Total Decisions Documented:** 166 (+13 from Sprints 124-125)
-**Current Sprint:** Sprint 125 (In Progress - vLLM + Domain-Aware Extraction + Domain Frontend)
-**Next Sprint:** Sprint 126 (RAGAS Phase 1 Ingestion + Benchmark), Sprint 127 (LightRAG Removal + Table Ingestion Investigation)
+---
+
+## SPRINT 126: LLM ENGINE MODE + ADMIN UI POLISH + DOMAIN SEEDING
+
+### 2026-02-07 | Runtime LLM Engine Mode Configuration (Sprint 126.1) — ADR-062
+**Context:** vLLM (40.7GB) + Ollama (24GB) cannot run simultaneously on DGX Spark (128GB unified memory). Deployments need flexibility: instant API startup for chat, or on-demand vLLM for bulk ingestion.
+
+**Decision:** Configurable engine mode (`vllm` / `ollama` / `auto`) stored in Redis. PUT `/api/v1/admin/llm/engine` endpoint enables hot-reload without container restart. AegisLLMProxy routes extraction tasks to vLLM (793 tok/s, 256+ concurrent) when mode permits, falls back to Ollama (41 tok/s, 4 concurrent).
+
+**Consequences:**
+- ✅ Zero-startup `ollama` mode (60s cold start eliminated)
+- ✅ Hot-reload via Redis (30s local cache)
+- ✅ Graceful degradation (fallback routing)
+- ⚠️ Operator must understand tradeoffs
+
+### 2026-02-07 | DeploymentProfilePage Save Bug Fix (Sprint 126.2)
+**Context:** Admin UI deployment profile save returned "Failed to save" error despite backend accepting request.
+
+**Root Cause:**
+- Wrong API endpoint URL (`/api/v1/admin/` → correct: `/api/v1/retrieval/admin/`)
+- Form data sent instead of JSON body
+- Missing auth token (raw fetch() → apiClient.put())
+- Backend expected `request.json()` but received `Form(...)`
+
+**Decision:** Fix all layers:
+1. Frontend: Update URL, use JSON body, switch to apiClient
+2. Backend: Change parameter from Form(...) to request.json()
+
+**Consequences:** Deployment profile changes now persist correctly, unblocking profile-based domain activation testing.
+
+### 2026-02-07 | AdminNavigationBar Deployment on All ~28 Admin Pages (Sprint 126.3)
+**Context:** Admin users navigated via "Back to Admin Dashboard" links, requiring clicks to return home between pages. Poor UX for rapid domain/LLM config changes.
+
+**Decision:** Replace "Back to Admin" links with persistent AdminNavigationBar at top of all ~28 admin pages. Navbar includes quick-nav links to: Dashboard, Domains, LLM Config, Deployment, Namespaces, Entity Management.
+
+**Consequences:**
+- ✅ Direct navigation between admin sections
+- ✅ Consistent visual hierarchy
+- ✅ Reduced clicks per workflow (30% fewer for typical admin session)
+
+### 2026-02-07 | Domain Seeding into Neo4j (Sprint 126.4)
+**Context:** Deployment profiles reference domains from `seed_domains.yaml` (35 domains: pharma, law, finance, etc.). But domains were never seeded into Neo4j — DeploymentProfilePage showed "Domain not found" errors when activating profiles.
+
+**Decision:** Run `seed_all_domains()` to load `seed_domains.yaml` into Neo4j:
+- Creates `:Domain` nodes with properties (name, description, ontology_url, entity_types, relation_types)
+- Establishes `:PART_OF` relationships (e.g., `DISEASE → medicine_domain`)
+- Validates against entity/relation type constraints
+
+**Consequences:** All 35 domains now available in deployment profiles, unblocking domain-specific extraction and UI testing.
+
+### 2026-02-07 | Community Detection as Nightly Batch Job (Sprint 126.3)
+**Context:** Community detection (GDS Leiden/Louvain) during ingestion adds ~625s per document (732s total → 107s without). For bulk ingestion, this is unacceptable.
+
+**Decision:** Make community detection a scheduled batch job instead of running during ingestion. APScheduler cron triggers at 5:00 AM daily. Manual trigger via POST `/api/v1/admin/community-detection/trigger`. New env var `GRAPH_COMMUNITY_DETECTION_MODE=scheduled` (default: `inline` for backward compat).
+
+**Consequences:**
+- ✅ 85% faster ingestion (732s → ~107s per document)
+- ✅ Community quality unchanged (same algorithms, just deferred)
+- ⚠️ Communities may be stale for up to 24h until next batch run
+- Manual trigger available for immediate refresh
+
+### 2026-02-07 | DSPy EntityExtractionSignature Fix (Sprint 126.4)
+**Context:** DSPy EntityExtractionSig used `list[str]` output, producing unstructured entity names without types. This caused all entities to be stored as generic "ENTITY" type, defeating ADR-060's 15 universal entity types.
+
+**Decision:** Change DSPy signatures to produce typed dicts: EntityExtractionSig → `list[dict[str, str]]` with `{name, type, description}`, RelationExtractionSig → `list[dict[str, str]]` with `{source, target, type, description}`. Added backward-compatible fallback for old string format. Normalize existing Neo4j domain training data.
+
+**Consequences:**
+- ✅ DSPy-trained prompts now produce typed entities matching ADR-060
+- ✅ Backward compatible with old training data
+- ✅ Training data normalization handles legacy formats
+
+### 2026-02-07 | NULL Relation-Type Backfill (Sprint 126.5)
+**Context:** Sprint 124 legacy data contained 1,021 relations with NULL types in Neo4j (from gpt-oss:120b generic extraction before S-P-O pipeline fix in Sprint 125).
+
+**Decision:** Run idempotent backfill script (`scripts/backfill_relation_types.py`) that pattern-matches relation descriptions to assign specific types: CONTAINS (89), PART_OF (45), USES (38), LOCATED_IN (21), CREATED_BY (19), etc. Remaining 809 unmatched relations get RELATED_TO (acceptable fallback).
+
+**Consequences:**
+- ✅ 0 NULL relations remaining (was 1,021)
+- ✅ 212 relations got specific types (20.8%)
+- ✅ 809 relations set to RELATED_TO (79.2%) — acceptable for legacy data
+- ✅ Idempotent — safe to re-run
+
+### 2026-02-07 | Domain Sub-Type Pipeline — YAML Factory Defaults with Neo4j Runtime Overrides (Sprint 126.6)
+**Context:** ADR-060 defines 15 universal entity types + domain-specific sub-types. But LLM extraction outputs domain-specific types (e.g., DISEASE, MEDICATION) that need mapping to universal types while preserving the sub-type for fine-grained queries.
+
+**Decision:** Implement 4-tier prompt priority system: (1) DSPy-trained domain prompts, (2) domain-enriched prompts (universal types + domain sub-types from Neo4j), (3) generic ADR-060 prompts, (4) legacy prompts. YAML `seed_domains.yaml` provides 253 entity aliases + 43 relation aliases as factory defaults. Neo4j `:Domain` nodes store `entity_sub_type_mapping` and `relation_hints` as runtime overrides. Async `_refresh_domain_type_mappings_from_db()` loads at extraction time. Cache invalidation on PUT `/domains/{name}`.
+
+**Consequences:**
+- ✅ Sub-types preserved through entire pipeline (LLM → extraction_service → Neo4j property `sub_type`)
+- ✅ Factory defaults from YAML, runtime overrides from Neo4j
+- ✅ API CRUD for domain type mappings (DomainCreateRequest/UpdateRequest include mapping fields)
+- ✅ No LLM prompt token budget increase (sub-types only in domain-enriched tier)
+
+---
+
+**Last Updated:** 2026-02-07 (Sprint 126)
+**Total Decisions Documented:** 173 (+7 from Sprint 126)
+**Current Sprint:** Sprint 126 ✅ Complete
+**Next Sprint:** Sprint 127 (LightRAG Removal — Direct Neo4j), Sprint 128 (Domain Editor UI + Table Ingestion)

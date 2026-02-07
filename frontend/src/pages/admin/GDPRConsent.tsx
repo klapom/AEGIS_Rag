@@ -7,8 +7,8 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { Shield, Plus, ArrowLeft } from 'lucide-react';
+import { Shield, Plus } from 'lucide-react';
+import { AdminNavigationBar } from '../../components/admin/AdminNavigationBar';
 import { ConsentRegistry } from '../../components/gdpr/ConsentRegistry';
 import { ConsentForm } from '../../components/gdpr/ConsentForm';
 import { DataSubjectRights } from '../../components/gdpr/DataSubjectRights';
@@ -332,15 +332,13 @@ export function GDPRConsentPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900" data-testid="gdpr-page">
       <div className="max-w-6xl mx-auto py-8 px-6 space-y-6">
+        {/* Navigation Bar */}
+        <div className="mb-4">
+          <AdminNavigationBar />
+        </div>
+
         {/* Header */}
         <header className="space-y-2">
-          <Link
-            to="/admin"
-            className="inline-flex items-center gap-1 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 mb-3"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Admin
-          </Link>
           <div className="flex items-center gap-3">
             <Shield className="w-8 h-8 text-blue-600 dark:text-blue-400" />
             <div>

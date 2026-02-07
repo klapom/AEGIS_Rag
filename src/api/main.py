@@ -185,26 +185,52 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             note="Embedding model will load on first request (may take 60-90s)",
         )
 
-    # Sprint 65 Feature 65.1: Pre-warm LLM for faster first follow-up question request
+    # Sprint 126: Check LLM engine mode from Redis before warmup
+    # If engine_mode == 'vllm', skip Ollama warmup (Ollama may not be loaded)
+    llm_engine_mode = "auto"
     try:
-        logger.info("Pre-warming LLM for follow-up question generation...")
-        from src.agents.followup_generator import generate_followup_questions
+        import redis.asyncio as aioredis
 
-        # Trigger a warmup request to load model into memory
-        await generate_followup_questions(
-            query="System warmup",
-            answer="System warmup",
-            sources=[],
-            max_questions=1,
+        _redis = aioredis.from_url(
+            f"redis://{settings.redis_host}:{settings.redis_port}/0",
+            decode_responses=True,
         )
-        logger.info("llm_prewarming_completed", status="success")
+        stored_mode = await _redis.get("aegis:llm_engine_mode")
+        await _redis.close()
+        if stored_mode and stored_mode in ("vllm", "ollama", "auto"):
+            llm_engine_mode = stored_mode
+        logger.info("llm_engine_mode_at_startup", engine_mode=llm_engine_mode)
     except Exception as e:
-        # Non-fatal: Follow-up questions will still work, just slower on first request
-        logger.warning(
-            "llm_prewarming_failed",
-            error=str(e),
-            note="Follow-up questions will work but may be slower on first request",
+        logger.warning("engine_mode_check_failed", error=str(e), fallback="auto")
+
+    # Sprint 65 Feature 65.1: Pre-warm LLM for faster first follow-up question request
+    if llm_engine_mode == "vllm":
+        # Skip Ollama warmup — vLLM is always warm (pre-loaded model)
+        logger.info(
+            "llm_prewarming_skipped",
+            engine_mode="vllm",
+            note="vLLM model is pre-loaded, no warmup needed",
         )
+    else:
+        try:
+            logger.info("Pre-warming LLM for follow-up question generation...")
+            from src.agents.followup_generator import generate_followup_questions
+
+            # Trigger a warmup request to load model into memory
+            await generate_followup_questions(
+                query="System warmup",
+                answer="System warmup",
+                sources=[],
+                max_questions=1,
+            )
+            logger.info("llm_prewarming_completed", status="success")
+        except Exception as e:
+            # Non-fatal: Follow-up questions will still work, just slower on first request
+            logger.warning(
+                "llm_prewarming_failed",
+                error=str(e),
+                note="Follow-up questions will work but may be slower on first request",
+            )
 
     # Sprint 31: Initialize FormatRouter with Docling health check
     docling_available = False
