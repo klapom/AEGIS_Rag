@@ -176,6 +176,12 @@ class AegisLLMProxy:
         self._vllm_base_url = settings.vllm_base_url
         self._vllm_model = settings.vllm_model
 
+        # Sprint 125 Feature 125.3: Strict Docker profile separation
+        # Load AEGIS_MODE to determine which LLM server is running
+        self._aegis_mode = settings.aegis_mode  # 'chat' or 'ingestion'
+        self._ollama_available = self._aegis_mode == "chat"  # Only available in CHAT mode
+        self._skip_ollama_fallback_in_ingestion = self._aegis_mode == "ingestion"
+
         logger.info(
             "aegis_llm_proxy_initialized",
             providers=list(self.config.providers.keys()),
@@ -184,6 +190,8 @@ class AegisLLMProxy:
             cache_enabled=self._cache_enabled,
             vllm_enabled=self._vllm_enabled,
             vllm_base_url=self._vllm_base_url if self._vllm_enabled else None,
+            aegis_mode=self._aegis_mode,
+            ollama_available=self._ollama_available,
         )
 
     def _is_budget_exceeded(self, provider: str) -> bool:
@@ -530,7 +538,43 @@ class AegisLLMProxy:
             return result
 
         except Exception as e:
-            # Provider error → try local as last resort
+            # Sprint 125.3: In INGESTION mode, don't try Ollama fallback (it's stopped)
+            if self._skip_ollama_fallback_in_ingestion:
+                logger.error(
+                    "provider_error_no_fallback_ingestion_mode",
+                    provider=provider,
+                    error=str(e),
+                    mode="ingestion",
+                    task_id=str(task.id),
+                    reason="ollama_unavailable_ingestion_mode",
+                )
+
+                # Emit FAILED phase event
+                if emit_phase_event and phase_type:
+                    try:
+                        from src.agents.phase_events_queue import stream_phase_event
+                        from src.models.phase_event import PhaseStatus
+
+                        stream_phase_event(
+                            phase_type=phase_type,
+                            status=PhaseStatus.FAILED,
+                            metadata={
+                                "prompt_name": task.metadata.get("prompt_name", "unknown"),
+                                "error": str(e),
+                                "provider": provider,
+                                "mode": "ingestion",
+                                "note": "no_ollama_fallback_in_ingestion_mode",
+                            },
+                        )
+                    except ImportError:
+                        logger.debug("phase_events_queue_not_available_skipping_error_event")
+
+                raise LLMExecutionError(
+                    f"Provider {provider} failed in INGESTION mode. Ollama is not available. "
+                    f"Error: {str(e)}"
+                ) from e
+
+            # CHAT mode: try local Ollama as fallback
             logger.error(
                 "provider_error_fallback",
                 provider=provider,

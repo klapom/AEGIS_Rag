@@ -14,14 +14,54 @@
 #   - System + Overhead:                   ~10GB
 #   - Reserve:                             ~46GB (for concurrent model loading)
 #
+# PROFILE SEPARATION (Sprint 125.3: vLLM vs Ollama GPU Memory Isolation)
+# =============================================================================
+# The DGX Spark has limited GPU memory (128GB unified). vLLM and Ollama both
+# need GPU access, but they CONFLICT during initialization:
+#   - vLLM: Performs GPU memory profiling during startup
+#   - Ollama: Unloads models if vLLM allocates GPU memory
+#   RESULT: vLLM fails with "Error in memory profiling" (AssertionError)
+#
+# SOLUTION: Strict profile-based separation
+#   - DEFAULT (no profile): CHAT MODE
+#     * Ollama: RUNNING (serves LLM requests)
+#     * vLLM: STOPPED (not needed for chat)
+#   - --profile ingestion: INGESTION MODE
+#     * Ollama: STOPPED (save GPU memory)
+#     * vLLM: RUNNING (high-concurrency extraction, 256+ requests)
+#     * Docling: RUNNING (GPU-accelerated OCR)
+#
+# HOW TO USE:
+# =============================================================================
+# CHAT MODE (default):
+#   docker compose -f docker-compose.dgx-spark.yml up -d
+#   # Ollama on :11434, serving LLM requests
+#
+# INGESTION MODE:
+#   # Option 1: Use helper script (recommended)
+#   ./scripts/switch_mode.sh ingestion
+#
+#   # Option 2: Manual commands
+#   docker compose -f docker-compose.dgx-spark.yml stop ollama
+#   sleep 5  # Wait for GPU memory to be freed
+#   docker compose -f docker-compose.dgx-spark.yml --profile ingestion up -d vllm docling
+#   # vLLM on :8001, Docling on :5001
+#
+# BACK TO CHAT MODE:
+#   ./scripts/switch_mode.sh chat
+#   # Or manually: docker compose -f docker-compose.dgx-spark.yml up -d ollama
+#
+# Environment Variables:
+#   AEGIS_MODE=chat|ingestion  # Track current mode (optional, for debugging)
+#
 # Usage:
 #   # Start all services
 #   docker compose -f docker-compose.dgx-spark.yml up -d
 #
-#   # Start with ingestion profile (includes Docling)
+#   # Start with ingestion profile (includes Docling + vLLM)
 #   docker compose -f docker-compose.dgx-spark.yml --profile ingestion up -d
 #
-#   # Pull models (run once after Ollama starts)
+#   # Pull models (run once after Ollama starts in CHAT mode)
 #   docker exec aegis-ollama ollama pull nemotron-no-think:latest
 #   docker exec aegis-ollama ollama pull gpt-oss:20b
 #   docker exec aegis-ollama ollama pull qwen3-vl:32b
@@ -44,6 +84,12 @@ services:
     # Default 64MB is too small for OLLAMA_NUM_CTX=32768 + OLLAMA_NUM_PARALLEL=2
     # Prevents sporadic hangs/timeouts with large prompts
     shm_size: "2g"
+    # Sprint 125 Profile Separation: Exclude from 'ingestion' profile (only vLLM)
+    # - In CHAT mode (default): Ollama runs, handles all LLM tasks
+    # - In INGESTION mode: Ollama stopped, vLLM only (prevents GPU memory conflict)
+    # To switch modes: docker compose -f docker-compose.dgx-spark.yml --profile ingestion up -d
+    profiles:
+      - chat  # Default mode - use 'chat' profile (empty means always-on in default mode)
     ports:
       - "11434:11434"
     volumes:
@@ -562,6 +608,8 @@ services:
       - NEO4J_USER=neo4j
       - NEO4J_PASSWORD=aegis-rag-neo4j-password
       - NEO4J_DATABASE=neo4j
+      # Sprint 126 Feature 126.1: Community Detection Mode (scheduled/sync/disabled)
+      - GRAPH_COMMUNITY_DETECTION_MODE=${GRAPH_COMMUNITY_DETECTION_MODE:-scheduled}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_DB=0

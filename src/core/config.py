@@ -283,6 +283,17 @@ class Settings(BaseSettings):
     log_level: str = Field(default="INFO", description="Logging level")
     json_logs: bool = Field(default=False, description="Output logs in JSON format")
 
+    # Sprint 125 Feature 125.3: Strict Docker profile separation (vLLM vs Ollama)
+    aegis_mode: Literal["chat", "ingestion"] = Field(
+        default="chat",
+        description=(
+            "LLM execution mode for Docker profile separation (Sprint 125.3):\n"
+            "- 'chat' (default): Ollama only, route everything to local Ollama\n"
+            "- 'ingestion': vLLM only, route extraction to vLLM (256+ concurrent requests)\n"
+            "NOTE: Use ./scripts/switch_mode.sh to switch modes safely"
+        ),
+    )
+
     # API Server
     # Security Note: Binding to 0.0.0.0 is intentional for Docker/Kubernetes deployments.
     # This allows the container to accept connections from any interface.
@@ -687,6 +698,16 @@ class Settings(BaseSettings):
     )
 
     # Community Detection Configuration (Sprint 6.3: Community Detection & Clustering)
+    # Sprint 126 Feature 126.1: Scheduled Community Detection
+    graph_community_detection_mode: Literal["sync", "scheduled", "disabled"] = Field(
+        default="scheduled",
+        description=(
+            "Community detection execution mode:\n"
+            "- 'sync': Run during ingestion (blocks API, 10-20min)\n"
+            "- 'scheduled': Skip during ingestion, run via nightly batch job (5 AM, default)\n"
+            "- 'disabled': Never run community detection"
+        ),
+    )
     graph_community_algorithm: str = Field(
         default="leiden", description="Community detection algorithm (leiden or louvain)"
     )
