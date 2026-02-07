@@ -64,31 +64,23 @@ test-watch:  ## Run tests in watch mode
 # Code Quality
 # ============================================================================
 
-lint:  ## Run linter (Ruff)
+lint:  ## Run linter (Ruff lint check)
 	poetry run ruff check src/ tests/
 
 lint-fix:  ## Run linter with auto-fix
 	poetry run ruff check src/ tests/ --fix
 
-format:  ## Format code (Black + Ruff)
-	poetry run black src/ tests/
+format:  ## Format code (Ruff format - replaces Black)
 	poetry run ruff format src/ tests/
 
 type-check:  ## Run type checker (MyPy)
 	poetry run mypy src/ --config-file=pyproject.toml
 
-security:  ## Run security scanners (Bandit + Safety)
-	poetry run bandit -r src/ -ll
-	poetry run safety check
+pre-commit:  ## Run all pre-commit hooks (recommended before commit)
+	pre-commit run --all-files
 
-pre-commit:  ## Run all pre-commit hooks
-	poetry run pre-commit run --all-files
-
-quality:  ## Run all quality checks
-	$(MAKE) lint
-	$(MAKE) format
-	$(MAKE) type-check
-	$(MAKE) security
+quality:  ## Run all quality checks locally (pre-commit + tests)
+	$(MAKE) pre-commit
 	$(MAKE) test
 
 # ============================================================================

@@ -180,55 +180,5 @@ jobs:
         run: |
           echo "E2E Test Run Complete"
           echo "Check artifacts for screenshots and detailed results"
-
-  test-quality:
-    name: Test Code Quality
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install poetry
-          poetry install --with dev
-
-      - name: Lint test files
-        run: |
-          poetry run ruff check tests/e2e/test_*.py tests/e2e/fixtures/ tests/e2e/utils/
-        continue-on-error: true
-
-      - name: Type check test files
-        run: |
-          poetry run mypy tests/e2e/ --ignore-missing-imports || true
-        continue-on-error: true
-
-      - name: Check test structure
-        run: |
-          python << 'PYTHON_EOF'
-          import ast
-          import pathlib
-
-          test_files = pathlib.Path('tests/e2e').glob('test_*.py')
-          for test_file in test_files:
-            if 'conftest' in test_file.name:
-              continue
-            with open(test_file) as f:
-              tree = ast.parse(f.read())
-              has_e2e_marker = False
-              for node in ast.walk(tree):
-                if isinstance(node, ast.FunctionDef) and node.name.startswith('test_'):
-                  for decorator in node.decorator_list:
-                    if 'mark.e2e' in ast.unparse(decorator):
-                      has_e2e_marker = True
-                      break
-              if not has_e2e_marker:
-                print(f'⚠ No @pytest.mark.e2e found in {test_file}')
-          print('✓ Test structure validation complete')
-          PYTHON_EOF
+          echo ""
+          echo "Note: Test code quality (linting, type checks) is validated by the main CI pipeline pre-commit hooks"

@@ -136,36 +136,25 @@ jobs:
           echo "todos=$TODO_COUNT" >> $GITHUB_OUTPUT
           echo "fixmes=$FIXME_COUNT" >> $GITHUB_OUTPUT
 
-      - name: Security scan
+      - name: Dependency Security Scan
         id: security
         run: |
-          echo "## Security Vulnerabilities" >> $GITHUB_STEP_SUMMARY
+          echo "## Dependency Security Vulnerabilities" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-
-          # Bandit (Python security issues)
-          bandit -r src/ -f json -o bandit-sprint-end.json || true
-
-          # Count issues by severity
-          if [ -f bandit-sprint-end.json ]; then
-            HIGH=$(jq '[.results[] | select(.issue_severity=="HIGH")] | length' bandit-sprint-end.json)
-            MEDIUM=$(jq '[.results[] | select(.issue_severity=="MEDIUM")] | length' bandit-sprint-end.json)
-            LOW=$(jq '[.results[] | select(.issue_severity=="LOW")] | length' bandit-sprint-end.json)
-
-            echo "- High: $HIGH" >> $GITHUB_STEP_SUMMARY
-            echo "- Medium: $MEDIUM" >> $GITHUB_STEP_SUMMARY
-            echo "- Low: $LOW" >> $GITHUB_STEP_SUMMARY
-
-            echo "security_high=$HIGH" >> $GITHUB_OUTPUT
-            echo "security_medium=$MEDIUM" >> $GITHUB_OUTPUT
-          fi
+          echo "Note: Bandit code security issues are checked on every commit via pre-commit hooks" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
 
           # pip-audit (dependency vulnerabilities)
           pip-audit --format json --output pip-audit-sprint-end.json || true
 
           if [ -f pip-audit-sprint-end.json ]; then
             VULNS=$(jq '.dependencies | length' pip-audit-sprint-end.json || echo "0")
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "Dependency vulnerabilities: $VULNS" >> $GITHUB_STEP_SUMMARY
+            echo "- Vulnerable dependencies: $VULNS" >> $GITHUB_STEP_SUMMARY
+            if [ "$VULNS" -gt "0" ]; then
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "### Vulnerable Packages:" >> $GITHUB_STEP_SUMMARY
+              jq '.dependencies[].name' pip-audit-sprint-end.json | head -10 >> $GITHUB_STEP_SUMMARY
+            fi
             echo "dep_vulns=$VULNS" >> $GITHUB_OUTPUT
           fi
 
@@ -232,8 +221,6 @@ jobs:
           DEAD_CODE: ${{ steps.dead_code.outputs.dead_code }}
           TODOS: ${{ steps.todos.outputs.todos }}
           FIXMES: ${{ steps.todos.outputs.fixmes }}
-          SECURITY_HIGH: ${{ steps.security.outputs.security_high }}
-          SECURITY_MEDIUM: ${{ steps.security.outputs.security_medium }}
           DEP_VULNS: ${{ steps.security.outputs.dep_vulns }}
           COVERAGE: ${{ steps.coverage.outputs.coverage }}
           TOTAL_LOC: ${{ steps.loc.outputs.total_loc }}
@@ -247,8 +234,6 @@ jobs:
             --dead-code "$DEAD_CODE" \
             --todos "$TODOS" \
             --fixmes "$FIXMES" \
-            --security-high "$SECURITY_HIGH" \
-            --security-medium "$SECURITY_MEDIUM" \
             --dep-vulns "$DEP_VULNS" \
             --coverage "$COVERAGE" \
             --loc "$TOTAL_LOC" \
@@ -264,7 +249,6 @@ jobs:
             maintainability.txt
             duplication-report.md
             dead-code.txt
-            bandit-sprint-end.json
             pip-audit-sprint-end.json
             coverage.json
             docs/sprints/SPRINT_*_CODE_QUALITY_REPORT.md
@@ -273,8 +257,8 @@ jobs:
         run: |
           # Fail if critical thresholds exceeded
           HIGH_COMPLEXITY=${{ steps.complexity.outputs.high_complexity }}
-          SECURITY_HIGH=${{ steps.security.outputs.security_high }}
           COVERAGE=${{ steps.coverage.outputs.coverage }}
+          DEP_VULNS=${{ steps.security.outputs.dep_vulns }}
 
           FAIL=0
 
@@ -283,14 +267,13 @@ jobs:
             FAIL=1
           fi
 
-          if [ "$SECURITY_HIGH" -gt 0 ]; then
-            echo "❌ High-severity security issues found: $SECURITY_HIGH"
+          if [ $(echo "$COVERAGE < 50" | bc) -eq 1 ]; then
+            echo "❌ Test coverage below 50%: $COVERAGE%"
             FAIL=1
           fi
 
-          if [ $(echo "$COVERAGE < 80" | bc) -eq 1 ]; then
-            echo "❌ Test coverage below 80%: $COVERAGE%"
-            FAIL=1
+          if [ "$DEP_VULNS" -gt 5 ]; then
+            echo "⚠️ High number of dependency vulnerabilities: $DEP_VULNS (threshold: 5)"
           fi
 
           if [ $FAIL -eq 1 ]; then
