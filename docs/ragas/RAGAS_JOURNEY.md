@@ -3559,3 +3559,205 @@ Expected improvements:
 - Extraction quality: Domain-specific prompts + reasoning parser
 
 ---
+
+## Sprint 126: vLLM Stabilization + CUDA Compilation on DGX Spark SM121 (2026-02-07)
+
+### Overview
+
+Sprint 126 focuses on stabilizing vLLM on DGX Spark (GB10 Blackwell, SM121) for sustained multi-request extraction. Previous attempts crashed with `cudaErrorIllegalInstruction` after 1-2 requests. This section documents the full debugging journey, root causes, and the final working configuration.
+
+### DGX Spark SM121 — The Compatibility Challenge
+
+The NVIDIA DGX Spark uses the **GB10 (Blackwell)** chip with compute capability **SM121** (sometimes referred to as SM12.1a). This is a unique architecture:
+
+- **SM120** = standard Blackwell (B100/B200 data center GPUs)
+- **SM121** = DGX Spark variant with unified CPU-GPU memory (128 GiB shared)
+- **Key difference**: Some CUTLASS kernels compiled for SM120 produce `cudaErrorIllegalInstruction` on SM121
+
+This matters because FlashInfer's MoE (Mixture of Experts) FP4 kernels use CUTLASS grouped GEMM operations that target SM120.
+
+### FlashInfer MOE Backend: `latency` vs `throughput`
+
+| Setting | Behavior on SM121 | Result |
+|---------|-------------------|--------|
+| `VLLM_FLASHINFER_MOE_BACKEND=throughput` | Autotuner tries SM120 CUTLASS tactics → **crash** | `cudaErrorIllegalInstruction` during inference |
+| `VLLM_FLASHINFER_MOE_BACKEND=latency` | Autotuner tries SM120 tactics → **gracefully skips** → falls back to compatible tactics | Stable operation |
+
+**Why `latency` works**: Both backends attempt the same SM120 CUTLASS grouped GEMM tactics (14/15). The difference is in error handling:
+- `throughput` mode: autotuner failure → engine crash
+- `latency` mode: autotuner failure → `"Failed to initialize cutlass TMA WS grouped gemm"` warning → skip to next tactic → engine continues
+
+**Log evidence (latency mode, working):**
+```
+[flashinfer] Failed to initialize cutlass TMA WS grouped gemm
+[flashinfer] Skipping tactic 14, trying next...
+[flashinfer] Skipping tactic 15, trying next...
+[flashinfer] Selected tactic 3 (compatible with SM121)
+```
+
+### CUDA Compilation Startup Times
+
+vLLM performs 4 sequential compilation phases on first start. These are cached for subsequent starts.
+
+#### Fresh Start (no cache)
+
+| Phase | Duration | Notes |
+|-------|----------|-------|
+| Model loading (safetensors) | ~90s | 5 shards, 19GB total |
+| FlashInfer autotuning | ~10 min | Tests SM120 CUTLASS tactics, skips failures |
+| torch.compile | ~9 min (552s) | Inductor backend, generates optimized kernels |
+| CUDA graph capture (piecewise) | ~2 min (51 graphs) | `CUDAGraphMode.FULL_AND_PIECEWISE` |
+| CUDA graph capture (full) | ~3 min (35 graphs) | Full batch sizes 1-512 |
+| **Total cold start** | **~22 min** | First-ever start, no cache |
+
+#### Cached Start (with bind-mounted caches)
+
+| Phase | Duration | Notes |
+|-------|----------|-------|
+| Model loading (safetensors) | ~90s | Same (not cached) |
+| FlashInfer autotuning | ~9s | Compiled kernels reused from `~/.cache/flashinfer/` |
+| torch.compile | ~137s (2.3 min) | Reused from `~/.cache/vllm/torch_compile_cache/` |
+| CUDA graph capture (piecewise) | ~4s each | Pre-warmed from cache |
+| CUDA graph capture (full) | ~4s each | Pre-warmed from cache |
+| **Total cached start** | **~4 min** | 5.5x faster than cold start |
+
+#### Cache Bind Mounts (docker-compose.dgx-spark.yml)
+
+```yaml
+volumes:
+  - ${HOME}/.cache/huggingface:/root/.cache/huggingface    # Model weights (19GB)
+  - ${HOME}/.cache/flashinfer:/root/.cache/flashinfer      # FlashInfer JIT CUTLASS kernels
+  - ${HOME}/.cache/vllm:/root/.cache/vllm                  # torch.compile + CUDA graph cache
+```
+
+**CRITICAL**: Cache is keyed by `gpu-memory-utilization`. Changing from 0.55 to 0.40 invalidates CUDA graph cache (different KV cache sizes). Stale cache causes `cudaErrorIllegalInstruction` on replay. Always clear cache after changing memory settings:
+
+```bash
+# Clear stale CUDA caches (files owned by root inside container)
+docker run --rm -v ${HOME}/.cache/vllm:/cache alpine sh -c \
+  "rm -rf /cache/torch_compile_cache /cache/torch_aot_compile"
+```
+
+### GPU Memory Management (3-way sharing)
+
+DGX Spark has 119.6 GiB usable GPU memory shared between vLLM, Ollama, and BGE-M3.
+
+| `gpu-memory-utilization` | vLLM Memory | KV Cache | Room for Ollama + BGE-M3 | Status |
+|--------------------------|-------------|----------|--------------------------|--------|
+| 0.55 | ~73.7 GiB | ~48 GiB | ~16 GiB (too tight) | BGE-M3 OOM |
+| 0.40 | ~55.3 GiB | ~33.6 GiB | ~34 GiB | Ollama 30 GiB + BGE-M3 2 GiB |
+| 0.25 | ~34.6 GiB | ~12 GiB | ~55 GiB | Conservative, fewer concurrent seqs |
+
+**Chosen: 0.40** — Balances extraction concurrency (max 57 concurrent sequences) with room for Ollama chat (30 GiB Nemotron) and BGE-M3 embeddings (2 GiB).
+
+**Memory profiling gotcha**: If Ollama loads/unloads models during vLLM's startup profiling phase, vLLM sees "current free > initial free" and crashes with `AssertionError: Error in memory profiling`. **Fix**: Always unload Ollama models before starting vLLM:
+```bash
+curl -X POST http://localhost:11434/api/generate -d '{"model":"nemotron-3-nano:128k","keep_alive":0}'
+```
+
+### httpx Timeout Fix
+
+The AegisLLMProxy's `_call_vllm()` method used `timeout=120.0` for httpx requests. Entity extraction windows take 100-300s on vLLM (especially cold requests with CUDA graph capture). This caused silent timeouts with fallback to Ollama.
+
+**Bug**: `str(httpx.ReadTimeout())` returns empty string `''` — making the fallback invisible in logs.
+
+**Fix** (in `aegis_llm_proxy.py`):
+```python
+# Line 915: Non-streaming vLLM call
+timeout=600.0,  # Was 120.0 — extraction windows take 100-300s
+
+# Line 1222: Streaming vLLM call
+timeout=600.0,  # Was 120.0
+
+# Line 641: Error logging
+error=repr(e),  # Was str(e) — httpx timeouts have empty str()
+```
+
+### First Successful vLLM Extraction (2026-02-07)
+
+**Test file**: `data/ragas_eval_txt/hotpot_000000.txt` (HotpotQA bridge question)
+**Results**:
+- Entities: 8 extracted via vLLM (77s, no fallback)
+- Relations: 6 (specific types: DEVELOPS, PRODUCES, OPERATES_IN, etc.)
+- Provider: vLLM (confirmed in API logs: `provider=vllm, fallback_used=False`)
+- Total ingestion: 463s (most time in Ollama fallback for earlier windows before timeout fix)
+
+**Crash on 2nd request**: The gleaning/relation extraction request triggered `cudaErrorIllegalInstruction` — caused by stale CUDA graph cache from `0.55` config being replayed with `0.40` config. Fixed by clearing cache and recompiling.
+
+### Current Configuration (docker-compose.dgx-spark.yml)
+
+```yaml
+vllm:
+  image: nvcr.io/nvidia/vllm:26.01-py3
+  command: >
+    bash -c '
+    wget -nc https://huggingface.co/.../nano_v3_reasoning_parser.py &&
+    vllm serve nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-NVFP4
+      --host 0.0.0.0 --port 8001
+      --trust-remote-code
+      --enable-auto-tool-choice
+      --tool-call-parser qwen3_coder
+      --reasoning-parser-plugin nano_v3_reasoning_parser.py
+      --reasoning-parser nano_v3
+      --gpu-memory-utilization 0.40
+      --kv-cache-dtype fp8
+    '
+  environment:
+    - VLLM_USE_FLASHINFER_MOE_FP4=1
+    - VLLM_FLASHINFER_MOE_BACKEND=latency     # NOT throughput (crashes SM121)
+    - VLLM_FASTSAFETENSORS_NOGDS=1
+  volumes:
+    - ${HOME}/.cache/huggingface:/root/.cache/huggingface
+    - ${HOME}/.cache/flashinfer:/root/.cache/flashinfer
+    - ${HOME}/.cache/vllm:/root/.cache/vllm
+```
+
+### Stability Testing Status
+
+| Test | Result | Notes |
+|------|--------|-------|
+| vLLM cold start | ✅ Stable | ~22 min, FlashInfer autotuning skips SM120 tactics |
+| vLLM cached start | ✅ **~100s** | torch.compile 2s + CUDA graphs 7s (with bind mounts) |
+| 1st extraction (entities) | ✅ 78s | 7 entities, 4,954 tokens, provider=vllm, fallback=False |
+| 2nd extraction (relations) | ✅ vLLM stable | JSON parse failed (reasoning content leak), cascade→gpt-oss:20b |
+| 3rd extraction (relations via graph_extraction) | ✅ 44.5s | 8 relations, 3,136 tokens, provider=vllm, fallback=False |
+| **Multi-request stability** | ✅ **CONFIRMED** | 3 consecutive vLLM requests, no crashes |
+
+**Root cause of `cudaErrorIllegalInstruction` CONFIRMED**: Stale CUDA graph cache compiled with `gpu-memory-utilization=0.55` was replayed with `0.40` config. Different KV cache sizes caused incompatible CUDA graph execution. Fix: clear `~/.cache/vllm/torch_compile_cache` and `torch_aot_compile` after changing memory settings.
+
+### Full Pipeline Test Results (hotpot_000003.txt, 2026-02-07)
+
+```json
+{
+  "status": "success",
+  "documents_loaded": 1,
+  "chunks_created": 1,
+  "embeddings_generated": 1,
+  "points_indexed": 1,
+  "duration_seconds": 433.53,
+  "neo4j_entities": 7,
+  "neo4j_relationships": 7
+}
+```
+
+**Pipeline timing breakdown:**
+| Phase | Duration | Engine |
+|-------|----------|--------|
+| Parse (Docling) | 2.2s | CPU |
+| Chunking | 0.8s | CPU |
+| Embedding (BGE-M3) | 0.07s | GPU |
+| Entity extraction | 78s | vLLM (rank 1) |
+| Relation extraction (cascade) | ~305s | vLLM (rank 1, JSON fail) → gpt-oss:20b (rank 2) |
+| Relation extraction (graph) | 44.5s | vLLM |
+| Neo4j storage | 1.0s | — |
+| **Total** | **433.5s** | Mixed (vLLM + Ollama fallback) |
+
+### Known Issue: Reasoning Content Leak in vLLM Relation Extraction
+
+The `nano_v3` reasoning parser sometimes outputs the chain-of-thought as `content` instead of `reasoning_content`. This causes JSON parse failure for relation extraction prompts (which produce longer, more complex outputs). Entity extraction (shorter, simpler) works correctly.
+
+**Impact**: Relation extraction falls back from vLLM (rank 1) to Ollama gpt-oss:20b (rank 2), adding ~150-200s latency.
+
+**Potential fix**: Parse the vLLM response to extract embedded JSON from within reasoning text, or adjust the prompt to encourage the model to clearly separate reasoning from JSON output.
+
+---

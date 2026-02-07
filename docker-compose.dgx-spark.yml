@@ -486,16 +486,26 @@ services:
       # Bind mount to local HF cache — shares models with host tools, avoids
       # re-downloading ~18GB Nemotron model. Same pattern as NVIDIA forum recommendation.
       - ${HOME}/.cache/huggingface:/root/.cache/huggingface
+      # Persist FlashInfer JIT-compiled CUTLASS kernels (SM121a) across restarts.
+      # First compile takes ~15min; cached restarts skip this entirely.
+      - ${HOME}/.cache/flashinfer:/root/.cache/flashinfer
+      # Persist vLLM torch.compile cache (CUDA graphs, inductor artifacts)
+      - ${HOME}/.cache/vllm:/root/.cache/vllm
     environment:
       # FlashInfer MOE optimization for NVFP4 models on Blackwell (SM121)
       - VLLM_USE_FLASHINFER_MOE_FP4=1
-      - VLLM_FLASHINFER_MOE_BACKEND=throughput
+      # CRITICAL: Use 'latency' not 'throughput' on DGX Spark (SM121)!
+      # 'throughput' triggers CUTLASS SM120 grouped GEMM kernels that crash on SM121
+      # See: https://forums.developer.nvidia.com/t/dgx-spark-nemotron3-and-nvfp4-getting-to-65-tps/355261
+      - VLLM_FLASHINFER_MOE_BACKEND=latency
       # HuggingFace cache (persists model downloads between restarts)
       - HF_HOME=/root/.cache/huggingface
       # Disable GPU Direct Storage (not available on DGX Spark)
       - VLLM_FASTSAFETENSORS_NOGDS=1
     # NGC vLLM image needs explicit entrypoint override (not vllm-openai)
     # Downloads reasoning parser plugin on startup, then launches vLLM serve
+    # Matches NVIDIA reference flags; gpu-memory-utilization=0.40 because shared GPU
+    # (Ollama ~30GB + BGE-M3 ~2GB + system ~15GB = ~47GB, leaving ~72GB for vLLM at 0.40)
     entrypoint: /bin/bash
     command:
       - -c
@@ -504,16 +514,13 @@ services:
         exec vllm serve nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-NVFP4 \
           --host 0.0.0.0 \
           --port 8001 \
-          --max-model-len 32768 \
-          --max-num-seqs 8 \
-          --gpu-memory-utilization 0.25 \
+          --gpu-memory-utilization 0.40 \
           --trust-remote-code \
           --enable-auto-tool-choice \
           --tool-call-parser qwen3_coder \
           --reasoning-parser-plugin nano_v3_reasoning_parser.py \
           --reasoning-parser nano_v3 \
-          --kv-cache-dtype fp8 \
-          --enable-prefix-caching
+          --kv-cache-dtype fp8
     deploy:
       resources:
         reservations:

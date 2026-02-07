@@ -91,7 +91,10 @@ async def graph_extraction_node(state: IngestionState) -> IngestionState:
     try:
         # Sprint 125 Feature 125.7: Auto-classify domain if not set
         # This enables domain-trained prompts to be used during extraction
-        if not state.get("domain_id"):
+        # Sprint 126: Treat "auto" and empty strings as needing auto-classification
+        domain_id = state.get("domain_id")
+        if not domain_id or domain_id.lower() == "auto":
+            state["domain_id"] = None  # Clear "auto" literal before classification
             try:
                 # Get first chunk text for classification
                 chunk_data_list = state.get("chunks", [])

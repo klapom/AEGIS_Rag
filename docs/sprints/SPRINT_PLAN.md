@@ -2125,8 +2125,8 @@ Sprint 117.1 (Domain CRUD) - Foundation
 ## Sprint 128 📝 **Planned** (after Sprint 127)
 
 **Status:** 📝 PLANNED
-**Focus:** LightRAG Removal — Direct Neo4j Architecture
-**Story Points:** 8 SP (estimated)
+**Focus:** LightRAG Removal + Extraction Performance + HyDE + Quality Improvements
+**Story Points:** ~30 SP (estimated)
 **Predecessor:** Sprint 127
 
 **Features:**
@@ -2138,12 +2138,24 @@ Sprint 117.1 (Domain CRUD) - Foundation
 | 128.3 | Replace rag.aquery() with DualLevelSearch | 2 | 📝 |
 | 128.4 | Remove lightrag-hku dependency + cleanup (7 files, ~1,500 LOC) | 1 | 📝 |
 | 128.5 | Structured Table Ingestion Investigation (Excel/CSV/HTML) | 3 | 📝 |
+| 128.6 | Parallel cross-sentence extraction (asyncio.gather for windows) | 3 | 📝 |
+| 128.7 | vLLM gpu_memory_utilization 0.25→0.5 + max_num_seqs 8→16 | 1 | 📝 |
+| 128.8 | Per-domain gleaning configuration (stored in Neo4j :Domain nodes) | 2 | 📝 |
+| 128.9 | HyDE query expansion (Hypothetical Document Embeddings) | 5 | 📝 |
+| 128.10 | Inactive domain warning (API response + Frontend upload UI) | 2 | 📝 |
+| 128.11 | vLLM EngineDeadError investigation + stability fix (SM121 CUTLASS) | 3 | 📝 |
+| 128.12 | Activate all 35 seed domains (not just 4) | 1 | 📝 |
+| 128.13 | engine_mode=auto as default (Ollama fallback when vLLM crashes) | 1 | 📝 |
 
 **Key Decisions:**
 - ADR-061: LightRAG provides only 3 functions; 45+ files / ~12,000 LOC are custom AegisRAG
 - Double data writes to Neo4j → eliminate
 - RAGAS benchmark comparison (Sprint 127 baseline vs Sprint 128 post-removal)
 - Rollback if RAGAS metrics degrade >5%
+- **Extraction parallelism**: Currently 0 parallel extractions (9 sequential windows). asyncio.gather could provide 3-8x speedup
+- **HyDE**: Hypothetical Document Embeddings for +10-20% Context Recall improvement
+- **Per-domain gleaning**: medicine_health gets gleaning_steps=2, others stay at 0
+- **vLLM instability**: EngineDeadError after ~5min continuous use — SM121 CUTLASS kernel issue
 
 ---
 

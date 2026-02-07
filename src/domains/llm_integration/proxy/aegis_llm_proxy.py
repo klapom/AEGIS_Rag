@@ -638,7 +638,7 @@ class AegisLLMProxy:
             logger.error(
                 "provider_error_fallback",
                 provider=provider,
-                error=str(e),
+                error=repr(e),  # repr() not str() — httpx timeouts have empty str()
                 fallback="local_ollama",
                 task_id=str(task.id),
             )
@@ -912,7 +912,7 @@ class AegisLLMProxy:
                         "temperature": task.temperature,
                         "max_tokens": task.max_tokens,
                     },
-                    timeout=120.0,
+                    timeout=600.0,  # Extraction windows can take 100-300s on vLLM
                 )
                 response.raise_for_status()
                 data = response.json()
@@ -1219,7 +1219,7 @@ class AegisLLMProxy:
                             "max_tokens": task.max_tokens,
                             "stream": True,
                         },
-                        timeout=120.0,
+                        timeout=600.0,  # Extraction windows can take 100-300s on vLLM
                     ) as response,
                 ):
                     response.raise_for_status()
