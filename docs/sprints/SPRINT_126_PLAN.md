@@ -1,250 +1,203 @@
-# Sprint 126 Plan: RAGAS Phase 1 Benchmark with vLLM Extraction
+# Sprint 126 Plan: LLM Engine Mode + Domain Sub-Types + DevOps Hardening
 
-**Status:** 📝 PLANNED
-**Story Points:** 13 SP
-**Duration:** 1-2 days (estimated)
+**Status:** ✅ COMPLETE
+**Story Points:** 22 SP (14 SP features + 8 SP DevOps)
+**Duration:** 1 day (2026-02-07)
 **Predecessor:** Sprint 125 (vLLM Integration + Domain-Aware Extraction)
 
 ---
 
 ## Sprint Goals
 
-1. **Complete RAGAS Phase 1 Ingestion** with vLLM extraction engine (498 documents)
-2. **Benchmark extraction performance** (vLLM vs Ollama, throughput, quality)
-3. **Evaluate RAGAS metrics** with new extraction improvements
-4. **Document S-P-O relation quality** (target: >70% specific types)
-5. **Validate domain-aware extraction** (domain classification → trained prompts)
-
----
-
-## Background
-
-Sprint 125 delivered critical extraction improvements but deferred RAGAS evaluation to Sprint 126:
-
-| Sprint 124 Issue | Sprint 125 Solution | Sprint 126 Validation |
-|------------------|---------------------|----------------------|
-| HTTP 000 timeout at 28/498 docs | vLLM dual-engine (8+ concurrent vs Ollama's 4) | Complete 498 doc ingestion |
-| 100% RELATES_TO relations | S-P-O schema + 21 universal relation types | Measure relation diversity |
-| Generic extraction prompts | Domain-aware pipeline (BGE-M3 → domain prompts) | Compare domain vs generic |
-| No performance baseline | N/A | Benchmark vLLM vs Ollama |
-
-**Rationale for Sprint 126:** Benchmark AFTER all extraction improvements are complete. Sprint 124's baseline with generic RELATES_TO relations would produce misleading metrics.
+1. **Runtime LLM Engine Mode** — Switch between vLLM/Ollama/Auto without restart (ADR-062)
+2. **Domain Sub-Type Pipeline** — YAML factory defaults → Neo4j runtime overrides → API CRUD
+3. **Community Detection as Batch Job** — Decouple from ingestion (85% faster)
+4. **Fix DSPy Extraction Signatures** — list[str] → list[dict] for ADR-060 types
+5. **NULL Relation Backfill** — Patch 1,021 legacy relations with specific types
+6. **Pre-commit Hooks** — 13 automated quality gates (Ruff, Bandit, secrets, TypeScript)
+7. **CI/CD Streamlining** — Remove duplicates, -40% pipeline runtime
 
 ---
 
 ## Features
 
-### 126.1: RAGAS Phase 1 Ingestion Completion (8 SP)
+### 126.1: Runtime LLM Engine Mode (ADR-062) — 2 SP ✅
 
-**Goal:** Ingest all 498 RAGAS Phase 1 documents with vLLM extraction engine.
+**Goal:** Hot-switch between vLLM, Ollama, or Auto mode at runtime.
 
-**Data Source:**
-- `data/ragas_phase1_contexts/` (498 .txt files)
-- Domains: Research Papers, Technical QA, E-Manuals, HotpotQA
+**Implementation:**
+- `GET/PUT /api/v1/admin/llm/engine` endpoints with Redis-backed state
+- AegisLLMProxy._route_task() honors mode, graceful fallback
+- 30s Redis cache prevents thundering herd on mode changes
+- Startup skips unnecessary warmups based on active engine
+- 3-card Admin UI selector (Ollama/vLLM/Auto)
 
-**Tasks:**
-- [ ] Start vLLM container with `--profile ingestion`
-- [ ] Verify vLLM health and model loaded (Nemotron-3-Nano-30B-A3B-NVFP4)
-- [ ] Run upload script: `scripts/upload_ragas_phase1.sh`
-- [ ] Monitor ingestion progress (log every 10 docs)
-- [ ] Track extraction performance (tok/s, time per doc, concurrent requests)
-- [ ] Verify domain classification runs for each document
-- [ ] Check domain-trained prompts used when available
-- [ ] Capture structured logs for analysis
-- [ ] Stop vLLM after ingestion completes
-
-**Upload Script Configuration:**
-```bash
-# scripts/upload_ragas_phase1.sh
-NAMESPACE="ragas_phase1_sprint126"
-BACKEND_URL="http://localhost:8000"
-FILES_DIR="data/ragas_phase1_contexts"
-BATCH_SIZE=10  # Concurrent uploads (vLLM supports 8+)
-DOMAIN="auto"  # BGE-M3 classification
-```
-
-**Expected Results:**
-- All 498 documents ingested successfully
-- ~1,500-2,000 entities extracted
-- ~2,000-3,000 relations (ER ratio ~1.2-1.5)
-- >70% specific relation types (down from 100% RELATES_TO)
-- Domain classification visible in logs for each doc
-
-**Acceptance Criteria:**
-- [ ] 498/498 documents in Qdrant + Neo4j
-- [ ] No HTTP 000 timeouts (vLLM concurrent batching)
-- [ ] Ingestion completes in <4 hours (vs 28/498 in 6+ hours with Ollama)
-- [ ] Domain classification runs for all documents
-- [ ] `domain_id` stored in Qdrant payloads and Neo4j entities
-- [ ] Structured logs saved to `data/ingestion_logs/sprint126/`
+**Commit:** `7660b27`
 
 ---
 
-### 126.2: Performance Benchmark + RAGAS Evaluation (5 SP)
+### 126.2: DeploymentProfilePage Save Bug Fix — 1 SP ✅
 
-**Goal:** Benchmark extraction performance and evaluate RAGAS metrics.
+**Problem:** Save button on DeploymentProfilePage returned 404/422.
+**Fix:** Corrected URL, JSON body format, and auth token header.
 
-**Benchmarks:**
-
-#### A. Extraction Performance (vLLM vs Ollama)
-
-| Metric | Ollama (Sprint 124) | vLLM (Sprint 126) | Target |
-|--------|---------------------|-------------------|--------|
-| Throughput | ~20 tok/s | ~54 tok/s | 2-3× improvement |
-| Time per doc | ~20s | <10s | 50%+ reduction |
-| Max concurrent | 4 | 8-16 | 2-4× improvement |
-| HTTP 000 errors | 15+ (at 28 docs) | 0 | No timeouts |
-| Total time (498 docs) | Projected 2.75 hours | <2 hours | <4 hours |
-
-#### B. Relation Quality (S-P-O vs RELATES_TO)
-
-| Metric | Sprint 124 | Sprint 126 Target |
-|--------|------------|-------------------|
-| RELATES_TO relations | 931/931 (100%) | <30% |
-| Specific relation types | 0/931 (0%) | >70% |
-| Universal relation types used | 1 | 10-15 |
-| Entity types from universal | ~60% | >95% |
-| Entity names < 4 words | ~70% | >90% |
-| Relation names 1-3 words | ~50% | >95% |
-
-#### C. Domain-Aware Extraction
-
-| Metric | Target |
-|--------|--------|
-| Documents with domain classification | 498/498 (100%) |
-| Domain-trained prompts used | >20% (domains with DSPy training) |
-| Generic prompts fallback | <80% (untrained domains) |
-| Classification accuracy | >80% (vs manual labels) |
-
-#### D. RAGAS Metrics (Updated Baseline)
-
-| Metric | Sprint 82 Baseline | Sprint 126 Target | Notes |
-|--------|-------------------|-------------------|-------|
-| Faithfulness | 0.91 | ≥0.90 | Maintain |
-| Answer Relevancy | 0.94 | ≥0.93 | Maintain |
-| Context Precision | 0.58 | ≥0.60 | +3% improvement |
-| Context Recall | 0.29 | ≥0.35 | +20% improvement (S-P-O relations) |
-
-**Tasks:**
-- [ ] Extract ingestion metrics from logs (total time, throughput, errors)
-- [ ] Query Neo4j for relation type distribution
-- [ ] Validate entity types against 15 universal types
-- [ ] Measure entity/relation name length compliance
-- [ ] Count domain-trained vs generic prompt usage
-- [ ] Run RAGAS evaluation on 50-sample subset
-- [ ] Compare RAGAS metrics to Sprint 82 baseline
-- [ ] Generate benchmark report
-- [ ] Update `docs/ragas/RAGAS_JOURNEY.md` with Sprint 126 results
-
-**Acceptance Criteria:**
-- [ ] Benchmark report saved to `data/benchmark_results/sprint126/`
-- [ ] Relation diversity >70% specific types
-- [ ] Entity type compliance >95% universal types
-- [ ] RAGAS metrics documented in RAGAS_JOURNEY.md
-- [ ] Performance improvements quantified (vLLM vs Ollama)
+**Commit:** `7660b27`
 
 ---
 
-## VRAM Budget (Ingestion Mode)
+### 126.3: Community Detection as Nightly Batch Job — 2 SP ✅
 
-```
-DGX Spark: 128 GB Unified Memory
+**Goal:** Decouple community detection from the ingestion pipeline.
 
-Ingestion Mode (Sprint 126):
-  Ollama Nemotron-3-Nano:128k   25 GB   (Chat fallback)
-  vLLM Nemotron NVFP4           ~18 GB   (Extraction primary)
-  BGE-M3 Embeddings              2 GB
-  Reranker (cross-encoder)        1 GB
-  OS + CUDA Overhead             10 GB
-  ─────────────────────────────────────
-  Total:                         56 GB
-  Free:                          72 GB
-```
+**Implementation:**
+- `GRAPH_COMMUNITY_DETECTION_MODE=scheduled` env var
+- APScheduler cron trigger at 5 AM daily
+- `POST /api/v1/admin/community-detection/trigger` for manual runs
+- `GET /api/v1/admin/community-detection/status` for monitoring
 
-Both LLMs can run simultaneously without conflict.
+**Impact:** Ingestion 85% faster (732s → ~107s/doc — community detection was the bottleneck)
+
+**Commit:** `6763a8b`
 
 ---
 
-## Environment Configuration
+### 126.4: DSPy EntityExtractionSignature Fix — 2 SP ✅
 
-**Required .env Settings:**
-```bash
-# vLLM Configuration
-VLLM_ENABLED=true
-VLLM_BASE_URL=http://localhost:8001
-VLLM_MODEL=nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-NVFP4
+**Problem:** DSPy signatures used `list[str]` for entities/relations, but ADR-060 requires typed dicts with subject_type, relation, object_type fields.
 
-# Ollama (Fallback)
-OLLAMA_BASE_URL=http://localhost:11434
-OLLAMA_MODEL_GENERATION=Nemotron3
+**Fix:** Changed `EntityExtractionSignature` and `RelationExtractionSignature` output fields to `list[dict]` matching the S-P-O triple format.
 
-# Extraction Pipeline
-AEGIS_USE_DSPY_PROMPTS=true
-AEGIS_USE_DOMAIN_PROMPTS=true
-EXTRACTION_BACKEND=vllm  # Routes extraction to vLLM
-
-# Domain Classification
-DOMAIN_CLASSIFIER_ENABLED=true
-DOMAIN_CLASSIFIER_BACKEND=bge_m3
-```
-
-**Start Services:**
-```bash
-# Start vLLM + all services
-docker compose -f docker-compose.dgx-spark.yml --profile ingestion up -d
-
-# Verify vLLM health
-curl http://localhost:8001/health
-
-# Verify model loaded
-curl http://localhost:8001/v1/models
-```
+**Commit:** `6763a8b`
 
 ---
 
-## Success Criteria
+### 126.5: NULL Relation-Type Backfill — 1 SP ✅
 
-Sprint 126 is complete when:
+**Problem:** 1,021 relations in Neo4j had NULL relation types (from pre-Sprint 125 ingestion).
 
-- [x] All 498 RAGAS Phase 1 documents ingested
-- [x] No HTTP 000 timeouts or ingestion failures
-- [x] >70% specific relation types (measured in Neo4j)
-- [x] >95% entity type compliance with 15 universal types
-- [x] Domain classification runs for all documents
-- [x] Performance benchmark shows 2-3× throughput improvement
-- [x] RAGAS metrics evaluated and documented
-- [x] Benchmark report saved to `data/benchmark_results/sprint126/`
-- [x] RAGAS_JOURNEY.md updated with Sprint 126 results
+**Fix:** Backfill script classified 212 as specific types (STUDIES, USES, PART_OF, etc.) and 809 as RELATED_TO (generic fallback). 0 NULL remaining.
+
+**Commit:** `6763a8b`
 
 ---
 
-## Risks & Mitigations
+### 126.6: Domain Sub-Type Pipeline — 3 SP ✅
 
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| vLLM crashes during ingestion | Partial data loss | Checkpoint every 50 docs, restart from last checkpoint |
-| VRAM OOM (vLLM + Ollama + BGE-M3) | Service crash | Monitor VRAM, stop Ollama if needed (vLLM primary) |
-| S-P-O prompts produce low-quality relations | RAGAS metrics worse than baseline | Fall back to generic prompts, iterate prompt engineering |
-| Domain classification too slow | Ingestion bottleneck | Cache classification results, use batch classification |
-| RAGAS evaluation timeouts | Incomplete metrics | Increase timeout, use smaller sample subset (20 questions) |
+**Goal:** Multi-tier type system with YAML defaults and Neo4j runtime overrides.
+
+**Implementation:**
+- 253 entity aliases + 43 relation aliases from `data/seed_domains.yaml`
+- 4-tier prompt priority: trained → domain-enriched → generic → legacy
+- LLM produces domain-specific sub_type (e.g., DISEASE) → mapped to universal type (CONCEPT) → sub_type preserved as Neo4j property
+- Cache invalidation on `PUT /domains/{name}`
+- Full API CRUD for domain sub-types
+
+**Commit:** `d4e015a`
 
 ---
 
-## Next Steps (Sprint 127)
+### 126.7: AdminNavigationBar on Admin Pages — 1 SP ✅
 
-**Focus:** LightRAG Removal — Direct Neo4j Architecture
+**Goal:** Consistent navigation across all ~28 admin pages.
 
-Sprint 126's RAGAS evaluation will inform Sprint 127 decisions:
-- If Context Recall improves: Keep S-P-O extraction, remove LightRAG abstraction
-- If Context Precision stagnates: Investigate reranking weights
-- If Faithfulness drops: Audit LLM response generation prompts
+**Implementation:** Added AdminNavigationBar component import and rendering to all admin page components.
+
+**Commit:** `7660b27`
+
+---
+
+### 126.8: Domain Seeding into Neo4j — 2 SP ✅
+
+**Goal:** Seed all 35 DDC+FORD domains into Neo4j on startup.
+
+**Implementation:** Reads `data/seed_domains.yaml`, creates `:Domain` nodes with entity_sub_type_mapping, relation_hints, keywords, and ontology references.
+
+**Commit:** `d4e015a`
+
+---
+
+### 126.9: Pre-commit Hooks Setup — 5 SP ✅
+
+**Goal:** Automated code quality gates on every commit.
+
+**13 Hooks Configured:**
+1. Ruff Linter (v0.14.8) — lint + auto-fix
+2. Ruff Formatter — consistent formatting
+3. Secret Detection (detect-secrets) — prevent API key leaks
+4. TypeScript Check — catch compile errors
+5. YAML/JSON/TOML Syntax — config validation
+6. Large Files (>1MB) — prevent binary bloat
+7. Merge Conflict Markers — catch unresolved merges
+8. Trailing Whitespace — clean formatting
+9. End of File Newline — POSIX compliance
+10. Bandit Security — static analysis (5 global skips, ~45 nosec annotations)
+11. Naming Conventions — custom check (Sprint 18)
+12. Conventional Commits — commit message format validation
+
+**Security Fixes:**
+- B324 (MD5): Added `usedforsecurity=False` to hashlib.md5 calls
+- B307 (eval): Replaced 3 `eval()` calls with `ast.literal_eval` in domain_training.py
+- B104/B106/B108/B110/B603: ~45 nosec annotations for intentional patterns
+
+**Commit:** `78be84c`
+
+---
+
+### 126.10: CI/CD Pipeline Streamlining — 3 SP ✅
+
+**Goal:** Remove duplicate checks between pre-commit and CI, eliminate low-value jobs.
+
+**Removed:**
+- 8 duplicate checks (Ruff, Bandit, detect-secrets, etc. — now in pre-commit)
+- 9 unnecessary checks (MyPy strict, docstring validation, import validation, etc.)
+
+**Impact:**
+- ci.yml: 849 → 636 lines (-25%), 11 → 8 jobs
+- code-quality-sprint-end.yml: -16%
+- e2e.yml: -23%
+- **CI runtime: 25-30 min → 15-20 min (-40%)**
+
+**Commit:** `cf2d493`
+
+---
+
+## Additional Commits
+
+| Commit | Type | Description |
+|--------|------|-------------|
+| `2d11560` | chore(infra) | /commit slash command for sprint-aware workflow |
+
+---
+
+## Story Points Breakdown
+
+| Category | Features | SP |
+|----------|----------|-----|
+| LLM Engine Mode (126.1-126.2) | 2 | 3 |
+| Extraction Fixes (126.3-126.5) | 3 | 5 |
+| Domain Pipeline (126.6-126.8) | 3 | 6 |
+| DevOps (126.9-126.10) | 2 | 8 |
+| **Total** | **10** | **22** |
+
+---
+
+## Success Criteria (All Met)
+
+- [x] Engine mode switchable via API without restart
+- [x] Community detection decoupled from ingestion (85% faster)
+- [x] DSPy signatures produce ADR-060 typed dicts
+- [x] 0 NULL relation types in Neo4j
+- [x] Domain sub-types preserved through extraction → storage
+- [x] 13 pre-commit hooks passing on every commit
+- [x] CI pipeline 40% faster with no duplicate checks
+- [x] All 35 domains seeded into Neo4j
 
 ---
 
 ## References
 
-- [Sprint 125 Plan](SPRINT_125_PLAN.md) - vLLM integration details
-- [RAGAS Journey](../ragas/RAGAS_JOURNEY.md) - Metrics evolution
-- [ADR-059](../adr/ADR-059-vllm-dual-engine.md) - Dual-engine architecture
-- [ADR-060](../adr/ADR-060-domain-taxonomy.md) - Domain taxonomy
-- [upload_ragas_phase1.sh](../../scripts/upload_ragas_phase1.sh) - Upload script
+- [ADR-062: LLM Engine Mode Configuration](../adr/ADR-062-llm-engine-mode-configuration.md)
+- [ADR-060: Domain Taxonomy](../adr/ADR-060-domain-taxonomy.md)
+- [Sprint 125 Plan](SPRINT_125_PLAN.md) — predecessor
+- [Sprint 127 Plan](SPRINT_127_PLAN.md) — RAGAS Phase 1 Benchmark (next)
+- [DECISION_LOG.md](../DECISION_LOG.md) — Sprint 126 section

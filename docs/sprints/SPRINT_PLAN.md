@@ -1573,10 +1573,11 @@ After implementing comprehensive logging (Sprint 83), we expect to discover addi
 | **123** | **21** | **3,107** | ✅ **Complete** |
 | **124** | **36** | **3,143** | ✅ **Complete** |
 | **125** | **45** | **3,188** | ✅ **Complete** |
-| **126** | **14** | **3,202** | ✅ **Complete** |
-| **127 (Planned)** | **8** | **3,210** | 📋 |
-| **128 (Planned)** | **18** | **3,228** | 📋 |
-| **Total** | **3,228** | - | - |
+| **126** | **22** | **3,210** | ✅ **Complete** |
+| **127 (Planned)** | **13** | **3,223** | 📋 |
+| **128 (Planned)** | **8** | **3,231** | 📋 |
+| **129 (Planned)** | **18** | **3,249** | 📋 |
+| **Total** | **3,249** | - | - |
 
 ---
 
@@ -1584,8 +1585,8 @@ After implementing comprehensive logging (Sprint 83), we expect to discover addi
 
 **Current Sprint:** 126 ✅ **Complete** (2026-02-07)
 **Previous Sprint:** 125 ✅ **Complete** (2026-02-06)
-**Next Sprint:** 127 📝 **Planned** (LightRAG Removal — Direct Neo4j Architecture)
-**Focus:** LLM Engine Mode + Domain Sub-Type Pipeline + Community Batch + Admin UI Polish
+**Next Sprint:** 127 📝 **Planned** (RAGAS Phase 1 Benchmark with vLLM Extraction)
+**Focus:** Engine Mode + Domain Sub-Types + Pre-commit Hooks + CI/CD Streamlining (22 SP, 10 features)
 
 ### Sprint 114 Summary (Complete) ✅
 
@@ -2049,7 +2050,7 @@ Sprint 117.1 (Domain CRUD) - Foundation
 
 **Status:** ✅ COMPLETE
 **Focus:** LLM Engine Mode + Domain Sub-Type Pipeline + Community Batch + Admin UI Polish
-**Story Points:** 14 SP delivered (8 features)
+**Story Points:** 22 SP delivered (10 features)
 **Predecessor:** Sprint 125
 
 **Features Completed:**
@@ -2064,6 +2065,8 @@ Sprint 117.1 (Domain CRUD) - Foundation
 | 126.6 | Domain Sub-Type Pipeline (YAML defaults → Neo4j overrides → CRUD) | 3 | ✅ |
 | 126.7 | AdminNavigationBar on ~28 Admin Pages | 1 | ✅ |
 | 126.8 | Domain Seeding into Neo4j (35 domains) | 2 | ✅ |
+| 126.9 | Pre-commit Hooks (13 hooks: Ruff, Bandit, secrets, TypeScript) | 5 | ✅ |
+| 126.10 | CI/CD Streamlining (-40% runtime, remove duplicates) | 3 | ✅ |
 
 **Key Achievements:**
 - ✅ **ADR-062:** LLM Engine Mode Configuration (hot-reload via Redis, graceful degradation)
@@ -2075,6 +2078,8 @@ Sprint 117.1 (Domain CRUD) - Foundation
 - ✅ DeploymentProfilePage save fixed (URL, JSON body, auth token)
 - ✅ AdminNavigationBar on all ~28 admin pages
 - ✅ All 35 domains seeded into Neo4j with ontology references
+- ✅ **Pre-commit Hooks:** 13 quality gates (Ruff lint+format, Bandit security, detect-secrets, TypeScript check, YAML/JSON/TOML, naming conventions, conventional commits). Security fixes: eval→ast.literal_eval, MD5 usedforsecurity, ~45 nosec annotations
+- ✅ **CI/CD Streamlining:** Removed 8 duplicate checks + 9 unnecessary checks. CI runtime 25-30min → 15-20min (-40%)
 
 **Technical Details:**
 - **Engine Routing:** AegisLLMProxy._route_task() honors mode, falls back gracefully
@@ -2084,75 +2089,84 @@ Sprint 117.1 (Domain CRUD) - Foundation
 - **Community API:** POST `/api/v1/admin/community-detection/trigger`, GET `/status`
 - **Sub-Type Flow:** LLM → domain-specific sub_type (e.g., DISEASE) → mapped to universal type (CONCEPT) → sub_type preserved as Neo4j property
 
-**Commits:** `6763a8b`, `d4e015a`
-**See:** `docs/adr/ADR-062-llm-engine-mode-configuration.md`, `docs/DECISION_LOG.md` (Sprint 126 section)
+**Commits:** `6763a8b`, `d4e015a`, `7660b27`, `2d11560`, `78be84c`, `cf2d493`
+**See:** `docs/sprints/SPRINT_126_PLAN.md`, `docs/adr/ADR-062-llm-engine-mode-configuration.md`
 
 ---
 
 ## Sprint 127 📝 **Planned** (after Sprint 126)
 
 **Status:** 📝 PLANNED
-**Focus:** LightRAG Removal — Direct Neo4j Architecture
-**Story Points:** 8 SP (estimated)
+**Focus:** RAGAS Phase 1 Benchmark with vLLM Extraction
+**Story Points:** 13 SP (estimated)
 **Predecessor:** Sprint 126
 
 **Features:**
 
 | # | Feature | SP | Status |
 |---|---------|-----|--------|
-| 127.1 | Replace LightRAG Neo4j driver with existing neo4j_client.py | 1 | 📝 |
-| 127.2 | Eliminate double data storage (remove ainsert_custom_kg) | 1 | 📝 |
-| 127.3 | Replace rag.aquery() with DualLevelSearch in maximum_hybrid_search | 2 | 📝 |
-| 127.4 | Remove lightrag-hku dependency + cleanup (7 files, ~1,500 LOC) | 1 | 📝 |
-| 127.5 | Structured Table Ingestion Investigation (Excel/CSV/HTML tables) | 3 | 📝 |
+| 127.1 | RAGAS Phase 1 Ingestion Completion (498 documents via vLLM) | 8 | 📝 |
+| 127.2 | Performance Benchmark + RAGAS Evaluation | 5 | 📝 |
 
-**127.5 — Structured Table Ingestion (Investigation Spike)**
-- **Goal:** Evaluate strategies for ingesting tabular data (Excel, CSV, HTML tables in PDFs)
-- **Option A — Direct DB Storage:** Store tables in a relational/structured format (PostgreSQL or Neo4j properties) and query via SQL/Cypher instead of chunking as text
-- **Option B — Table-Aware Chunking:** Keep in RAG pipeline but preserve row/column structure in chunks (Markdown tables, structured JSON)
-- **Option C — Hybrid:** Small tables → text chunks with Markdown formatting; large tables → dedicated DB with NL-to-SQL query agent
-- **Investigation scope:** Docling already extracts tables from PDFs as structured data (TableData objects with cells/rows/columns) — evaluate if this can feed directly into a queryable store
-- **Deliverable:** ADR with recommendation + prototype for chosen approach
+**Key Goals:**
+- Ingest all 498 RAGAS Phase 1 documents with vLLM extraction engine
+- Benchmark vLLM vs Ollama throughput (target: 2-3x improvement)
+- Measure relation diversity (target: >70% specific types, down from 100% RELATES_TO)
+- Evaluate RAGAS metrics (Faithfulness ≥0.90, Answer Relevancy ≥0.93, Context Recall ≥0.35)
+- Validate domain-aware extraction (BGE-M3 classifier → domain prompts)
 
-**Key Decisions:**
-- **ADR-061:** LightRAG provides only 3 functions; 45+ files / ~12,000 LOC are custom AegisRAG code
-- **Audit finding:** Data written to Neo4j twice (LightRAG internal + AegisRAG schema) → eliminate double writes
-- **Verification:** RAGAS benchmark comparison (Sprint 126 baseline vs Sprint 127 post-removal)
-- **ADR-005 superseded:** LightRAG no longer used; AegisRAG has superior custom implementations
-- **Table ingestion:** Investigate structured storage vs text chunking for tabular data (Excel/CSV)
+**Data:** `data/ragas_phase1_contexts/` (500 .txt files, 4 domains)
+**Script:** `scripts/upload_ragas_phase1.sh`
 
-**Rollback Plan:** If RAGAS metrics degrade >5% → revert removal, re-evaluate
-
-**See:** `docs/sprints/SPRINT_125_PLAN.md` (moved features section)
+**See:** `docs/sprints/SPRINT_127_PLAN.md` (detailed plan)
 
 ---
 
 ## Sprint 128 📝 **Planned** (after Sprint 127)
 
 **Status:** 📝 PLANNED
-**Focus:** Domain Editor UI + Table Ingestion Implementation
-**Story Points:** ~18 SP (estimated)
+**Focus:** LightRAG Removal — Direct Neo4j Architecture
+**Story Points:** 8 SP (estimated)
 **Predecessor:** Sprint 127
 
 **Features:**
 
 | # | Feature | SP | Status |
 |---|---------|-----|--------|
-| 128.1 | Domain Management Admin Page (list, filter, search) | 2 | 📝 |
-| 128.2 | Domain Detail Editor (keywords, entity sub-types, relation hints) | 3 | 📝 |
-| 128.3 | Custom Domain Creation Wizard (with template copy) | 2 | 📝 |
-| 128.4 | Domain CRUD Backend API (7 endpoints, Neo4j MERGE) | 3 | 📝 |
-| 128.5 | Reset to YAML Default + Re-Train Trigger | 3 | 📝 |
-| 128.6 | Table Ingestion Implementation (based on 127.5 ADR) | 5 | 📝 |
+| 128.1 | Replace LightRAG Neo4j driver with existing neo4j_client.py | 1 | 📝 |
+| 128.2 | Eliminate double data storage (remove ainsert_custom_kg) | 1 | 📝 |
+| 128.3 | Replace rag.aquery() with DualLevelSearch | 2 | 📝 |
+| 128.4 | Remove lightrag-hku dependency + cleanup (7 files, ~1,500 LOC) | 1 | 📝 |
+| 128.5 | Structured Table Ingestion Investigation (Excel/CSV/HTML) | 3 | 📝 |
+
+**Key Decisions:**
+- ADR-061: LightRAG provides only 3 functions; 45+ files / ~12,000 LOC are custom AegisRAG
+- Double data writes to Neo4j → eliminate
+- RAGAS benchmark comparison (Sprint 127 baseline vs Sprint 128 post-removal)
+- Rollback if RAGAS metrics degrade >5%
+
+---
+
+## Sprint 129 📝 **Planned** (after Sprint 128)
+
+**Status:** 📝 PLANNED
+**Focus:** Domain Editor UI + Table Ingestion Implementation
+**Story Points:** ~18 SP (estimated)
+**Predecessor:** Sprint 128
+
+**Features:**
+
+| # | Feature | SP | Status |
+|---|---------|-----|--------|
+| 129.1 | Domain Management Admin Page (list, filter, search) | 2 | 📝 |
+| 129.2 | Domain Detail Editor (keywords, entity sub-types, relation hints) | 3 | 📝 |
+| 129.3 | Custom Domain Creation Wizard (with template copy) | 2 | 📝 |
+| 129.4 | Domain CRUD Backend API (7 endpoints, Neo4j MERGE) | 3 | 📝 |
+| 129.5 | Reset to YAML Default + Re-Train Trigger | 3 | 📝 |
+| 129.6 | Table Ingestion Implementation (based on 128.5 ADR) | 5 | 📝 |
 
 **Architecture:**
 - **YAML = Factory Default** (seed_domains.yaml, read-only, versioned in Git)
 - **Neo4j = Runtime Config** (user edits, trained prompts, custom domains)
 - **Reset to Default:** Reads YAML, overwrites Neo4j node (preserves trained prompts option)
 - **Custom Domains:** Exist only in Neo4j (not in YAML), deletable
-
-**Key Design Decisions:**
-- Extends existing DomainTrainingPage (Sprint 45) with CRUD capabilities
-- Entity sub-types editable per domain (Tier 2 types from ADR-060)
-- Re-Train button triggers DSPy MIPROv2 with updated sub-types/keywords
-- Table Ingestion approach TBD by Sprint 127.5 investigation ADR
