@@ -226,12 +226,15 @@ class ExtractionPipelineFactory:
                     )
 
                 # Step 4: Convert GraphRelationship → LightRAG format
+                # Sprint 125: Include relation type for S-P-O triples (ADR-060)
                 lightrag_relations = []
                 for rel in relationships_graph:
                     lightrag_relations.append(
                         {
                             "source": rel.source,
                             "target": rel.target,
+                            "type": rel.type or "RELATES_TO",
+                            "relation_type": rel.type or "RELATES_TO",
                             "description": rel.description
                             or f"{rel.source} {rel.type} {rel.target}",
                             "strength": 8,  # Default strength (LightRAG uses 1-10)

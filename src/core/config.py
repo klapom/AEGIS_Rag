@@ -873,7 +873,7 @@ class Settings(BaseSettings):
         description="LLM temperature for extraction (low for consistency)",
     )
     lightrag_llm_max_tokens: int = Field(
-        default=4096, ge=100, le=32768, description="Max tokens for LLM response"
+        default=8192, ge=100, le=32768, description="Max tokens for LLM response (Nemotron 32k context)"
     )
 
     # LightRAG Embedding Configuration

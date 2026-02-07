@@ -1158,6 +1158,17 @@ class ExtractionService:
                                 item=item,
                                 missing_fields=["name", "type"],
                             )
+                    elif isinstance(item, str) and data_type == "entity":
+                        # Sprint 125: DSPy MIPROv2 prompts produce string arrays
+                        # like ["Henry Miller", "Academy Award", "California"]
+                        # Convert to dict format with UNKNOWN type (SpaCy will retype later)
+                        name = validate_entity_name_length(item.strip(), max_words=4)
+                        if name and len(name) > 1:
+                            valid_items.append({
+                                "name": name,
+                                "type": "UNKNOWN",
+                                "description": f"Entity from DSPy prompt extraction",
+                            })
                     else:
                         logger.warning(
                             f"invalid_{data_type}_type",
@@ -1303,6 +1314,12 @@ class ExtractionService:
         except KeyError:
             # Fallback for prompts without domain placeholder
             prompt = entity_prompt.format(text=text)
+
+        # Sprint 125: DSPy MIPROv2 domain-trained prompts may not have {text} placeholder.
+        # Python .format() silently ignores unused kwargs, so the text never gets injected.
+        # Detect this and append the text explicitly.
+        if "{text}" not in entity_prompt and text not in prompt:
+            prompt = f"{prompt}\n\nText:\n{text}\n\nEntities (JSON array):"
 
         # Create LLM task with rank-specific model
         task = LLMTask(
@@ -1659,7 +1676,7 @@ class ExtractionService:
                         quality=QualityRequirement.MEDIUM,
                         prompt=prompt,
                         model_override=stage_config.model,
-                        max_tokens=2000,
+                        max_tokens=self.max_tokens,
                         temperature=0.1,
                     )
                 ),
@@ -1798,7 +1815,7 @@ class ExtractionService:
                         quality=QualityRequirement.HIGH,
                         prompt=prompt,
                         model_override=stage_config.model,
-                        max_tokens=4000,
+                        max_tokens=self.max_tokens,
                         temperature=0.1,
                     )
                 ),
@@ -2004,7 +2021,7 @@ class ExtractionService:
                 # Get source/target (handle both formats)
                 source = rel_dict.get("source") or rel_dict.get("subject", "")
                 target = rel_dict.get("target") or rel_dict.get("object", "")
-                rel_type = rel_dict.get("type") or rel_dict.get("predicate", "RELATES_TO")
+                rel_type = rel_dict.get("type") or rel_dict.get("relation") or rel_dict.get("predicate", "RELATES_TO")
 
                 logger.info(
                     "parse_relationship_response_processing",
@@ -2095,7 +2112,7 @@ class ExtractionService:
                         quality=QualityRequirement.BALANCED,
                         prompt=prompt,
                         model_override=model,
-                        max_tokens=2000,
+                        max_tokens=self.max_tokens,
                         temperature=0.1,
                     )
                 ),
@@ -2685,10 +2702,23 @@ class ExtractionService:
         entity_list = "\n".join([f"- {e.name} ({e.type})" for e in entities])
 
         # Format prompt
-        prompt = relation_prompt.format(
-            entities=entity_list,
-            text=text,
-        )
+        try:
+            prompt = relation_prompt.format(
+                entities=entity_list,
+                text=text,
+            )
+        except KeyError:
+            prompt = relation_prompt
+
+        # Sprint 125: DSPy MIPROv2 domain-trained prompts may lack {text}/{entities}.
+        # Python .format() silently ignores unused kwargs — detect and append.
+        if "{text}" not in relation_prompt or "{entities}" not in relation_prompt:
+            prompt = (
+                f"{prompt}\n\n"
+                f"Entities:\n{entity_list}\n\n"
+                f"Text:\n{text}\n\n"
+                f"Output (valid JSON with \"relations\" array of {{\"subject\", \"relation\", \"object\", \"description\", \"strength\"}}):"
+            )
 
         # Create LLM task with rank-specific model
         # Note: Both LLM-Only and Hybrid use LLM for relationship extraction
@@ -2732,11 +2762,15 @@ class ExtractionService:
             relationships = []
             for rel_dict in relationships_data:
                 try:
+                    # Sprint 125: Handle both old {source,target,type} and new S-P-O {subject,relation,object} formats
+                    source = rel_dict.get("source") or rel_dict.get("subject", "")
+                    target = rel_dict.get("target") or rel_dict.get("object", "")
+                    rel_type = rel_dict.get("type") or rel_dict.get("relation") or rel_dict.get("predicate", "RELATED_TO")
                     relationship = GraphRelationship(
                         id=str(uuid.uuid4()),
-                        source=rel_dict.get("source", ""),
-                        target=rel_dict.get("target", ""),
-                        type=rel_dict.get("type", "RELATED_TO"),
+                        source=source,
+                        target=target,
+                        type=rel_type,
                         description=rel_dict.get("description", ""),
                         properties={},
                         source_document=document_id,
@@ -3128,9 +3162,10 @@ class ExtractionService:
 
             for rel_dict in relationships_data:
                 try:
-                    source = rel_dict.get("source", "")
-                    target = rel_dict.get("target", "")
-                    rel_type = rel_dict.get("type", "RELATES_TO")
+                    # Sprint 125: Handle both old {source,target,type} and new S-P-O {subject,relation,object} formats
+                    source = rel_dict.get("source") or rel_dict.get("subject", "")
+                    target = rel_dict.get("target") or rel_dict.get("object", "")
+                    rel_type = rel_dict.get("type") or rel_dict.get("relation") or rel_dict.get("predicate", "RELATES_TO")
 
                     # Skip duplicates
                     key = (source.lower(), target.lower(), rel_type.upper())

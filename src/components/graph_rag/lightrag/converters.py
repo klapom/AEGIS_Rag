@@ -250,7 +250,8 @@ def convert_relations_to_lightrag_format(
 
     lightrag_relations = []
     for relation in relations:
-        rel_type = relation.get("type", "RELATED_TO")
+        # Sprint 125: Handle both old {source,target,type} and new S-P-O {subject,relation,object} formats
+        rel_type = relation.get("type") or relation.get("relation_type") or relation.get("relation", "RELATED_TO")
 
         # Sprint 30: Ensure source_id is never empty
         chunk_id = relation.get("chunk_id", "")
@@ -258,8 +259,8 @@ def convert_relations_to_lightrag_format(
         source_id = chunk_id if chunk_id else document_id
 
         lightrag_relation = {
-            "src_id": relation.get("source", "UNKNOWN"),
-            "tgt_id": relation.get("target", "UNKNOWN"),
+            "src_id": relation.get("source") or relation.get("subject", "UNKNOWN"),
+            "tgt_id": relation.get("target") or relation.get("object", "UNKNOWN"),
             "description": relation.get("description", ""),
             "keywords": rel_type,
             "weight": relation.get("confidence", 1.0),

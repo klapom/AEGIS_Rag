@@ -52,6 +52,7 @@ Given a text document and a list of entities found in that text, identify all re
 3. For each pair of related entities, extract the following information:
    - source: name of the source entity (must match an entity from the provided list)
    - target: name of the target entity (must match an entity from the provided list)
+   - type: the relationship type from this list: USES, CREATES, PART_OF, LOCATED_IN, WORKS_FOR, ASSOCIATED_WITH, DERIVED_FROM, INFLUENCES, CONTAINS, MEASURES, FUNDED_BY, AUTHORED_BY, MANAGES, DEPENDS_ON, PRODUCES, COMPETES_WITH, REGULATES, SUPPORTS, TEACHES, PRECEDED_BY, RELATED_TO
    - description: Explanation as to why the source entity and target entity are related
    - strength: A numeric score (1-10) indicating strength of the relationship
 
@@ -80,9 +81,9 @@ Extract relationships between the provided entities based on the input text.
 If entity list contains ["Alex", "Jordan", "TechCorp"] and text says "Alex and Jordan worked at TechCorp together", output:
 {{
   "relations": [
-    {{"source": "Alex", "target": "TechCorp", "description": "Alex worked at TechCorp.", "strength": 8}},
-    {{"source": "Jordan", "target": "TechCorp", "description": "Jordan worked at TechCorp.", "strength": 8}},
-    {{"source": "Alex", "target": "Jordan", "description": "Alex and Jordan worked together.", "strength": 7}}
+    {{"source": "Alex", "target": "TechCorp", "type": "WORKS_FOR", "description": "Alex worked at TechCorp.", "strength": 8}},
+    {{"source": "Jordan", "target": "TechCorp", "type": "WORKS_FOR", "description": "Jordan worked at TechCorp.", "strength": 8}},
+    {{"source": "Alex", "target": "Jordan", "type": "ASSOCIATED_WITH", "description": "Alex and Jordan worked together.", "strength": 7}}
   ]
 }}
 
@@ -121,8 +122,8 @@ class RelationExtractor:
         self,
         model: str | None = None,  # Sprint 124: Read from LIGHTRAG_LLM_MODEL env var
         temperature: float = 0.1,
-        num_predict: int = 2000,
-        num_ctx: int = 16384,
+        num_predict: int = 8192,
+        num_ctx: int = 32768,
         max_retries: int = 3,
         retry_min_wait: float = 2.0,
         retry_max_wait: float = 10.0,
@@ -579,8 +580,8 @@ def create_relation_extractor_from_config(config) -> RelationExtractor:
     return RelationExtractor(
         model=model,  # Sprint 124: None triggers env var lookup in __init__
         temperature=getattr(config, "gemma_temperature", 0.1),
-        num_predict=getattr(config, "gemma_num_predict", 2000),
-        num_ctx=getattr(config, "gemma_num_ctx", 16384),
+        num_predict=getattr(config, "gemma_num_predict", 8192),
+        num_ctx=getattr(config, "gemma_num_ctx", 32768),
         # Sprint 14: Retry configuration
         max_retries=getattr(config, "extraction_max_retries", 3),
         retry_min_wait=getattr(config, "extraction_retry_min_wait", 2.0),

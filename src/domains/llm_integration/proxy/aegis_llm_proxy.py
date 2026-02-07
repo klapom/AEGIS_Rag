@@ -641,12 +641,27 @@ class AegisLLMProxy:
             # → ("local_ollama", "sensitive_data_local_only")
         """
         # PRIORITY 1: Data Privacy (PII/HIPAA always local)
+        # Sprint 125: vLLM is also LOCAL (runs on same DGX Spark), so allow it for
+        # CONFIDENTIAL/PII/HIPAA data — only cloud providers are blocked.
         sensitive_classifications = [
             DataClassification.PII,
             DataClassification.HIPAA,
             DataClassification.CONFIDENTIAL,
         ]
-        if task.data_classification in sensitive_classifications:
+        is_sensitive = task.data_classification in sensitive_classifications
+
+        # PRIORITY 1.5: vLLM for sensitive EXTRACTION tasks (vLLM is local, no data leaves)
+        if is_sensitive and task.task_type == TaskType.EXTRACTION and self._vllm_enabled:
+            is_healthy = await self._check_vllm_health()
+            if is_healthy:
+                logger.info(
+                    "routing_vllm_sensitive_extraction",
+                    classification=task.data_classification,
+                    reason="vllm_is_local_no_data_leaves",
+                )
+                return ("vllm", "sensitive_extraction_local_vllm")
+
+        if is_sensitive:
             logger.info(
                 "routing_data_privacy",
                 classification=task.data_classification,
@@ -782,7 +797,35 @@ class AegisLLMProxy:
                 data = response.json()
 
                 # Extract response content
-                content = data["choices"][0]["message"]["content"]
+                # Sprint 125: nano_v3 reasoning parser separates reasoning_content from content.
+                # Three failure modes:
+                # 1. content=None, reasoning_content has the answer → use reasoning
+                # 2. content has reasoning text (no JSON), reasoning_content has JSON → use reasoning
+                # 3. content has reasoning text, no reasoning_content → model ran out of tokens
+                message = data["choices"][0]["message"]
+                content = message.get("content") or ""
+                reasoning_content = message.get("reasoning_content")
+
+                # Check if content looks like it contains JSON (extraction tasks need JSON)
+                content_has_json = content and ("{" in content and "}" in content)
+
+                # If content is empty/None, use reasoning_content
+                if not content and reasoning_content:
+                    logger.info(
+                        "vllm_using_reasoning_as_content",
+                        reasoning_length=len(reasoning_content),
+                        reason="content_was_empty_or_none",
+                    )
+                    content = reasoning_content
+                # If content has no JSON but reasoning_content does, prefer reasoning
+                elif not content_has_json and reasoning_content and "{" in reasoning_content:
+                    logger.info(
+                        "vllm_using_reasoning_as_content",
+                        content_preview=content[:100] if content else "",
+                        reasoning_length=len(reasoning_content),
+                        reason="content_has_no_json_reasoning_does",
+                    )
+                    content = reasoning_content
 
                 # Extract token usage
                 usage = data.get("usage", {})

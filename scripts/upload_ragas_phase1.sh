@@ -144,7 +144,7 @@ upload_file() {
             -H "Authorization: Bearer $TOKEN" \
             -F "file=@$file" \
             -F "namespace_id=$namespace" \
-            -F "domain=$DOMAIN" \
+            -F "domain_id=$DOMAIN" \
             -w "\n%{http_code}" \
             --max-time 1800)  # 30 min timeout per file (gpt-oss:120b needs time for quality extraction)
 
