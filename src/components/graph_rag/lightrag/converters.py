@@ -189,10 +189,14 @@ def convert_entities_to_lightrag_format(
         # Handle both "type" and "entity_type" keys
         entity_type = entity.get("type", entity.get("entity_type", "UNKNOWN"))
 
+        # Sprint 126: Preserve domain-specific sub_type for Neo4j storage
+        entity_sub_type = entity.get("sub_type", entity.get("entity_sub_type"))
+
         lightrag_entity = {
             "entity_name": entity_name,
             "entity_id": entity_name,
             "entity_type": entity_type,
+            "entity_sub_type": entity_sub_type,
             "description": entity.get("description", ""),
             "source_id": source_id,
             "file_path": document_id,

@@ -259,6 +259,11 @@ class GraphEntity(BaseModel):
     id: str = Field(..., description="Unique entity ID")
     name: str = Field(..., description="Entity name")
     type: str = Field(..., description="Entity type (PERSON, ORGANIZATION, etc.)")
+    sub_type: str | None = Field(
+        None,
+        description="Domain-specific Tier 2 sub-type (e.g., DISEASE, COMPONENT). "
+        "Sprint 126: Preserved from LLM output before universal type mapping.",
+    )
     description: str = Field(default="", description="Entity description")
     properties: dict[str, Any] = Field(
         default_factory=dict, description="Additional entity properties"
@@ -803,6 +808,16 @@ class DomainCreateRequest(BaseModel):
         default_factory=DomainLLMConfig,
         description="LLM configuration",
     )
+    entity_sub_type_mapping: dict[str, str] | None = Field(
+        default=None,
+        description="Domain sub-type → universal type mapping (e.g., {DISEASE: CONCEPT}). "
+        "Sprint 126: YAML factory defaults, editable via UI.",
+    )
+    relation_hints: list[str] | None = Field(
+        default=None,
+        description="Domain-specific relation examples (e.g., 'TREATS → Medication → Disease'). "
+        "Sprint 126: YAML factory defaults, editable via UI.",
+    )
 
 
 class DomainUpdateRequest(BaseModel):
@@ -848,6 +863,16 @@ class DomainUpdateRequest(BaseModel):
     llm_config: DomainLLMConfig | None = Field(
         default=None,
         description="Updated LLM configuration",
+    )
+    entity_sub_type_mapping: dict[str, str] | None = Field(
+        default=None,
+        description="Updated domain sub-type → universal type mapping. "
+        "Sprint 126: Overrides YAML factory defaults.",
+    )
+    relation_hints: list[str] | None = Field(
+        default=None,
+        description="Updated domain-specific relation examples. "
+        "Sprint 126: Overrides YAML factory defaults.",
     )
 
     @field_validator("entity_types")

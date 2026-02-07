@@ -65,6 +65,21 @@ from src.core.response_utils import error_response_from_request, success_respons
 logger = structlog.get_logger(__name__)
 settings = get_settings()
 
+
+def _parse_json_field(value: str | None, default: Any = None) -> Any:
+    """Parse a JSON string from Neo4j, returning default if None/empty."""
+    if value is None:
+        return default
+    if isinstance(value, (dict, list)):
+        return value
+    try:
+        import json
+
+        return json.loads(value)
+    except (json.JSONDecodeError, TypeError):
+        return default
+
+
 router = APIRouter(prefix="/api/v1/admin/domains", tags=["Domain Training"])
 
 
@@ -99,6 +114,14 @@ class DomainCreateRequest(BaseModel):
         default="qwen3:32b",
         description="LLM model to use for extraction (must be available in Ollama)",
         examples=["qwen3:32b", "llama3.2:8b", "mistral:7b"],
+    )
+    entity_sub_type_mapping: dict[str, str] | None = Field(
+        default=None,
+        description="Sprint 126: Domain sub-type → universal type mapping (e.g., {DISEASE: CONCEPT})",
+    )
+    relation_hints: list[str] | None = Field(
+        default=None,
+        description="Sprint 126: Domain-specific relation examples (e.g., 'TREATS → Medication → Disease')",
     )
 
 
@@ -179,6 +202,14 @@ class DomainResponse(BaseModel):
     )
     created_at: str = Field(..., description="Creation timestamp (ISO 8601)")
     trained_at: str | None = Field(default=None, description="Training completion timestamp")
+    entity_sub_type_mapping: dict[str, str] | None = Field(
+        default=None,
+        description="Sprint 126: Domain sub-type → universal type mapping (JSON)",
+    )
+    relation_hints: list[str] | None = Field(
+        default=None,
+        description="Sprint 126: Domain-specific relation examples",
+    )
 
 
 class TrainingStep(BaseModel):
@@ -622,11 +653,14 @@ async def create_domain(
         )
 
         # Create domain in Neo4j
+        # Sprint 126: Pass entity_sub_type_mapping and relation_hints from request
         domain = await repo.create_domain(
             name=domain_request.name,
             description=domain_request.description,
             llm_model=domain_request.llm_model,
             description_embedding=description_embedding,
+            entity_sub_type_mapping=domain_request.entity_sub_type_mapping,
+            relation_hints=domain_request.relation_hints,
         )
 
         logger.info(
@@ -645,6 +679,8 @@ async def create_domain(
             training_metrics=None,
             created_at=domain["created_at"],
             trained_at=None,
+            entity_sub_type_mapping=_parse_json_field(domain.get("entity_sub_type_mapping"), {}),
+            relation_hints=_parse_json_field(domain.get("relation_hints"), []),
         )
 
         return success_response_from_request(domain_response, request)
@@ -712,6 +748,8 @@ async def list_domains(request: Request) -> ApiResponse[list[DomainResponse]]:
                 ),
                 created_at=str(d["created_at"]),
                 trained_at=str(d["trained_at"]) if d.get("trained_at") else None,
+                entity_sub_type_mapping=_parse_json_field(d.get("entity_sub_type_mapping"), {}),
+                relation_hints=_parse_json_field(d.get("relation_hints"), []),
             )
             for d in domains
         ]
@@ -894,6 +932,8 @@ async def get_domain(domain_name: str) -> DomainResponse:
             training_metrics=training_metrics,
             created_at=str(domain["created_at"]),
             trained_at=str(domain["trained_at"]) if domain.get("trained_at") else None,
+            entity_sub_type_mapping=_parse_json_field(domain.get("entity_sub_type_mapping"), {}),
+            relation_hints=_parse_json_field(domain.get("relation_hints"), []),
         )
 
     except HTTPException:
@@ -969,9 +1009,22 @@ async def update_domain(
             update_data["status"] = update_request.status
         if update_request.llm_config is not None:
             update_data["llm_config"] = update_request.llm_config.model_dump()
+        # Sprint 126: entity_sub_type_mapping and relation_hints (YAML override via UI)
+        if update_request.entity_sub_type_mapping is not None:
+            update_data["entity_sub_type_mapping"] = update_request.entity_sub_type_mapping
+        if update_request.relation_hints is not None:
+            update_data["relation_hints"] = update_request.relation_hints
 
         # Update domain
         updated_domain = await repo.update_domain(domain_name, **update_data)
+
+        # Sprint 126: Invalidate extraction type mapping cache if mapping changed
+        if update_request.entity_sub_type_mapping is not None or update_request.relation_hints is not None:
+            from src.components.graph_rag.extraction_service import (
+                invalidate_domain_type_mappings_cache,
+            )
+
+            invalidate_domain_type_mappings_cache()
 
         logger.info("domain_updated_successfully", name=domain_name)
 

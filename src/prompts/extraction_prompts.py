@@ -656,3 +656,83 @@ def get_active_extraction_prompts(domain: str = "technical") -> tuple[str, str]:
             GENERIC_ENTITY_EXTRACTION_PROMPT,
             GENERIC_RELATION_EXTRACTION_PROMPT,
         )
+
+
+def get_domain_enriched_extraction_prompts(
+    domain: str,
+    entity_sub_types: list[str] | None = None,
+    entity_sub_type_mapping: dict[str, str] | None = None,
+    relation_hints: list[str] | None = None,
+) -> tuple[str, str]:
+    """Generate domain-enriched extraction prompts from generic DSPy templates.
+
+    Sprint 126: Bridges seed_domains.yaml metadata into extraction prompts.
+    When no DSPy-trained prompts exist for a domain, this enriches the generic
+    prompts with domain-specific entity sub-types and relation hint patterns
+    from the seed catalog (ADR-060).
+
+    Priority chain in extraction_service.get_extraction_prompts():
+        1. DSPy-trained prompts from Neo4j (fully trained)
+        2. THIS: Generic DSPy + domain enrichment from seed_domains.yaml
+        3. Generic DSPy prompts (no domain enrichment)
+        4. Legacy prompts
+
+    Args:
+        domain: Domain identifier (e.g., "medicine_health")
+        entity_sub_types: List of Tier 2 entity types (e.g., ["DISEASE", "SYMPTOM"])
+        entity_sub_type_mapping: Maps sub-types to universal types (e.g., {"DISEASE": "CONCEPT"})
+        relation_hints: Domain-specific S-P-O patterns (e.g., ["TREATS → Medication → Disease"])
+
+    Returns:
+        Tuple of (enriched_entity_prompt, enriched_relation_prompt)
+    """
+    entity_prompt = DSPY_OPTIMIZED_ENTITY_PROMPT
+    relation_prompt = DSPY_OPTIMIZED_RELATION_PROMPT
+
+    # Enrich entity prompt with domain-specific sub-types
+    # Sprint 126: LLM uses domain-specific types directly (e.g., DISEASE, COMPONENT)
+    # Post-processing maps them to universal types and preserves the original as sub_type
+    if entity_sub_types and entity_sub_type_mapping:
+        sub_type_lines = []
+        for sub_type in entity_sub_types:
+            parent_type = entity_sub_type_mapping.get(sub_type, "CONCEPT")
+            sub_type_lines.append(
+                f"- `{sub_type}` (maps to `{parent_type}` in post-processing)"
+            )
+
+        sub_type_section = (
+            f"\n\n**Domain-Specific Entity Types ({domain})**\n"
+            "In this domain, use these specialized type tags DIRECTLY instead of the "
+            "universal types above. They will be automatically mapped to universal types "
+            "in post-processing, while preserving the domain-specific type:\n\n"
+            + "\n".join(sub_type_lines)
+            + "\n\n"
+        )
+
+        # Inject before "**IMPORTANT Entity Naming Rules**"
+        entity_prompt = entity_prompt.replace(
+            "**IMPORTANT Entity Naming Rules**",
+            sub_type_section + "**IMPORTANT Entity Naming Rules**",
+        )
+
+    # Enrich relation prompt with domain-specific relation patterns
+    # Sprint 126: LLM uses domain-specific relation types directly (e.g., TREATS, ENCODES)
+    # Post-processing maps them to universal types
+    if relation_hints:
+        hint_lines = "\n".join(f"- {hint}" for hint in relation_hints)
+
+        hint_section = (
+            f"\n\n**Domain-Specific Relation Types ({domain})**\n"
+            "Use these domain-specific relationship types DIRECTLY. They will be "
+            "automatically mapped to universal types in post-processing:\n\n"
+            + hint_lines
+            + "\n"
+        )
+
+        # Inject before "---S-P-O Triple Output Format---"
+        relation_prompt = relation_prompt.replace(
+            "---S-P-O Triple Output Format---",
+            hint_section + "\n---S-P-O Triple Output Format---",
+        )
+
+    return (entity_prompt, relation_prompt)

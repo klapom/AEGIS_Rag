@@ -83,6 +83,7 @@ logger = structlog.get_logger(__name__)
 
 # ============================================================================
 # Sprint 125 Feature 125.3: ADR-060 Universal Types
+# Sprint 126: Domain sub-type mappings loaded from seed_domains.yaml
 # ============================================================================
 
 # 15 Universal Entity Types (ADR-060 Standard)
@@ -91,6 +92,9 @@ UNIVERSAL_ENTITY_TYPES = {
     "CONCEPT", "TECHNOLOGY", "PRODUCT", "METRIC", "DOCUMENT",
     "PROCESS", "MATERIAL", "REGULATION", "QUANTITY", "FIELD"
 }
+
+# Sprint 126: Cache for domain sub-type mappings loaded from seed_domains.yaml
+_domain_mappings_loaded = False
 
 # 21 Universal Relation Types (ADR-060 Standard)
 UNIVERSAL_RELATION_TYPES = {
@@ -217,14 +221,169 @@ RELATION_TYPE_ALIASES = {
     "DELETES": "USES",
 }
 
+# Sprint 126: Domain-specific relation type mappings
+# These map domain-specific relation names from seed_domains.yaml relation_hints
+# to the closest universal relation type. Parsed from "TREATS → Medication → Disease" patterns.
+DOMAIN_RELATION_TYPE_ALIASES = {
+    # medicine_health
+    "TREATS": "USES",
+    "DIAGNOSED_BY": "USES",
+    "CONTRAINDICATED_WITH": "ASSOCIATED_WITH",
+    "INDICATES": "ASSOCIATED_WITH",
+    "ADMINISTERED_VIA": "USES",
+    "SIDE_EFFECT_OF": "CAUSES",
+    # biology_life_sciences
+    "ENCODES": "CREATES",
+    "REGULATES": "MANAGES",
+    "INHABITS": "LOCATED_IN",
+    "EVOLVES_FROM": "TYPE_OF",
+    "PARTICIPATES_IN": "PART_OF",
+    "PREYS_ON": "USES",
+    # engineering
+    "CONTROLS": "MANAGES",
+    "POWERED_BY": "DEPENDS_ON",
+    "MEETS_STANDARD": "IMPLEMENTS",
+    "TESTED_BY": "USES",
+    "FAILS_DUE_TO": "CAUSES",
+    "TOLERATES": "ASSOCIATED_WITH",
+    # computer_science_it
+    "RUNS_ON": "DEPENDS_ON",
+    "TRAINS_ON": "USES",
+    "COMPILES_TO": "CREATES",
+    "QUERIES": "USES",
+    "AUTHENTICATES": "USES",
+    "DEPLOYS_TO": "USES",
+    "EXPLOITS": "USES",
+}
+
+
+_domain_db_mappings_loaded = False
+
+
+def invalidate_domain_type_mappings_cache():
+    """Invalidate the domain type mappings cache so next extraction reloads from Neo4j.
+
+    Sprint 126: Called from domain update API endpoint when user changes
+    entity_sub_type_mapping via the UI.
+    """
+    global _domain_db_mappings_loaded
+    _domain_db_mappings_loaded = False
+    logger.info("domain_type_mappings_cache_invalidated")
+
+
+async def _refresh_domain_type_mappings_from_db():
+    """Refresh entity/relation type mappings from Neo4j :Domain nodes.
+
+    Sprint 126: Neo4j is the runtime source of truth (YAML = factory default).
+    User changes via UI update Neo4j, which overrides YAML values.
+    Called once on first async extraction call.
+    """
+    global _domain_db_mappings_loaded
+    if _domain_db_mappings_loaded:
+        return
+
+    try:
+        import json as _json
+
+        from src.components.domain_training import get_domain_repository
+
+        repo = get_domain_repository()
+        domains = await repo.list_domains()
+
+        db_entity_added = 0
+        for domain in domains:
+            mapping_json = domain.get("entity_sub_type_mapping", "{}")
+            if isinstance(mapping_json, str):
+                mapping = _json.loads(mapping_json) if mapping_json else {}
+            else:
+                mapping = mapping_json or {}
+
+            for sub_type, universal_type in mapping.items():
+                sub_upper = sub_type.upper().strip()
+                uni_upper = universal_type.upper().strip()
+                # Neo4j overrides YAML (user may have changed mapping via UI)
+                if uni_upper in UNIVERSAL_ENTITY_TYPES:
+                    ENTITY_TYPE_ALIASES[sub_upper] = uni_upper
+                    db_entity_added += 1
+
+        logger.info(
+            "domain_type_mappings_refreshed_from_db",
+            domains_count=len(domains),
+            entity_aliases_from_db=db_entity_added,
+            total_entity_aliases=len(ENTITY_TYPE_ALIASES),
+        )
+
+    except Exception as e:
+        logger.debug("domain_type_mappings_db_refresh_skipped", error=str(e))
+
+    _domain_db_mappings_loaded = True
+
+
+def _load_domain_type_mappings():
+    """Load entity sub-type mappings from seed_domains.yaml into ENTITY_TYPE_ALIASES.
+
+    Sprint 126: Sync bootstrap from YAML (factory defaults). Called once on first use.
+    For runtime overrides from Neo4j (user edits via UI), see _refresh_domain_type_mappings_from_db().
+
+    Also merges DOMAIN_RELATION_TYPE_ALIASES into RELATION_TYPE_ALIASES.
+    """
+    global _domain_mappings_loaded
+    if _domain_mappings_loaded:
+        return
+
+    try:
+        from pathlib import Path
+        import yaml
+
+        yaml_path = Path(__file__).parent.parent.parent.parent / "data" / "seed_domains.yaml"
+        if not yaml_path.exists():
+            logger.warning("seed_domains_yaml_not_found", path=str(yaml_path))
+            _domain_mappings_loaded = True
+            return
+
+        with open(yaml_path, "r", encoding="utf-8") as f:
+            catalog = yaml.safe_load(f)
+
+        added_count = 0
+        for domain in catalog.get("domains", []):
+            mapping = domain.get("entity_sub_type_mapping", {})
+            if mapping:
+                for sub_type, universal_type in mapping.items():
+                    sub_upper = sub_type.upper().strip()
+                    uni_upper = universal_type.upper().strip()
+                    if sub_upper not in ENTITY_TYPE_ALIASES and sub_upper not in UNIVERSAL_ENTITY_TYPES:
+                        ENTITY_TYPE_ALIASES[sub_upper] = uni_upper
+                        added_count += 1
+
+        # Merge domain relation aliases
+        rel_added = 0
+        for rel_type, universal_type in DOMAIN_RELATION_TYPE_ALIASES.items():
+            if rel_type not in RELATION_TYPE_ALIASES and rel_type not in UNIVERSAL_RELATION_TYPES:
+                RELATION_TYPE_ALIASES[rel_type] = universal_type
+                rel_added += 1
+
+        logger.info(
+            "domain_type_mappings_loaded",
+            entity_aliases_added=added_count,
+            relation_aliases_added=rel_added,
+            total_entity_aliases=len(ENTITY_TYPE_ALIASES),
+            total_relation_aliases=len(RELATION_TYPE_ALIASES),
+        )
+
+    except Exception as e:
+        logger.warning("domain_type_mappings_load_failed", error=str(e))
+
+    _domain_mappings_loaded = True
+
 
 def validate_entity_type(entity_type: str) -> str:
     """Validate and normalize entity type to universal type.
 
     Sprint 125 Feature 125.3: ADR-060 Universal Types
+    Sprint 126: Also loads domain sub-type mappings from seed_domains.yaml
 
     Args:
-        entity_type: Raw entity type from LLM (may be unknown)
+        entity_type: Raw entity type from LLM (may be domain-specific like DISEASE, COMPONENT)
 
     Returns:
         Normalized universal entity type (one of 15 types)
@@ -233,9 +392,14 @@ def validate_entity_type(entity_type: str) -> str:
     Example:
         >>> validate_entity_type("COMPANY")
         "ORGANIZATION"
-        >>> validate_entity_type("UNKNOWN_TYPE")
+        >>> validate_entity_type("DISEASE")  # Sprint 126: from seed_domains.yaml
         "CONCEPT"
+        >>> validate_entity_type("COMPONENT")  # Sprint 126: from seed_domains.yaml
+        "PRODUCT"
     """
+    # Sprint 126: Ensure domain mappings are loaded on first use
+    _load_domain_type_mappings()
+
     if not entity_type:
         return "CONCEPT"
 
@@ -245,7 +409,7 @@ def validate_entity_type(entity_type: str) -> str:
     if entity_type_upper in UNIVERSAL_ENTITY_TYPES:
         return entity_type_upper
 
-    # Check if it's a known alias
+    # Check if it's a known alias (includes domain sub-types from Sprint 126)
     if entity_type_upper in ENTITY_TYPE_ALIASES:
         mapped_type = ENTITY_TYPE_ALIASES[entity_type_upper]
         logger.debug(
@@ -268,9 +432,10 @@ def validate_relation_type(relation_type: str) -> str:
     """Validate and normalize relation type to universal type.
 
     Sprint 125 Feature 125.3: ADR-060 Universal Types
+    Sprint 126: Also loads domain relation type mappings (TREATS→USES, ENCODES→CREATES, etc.)
 
     Args:
-        relation_type: Raw relation type from LLM (may be unknown)
+        relation_type: Raw relation type from LLM (may be domain-specific like TREATS, ENCODES)
 
     Returns:
         Normalized universal relation type (one of 21 types)
@@ -279,9 +444,14 @@ def validate_relation_type(relation_type: str) -> str:
     Example:
         >>> validate_relation_type("WORKS_AT")
         "EMPLOYS"
-        >>> validate_relation_type("UNKNOWN_RELATION")
-        "RELATED_TO"
+        >>> validate_relation_type("TREATS")  # Sprint 126: domain-specific
+        "USES"
+        >>> validate_relation_type("ENCODES")  # Sprint 126: domain-specific
+        "CREATES"
     """
+    # Sprint 126: Ensure domain mappings are loaded on first use
+    _load_domain_type_mappings()
+
     if not relation_type:
         return "RELATED_TO"
 
@@ -291,7 +461,7 @@ def validate_relation_type(relation_type: str) -> str:
     if relation_type_upper in UNIVERSAL_RELATION_TYPES:
         return relation_type_upper
 
-    # Check if it's a known alias
+    # Check if it's a known alias (includes domain relation types from Sprint 126)
     if relation_type_upper in RELATION_TYPE_ALIASES:
         mapped_type = RELATION_TYPE_ALIASES[relation_type_upper]
         logger.debug(
@@ -885,11 +1055,13 @@ class ExtractionService:
         Sprint 45 Feature 45.8: Domain-specific or generic fallback prompts.
         Sprint 86 Feature 86.2: DSPy MIPROv2 optimized prompts with feature flag.
         Sprint 125 Feature 125.7: Domain-trained prompts prioritized over generic DSPy.
+        Sprint 126: Domain-enriched prompts from seed_domains.yaml (entity_sub_types + relation_hints).
 
-        Priority order (Sprint 125.7):
-        1. Domain-trained prompts (from Neo4j :Domain node, if domain provided and has trained prompts)
-        2. Generic DSPy-optimized prompts (default, if AEGIS_USE_DSPY_PROMPTS=1)
-        3. Legacy generic prompts (fallback, if AEGIS_USE_LEGACY_PROMPTS=1)
+        Priority order (Sprint 126):
+        1. Domain-trained prompts (from Neo4j :Domain node, if domain has DSPy-trained prompts)
+        2. Domain-enriched generic prompts (generic DSPy + entity_sub_types/relation_hints from YAML)
+        3. Generic DSPy-optimized prompts (default, if AEGIS_USE_DSPY_PROMPTS=1)
+        4. Legacy generic prompts (fallback, if AEGIS_USE_LEGACY_PROMPTS=1)
 
         Args:
             domain: Domain name (e.g., "entertainment", "medicine_health", "software_dev")
@@ -934,12 +1106,57 @@ class ExtractionService:
                         domain_config["relation_prompt"],
                     )
                 else:
-                    logger.info(
-                        "domain_exists_no_trained_prompts",
-                        domain=domain,
-                        fallback="generic_dspy_prompts",
-                        reason="domain_not_trained_yet",
-                    )
+                    # Sprint 126: Priority 2 - Domain-enriched generic prompts
+                    # Consult seed_domains.yaml for entity_sub_types + relation_hints
+                    # to enrich the generic DSPy prompt with domain-specific guidance
+                    try:
+                        from src.components.domain_training.domain_seeder import (
+                            get_domain_config,
+                        )
+
+                        yaml_config = await get_domain_config(domain)
+
+                        if yaml_config and (
+                            yaml_config.get("entity_sub_types")
+                            or yaml_config.get("relation_hints")
+                        ):
+                            from src.prompts.extraction_prompts import (
+                                get_domain_enriched_extraction_prompts,
+                            )
+
+                            logger.info(
+                                "using_domain_enriched_prompts",
+                                domain=domain,
+                                entity_sub_types=len(
+                                    yaml_config.get("entity_sub_types", [])
+                                ),
+                                relation_hints=len(
+                                    yaml_config.get("relation_hints", [])
+                                ),
+                                source="seed_domains_yaml",
+                            )
+                            return get_domain_enriched_extraction_prompts(
+                                domain=domain,
+                                entity_sub_types=yaml_config.get("entity_sub_types"),
+                                entity_sub_type_mapping=yaml_config.get(
+                                    "entity_sub_type_mapping"
+                                ),
+                                relation_hints=yaml_config.get("relation_hints"),
+                            )
+                        else:
+                            logger.info(
+                                "domain_exists_no_trained_prompts",
+                                domain=domain,
+                                fallback="generic_dspy_prompts",
+                                reason="no_yaml_hints_available",
+                            )
+                    except Exception as e:
+                        logger.warning(
+                            "domain_enrichment_failed",
+                            domain=domain,
+                            error=str(e),
+                            fallback="generic_dspy_prompts",
+                        )
             except Exception as e:
                 # If domain lookup fails, continue to generic prompts
                 logger.warning(
@@ -949,10 +1166,10 @@ class ExtractionService:
                     fallback="generic_prompts",
                 )
 
-        # Sprint 125 Feature 125.7: Priority 2 - Generic DSPy-optimized prompts
+        # Sprint 126: Priority 3 - Generic DSPy-optimized prompts
         # These are used when:
         # - No domain provided
-        # - Domain exists but no trained prompts yet
+        # - Domain exists but no trained prompts AND no YAML hints
         # - Domain lookup failed
         if USE_DSPY_PROMPTS:
             logger.info(
@@ -962,7 +1179,7 @@ class ExtractionService:
             )
             return get_active_extraction_prompts(domain or "technical")
 
-        # Sprint 125 Feature 125.7: Priority 3 - Legacy generic prompts
+        # Sprint 126: Priority 4 - Legacy generic prompts
         # Only used if AEGIS_USE_LEGACY_PROMPTS=1 is set
         logger.info(
             "using_legacy_generic_prompts",
@@ -1368,10 +1585,19 @@ class ExtractionService:
             entities = []
             for entity_dict in entities_data:
                 try:
+                    # Sprint 126: Preserve original LLM type as sub_type before mapping
+                    raw_type = entity_dict.get("type", "UNKNOWN")
+                    validated_type = validate_entity_type(raw_type)
+                    raw_upper = raw_type.upper().strip()
+                    # sub_type is set when the LLM used a domain-specific type
+                    # that was mapped to a universal type (e.g., DISEASE → CONCEPT)
+                    sub_type = raw_upper if raw_upper != validated_type else None
+
                     entity = GraphEntity(
                         id=str(uuid.uuid4()),
                         name=entity_dict.get("name", ""),
-                        type=entity_dict.get("type", "UNKNOWN"),
+                        type=validated_type,
+                        sub_type=sub_type,
                         description=entity_dict.get("description", ""),
                         properties={},
                         source_document=document_id,
@@ -1453,6 +1679,9 @@ class ExtractionService:
             Tuple of (entities, relations)
         """
         from src.components.graph_rag.extraction_debug_logger import get_debug_logger
+
+        # Sprint 126: Refresh type mappings from Neo4j (overrides YAML factory defaults)
+        await _refresh_domain_type_mappings_from_db()
 
         pipeline_start = time.time()
         pipeline = get_pipeline_config()
@@ -1957,10 +2186,17 @@ class ExtractionService:
                 entity_name = entity_dict.get("name", "")
                 entity_id = f"{entity_name.lower().replace(' ', '_')}_{i}"
 
+                # Sprint 126: Preserve original LLM type as sub_type before mapping
+                raw_type = entity_dict.get("type", "ENTITY")
+                validated_type = validate_entity_type(raw_type)
+                raw_upper = raw_type.upper().strip()
+                sub_type = raw_upper if raw_upper != validated_type else None
+
                 entity = GraphEntity(
                     id=entity_id,
                     name=entity_name,
-                    type=entity_dict.get("type", "ENTITY"),
+                    type=validated_type,
+                    sub_type=sub_type,
                     description=entity_dict.get("description", ""),
                     source_document=document_id or entity_dict.get("source_id", ""),
                 )
@@ -2180,6 +2416,9 @@ class ExtractionService:
                 document_id=document_id,
                 hint="Consider using extract_with_spacy_first_pipeline() for better performance",
             )
+
+        # Sprint 126: Refresh type mappings from Neo4j (overrides YAML factory defaults)
+        await _refresh_domain_type_mappings_from_db()
 
         # Sprint 86.7: Apply coreference resolution as preprocessing
         # This resolves pronouns (he, she, it) to their antecedents
@@ -2421,10 +2660,17 @@ class ExtractionService:
             new_entities = []
             for entity_dict in entities_data:
                 try:
+                    # Sprint 126: Preserve original LLM type as sub_type
+                    raw_type = entity_dict.get("type", "UNKNOWN")
+                    validated_type = validate_entity_type(raw_type)
+                    raw_upper = raw_type.upper().strip()
+                    sub_type = raw_upper if raw_upper != validated_type else None
+
                     entity = GraphEntity(
                         id=str(uuid.uuid4()),
                         name=entity_dict.get("name", ""),
-                        type=entity_dict.get("type", "UNKNOWN"),
+                        type=validated_type,
+                        sub_type=sub_type,
                         description=entity_dict.get("description", ""),
                         properties={},
                         source_document=document_id,

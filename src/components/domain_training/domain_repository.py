@@ -20,6 +20,8 @@ Neo4j Schema:
         llm_model: string,
         extraction_model_cascade: string (JSON array, Sprint 83),  # Custom cascade configuration
         extraction_settings: string (JSON object, Sprint 83.4),  # ERExtractionSettings (fast vs refinement)
+        entity_sub_type_mapping: string (JSON object, Sprint 126),  # Domain sub-type → universal type mapping
+        relation_hints: string (JSON array, Sprint 126),  # Domain-specific relation examples
         training_samples: int,
         training_metrics: string (JSON object),
         status: string (pending/training/ready/failed),
@@ -298,6 +300,8 @@ class DomainRepository:
         description_embedding: list[float],
         status: str = "pending",
         llm_config: DomainLLMConfig | None = None,
+        entity_sub_type_mapping: dict[str, str] | None = None,
+        relation_hints: list[str] | None = None,
         tx: AsyncTransaction | None = None,
     ) -> dict[str, Any]:
         """Create a new domain configuration.
@@ -311,6 +315,8 @@ class DomainRepository:
             description_embedding: BGE-M3 embedding of description (1024-dim)
             status: Initial domain status (default: "pending")
             llm_config: LLM configuration (training/extraction/classification models) - Sprint 117.12
+            entity_sub_type_mapping: Domain sub-type → universal type mapping (Sprint 126)
+            relation_hints: Domain-specific relation examples (Sprint 126)
             tx: Optional transaction for rollback support
 
         Returns:
@@ -352,6 +358,10 @@ class DomainRepository:
         # Serialize llm_config to JSON
         llm_config_json = json.dumps(llm_config.to_dict())
 
+        # Sprint 126: Serialize domain type mappings
+        entity_mapping_json = json.dumps(entity_sub_type_mapping or {})
+        relation_hints_json = json.dumps(relation_hints or [])
+
         query = """
         CREATE (d:Domain {
             id: $id,
@@ -365,6 +375,8 @@ class DomainRepository:
             llm_model: $llm_model,
             llm_config: $llm_config,
             extraction_settings: '{}',
+            entity_sub_type_mapping: $entity_sub_type_mapping,
+            relation_hints: $relation_hints,
             training_samples: 0,
             training_metrics: '{}',
             status: $status,
@@ -382,6 +394,8 @@ class DomainRepository:
             "embedding": description_embedding,
             "llm_model": llm_model,
             "llm_config": llm_config_json,
+            "entity_sub_type_mapping": entity_mapping_json,
+            "relation_hints": relation_hints_json,
             "status": status,
             "created_at": now,
             "updated_at": now,
@@ -446,7 +460,9 @@ class DomainRepository:
                        d.llm_model as llm_model, d.training_samples as training_samples,
                        d.training_metrics as training_metrics, d.status as status,
                        d.created_at as created_at, d.updated_at as updated_at,
-                       d.trained_at as trained_at
+                       d.trained_at as trained_at,
+                       d.entity_sub_type_mapping as entity_sub_type_mapping,
+                       d.relation_hints as relation_hints
                 """,
                 {"name": name},
             )
@@ -481,7 +497,9 @@ class DomainRepository:
                 RETURN d.id as id, d.name as name, d.description as description,
                        d.llm_model as llm_model, d.training_samples as training_samples,
                        d.status as status, d.created_at as created_at,
-                       d.trained_at as trained_at
+                       d.trained_at as trained_at,
+                       d.entity_sub_type_mapping as entity_sub_type_mapping,
+                       d.relation_hints as relation_hints
                 ORDER BY d.created_at DESC
                 """
             )
@@ -862,6 +880,8 @@ class DomainRepository:
         confidence_threshold: float | None = None,
         status: str | None = None,
         llm_config: dict[str, Any] | None = None,
+        entity_sub_type_mapping: dict[str, str] | None = None,
+        relation_hints: list[str] | None = None,
     ) -> dict[str, Any]:
         """Update domain configuration.
 
@@ -949,6 +969,15 @@ class DomainRepository:
         if llm_config is not None:
             set_clauses.append("d.llm_config = $llm_config")
             params["llm_config"] = json.dumps(llm_config)
+
+        # Sprint 126: Domain sub-type mapping and relation hints (YAML override via UI)
+        if entity_sub_type_mapping is not None:
+            set_clauses.append("d.entity_sub_type_mapping = $entity_sub_type_mapping")
+            params["entity_sub_type_mapping"] = json.dumps(entity_sub_type_mapping)
+
+        if relation_hints is not None:
+            set_clauses.append("d.relation_hints = $relation_hints")
+            params["relation_hints"] = json.dumps(relation_hints)
 
         set_clause = ", ".join(set_clauses)
 

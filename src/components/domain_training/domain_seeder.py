@@ -311,6 +311,8 @@ async def seed_domain(domain_id: str, catalog: dict[str, Any] | None = None) -> 
             description_embedding=zero_embedding,
             status="pending",  # Will be set to "active" after training
             llm_config=llm_config,
+            entity_sub_type_mapping=domain_config.get("entity_sub_type_mapping"),
+            relation_hints=domain_config.get("relation_hints"),
         )
 
         logger.info(

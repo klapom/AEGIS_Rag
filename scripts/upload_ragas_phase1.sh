@@ -6,12 +6,14 @@
 # 1. Namespace is correctly set in ALL databases (Qdrant, Neo4j, BM25, LightRAG)
 # 2. Full ingestion pipeline runs (chunking -> embedding -> graph extraction)
 # 3. All metadata is properly attached
+# 4. Domain auto-classification via BGE-M3 (Sprint 126 fix)
 #
 # Usage:
-#   ./scripts/upload_ragas_phase1.sh                    # Upload all 500 samples
+#   ./scripts/upload_ragas_phase1.sh                    # Upload all 500 samples (auto-classify domain)
 #   ./scripts/upload_ragas_phase1.sh --max 10           # Upload first 10 samples (testing)
 #   ./scripts/upload_ragas_phase1.sh --resume 100       # Resume from sample 100
 #   ./scripts/upload_ragas_phase1.sh --dry-run          # Show what would be uploaded
+#   DOMAIN=medicine_health ./scripts/upload_ragas_phase1.sh  # Override domain (skip auto-classify)
 
 set -e
 
@@ -24,8 +26,10 @@ UPLOAD_ENDPOINT="$API/api/v1/retrieval/upload"
 # Sprint 126: Use configurable namespace (default: ragas_phase1_sprint126)
 # Sprint 125 switched extraction to vLLM (Nemotron-3-Nano-30B via NGC container)
 NAMESPACE="${NAMESPACE:-ragas_phase1_sprint126}"
-# Sprint 124: Domain for DSPy-optimized prompts (entertainment = MIPROv2-trained prompts)
-DOMAIN="${DOMAIN:-entertainment}"
+# Sprint 126 Fix: Do NOT hardcode domain — let BGE-M3 auto-classify each document individually.
+# RAGAS Phase 1 spans 4+ domains (CS/IT, engineering, medicine, general knowledge).
+# Set DOMAIN env var only to force a specific domain for all files.
+DOMAIN="${DOMAIN:-}"
 CONTEXTS_DIR="data/ragas_phase1_contexts"
 
 # Parse arguments
@@ -63,7 +67,7 @@ echo "================================================================"
 echo "RAGAS Phase 1 Upload (Frontend API)"
 echo "================================================================"
 echo "Namespace: ${NAMESPACE}"
-echo "Domain: ${DOMAIN}"
+echo "Domain: ${DOMAIN:-<auto-classify via BGE-M3>}"
 echo "Contexts directory: ${CONTEXTS_DIR}"
 echo "API Base: ${API}"
 echo "Max samples: ${MAX_SAMPLES} (-1 = all)"
@@ -140,13 +144,20 @@ upload_file() {
     local auth_retry=0
 
     while [ $auth_retry -le $max_auth_retries ]; do
-        RESPONSE=$(curl -s -X POST "$UPLOAD_ENDPOINT" \
+        # Sprint 126: Build curl args dynamically — only include domain_id if explicitly set
+        # When omitted, the ingestion pipeline auto-classifies via BGE-M3 DomainClassifier
+        local curl_args=(-s -X POST "$UPLOAD_ENDPOINT" \
             -H "Authorization: Bearer $TOKEN" \
             -F "file=@$file" \
-            -F "namespace_id=$namespace" \
-            -F "domain_id=$DOMAIN" \
-            -w "\n%{http_code}" \
-            --max-time 1800)  # 30 min timeout per file (gpt-oss:120b needs time for quality extraction)
+            -F "namespace_id=$namespace")
+
+        if [ -n "$DOMAIN" ]; then
+            curl_args+=(-F "domain_id=$DOMAIN")
+        fi
+
+        curl_args+=(-w "\n%{http_code}" --max-time 1800)
+
+        RESPONSE=$(curl "${curl_args[@]}")
 
         HTTP_CODE=$(echo "$RESPONSE" | tail -1)
         BODY=$(echo "$RESPONSE" | head -n -1)

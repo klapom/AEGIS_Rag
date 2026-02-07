@@ -214,16 +214,18 @@ class ExtractionPipelineFactory:
                     )
 
                 # Step 3: Convert GraphEntity → LightRAG format
+                # Sprint 126: Propagate entity_sub_type for Neo4j storage
                 lightrag_entities = []
                 for entity in entities_graph:
-                    lightrag_entities.append(
-                        {
-                            "entity_name": entity.name,
-                            "entity_type": entity.type,
-                            "description": entity.description or f"{entity.type}: {entity.name}",
-                            "source_id": entity.source_document or document_id or "unknown",
-                        }
-                    )
+                    entity_dict = {
+                        "entity_name": entity.name,
+                        "entity_type": entity.type,
+                        "description": entity.description or f"{entity.type}: {entity.name}",
+                        "source_id": entity.source_document or document_id or "unknown",
+                    }
+                    if entity.sub_type:
+                        entity_dict["entity_sub_type"] = entity.sub_type
+                    lightrag_entities.append(entity_dict)
 
                 # Step 4: Convert GraphRelationship → LightRAG format
                 # Sprint 125: Include relation type for S-P-O triples (ADR-060)
