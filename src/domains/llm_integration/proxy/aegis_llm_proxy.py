@@ -911,6 +911,13 @@ class AegisLLMProxy:
                         "messages": messages,
                         "temperature": task.temperature,
                         "max_tokens": task.max_tokens,
+                        # Sprint 126: Disable reasoning for extraction tasks.
+                        # With enable_thinking=true (default), Nemotron spends all
+                        # max_tokens on CoT reasoning, leaving nothing for JSON output.
+                        # Relation extraction consistently hits 8192 token limit with
+                        # pure reasoning in reasoning_content and empty content.
+                        # Reference: HuggingFace nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-NVFP4
+                        "chat_template_kwargs": {"enable_thinking": False},
                     },
                     timeout=600.0,  # Extraction windows can take 100-300s on vLLM
                 )
@@ -918,19 +925,16 @@ class AegisLLMProxy:
                 data = response.json()
 
                 # Extract response content
-                # Sprint 125: nano_v3 reasoning parser separates reasoning_content from content.
-                # Three failure modes:
-                # 1. content=None, reasoning_content has the answer → use reasoning
-                # 2. content has reasoning text (no JSON), reasoning_content has JSON → use reasoning
-                # 3. content has reasoning text, no reasoning_content → model ran out of tokens
                 message = data["choices"][0]["message"]
                 content = message.get("content") or ""
                 reasoning_content = message.get("reasoning_content")
 
-                # Check if content looks like it contains JSON (extraction tasks need JSON)
+                # With enable_thinking=False, content should have JSON directly.
+                # Keep reasoning_content fallback as safety net in case some
+                # requests still produce reasoning (e.g., if chat_template_kwargs
+                # is not honored by a future vLLM version).
                 content_has_json = content and ("{" in content and "}" in content)
 
-                # If content is empty/None, use reasoning_content
                 if not content and reasoning_content:
                     logger.info(
                         "vllm_using_reasoning_as_content",
@@ -938,7 +942,6 @@ class AegisLLMProxy:
                         reason="content_was_empty_or_none",
                     )
                     content = reasoning_content
-                # If content has no JSON but reasoning_content does, prefer reasoning
                 elif not content_has_json and reasoning_content and "{" in reasoning_content:
                     logger.info(
                         "vllm_using_reasoning_as_content",

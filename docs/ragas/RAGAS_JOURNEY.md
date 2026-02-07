@@ -3752,12 +3752,54 @@ vllm:
 | Neo4j storage | 1.0s | — |
 | **Total** | **433.5s** | Mixed (vLLM + Ollama fallback) |
 
-### Known Issue: Reasoning Content Leak in vLLM Relation Extraction
+### Root Cause: Reasoning Token Budget Exhaustion (RESOLVED)
 
-The `nano_v3` reasoning parser sometimes outputs the chain-of-thought as `content` instead of `reasoning_content`. This causes JSON parse failure for relation extraction prompts (which produce longer, more complex outputs). Entity extraction (shorter, simpler) works correctly.
+**Problem**: With `enable_thinking=true` (default), Nemotron outputs CoT reasoning BEFORE JSON. For relation extraction (complex prompts), the model used all 8,192 `max_tokens` on reasoning, leaving `content=None`. The `reasoning_content` (26,534 chars) was pure CoT with no JSON.
 
-**Impact**: Relation extraction falls back from vLLM (rank 1) to Ollama gpt-oss:20b (rank 2), adding ~150-200s latency.
+**API logs confirmed**:
+```
+vllm_using_reasoning_as_content | reason=content_was_empty_or_none | reasoning_length=26534
+tokens_output=8192  (= exactly max_tokens → model was truncated mid-reasoning!)
+```
 
-**Potential fix**: Parse the vLLM response to extract embedded JSON from within reasoning text, or adjust the prompt to encourage the model to clearly separate reasoning from JSON output.
+**Fix**: Disable reasoning for extraction via `chat_template_kwargs: {"enable_thinking": false}`:
+```json
+{
+  "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-NVFP4",
+  "messages": [...],
+  "chat_template_kwargs": {"enable_thinking": false},
+  "max_tokens": 8192
+}
+```
+
+**NVIDIA reference**: [HuggingFace Model Card](https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-NVFP4) documents `enable_thinking` for vLLM via `chat_template_kwargs`.
+
+### Performance Improvement: enable_thinking=false (2026-02-07)
+
+| Phase | Before (thinking=true) | After (thinking=false) | Speedup |
+|-------|----------------------|----------------------|---------|
+| Entity Extraction | 78.3s (3,919 output tokens) | **8.8s** (469 tokens) | **8.9x** |
+| Relation Extraction | 305s (vLLM fail→Ollama) | **11.8s** (vLLM direct) | **25.8x** |
+| Relation (graph_extraction) | 44.5s | **12.2s** | **3.6x** |
+| **Total Pipeline** | **433.5s** | **64.0s** | **6.8x** |
+
+| Quality Metric | Before | After |
+|---------------|--------|-------|
+| Entities extracted | 7 | **17** |
+| Relations extracted | 7 | **11** |
+| vLLM fallback to Ollama | Yes (relation) | **No** |
+| Domain detected | None | **chemistry** |
+
+**Full pipeline test (hotpot_000004.txt)**:
+```json
+{
+  "status": "success",
+  "duration_seconds": 64.02,
+  "neo4j_entities": 17,
+  "neo4j_relationships": 11
+}
+```
+
+**Note**: The model still outputs a brief reasoning prefix ("Reasoning: Identify entities...") before the JSON array, even with `enable_thinking=false`. This is not a problem — the `regex_array` JSON parser correctly extracts the JSON from within the response.
 
 ---
