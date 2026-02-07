@@ -1159,15 +1159,21 @@ class ExtractionService:
                                 missing_fields=["name", "type"],
                             )
                     elif isinstance(item, str) and data_type == "entity":
-                        # Sprint 125: DSPy MIPROv2 prompts produce string arrays
-                        # like ["Henry Miller", "Academy Award", "California"]
-                        # Convert to dict format with UNKNOWN type (SpaCy will retype later)
+                        # Sprint 125 Fix: Defensive fallback for legacy DSPy prompts
+                        # After DSPy signature fix, this should rarely trigger
+                        # Kept as safety net for old trained prompts in Neo4j
+                        logger.warning(
+                            "legacy_dspy_string_entity",
+                            entity=item,
+                            reason="DSPy prompt still returning strings instead of dicts",
+                            action="Converting to dict with UNKNOWN type",
+                        )
                         name = validate_entity_name_length(item.strip(), max_words=4)
                         if name and len(name) > 1:
                             valid_items.append({
                                 "name": name,
                                 "type": "UNKNOWN",
-                                "description": f"Entity from DSPy prompt extraction",
+                                "description": f"Legacy entity from old DSPy prompt (needs retraining)",
                             })
                     else:
                         logger.warning(

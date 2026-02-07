@@ -337,10 +337,43 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             note="MCP servers will be available for manual connection",
         )
 
+    # Sprint 126 Feature 126.1: Start community detection scheduler
+    try:
+        from src.jobs.community_batch_job import start_community_detection_scheduler
+
+        scheduler = start_community_detection_scheduler()
+        if scheduler:
+            logger.info(
+                "community_detection_scheduler_started",
+                mode=settings.graph_community_detection_mode,
+                note="Nightly batch job will run at 5:00 AM",
+            )
+        else:
+            logger.info(
+                "community_detection_scheduler_not_started",
+                mode=settings.graph_community_detection_mode,
+                note="Scheduler only runs in 'scheduled' mode",
+            )
+    except Exception as e:
+        logger.warning(
+            "community_detection_scheduler_failed",
+            error=str(e),
+            note="Community detection will not run automatically - use manual trigger API",
+        )
+
     yield
 
     # Shutdown
     logger.info("application_shutting_down")
+
+    # Sprint 126 Feature 126.1: Shutdown community detection scheduler
+    try:
+        from src.jobs.community_batch_job import shutdown_community_detection_scheduler
+
+        shutdown_community_detection_scheduler()
+        logger.info("community_detection_scheduler_shutdown_complete")
+    except Exception as e:
+        logger.warning("community_detection_scheduler_shutdown_failed", error=str(e))
 
     # Sprint 51: Clear pre-warmed Docling client reference (keep container running)
     # Note: We intentionally do NOT stop the container on backend shutdown

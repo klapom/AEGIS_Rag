@@ -81,6 +81,7 @@ async def test_optimize_entity_extraction_has_required_keys():
 
     sample_data = [
         {"text": "Apple acquired Siri.", "entities": ["Apple", "Siri"]},
+        {"text": "Tesla builds electric cars.", "entities": ["Tesla", "electric cars"]},
     ]
 
     result = await optimizer.optimize_entity_extraction(training_data=sample_data)
@@ -111,6 +112,7 @@ async def test_optimize_entity_extraction_returns_strings():
 
     sample_data = [
         {"text": "Text content", "entities": ["Entity1"]},
+        {"text": "More text", "entities": ["Entity2"]},
     ]
 
     result = await optimizer.optimize_entity_extraction(training_data=sample_data)
@@ -134,6 +136,7 @@ async def test_optimize_entity_extraction_calls_progress_callback():
 
     sample_data = [
         {"text": "Sample text", "entities": ["Entity1"]},
+        {"text": "Another sample", "entities": ["Entity2"]},
     ]
 
     # Should not raise error when progress callback is provided
@@ -163,6 +166,11 @@ async def test_optimize_relation_extraction_returns_dict():
             "text": "FastAPI uses Pydantic.",
             "entities": ["FastAPI", "Pydantic"],
             "relations": [{"subject": "FastAPI", "predicate": "uses", "object": "Pydantic"}],
+        },
+        {
+            "text": "Python powers Django.",
+            "entities": ["Python", "Django"],
+            "relations": [{"subject": "Python", "predicate": "powers", "object": "Django"}],
         },
     ]
 
@@ -290,6 +298,7 @@ async def test_mock_entity_optimization_result():
 
     sample_data = [
         {"text": "Text", "entities": ["Entity1"]},
+        {"text": "More text", "entities": ["Entity2"]},
     ]
 
     result = await optimizer.optimize_entity_extraction(training_data=sample_data)
@@ -312,6 +321,11 @@ async def test_mock_relation_optimization_result():
             "text": "Text",
             "entities": ["E1"],
             "relations": [{"subject": "E1", "predicate": "relates", "object": "E2"}],
+        },
+        {
+            "text": "More text",
+            "entities": ["E3"],
+            "relations": [{"subject": "E3", "predicate": "relates", "object": "E4"}],
         },
     ]
 
@@ -347,7 +361,8 @@ async def test_optimize_entity_extraction_handles_malformed_data():
 
     malformed_data = [
         {"text": "Valid", "entities": ["Entity1"]},
-        {"text": "Missing entities field"},  # Invalid
+        {"text": "Also valid", "entities": ["Entity2"]},
+        {"text": "Missing entities field"},  # Invalid (will be filtered)
     ]
 
     # Should either succeed or raise appropriate error
@@ -371,6 +386,7 @@ async def test_optimize_with_progress_callback_exception():
 
     sample_data = [
         {"text": "Text", "entities": ["Entity1"]},
+        {"text": "More text", "entities": ["Entity2"]},
     ]
 
     # Optimization should complete despite callback error
@@ -424,6 +440,7 @@ async def test_multiple_optimizations_sequence():
 
     entity_data = [
         {"text": "Apple Inc. was founded.", "entities": ["Apple Inc."]},
+        {"text": "Microsoft builds software.", "entities": ["Microsoft"]},
     ]
 
     relation_data = [
@@ -431,6 +448,11 @@ async def test_multiple_optimizations_sequence():
             "text": "Python is a language",
             "entities": ["Python"],
             "relations": [{"subject": "Python", "predicate": "is_a", "object": "language"}],
+        },
+        {
+            "text": "Java is a language",
+            "entities": ["Java"],
+            "relations": [{"subject": "Java", "predicate": "is_a", "object": "language"}],
         },
     ]
 
@@ -505,7 +527,10 @@ async def test_entity_result_instructions_is_string():
     from src.components.domain_training.dspy_optimizer import DSPyOptimizer
 
     optimizer = DSPyOptimizer()
-    sample_data = [{"text": "Text", "entities": ["E1"]}]
+    sample_data = [
+        {"text": "Text", "entities": ["E1"]},
+        {"text": "More", "entities": ["E2"]},
+    ]
 
     result = await optimizer.optimize_entity_extraction(training_data=sample_data)
 
@@ -519,7 +544,10 @@ async def test_entity_result_demos_is_list():
     from src.components.domain_training.dspy_optimizer import DSPyOptimizer
 
     optimizer = DSPyOptimizer()
-    sample_data = [{"text": "Text", "entities": ["E1"]}]
+    sample_data = [
+        {"text": "Text", "entities": ["E1"]},
+        {"text": "More", "entities": ["E2"]},
+    ]
 
     result = await optimizer.optimize_entity_extraction(training_data=sample_data)
 
@@ -532,8 +560,226 @@ async def test_entity_result_metrics_is_dict():
     from src.components.domain_training.dspy_optimizer import DSPyOptimizer
 
     optimizer = DSPyOptimizer()
-    sample_data = [{"text": "Text", "entities": ["E1"]}]
+    sample_data = [
+        {"text": "Text", "entities": ["E1"]},
+        {"text": "More", "entities": ["E2"]},
+    ]
 
     result = await optimizer.optimize_entity_extraction(training_data=sample_data)
 
     assert isinstance(result["metrics"], dict)
+
+
+# ============================================================================
+# Tests: Sprint 125 - Structured Entity/Relation Output (ADR-060)
+# ============================================================================
+
+
+def test_entity_extraction_signature_outputs_structured_entities():
+    """Test EntityExtractionSignature specifies dict output (Sprint 125 fix)."""
+    from src.components.domain_training.dspy_optimizer import EntityExtractionSignature
+
+    sig = EntityExtractionSignature()
+
+    # Should output list[dict], not list[str]
+    assert hasattr(sig, "entities")
+    # Check type annotation (entities should be list[dict[str, str]])
+    assert sig.entities == []  # Empty list initially
+
+
+def test_entity_extraction_signature_instructions_mention_types():
+    """Test EntityExtractionSignature instructions mention ADR-060 types."""
+    from src.components.domain_training.dspy_optimizer import EntityExtractionSignature
+
+    instructions = EntityExtractionSignature.get_instructions()
+
+    # Should mention the universal entity types from ADR-060
+    assert "PERSON" in instructions
+    assert "ORGANIZATION" in instructions
+    assert "LOCATION" in instructions
+    assert "name" in instructions
+    assert "type" in instructions
+    assert "description" in instructions
+
+
+def test_relation_extraction_signature_instructions_mention_types():
+    """Test RelationExtractionSignature instructions mention ADR-060 relation types."""
+    from src.components.domain_training.dspy_optimizer import RelationExtractionSignature
+
+    instructions = RelationExtractionSignature.get_instructions()
+
+    # Should mention the universal relation types from ADR-060
+    assert "PART_OF" in instructions
+    assert "EMPLOYS" in instructions
+    assert "LOCATED_IN" in instructions
+    assert "source" in instructions
+    assert "target" in instructions
+    assert "type" in instructions
+
+
+@pytest.mark.asyncio
+async def test_optimize_entity_extraction_with_structured_entities():
+    """Test entity extraction with structured entity training data (new format)."""
+    from src.components.domain_training.dspy_optimizer import DSPyOptimizer
+
+    optimizer = DSPyOptimizer()
+
+    # New format: entities as dicts with name, type, description
+    sample_data = [
+        {
+            "text": "Tesla is located in Palo Alto, California.",
+            "entities": [
+                {"name": "Tesla", "type": "ORGANIZATION", "description": "Electric vehicle company"},
+                {"name": "Palo Alto", "type": "LOCATION", "description": "City in California"},
+                {"name": "California", "type": "LOCATION", "description": "US State"},
+            ],
+        },
+        {
+            "text": "Elon Musk founded SpaceX.",
+            "entities": [
+                {"name": "Elon Musk", "type": "PERSON", "description": "Entrepreneur"},
+                {"name": "SpaceX", "type": "ORGANIZATION", "description": "Aerospace company"},
+            ],
+        },
+    ]
+
+    result = await optimizer.optimize_entity_extraction(training_data=sample_data)
+
+    # Should return valid result
+    assert isinstance(result, dict)
+    assert "instructions" in result
+    assert "demos" in result
+    assert "metrics" in result
+
+
+@pytest.mark.asyncio
+async def test_optimize_entity_extraction_with_mixed_entity_formats():
+    """Test entity extraction handles both old (strings) and new (dicts) formats."""
+    from src.components.domain_training.dspy_optimizer import DSPyOptimizer
+
+    optimizer = DSPyOptimizer()
+
+    # Mixed format: some strings, some dicts
+    sample_data = [
+        {
+            "text": "Old format example",
+            "entities": ["Entity1", "Entity2"],  # Old format (strings)
+        },
+        {
+            "text": "New format example",
+            "entities": [
+                {"name": "Entity3", "type": "CONCEPT", "description": "A concept"},
+            ],  # New format (dicts)
+        },
+    ]
+
+    result = await optimizer.optimize_entity_extraction(training_data=sample_data)
+
+    # Should handle mixed formats gracefully
+    assert isinstance(result, dict)
+    assert "instructions" in result
+    assert "demos" in result
+
+
+@pytest.mark.asyncio
+async def test_optimize_relation_extraction_with_structured_relations():
+    """Test relation extraction with new source/target/type format (ADR-060)."""
+    from src.components.domain_training.dspy_optimizer import DSPyOptimizer
+
+    optimizer = DSPyOptimizer()
+
+    # New format: relations with source/target/type/description
+    sample_data = [
+        {
+            "text": "Tesla is located in Palo Alto.",
+            "entities": [
+                {"name": "Tesla", "type": "ORGANIZATION", "description": "Car company"},
+                {"name": "Palo Alto", "type": "LOCATION", "description": "City"},
+            ],
+            "relations": [
+                {
+                    "source": "Tesla",
+                    "target": "Palo Alto",
+                    "type": "LOCATED_IN",
+                    "description": "Tesla headquarters location",
+                }
+            ],
+        },
+        {
+            "text": "SpaceX was founded by Elon Musk.",
+            "entities": [
+                {"name": "SpaceX", "type": "ORGANIZATION", "description": "Aerospace company"},
+                {"name": "Elon Musk", "type": "PERSON", "description": "Founder"},
+            ],
+            "relations": [
+                {
+                    "source": "SpaceX",
+                    "target": "Elon Musk",
+                    "type": "FOUNDED_BY",
+                    "description": "SpaceX founder relation",
+                }
+            ],
+        },
+    ]
+
+    result = await optimizer.optimize_relation_extraction(training_data=sample_data)
+
+    # Should return valid result
+    assert isinstance(result, dict)
+    assert "instructions" in result
+    assert "demos" in result
+    assert "metrics" in result
+
+
+@pytest.mark.asyncio
+async def test_optimize_relation_extraction_with_old_spo_format():
+    """Test relation extraction handles old subject/predicate/object format."""
+    from src.components.domain_training.dspy_optimizer import DSPyOptimizer
+
+    optimizer = DSPyOptimizer()
+
+    # Old format: subject/predicate/object
+    sample_data = [
+        {
+            "text": "FastAPI uses Pydantic.",
+            "entities": ["FastAPI", "Pydantic"],
+            "relations": [
+                {"subject": "FastAPI", "predicate": "uses", "object": "Pydantic"}
+            ],
+        },
+    ]
+
+    result = await optimizer.optimize_relation_extraction(training_data=sample_data)
+
+    # Should handle old format gracefully
+    assert isinstance(result, dict)
+    assert "instructions" in result
+
+
+@pytest.mark.asyncio
+async def test_mock_entity_result_has_structured_entities():
+    """Test mock entity optimization result returns structured entities."""
+    from src.components.domain_training.dspy_optimizer import DSPyOptimizer
+
+    optimizer = DSPyOptimizer()
+
+    # Old format data (strings)
+    sample_data = [
+        {"text": "Sample text", "entities": ["Entity1", "Entity2"]},
+        {"text": "More text", "entities": ["Entity3", "Entity4"]},
+    ]
+
+    result = await optimizer.optimize_entity_extraction(training_data=sample_data)
+
+    # Even with old format input, mock should normalize to new format
+    assert "demos" in result
+    if result["demos"]:
+        demo = result["demos"][0]
+        assert "output" in demo
+        assert "entities" in demo["output"]
+        # Entities should be dicts, not strings
+        for entity in demo["output"]["entities"]:
+            assert isinstance(entity, dict)
+            assert "name" in entity
+            assert "type" in entity
+            assert "description" in entity

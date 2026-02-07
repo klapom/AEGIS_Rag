@@ -1014,6 +1014,170 @@ async def admin_memory_search(
 
 
 # ============================================================================
+# Sprint 126 Feature 126.1: Community Detection Batch Job Management
+# ============================================================================
+
+
+class CommunityDetectionJobResponse(BaseModel):
+    """Response model for community detection batch job."""
+
+    job_id: str = Field(description="Unique job ID")
+    started_at: str = Field(description="ISO timestamp of job start")
+    completed_at: str | None = Field(default=None, description="ISO timestamp of completion")
+    duration_seconds: float | None = Field(default=None, description="Job duration in seconds")
+    communities_detected: int = Field(description="Number of communities detected")
+    summaries_generated: int = Field(description="Number of summaries generated")
+    algorithm: str = Field(description="Detection algorithm used")
+    success: bool = Field(description="True if job completed successfully")
+    error: str | None = Field(default=None, description="Error message if failed")
+
+
+class SchedulerStatusResponse(BaseModel):
+    """Response model for scheduler status."""
+
+    running: bool = Field(description="True if scheduler is active")
+    next_run: str | None = Field(default=None, description="ISO timestamp of next scheduled run")
+    last_run: str | None = Field(default=None, description="ISO timestamp of last run")
+    mode: Literal["sync", "scheduled", "disabled"] = Field(
+        description="Current detection mode from config"
+    )
+
+
+@router.post(
+    "/community-detection/trigger",
+    response_model=CommunityDetectionJobResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Trigger community detection batch job manually",
+    description="Run community detection immediately (Sprint 126.1)",
+)
+async def trigger_community_detection() -> CommunityDetectionJobResponse:
+    """Trigger community detection batch job manually.
+
+    **Sprint 126 Feature 126.1: Scheduled Community Detection**
+
+    Runs community detection and summarization immediately, outside the
+    ingestion pipeline. This is the same job that runs nightly at 5 AM.
+
+    **Use Cases:**
+    - Test community detection after ingesting new documents
+    - Force immediate update after graph changes
+    - Debug community detection issues
+
+    **Example Response:**
+    ```json
+    {
+      "job_id": "comm_batch_20260207_143022",
+      "started_at": "2026-02-07T14:30:22Z",
+      "completed_at": "2026-02-07T14:45:45Z",
+      "duration_seconds": 923.45,
+      "communities_detected": 2387,
+      "summaries_generated": 2387,
+      "algorithm": "leiden",
+      "success": true
+    }
+    ```
+
+    Returns:
+        CommunityDetectionJobResponse with job statistics
+
+    Raises:
+        HTTPException 500: If job execution fails
+    """
+    logger.info(
+        "community_detection_trigger_endpoint_called",
+        endpoint="/api/v1/admin/community-detection/trigger",
+        method="POST",
+    )
+
+    try:
+        from src.jobs.community_batch_job import run_community_detection_batch
+
+        # Run batch job
+        result = await run_community_detection_batch()
+
+        logger.info(
+            "community_detection_triggered_successfully",
+            job_id=result.get("job_id"),
+            communities_detected=result.get("communities_detected"),
+            duration_seconds=result.get("duration_seconds"),
+        )
+
+        return CommunityDetectionJobResponse(**result)
+
+    except Exception as e:
+        logger.error(
+            "community_detection_trigger_failed",
+            error=str(e),
+            error_type=type(e).__name__,
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to trigger community detection: {str(e)}",
+        ) from e
+
+
+@router.get(
+    "/community-detection/status",
+    response_model=SchedulerStatusResponse,
+    summary="Get community detection scheduler status",
+    description="Check scheduler status and next run time (Sprint 126.1)",
+)
+async def get_community_detection_status() -> SchedulerStatusResponse:
+    """Get community detection scheduler status.
+
+    **Sprint 126 Feature 126.1: Scheduled Community Detection**
+
+    Returns information about the background scheduler:
+    - Whether it's running
+    - Next scheduled run time
+    - Current detection mode (sync/scheduled/disabled)
+
+    **Example Response:**
+    ```json
+    {
+      "running": true,
+      "next_run": "2026-02-08T05:00:00Z",
+      "last_run": "2026-02-07T05:00:00Z",
+      "mode": "scheduled"
+    }
+    ```
+
+    Returns:
+        SchedulerStatusResponse with scheduler information
+
+    Raises:
+        HTTPException 500: If status retrieval fails
+    """
+    logger.info(
+        "community_detection_status_endpoint_called",
+        endpoint="/api/v1/admin/community-detection/status",
+        method="GET",
+    )
+
+    try:
+        from src.jobs.community_batch_job import get_scheduler_status
+
+        status_info = get_scheduler_status()
+
+        logger.info("community_detection_status_retrieved", status=status_info)
+
+        return SchedulerStatusResponse(**status_info)
+
+    except Exception as e:
+        logger.error(
+            "community_detection_status_failed",
+            error=str(e),
+            error_type=type(e).__name__,
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get community detection status: {str(e)}",
+        ) from e
+
+
+# ============================================================================
 # Sprint 53: LLM Config and Graph Analytics moved to separate modules
 # See: admin_llm.py, admin_graph.py
 # ============================================================================

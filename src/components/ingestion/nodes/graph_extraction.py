@@ -631,20 +631,50 @@ async def graph_extraction_node(state: IngestionState) -> IngestionState:
 
         # =========================================================================
         # Sprint 42: Automatic Community Detection for 4-Way Hybrid RRF (TD-057)
+        # Sprint 126 Feature 126.1: Scheduled Community Detection (5 AM batch job)
         # Run Community Detection only if RELATES_TO relationships were created
         # This enables Global Graph Retrieval via Community -> Entity -> Chunk expansion
         # =========================================================================
+        from src.core.config import settings
+
         community_detection_stats: dict[str, Any] = {}
         community_detection_ms = 0.0
 
         relations_created = state.get("relations_count", 0)
-        if relations_created > 0:
+
+        # Sprint 126 Feature 126.1: Check community detection mode
+        detection_mode = settings.graph_community_detection_mode
+
+        if detection_mode == "disabled":
+            logger.info(
+                "community_detection_disabled",
+                document_id=state["document_id"],
+                mode=detection_mode,
+                note="Community detection globally disabled via config",
+            )
+        elif detection_mode == "scheduled":
+            logger.info(
+                "community_detection_deferred",
+                document_id=state["document_id"],
+                mode=detection_mode,
+                relations_count=relations_created,
+                reason="scheduled_batch_mode",
+                note="Community detection will run in nightly batch job (5 AM)",
+            )
+            # Store stats indicating deferred execution
+            community_detection_stats = {
+                "status": "deferred",
+                "mode": "scheduled",
+                "note": "Will run in nightly batch job",
+            }
+        elif relations_created > 0:
             try:
                 community_start = time.perf_counter()
                 logger.info(
                     "community_detection_starting",
                     document_id=state["document_id"],
                     relations_count=relations_created,
+                    mode=detection_mode,
                 )
 
                 # Sprint 51: Emit progress event for community detection

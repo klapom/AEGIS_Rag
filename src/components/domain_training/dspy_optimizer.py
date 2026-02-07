@@ -50,15 +50,18 @@ logger = structlog.get_logger(__name__)
 
 
 class EntityExtractionSignature:
-    """Extract key entities from the source text.
+    """Extract key entities from the source text with types and descriptions.
 
     This signature defines the input/output schema for entity extraction.
     DSPy will optimize the instructions and examples automatically.
+
+    Sprint 125 Fix: Changed from list[str] to list[dict] to produce structured entities
+    with proper types from ADR-060's 15 universal entity types.
     """
 
     def __init__(self) -> None:
         self.source_text: str = ""
-        self.entities: list[str] = []
+        self.entities: list[dict[str, str]] = []
 
     @staticmethod
     def get_input_fields() -> list[str]:
@@ -72,8 +75,23 @@ class EntityExtractionSignature:
 
     @staticmethod
     def get_instructions() -> str:
-        """Return default instructions for entity extraction."""
-        return "Extract a THOROUGH list of key entities from the source text."
+        """Return default instructions for entity extraction.
+
+        Each entity must be a dict with:
+        - name: The entity name (e.g., "Tesla", "Elon Musk")
+        - type: One of the 15 universal types from ADR-060:
+          PERSON, ORGANIZATION, LOCATION, EVENT, DATE_TIME,
+          CONCEPT, TECHNOLOGY, PRODUCT, METRIC, DOCUMENT,
+          PROCESS, MATERIAL, REGULATION, QUANTITY, FIELD
+        - description: Brief description of the entity
+        """
+        return (
+            "Extract a THOROUGH list of key entities from the source text. "
+            "Each entity must be a dictionary with 'name', 'type', and 'description'. "
+            "Use only these 15 universal types: "
+            "PERSON, ORGANIZATION, LOCATION, EVENT, DATE_TIME, CONCEPT, TECHNOLOGY, "
+            "PRODUCT, METRIC, DOCUMENT, PROCESS, MATERIAL, REGULATION, QUANTITY, FIELD."
+        )
 
 
 class RelationExtractionSignature:
@@ -81,11 +99,14 @@ class RelationExtractionSignature:
 
     This signature uses entities as additional context to extract relations.
     DSPy will optimize the instructions and examples for relation extraction.
+
+    Sprint 125 Fix: Enhanced instructions to produce structured relations
+    with proper types from ADR-060's 21 universal relation types.
     """
 
     def __init__(self) -> None:
         self.source_text: str = ""
-        self.entities: list[str] = []
+        self.entities: list[dict[str, str]] = []  # Changed from list[str]
         self.relations: list[dict[str, str]] = []
 
     @staticmethod
@@ -100,8 +121,27 @@ class RelationExtractionSignature:
 
     @staticmethod
     def get_instructions() -> str:
-        """Return default instructions for relation extraction."""
-        return "Extract subject-predicate-object triples from the source text."
+        """Return default instructions for relation extraction.
+
+        Each relation must be a dict with:
+        - source: Source entity name
+        - target: Target entity name
+        - type: One of the 21 universal relation types from ADR-060:
+          PART_OF, CONTAINS, INSTANCE_OF, TYPE_OF (Structural)
+          EMPLOYS, MANAGES, FOUNDED_BY, OWNS, LOCATED_IN (Organizational)
+          CAUSES, INFLUENCES, CORRELATES_WITH, DEPENDS_ON (Causal)
+          CREATED_BY, CREATED_AT, OCCURRED_ON, PUBLISHED_BY (Temporal)
+          USES, PRODUCES, REGULATES, RELATES_TO (Functional)
+        - description: Brief description of the relationship
+        """
+        return (
+            "Extract subject-predicate-object triples from the source text. "
+            "Each relation must be a dictionary with 'source', 'target', 'type', and 'description'. "
+            "Use only these 21 universal relation types: "
+            "PART_OF, CONTAINS, INSTANCE_OF, TYPE_OF, EMPLOYS, MANAGES, FOUNDED_BY, OWNS, "
+            "LOCATED_IN, CAUSES, INFLUENCES, CORRELATES_WITH, DEPENDS_ON, CREATED_BY, "
+            "CREATED_AT, OCCURRED_ON, PUBLISHED_BY, USES, PRODUCES, REGULATES, RELATES_TO."
+        )
 
 
 class DSPyOptimizer:
@@ -318,15 +358,37 @@ class DSPyOptimizer:
         await self._call_progress_callback(progress_callback, "Preparing training data", 10.0)
 
         # Convert to DSPy format
+        # Sprint 125 Fix: Normalize entities to structured dict format
         dspy_examples = []
         for item in training_data:
             if "text" not in item or "entities" not in item:
                 logger.warning("invalid_training_sample", sample=item)
                 continue
 
+            # Normalize entities: convert strings to dicts if needed
+            entities = item["entities"]
+            normalized_entities = []
+            for e in entities:
+                if isinstance(e, str):
+                    # Old format: convert string to dict with CONCEPT type
+                    normalized_entities.append({
+                        "name": e,
+                        "type": "CONCEPT",
+                        "description": f"Entity extracted from training data"
+                    })
+                elif isinstance(e, dict) and "name" in e:
+                    # New format: ensure all required fields exist
+                    normalized_entities.append({
+                        "name": e["name"],
+                        "type": e.get("type", "CONCEPT"),
+                        "description": e.get("description", f"Entity: {e['name']}")
+                    })
+                else:
+                    logger.warning("invalid_entity_format", entity=e)
+
             example = self._dspy.Example(
                 source_text=item["text"],
-                entities=item["entities"],
+                entities=normalized_entities,
             ).with_inputs("source_text")
             dspy_examples.append(example)
 
@@ -403,10 +465,28 @@ class DSPyOptimizer:
         semantic_matcher = get_semantic_matcher(threshold=0.75)
 
         # Define metric function with event emission and semantic matching
+        # Sprint 125 Fix: Handle structured entities (dicts with 'name' field)
         def entity_extraction_metric(example: Any, pred: Any, _trace: Any = None) -> float:
-            """Calculate F1 score for entity extraction using semantic matching."""
-            gold_entities = set(example.entities)
-            pred_entities = set(pred.entities) if hasattr(pred, "entities") else set()
+            """Calculate F1 score for entity extraction using semantic matching.
+
+            Handles both old format (list[str]) and new format (list[dict]) for
+            backward compatibility with existing training data.
+            """
+            # Extract entity names from structured format
+            def extract_entity_names(entities: Any) -> set[str]:
+                """Extract entity names from structured or string format."""
+                if not entities:
+                    return set()
+                names = set()
+                for e in entities:
+                    if isinstance(e, dict) and "name" in e:
+                        names.add(e["name"])
+                    elif isinstance(e, str):
+                        names.add(e)
+                return names
+
+            gold_entities = extract_entity_names(example.entities)
+            pred_entities = extract_entity_names(pred.entities) if hasattr(pred, "entities") else set()
 
             if not gold_entities:
                 return 1.0 if not pred_entities else 0.0
@@ -452,12 +532,26 @@ class DSPyOptimizer:
         try:
             with self._get_dspy_context():
                 # Create proper DSPy Signature class
+                # Sprint 125 Fix: Output structured entities with types from ADR-060
                 class EntityExtractionSig(dspy_module.Signature):
-                    """Extract a THOROUGH list of key entities from the source text."""
+                    """Extract a THOROUGH list of key entities from the source text.
+
+                    Each entity must be a dict with:
+                    - name: Entity name (e.g., "Tesla", "Elon Musk")
+                    - type: One of 15 universal types (PERSON, ORGANIZATION, LOCATION, EVENT, DATE_TIME,
+                      CONCEPT, TECHNOLOGY, PRODUCT, METRIC, DOCUMENT, PROCESS, MATERIAL, REGULATION,
+                      QUANTITY, FIELD)
+                    - description: Brief description of the entity
+                    """
 
                     source_text: str = dspy_module.InputField()
-                    entities: list[str] = dspy_module.OutputField(
-                        desc="THOROUGH list of key entities"
+                    entities: list[dict[str, str]] = dspy_module.OutputField(
+                        desc=(
+                            "THOROUGH list of entities as dicts with 'name', 'type', and 'description'. "
+                            "Types must be one of: PERSON, ORGANIZATION, LOCATION, EVENT, DATE_TIME, "
+                            "CONCEPT, TECHNOLOGY, PRODUCT, METRIC, DOCUMENT, PROCESS, MATERIAL, "
+                            "REGULATION, QUANTITY, FIELD."
+                        )
                     )
 
                 # Use MIPROv2 optimizer with auto mode for balanced optimization
@@ -577,16 +671,55 @@ class DSPyOptimizer:
         await self._call_progress_callback(progress_callback, "Preparing training data", 10.0)
 
         # Convert to DSPy format
+        # Sprint 125 Fix: Normalize entities and relations to structured dict format
         dspy_examples = []
         for item in training_data:
             if "text" not in item or "entities" not in item or "relations" not in item:
                 logger.warning("invalid_training_sample", sample=item)
                 continue
 
+            # Normalize entities: convert strings to dicts if needed
+            entities = item["entities"]
+            normalized_entities = []
+            for e in entities:
+                if isinstance(e, str):
+                    normalized_entities.append({
+                        "name": e,
+                        "type": "CONCEPT",
+                        "description": f"Entity from training data"
+                    })
+                elif isinstance(e, dict) and "name" in e:
+                    normalized_entities.append({
+                        "name": e["name"],
+                        "type": e.get("type", "CONCEPT"),
+                        "description": e.get("description", f"Entity: {e['name']}")
+                    })
+
+            # Normalize relations: ensure all required fields exist
+            relations = item["relations"]
+            normalized_relations = []
+            for r in relations:
+                if isinstance(r, dict) and all(k in r for k in ["subject", "predicate", "object"]):
+                    normalized_relations.append({
+                        "source": r["subject"],
+                        "target": r["object"],
+                        "type": r["predicate"],
+                        "description": r.get("description", f"{r['subject']} {r['predicate']} {r['object']}")
+                    })
+                elif isinstance(r, dict) and all(k in r for k in ["source", "target", "type"]):
+                    normalized_relations.append({
+                        "source": r["source"],
+                        "target": r["target"],
+                        "type": r["type"],
+                        "description": r.get("description", f"{r['source']} {r['type']} {r['target']}")
+                    })
+                else:
+                    logger.warning("invalid_relation_format", relation=r)
+
             example = self._dspy.Example(
                 source_text=item["text"],
-                entities=item["entities"],
-                relations=item["relations"],
+                entities=normalized_entities,
+                relations=normalized_relations,
             ).with_inputs("source_text", "entities")
             dspy_examples.append(example)
 
@@ -628,7 +761,7 @@ class DSPyOptimizer:
                 super().__init__()
                 self.predictor = dspy_module.ChainOfThought(signature)
 
-            def forward(self, source_text: str, entities: list[str]) -> Any:
+            def forward(self, source_text: str, entities: list[dict[str, str]]) -> Any:
                 # Emit LLM request event (full prompt, NOT truncated)
                 optimizer_self._emit_llm_event(
                     event_type="llm_request",
@@ -664,18 +797,35 @@ class DSPyOptimizer:
         semantic_matcher = get_semantic_matcher(threshold=0.70, predicate_weight=0.4)
 
         # Define metric function with event emission and semantic matching
+        # Sprint 125 Fix: Handle both old (subject/predicate/object) and new (source/target/type) formats
         def relation_extraction_metric(example: Any, pred: Any, _trace: Any = None) -> float:
-            """Calculate F1 score for relation extraction using semantic matching."""
+            """Calculate F1 score for relation extraction using semantic matching.
+
+            Handles both formats:
+            - Old: {subject, predicate, object}
+            - New: {source, target, type, description}
+            """
+            def normalize_relation(r: dict[str, str]) -> dict[str, str]:
+                """Normalize relation to {subject, predicate, object} format."""
+                if all(k in r for k in ["subject", "predicate", "object"]):
+                    return {"subject": r["subject"], "predicate": r["predicate"], "object": r["object"]}
+                elif all(k in r for k in ["source", "target", "type"]):
+                    return {"subject": r["source"], "predicate": r["type"], "object": r["target"]}
+                return {}
+
             gold_relations = [
-                {"subject": r["subject"], "predicate": r["predicate"], "object": r["object"]}
+                normalize_relation(r)
                 for r in example.relations
-                if isinstance(r, dict) and all(k in r for k in ["subject", "predicate", "object"])
+                if isinstance(r, dict)
             ]
+            gold_relations = [r for r in gold_relations if r]  # Filter empty dicts
+
             pred_relations = [
-                {"subject": r["subject"], "predicate": r["predicate"], "object": r["object"]}
+                normalize_relation(r)
                 for r in (pred.relations if hasattr(pred, "relations") else [])
-                if isinstance(r, dict) and all(k in r for k in ["subject", "predicate", "object"])
+                if isinstance(r, dict)
             ]
+            pred_relations = [r for r in pred_relations if r]  # Filter empty dicts
 
             if not gold_relations:
                 return 1.0 if not pred_relations else 0.0
@@ -718,13 +868,32 @@ class DSPyOptimizer:
         try:
             with self._get_dspy_context():
                 # Create proper DSPy Signature class
+                # Sprint 125 Fix: Input structured entities, output structured relations with ADR-060 types
                 class RelationExtractionSig(dspy_module.Signature):
-                    """Extract subject-predicate-object triples from the source text."""
+                    """Extract subject-predicate-object triples from the source text.
+
+                    Each relation must be a dict with:
+                    - source: Source entity name
+                    - target: Target entity name
+                    - type: One of 21 universal relation types (PART_OF, CONTAINS, INSTANCE_OF, TYPE_OF,
+                      EMPLOYS, MANAGES, FOUNDED_BY, OWNS, LOCATED_IN, CAUSES, INFLUENCES, CORRELATES_WITH,
+                      DEPENDS_ON, CREATED_BY, CREATED_AT, OCCURRED_ON, PUBLISHED_BY, USES, PRODUCES,
+                      REGULATES, RELATES_TO)
+                    - description: Brief description of the relationship
+                    """
 
                     source_text: str = dspy_module.InputField()
-                    entities: list[str] = dspy_module.InputField()
+                    entities: list[dict[str, str]] = dspy_module.InputField(
+                        desc="Previously extracted entities as dicts with 'name', 'type', 'description'"
+                    )
                     relations: list[dict[str, str]] = dspy_module.OutputField(
-                        desc="List of {subject, predicate, object} tuples"
+                        desc=(
+                            "List of relations as dicts with 'source', 'target', 'type', and 'description'. "
+                            "Types must be one of: PART_OF, CONTAINS, INSTANCE_OF, TYPE_OF, EMPLOYS, "
+                            "MANAGES, FOUNDED_BY, OWNS, LOCATED_IN, CAUSES, INFLUENCES, CORRELATES_WITH, "
+                            "DEPENDS_ON, CREATED_BY, CREATED_AT, OCCURRED_ON, PUBLISHED_BY, USES, "
+                            "PRODUCES, REGULATES, RELATES_TO."
+                        )
                     )
 
                 # Use MIPROv2 optimizer with auto mode for balanced optimization
@@ -1165,6 +1334,8 @@ class DSPyOptimizer:
     ) -> dict[str, Any]:
         """Generate mock optimization result when DSPy is not available.
 
+        Sprint 125 Fix: Returns structured entities with types, not just strings.
+
         Args:
             training_data: Training data used for mock result
 
@@ -1176,7 +1347,14 @@ class DSPyOptimizer:
             "demos": [
                 {
                     "input": {"source_text": item["text"]},
-                    "output": {"entities": item["entities"]},
+                    "output": {
+                        "entities": [
+                            {"name": e, "type": "CONCEPT", "description": f"Entity: {e}"}
+                            if isinstance(e, str)
+                            else e
+                            for e in item["entities"]
+                        ]
+                    },
                 }
                 for item in training_data[:3]  # Use first 3 as mock demos
             ],

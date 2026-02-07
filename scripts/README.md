@@ -2,7 +2,7 @@
 
 Production and utility scripts for AegisRAG.
 
-**Last Updated**: Sprint 121 (2026-01-27)
+**Last Updated**: Sprint 124 (2026-02-07)
 **Platform**: DGX Spark (Linux ARM64, CUDA 13.0)
 
 ---
@@ -33,6 +33,12 @@ Production and utility scripts for AegisRAG.
 | `upload_ragas_phase1.sh` | Upload RAGAS Phase 1 docs | Bash script for batch upload |
 | `upload_ragas_phase1_resume.sh` | Resume interrupted upload | Continue from last uploaded |
 | `upload_ragas_frontend.sh` | Upload via frontend API | Uses `/api/v1/retrieval/upload` |
+
+### Database Migrations (Sprint 124+)
+
+| Script | Purpose | Usage |
+|--------|---------|-------|
+| `backfill_relation_types.py` | Backfill NULL relation_types in Neo4j | `poetry run python scripts/backfill_relation_types.py` |
 
 ### Testing & E2E (Sprint 119+)
 
@@ -72,6 +78,12 @@ docker exec aegis-api python scripts/seed_test_graph_data.py --clean
 # Benchmark section extraction parallel features (Sprint 121)
 docker cp scripts/benchmark_section_extraction_sprint121.py aegis-api:/app/benchmark_sprint121.py
 docker exec aegis-api python3 /app/benchmark_sprint121.py
+
+# Backfill NULL relation_types in Neo4j (Sprint 124)
+# Dry-run (preview changes)
+poetry run python scripts/backfill_relation_types.py --dry-run
+# Actual migration
+poetry run python scripts/backfill_relation_types.py
 ```
 
 ---
@@ -132,6 +144,6 @@ Old documentation moved to `archive/docs-sprint30/`:
 
 ---
 
-**Total Active Scripts**: 16
+**Total Active Scripts**: 17
 **Archived**: 70+ scripts
 **Last Cleanup**: Sprint 119 (2026-01-26)
