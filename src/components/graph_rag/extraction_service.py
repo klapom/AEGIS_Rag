@@ -578,6 +578,11 @@ USE_COREFERENCE = os.environ.get("AEGIS_USE_COREFERENCE", "1") == "1"
 USE_CROSS_SENTENCE = os.environ.get("AEGIS_USE_CROSS_SENTENCE", "1") == "1"
 CROSS_SENTENCE_THRESHOLD = 5  # Minimum sentences to trigger windowed extraction
 
+# Parallel extraction workers for cross-sentence windows
+# Default: 1 (sequential). Set to 2+ for parallel extraction.
+# Ollama supports OLLAMA_NUM_PARALLEL=4; vLLM supports 256+.
+EXTRACTION_WORKERS = int(os.environ.get("AEGIS_EXTRACTION_WORKERS", "1"))
+
 # Lazy import to avoid circular dependency
 _coreference_resolver = None
 
@@ -3166,52 +3171,71 @@ class ExtractionService:
 
         all_relationships: list[GraphRelationship] = []
         seen_triples: set[tuple[str, str, str]] = set()
+        dedup_lock = asyncio.Lock()
 
         cascade = get_cascade_for_domain(domain)
         rank_config = cascade[0]  # Use first rank for windowed extraction
 
-        for i, window_text in enumerate(windows):
-            try:
-                # Extract from window
-                window_relations = await self._extract_relationships_with_rank(
-                    text=window_text,
-                    entities=entities,
-                    rank_config=rank_config,
-                    document_id=f"{document_id}_window_{i}" if document_id else None,
-                    domain=domain,
-                )
+        workers = max(1, EXTRACTION_WORKERS)
+        semaphore = asyncio.Semaphore(workers)
 
-                # Deduplicate: add only new (source, target, type) triples
-                for rel in window_relations:
-                    triple = (
-                        rel.source.lower().strip(),
-                        rel.target.lower().strip(),
-                        rel.type.upper().strip(),
+        async def _extract_window(i: int, window_text: str) -> list[GraphRelationship]:
+            """Extract relations from a single window with concurrency limit."""
+            async with semaphore:
+                try:
+                    window_relations = await self._extract_relationships_with_rank(
+                        text=window_text,
+                        entities=entities,
+                        rank_config=rank_config,
+                        document_id=f"{document_id}_window_{i}" if document_id else None,
+                        domain=domain,
                     )
-                    if triple not in seen_triples:
-                        seen_triples.add(triple)
-                        all_relationships.append(rel)
 
-                logger.debug(
-                    "cross_sentence_window_extracted",
-                    window_index=i,
-                    window_relations=len(window_relations),
-                    total_unique=len(all_relationships),
-                )
+                    # Thread-safe deduplication
+                    unique_rels: list[GraphRelationship] = []
+                    async with dedup_lock:
+                        for rel in window_relations:
+                            triple = (
+                                rel.source.lower().strip(),
+                                rel.target.lower().strip(),
+                                rel.type.upper().strip(),
+                            )
+                            if triple not in seen_triples:
+                                seen_triples.add(triple)
+                                all_relationships.append(rel)
+                                unique_rels.append(rel)
 
-            except Exception as e:
-                logger.warning(
-                    "cross_sentence_window_extraction_failed",
-                    window_index=i,
-                    error=str(e),
-                )
-                # Continue with other windows
+                    logger.debug(
+                        "cross_sentence_window_extracted",
+                        window_index=i,
+                        window_relations=len(window_relations),
+                        unique_new=len(unique_rels),
+                        total_unique=len(all_relationships),
+                    )
+                    return unique_rels
+
+                except Exception as e:
+                    logger.warning(
+                        "cross_sentence_window_extraction_failed",
+                        window_index=i,
+                        error=str(e),
+                    )
+                    return []
+
+        # Launch all windows — semaphore limits actual concurrency
+        logger.info(
+            "cross_sentence_parallel_config",
+            workers=workers,
+            window_count=len(windows),
+        )
+        await asyncio.gather(*[_extract_window(i, wt) for i, wt in enumerate(windows)])
 
         logger.info(
             "cross_sentence_windowed_extraction_complete",
             window_count=len(windows),
             total_relations=len(all_relationships),
             document_id=document_id,
+            workers=workers,
         )
 
         return all_relationships
