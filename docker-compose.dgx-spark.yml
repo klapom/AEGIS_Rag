@@ -504,8 +504,8 @@ services:
       - VLLM_FASTSAFETENSORS_NOGDS=1
     # NGC vLLM image needs explicit entrypoint override (not vllm-openai)
     # Downloads reasoning parser plugin on startup, then launches vLLM serve
-    # Matches NVIDIA reference flags; gpu-memory-utilization=0.40 because shared GPU
-    # (Ollama ~30GB + BGE-M3 ~2GB + system ~15GB = ~47GB, leaving ~72GB for vLLM at 0.40)
+    # Matches NVIDIA reference flags; gpu-memory-utilization=0.60 because shared GPU
+    # (Ollama ~30GB + BGE-M3 ~2GB + vLLM ~77GB at 0.60 = ~109GB/128GB unified)
     entrypoint: /bin/bash
     command:
       - -c
@@ -514,7 +514,7 @@ services:
         exec vllm serve nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-NVFP4 \
           --host 0.0.0.0 \
           --port 8001 \
-          --gpu-memory-utilization 0.40 \
+          --gpu-memory-utilization 0.60 \
           --trust-remote-code \
           --enable-auto-tool-choice \
           --tool-call-parser qwen3_coder \
@@ -593,6 +593,8 @@ services:
       - VLLM_MODEL=nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-NVFP4
       # Sprint 124: LLM-First Cascade (SpaCy only as Rank 3 fallback)
       - AEGIS_USE_LEGACY_CASCADE=${AEGIS_USE_LEGACY_CASCADE:-0}
+      # A/B Test: Cross-sentence window extraction (default: 1=ON)
+      - AEGIS_USE_CROSS_SENTENCE=${AEGIS_USE_CROSS_SENTENCE:-1}
       # Sprint 124: Thinking mode control (default: false)
       - AEGIS_LLM_THINKING=${AEGIS_LLM_THINKING:-false}
       - VLM_BACKEND=ollama

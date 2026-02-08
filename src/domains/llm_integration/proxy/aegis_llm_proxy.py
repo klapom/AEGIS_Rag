@@ -910,12 +910,15 @@ class AegisLLMProxy:
                         "model": self._vllm_model,
                         "messages": messages,
                         "temperature": task.temperature,
-                        "max_tokens": task.max_tokens,
+                        # Sprint 126: 2x max_tokens as safety net for reasoning leak.
+                        # Even with enable_thinking=false, Nemotron sometimes produces
+                        # inline CoT reasoning before JSON for complex extraction prompts.
+                        # Doubling tokens ensures JSON output is not truncated.
+                        # The downstream regex_array parser strips non-JSON content.
+                        "max_tokens": min(task.max_tokens * 2, 32768),
                         # Sprint 126: Disable reasoning for extraction tasks.
                         # With enable_thinking=true (default), Nemotron spends all
                         # max_tokens on CoT reasoning, leaving nothing for JSON output.
-                        # Relation extraction consistently hits 8192 token limit with
-                        # pure reasoning in reasoning_content and empty content.
                         # Reference: HuggingFace nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-NVFP4
                         "chat_template_kwargs": {"enable_thinking": False},
                     },
