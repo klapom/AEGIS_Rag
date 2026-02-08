@@ -1,6 +1,6 @@
 # Sprint 127 Plan: RAGAS Phase 1 Benchmark with vLLM Extraction
 
-**Status:** 📝 PLANNED
+**Status:** 🔄 IN PROGRESS
 **Story Points:** 13 SP
 **Duration:** 1-2 days (estimated)
 **Predecessor:** Sprint 127 (Engine Mode + Domain Sub-Types + Pre-commit)
@@ -77,6 +77,40 @@ DOMAIN="auto"  # BGE-M3 classification
 - [ ] Domain classification runs for all documents
 - [ ] `domain_id` stored in Qdrant payloads and Neo4j entities
 - [ ] Structured logs saved to `data/ingestion_logs/sprint127/`
+
+**Results (127.1 Quality Evaluation):**
+
+| Metric | Result | Target | Status |
+|--------|--------|--------|--------|
+| Total Entities | 873 | 1,500-2,000 | ⚠ Below target |
+| Total Relations | 870 | 2,000-3,000 | ⚠ Below target |
+| Entity Types Used | 13/15 ADR-060 universal | 10-15 | ✅ Met |
+| Relation Types Used | 18 semantic types | >15 | ✅ Met |
+| Specific Relations | 172/873 (21.1%) | >70% | ❌ Failed |
+| RELATED_TO Relations | 701/873 (79%) | <30% | ❌ Failed |
+| Entity Name Compliance | 802/873 (91.9%) | >90% | ✅ Met |
+| Domain Sub-Types Stored | 0/873 (0%) | >90% | ❌ Failed |
+
+**Root Cause Analysis:**
+The extraction pipeline delivered expected S-P-O types and quality per window, but **LightRAG's `ainsert_custom_kg` re-extracts and overwrites all relations as generic `RELATED_TO`**, bypassing AegisRAG's typed extraction layer entirely. This creates a double-extraction bottleneck (92% of time per doc) and destroys relation diversity before storage in Neo4j.
+
+**Key Findings:**
+- AegisRAG extraction service produces ~21 unique semantic relation types (e.g., `AUTHOR_OF`, `PUBLISHED_IN`, `CITES`, `CONTAINS`) with proper ADR-060 adherence
+- LightRAG's internal extraction (called via `ainsert_custom_kg`) re-processes the same text and stores only generic relationship mappings
+- `domain_id` property never reaches Neo4j because LightRAG's entity creation bypasses the domain-aware sub-type pipeline
+- 10-doc ingestion took 91 minutes (5,447s graph extraction); LightRAG consumed 5,030s (92%) of that time
+
+**Impact on RAGAS Metrics:**
+- Relation diversity bottleneck will suppress Context Recall (fewer specific relation pathways for graph reasoning)
+- Domain-trained extraction prompts cannot improve metrics while LightRAG overwrites with generic types
+- Ingestion velocity will remain 13x slower than optimal
+
+**Resolution Path (Sprint 128):**
+The **LightRAG Removal** task (128.1, 5 SP) will eliminate this duplicate extraction path. Expected improvements:
+- Relation diversity: 21% → 70%+ specific types (from AegisRAG extraction layer directly)
+- Domain sub-types: 0% → 90%+ stored in Neo4j
+- Ingestion speed: 91 min → ~7 min for 10 docs (13x improvement)
+- RAGAS Context Recall: Expected +15-25% improvement (more specific relations for multi-hop reasoning)
 
 ---
 

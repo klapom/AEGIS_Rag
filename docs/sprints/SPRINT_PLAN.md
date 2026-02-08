@@ -2094,10 +2094,10 @@ Sprint 117.1 (Domain CRUD) - Foundation
 
 ---
 
-## Sprint 127 📝 **Planned** (after Sprint 126)
+## Sprint 127 🔄 **In Progress** (2026-02-08)
 
-**Status:** 📝 PLANNED
-**Focus:** RAGAS Phase 1 Benchmark with vLLM Extraction
+**Status:** 🔄 IN PROGRESS
+**Focus:** RAGAS Phase 1 Benchmark with vLLM Extraction (10-Doc Baseline)
 **Story Points:** 13 SP (estimated)
 **Predecessor:** Sprint 126
 
@@ -2105,18 +2105,18 @@ Sprint 117.1 (Domain CRUD) - Foundation
 
 | # | Feature | SP | Status |
 |---|---------|-----|--------|
-| 127.1 | RAGAS Phase 1 Ingestion Completion (498 documents via vLLM) | 8 | 📝 |
-| 127.2 | Performance Benchmark + RAGAS Evaluation | 5 | 📝 |
+| 127.pre1 | vLLM Tenacity Retry (3x exp backoff on transient errors) | 1 | ✅ |
+| 127.pre2 | 10-Doc RAGAS Ingestion (204 entities, 1,376 relations) | 2 | ✅ |
+| 127.0 | Parallel Extraction Benchmark (2 workers optimal, 2.03x) | 2 | ✅ |
+| 127.1 | Quality Evaluation (relation diversity, entity types) | 3 | 🔄 |
+| 127.2 | RAGAS Metrics Evaluation (Faithfulness, Context Recall) | 5 | 📝 |
 
-**Key Goals:**
-- Ingest all 498 RAGAS Phase 1 documents with vLLM extraction engine
-- Benchmark vLLM vs Ollama throughput (target: 2-3x improvement)
-- Measure relation diversity (target: >70% specific types, down from 100% RELATES_TO)
-- Evaluate RAGAS metrics (Faithfulness ≥0.90, Answer Relevancy ≥0.93, Context Recall ≥0.35)
-- Validate domain-aware extraction (BGE-M3 classifier → domain prompts)
-
-**Data:** `data/ragas_phase1_contexts/` (500 .txt files, 4 domains)
-**Script:** `scripts/upload_ragas_phase1.sh`
+**Key Findings (Pre-Work):**
+- **vLLM stability:** 199 calls, 0 retries needed (gpu-mem=0.45)
+- **LightRAG overhead:** 92% of graph extraction time (5,030s/5,447s)
+- **GPU overload:** 34.8% of time at 3-5 concurrent requests (cascade ghost requests)
+- **10-doc ingestion:** 91 min total, avg 510s/doc (with LightRAG), estimated ~43s/doc without
+- **Full 498-doc ingestion deferred to Sprint 128** (after LightRAG removal: 75h → ~6h)
 
 **See:** `docs/sprints/SPRINT_127_PLAN.md` (detailed plan)
 
@@ -2125,37 +2125,24 @@ Sprint 117.1 (Domain CRUD) - Foundation
 ## Sprint 128 📝 **Planned** (after Sprint 127)
 
 **Status:** 📝 PLANNED
-**Focus:** LightRAG Removal + Extraction Performance + HyDE + Quality Improvements
-**Story Points:** ~30 SP (estimated)
+**Focus:** LightRAG Removal + Cascade Timeout Guard + Full RAGAS Ingestion
+**Story Points:** ~21 SP (estimated)
 **Predecessor:** Sprint 127
 
 **Features:**
 
 | # | Feature | SP | Status |
 |---|---------|-----|--------|
-| 128.1 | Replace LightRAG Neo4j driver with existing neo4j_client.py | 1 | 📝 |
-| 128.2 | Eliminate double data storage (remove ainsert_custom_kg) | 1 | 📝 |
-| 128.3 | Replace rag.aquery() with DualLevelSearch | 2 | 📝 |
-| 128.4 | Remove lightrag-hku dependency + cleanup (7 files, ~1,500 LOC) | 1 | 📝 |
-| 128.5 | Structured Table Ingestion Investigation (Excel/CSV/HTML) | 3 | 📝 |
-| 128.6 | Parallel cross-sentence extraction (asyncio.gather for windows) | 3 | 📝 |
-| 128.7 | vLLM gpu_memory_utilization 0.25→0.5 + max_num_seqs 8→16 | 1 | 📝 |
-| 128.8 | Per-domain gleaning configuration (stored in Neo4j :Domain nodes) | 2 | 📝 |
-| 128.9 | HyDE query expansion (Hypothetical Document Embeddings) | 5 | 📝 |
-| 128.10 | Inactive domain warning (API response + Frontend upload UI) | 2 | 📝 |
-| 128.11 | vLLM EngineDeadError investigation + stability fix (SM121 CUTLASS) | 3 | 📝 |
-| 128.12 | Activate all 35 seed domains (not just 4) | 1 | 📝 |
-| 128.13 | engine_mode=auto as default (Ollama fallback when vLLM crashes) | 1 | 📝 |
+| 128.1 | LightRAG Removal (eliminate ainsert_custom_kg, 92% overhead) | 5 | 📝 |
+| 128.2 | Cascade Timeout Guard (check vLLM active before next rank) | 3 | 📝 |
+| 128.3 | RAGAS Phase 1 Full Ingestion (488 remaining docs, post-LightRAG) | 8 | 📝 |
+| 128.4 | HyDE Query Expansion (Hypothetical Document Embeddings) | 5 | 📝 |
 
 **Key Decisions:**
-- ADR-061: LightRAG provides only 3 functions; 45+ files / ~12,000 LOC are custom AegisRAG
-- Double data writes to Neo4j → eliminate
-- RAGAS benchmark comparison (Sprint 127 baseline vs Sprint 128 post-removal)
-- Rollback if RAGAS metrics degrade >5%
-- **Extraction parallelism**: Currently 0 parallel extractions (9 sequential windows). asyncio.gather could provide 3-8x speedup
-- **HyDE**: Hypothetical Document Embeddings for +10-20% Context Recall improvement
-- **Per-domain gleaning**: medicine_health gets gleaning_steps=2, others stay at 0
-- **vLLM instability**: EngineDeadError after ~5min continuous use — SM121 CUTLASS kernel issue
+- ADR-061: LightRAG provides only 3 functions; 92% extraction time is duplicate overhead
+- Cascade timeout ghost requests cause GPU overload (34.8% at 3-5 concurrent) — guard needed
+- Full ingestion only practical after LightRAG removal (75h → ~6h estimated)
+- RAGAS benchmark comparison: Sprint 127 10-doc baseline vs Sprint 128 post-removal
 
 ---
 

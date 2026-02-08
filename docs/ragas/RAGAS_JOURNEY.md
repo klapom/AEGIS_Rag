@@ -3953,3 +3953,71 @@ Graph extraction time includes LightRAG's `ainsert_custom_kg` which performs a *
 - [ ] Run RAGAS evaluation on 10-doc subset
 - [ ] Remove LightRAG (Sprint 128) to halve graph extraction time
 - [ ] Increase curl timeout to 1800s for large files
+
+---
+
+### Sprint 127.1: Quality Evaluation (2026-02-08)
+
+**Namespace:** `ragas_phase1_sprint124` (LightRAG namespace mapping issue — entities stored under old namespace)
+
+#### Relation Quality
+
+| Metric | Value | Target | Status |
+|--------|-------|--------|--------|
+| Total relations | 870 | — | — |
+| Specific semantic types | 184 (21.1%) | >70% | BELOW TARGET |
+| Generic (RELATED_TO) | 686 (78.9%) | <30% | ABOVE TARGET |
+| Unique relation types used | 18 | 10-15 | Exceeds |
+
+**Top Semantic Relation Types:**
+
+| Type | Count | % of Specific |
+|------|-------|---------------|
+| CONTAINS | 48 | 26.1% |
+| PART_OF | 44 | 23.9% |
+| ASSOCIATED_WITH | 15 | 8.2% |
+| USES | 15 | 8.2% |
+| SUPPORTS | 13 | 7.1% |
+| MANAGES | 10 | 5.4% |
+| PRECEDED_BY | 9 | 4.9% |
+| DEPENDS_ON | 8 | 4.3% |
+| DERIVED_FROM | 6 | 3.3% |
+| *8 more types* | 16 | 8.7% |
+
+**Root Cause of Low Diversity:** LightRAG's `ainsert_custom_kg` performs its own extraction and stores ALL relations as `RELATES_TO` edge type with a `relation_type` property. 686/870 (79%) are generic `RELATED_TO` from LightRAG's extraction. AegisRAG's ExtractionService produces correctly typed relations, but LightRAG's duplicate path overwrites them. After LightRAG removal (Sprint 128), relation diversity should improve to >80%.
+
+#### Entity Type Distribution (13/15 universal types used)
+
+| Entity Type | Count | % |
+|-------------|-------|---|
+| CONCEPT | 231 | 26.5% |
+| PRODUCT | 209 | 23.9% |
+| OTHER | 178 | 20.4% |
+| TECHNOLOGY | 86 | 9.8% |
+| ORGANIZATION | 58 | 6.6% |
+| DATE | 42 | 4.8% |
+| PERSON | 16 | 1.8% |
+| EVENT | 15 | 1.7% |
+| PAPER | 11 | 1.3% |
+| LOCATION | 9 | 1.0% |
+| TEMPORAL | 8 | 0.9% |
+| BENCHMARK/MODEL/etc. | 8 | 0.9% |
+
+**Assessment:** 13 of 15 ADR-060 universal types are used. Entity extraction quality is good. Missing types: METHODOLOGY, REGULATION (expected given dataset domains).
+
+#### Compliance Metrics
+
+| Metric | Value | Target | Status |
+|--------|-------|--------|--------|
+| Entity names ≤4 words | 91.9% | >90% | MEETS |
+| Domain sub-types stored | 0 | — | NOT STORED (LightRAG bypass) |
+| Total entities | 873 | — | — |
+| Unique documents (by filename) | 45 | — | Includes Sprint 124 + 127 data |
+
+#### Key Takeaways
+
+1. **Entity extraction quality is good** — 13/15 universal types, 91.9% name compliance
+2. **Relation diversity blocked by LightRAG** — 79% generic because LightRAG re-extracts and stores as RELATED_TO
+3. **Domain sub-types not preserved** — LightRAG's storage path bypasses AegisRAG's sub_type property
+4. **Namespace isolation broken** — Upload with `ragas_phase1_sprint127` but stored as `ragas_phase1_sprint124` by LightRAG
+5. **Sprint 128 LightRAG removal** is the critical path to achieving >70% relation diversity target

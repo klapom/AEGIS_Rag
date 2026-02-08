@@ -1044,7 +1044,40 @@
 
 ---
 
-**Last Updated:** 2026-02-07 (Sprint 126)
-**Total Decisions Documented:** 173 (+7 from Sprint 126)
-**Current Sprint:** Sprint 126 ✅ Complete
-**Next Sprint:** Sprint 127 (LightRAG Removal — Direct Neo4j), Sprint 128 (Domain Editor UI + Table Ingestion)
+### 2026-02-08 | vLLM Tenacity Retry for Transient Errors (Sprint 127.pre1)
+**Context:** vLLM on DGX Spark SM121 occasionally hits transient errors (httpx timeout, connect errors, 5xx from EngineDeadError). The extraction cascade would fall back to Ollama Rank 2, causing model-switching overhead.
+
+**Decision:** Add tenacity `@retry` decorator to `_call_vllm()` with 3 attempts, exponential backoff (5-30s), retrying only on transient errors (httpx.TimeoutException, ConnectError, HTTPStatusError 5xx). Do NOT retry 4xx (prompt/model errors). Custom predicate `_is_retryable_vllm_error()` handles classification.
+
+**Consequences:**
+- ✅ 199 consecutive vLLM calls during 10-doc batch: 0 retries needed (gpu-mem=0.45 is rock-solid)
+- ✅ Safety net for future instability without Ollama fallback overhead
+- ✅ Structured logging of retry attempts for observability
+
+### 2026-02-08 | 10-Doc RAGAS Baseline Before LightRAG Removal (Sprint 127.pre2)
+**Context:** Full 498-doc ingestion at ~9 min/doc would take ~75 hours. LightRAG `ainsert_custom_kg` consumes 92% of graph extraction time via duplicate vLLM extraction. Proceeding with full ingestion before LightRAG removal is impractical.
+
+**Decision:** Ingest only 10 representative RAGAS Phase 1 documents as Sprint 127 baseline. Defer full 498-doc ingestion to Sprint 128 after LightRAG removal (expected 13x speedup). Results: 204 entities, 1,376 relations, 15 chunks in 91 minutes.
+
+**Consequences:**
+- ✅ Viable baseline for comparing pre/post LightRAG removal quality
+- ✅ Discovered 92% LightRAG overhead (5,030s/5,447s) — validates ADR-061 removal urgency
+- ✅ Discovered cascade timeout ghost requests (34.8% GPU overload at 3-5 concurrent requests)
+- ⚠️ 10-doc sample may not represent full dataset diversity
+
+### 2026-02-08 | Cascade Timeout Guard Planned for Sprint 128 (Sprint 127 finding)
+**Context:** During 10-doc ingestion, httpx times out after 600s but vLLM continues processing server-side. The cascade starts Rank 2 with a NEW vLLM request, causing GPU overload. Combined with LightRAG double extraction and 2-worker parallelism, 34.8% of time was spent at 3-5 concurrent vLLM requests (target: 2).
+
+**Decision:** Plan Sprint 128.2 feature: before starting next cascade rank after timeout, check if the timed-out vLLM request is still running. If yes, extend timeout instead of starting competing request. If dead, proceed normally. This prevents cascade-induced GPU overload.
+
+**Consequences:**
+- ✅ Prevents fire-and-forget anti-pattern in cascade extraction
+- ✅ Expected to reduce peak concurrent requests from 5 to 2
+- ✅ Must be implemented alongside LightRAG removal (Sprint 128.1) for full effect
+
+---
+
+**Last Updated:** 2026-02-08 (Sprint 127)
+**Total Decisions Documented:** 176 (+3 from Sprint 127)
+**Current Sprint:** Sprint 127 (RAGAS Phase 1 Benchmark)
+**Next Sprint:** Sprint 128 (LightRAG Removal + Cascade Timeout Guard)
