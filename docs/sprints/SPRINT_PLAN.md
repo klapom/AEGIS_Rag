@@ -2094,11 +2094,11 @@ Sprint 117.1 (Domain CRUD) - Foundation
 
 ---
 
-## Sprint 127 🔄 **In Progress** (2026-02-08)
+## Sprint 127 ✅ **Complete** (2026-02-08)
 
-**Status:** 🔄 IN PROGRESS
+**Status:** ✅ COMPLETE
 **Focus:** RAGAS Phase 1 Benchmark with vLLM Extraction (10-Doc Baseline)
-**Story Points:** 13 SP (estimated)
+**Story Points:** 13 SP
 **Predecessor:** Sprint 126
 
 **Features:**
@@ -2108,26 +2108,27 @@ Sprint 117.1 (Domain CRUD) - Foundation
 | 127.pre1 | vLLM Tenacity Retry (3x exp backoff on transient errors) | 1 | ✅ |
 | 127.pre2 | 10-Doc RAGAS Ingestion (204 entities, 1,376 relations) | 2 | ✅ |
 | 127.0 | Parallel Extraction Benchmark (2 workers optimal, 2.03x) | 2 | ✅ |
-| 127.1 | Quality Evaluation (relation diversity, entity types) | 3 | 🔄 |
-| 127.2 | RAGAS Metrics Evaluation (Faithfulness, Context Recall) | 5 | 📝 |
+| 127.1 | Quality Evaluation (relation diversity, entity types) | 3 | ✅ |
+| 127.2 | RAGAS Metrics Evaluation (CP=0.739, CR=0.760, F=0.699, AR=0.828) | 5 | ✅ |
 
-**Key Findings (Pre-Work):**
-- **vLLM stability:** 199 calls, 0 retries needed (gpu-mem=0.45)
-- **LightRAG overhead:** 92% of graph extraction time (5,030s/5,447s)
-- **GPU overload:** 34.8% of time at 3-5 concurrent requests (cascade ghost requests)
-- **10-doc ingestion:** 91 min total, avg 510s/doc (with LightRAG), estimated ~43s/doc without
+**Key Results:**
+- **RAGAS Baseline:** CP=0.739 (+27%), CR=0.760 (+162%), F=0.699, AR=0.828 (vs Sprint 82)
+- **vLLM stability:** 199 calls, 0 retries needed (gpu-mem=0.45, tenacity validated)
+- **LightRAG bottleneck confirmed:** 92% of graph extraction time, 79% generic RELATED_TO relations
+- **Parallel extraction:** 2 workers optimal (2.03x speedup), GPU memory 0.45 optimal
+- **RAGAS local model fix:** LangchainLLMWrapper + extract_json monkey-patch (94.6% parse success)
 - **Full 498-doc ingestion deferred to Sprint 128** (after LightRAG removal: 75h → ~6h)
 
 **See:** `docs/sprints/SPRINT_127_PLAN.md` (detailed plan)
 
 ---
 
-## Sprint 128 📝 **Planned** (after Sprint 127)
+## Sprint 128 🔄 **Next** (after Sprint 127)
 
 **Status:** 📝 PLANNED
 **Focus:** LightRAG Removal + Cascade Timeout Guard + Full RAGAS Ingestion
 **Story Points:** ~21 SP (estimated)
-**Predecessor:** Sprint 127
+**Predecessor:** Sprint 127 ✅
 
 **Features:**
 

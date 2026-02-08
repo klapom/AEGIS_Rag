@@ -1,6 +1,6 @@
 # Sprint 127 Plan: RAGAS Phase 1 Benchmark with vLLM Extraction
 
-**Status:** 🔄 IN PROGRESS
+**Status:** ✅ COMPLETE (2026-02-08)
 **Story Points:** 13 SP
 **Duration:** 1-2 days (estimated)
 **Predecessor:** Sprint 127 (Engine Mode + Domain Sub-Types + Pre-commit)

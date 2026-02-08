@@ -1096,7 +1096,7 @@
 
 ---
 
-**Last Updated:** 2026-02-08 (Sprint 127)
+**Last Updated:** 2026-02-08 (Sprint 127 ✅)
 **Total Decisions Documented:** 177 (+4 from Sprint 127)
-**Current Sprint:** Sprint 127 (RAGAS Phase 1 Benchmark)
-**Next Sprint:** Sprint 128 (LightRAG Removal + Cascade Timeout Guard)
+**Current Sprint:** Sprint 127 ✅ COMPLETE (RAGAS Phase 1 Benchmark)
+**Next Sprint:** Sprint 128 (LightRAG Removal + Cascade Timeout Guard + Full RAGAS Ingestion)
