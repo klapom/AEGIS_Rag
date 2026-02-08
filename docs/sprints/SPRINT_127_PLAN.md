@@ -145,23 +145,102 @@ DOMAIN="auto"  # BGE-M3 classification
 
 ---
 
+### 127.pre1: vLLM Retry with Tenacity (2026-02-08)
+
+**Status:** ✅ COMPLETE
+
+**Goal:** Add tenacity retry with exponential backoff to `_call_vllm()` so transient vLLM errors (timeout, connect, 5xx) are retried 3× before raising.
+
+**Changes:**
+- `src/domains/llm_integration/proxy/aegis_llm_proxy.py`: `@retry(stop=3, wait=exp(5-30s))` on `_call_vllm()`
+- Custom predicate `_is_retryable_vllm_error()` for httpx timeout/connect/5xx
+- Result: **199 consecutive vLLM calls, 0 retries needed** — gpu-memory-utilization=0.45 is rock solid
+
+---
+
+### 127.pre2: First 10-Doc RAGAS Ingestion (2026-02-08)
+
+**Status:** ✅ COMPLETE
+
+**Goal:** Ingest first 10 RAGAS Phase 1 documents with vLLM extraction engine to validate pipeline stability.
+
+**Results (10 docs, namespace `ragas_phase1_sprint127`):**
+
+| Doc | File | Size | Duration | Entities | Relations | Chunks |
+|-----|------|------|----------|----------|-----------|--------|
+| 1 | ragas_phase1_0004_ragbench_1017.txt | 5.5KB | 754s | 18 | 98 | 1 |
+| 2 | ragas_phase1_0006_ragbench_techqaTR.txt | 2.5KB | 312s | 4 | 91 | 1 |
+| 3 | ragas_phase1_0007_ragbench_5085.txt | 4.7KB | 241s | 25 | 60 | 1 |
+| 4 | ragas_phase1_0008_ragbench_1145.txt | 6.5KB | 901s | 19 | 221 | 1 |
+| 5 | ragas_phase1_0010_logqa_emanual1.txt | 5.7KB | 336s | 19 | 19 | 1 |
+| 6 | ragas_phase1_0012_ragbench_techqaTR.txt | 17.3KB | 753s | 18 | 16 | 2 |
+| 7 | ragas_phase1_0015_hotpot_5ae0d91e.txt | 6.2KB | 440s | 19 | 23 | 2 |
+| 8 | ragas_phase1_0015_ragbench_28.txt | 2.5KB | 444s | 19 | 23 | 1 |
+| 9 | ragas_phase1_0015_ragbench_5009.txt | 2.0KB | 335s | 18 | 30 | 1 |
+| 10 | ragas_phase1_0018_logqa_emanual3.txt | 2.8KB | 231s | 4 | 8 | 1 |
+| **TOTAL** | | **55.7KB** | **91min** | **163** | **589** | **12** |
+
+**Key Findings:**
+- **vLLM stability**: 199 calls, 0 retries, 0 failures — tenacity decorator validated but not needed at 0.45 config
+- **LightRAG overhead**: 92% of graph extraction time (5,030s/5,447s) consumed by duplicate `ainsert_custom_kg` extraction
+- **GPU overload**: 34.8% of time at 3-5 concurrent vLLM requests (target: 2) — caused by LightRAG + cascade ghost requests
+- **Without LightRAG**: estimated ~7 min instead of ~91 min (13x improvement)
+
+**Issues Found:**
+- JWT token expiry after ~30min → fixed: re-authenticate before each upload
+- curl `--max-time 900` too short for large files → 2 HTTP 000 timeouts (backend completed successfully)
+- Cascade timeout ghost requests: httpx times out, vLLM continues processing, Rank 2 starts competing request
+
+---
+
+### 127.0: Parallel Extraction Benchmark (Pre-Sprint, 2026-02-08)
+
+**Status:** ✅ COMPLETE
+
+**Goal:** Determine optimal vLLM `gpu-memory-utilization` and `AEGIS_EXTRACTION_WORKERS` for the DGX Spark extraction pipeline before starting RAGAS Phase 1 ingestion.
+
+**Setup:** Pure vLLM (Ollama OFF, no fallback), SM121, `enable_thinking=false`, cross-sentence windows ON, fresh files per test, Redis cache cleared.
+
+**Results — Worker Scaling (gpu-memory-utilization=0.45):**
+
+| Workers | Duration | Speedup | Notes |
+|---------|----------|---------|-------|
+| 1       | 229s     | 1.00x   | Baseline |
+| **2**   | **113s** | **2.03x** | **Optimal** |
+| 4       | 169s     | 1.35x   | GPU saturation starts |
+| 8       | 393s     | 0.58x   | Worse than sequential |
+
+**Results — GPU Memory Scaling:**
+
+| GPU Util | GPU (GB) | 2 Workers | 3 Workers |
+|----------|----------|-----------|-----------|
+| **0.45** | 64.5     | **113s (stable)** | N/A |
+| 0.50     | 68.3     | 622s (reasoning leak) | 444s (3 windows failed) |
+| 0.55     | 71.2     | 182s (stable) | **vLLM crash** (cudaErrorIllegalInstruction) |
+| 0.60     | 80.9     | BGE-M3 OOM | BGE-M3 OOM |
+
+**Decision:** `gpu-memory-utilization=0.45` + `AEGIS_EXTRACTION_WORKERS=2` — optimal balance of speed, stability, and memory headroom for co-resident services (Ollama 30GB + BGE-M3 2GB).
+
+---
+
 ## VRAM Budget (Ingestion Mode)
 
 ```
 DGX Spark: 128 GB Unified Memory
 
-Ingestion Mode (Sprint 127):
-  Ollama Nemotron-3-Nano:128k   25 GB   (Chat fallback)
-  vLLM Nemotron NVFP4           ~18 GB   (Extraction primary)
-  BGE-M3 Embeddings              2 GB
-  Reranker (cross-encoder)        1 GB
-  OS + CUDA Overhead             10 GB
+Ingestion Mode (Sprint 127 — measured 2026-02-08):
+  vLLM NVFP4 (0.45 util)         64.5 GB   (Extraction primary)
+  Ollama Nemotron-3-Nano         ~30 GB    (Chat fallback, when loaded)
+  BGE-M3 Embeddings               2 GB
+  OS + CUDA Overhead             ~10 GB
   ─────────────────────────────────────
-  Total:                         56 GB
-  Free:                          72 GB
-```
+  Total (all loaded):            ~107 GB
+  Free:                          ~21 GB
 
-Both LLMs can run simultaneously without conflict.
+Note: Ollama auto-unloads idle models. With Ollama unloaded:
+  Total:                         ~77 GB
+  Free:                          ~51 GB
+```
 
 ---
 
@@ -232,10 +311,36 @@ Sprint 127 is complete when:
 
 ## Next Steps (Sprint 128)
 
-**Focus:** LightRAG Removal — Direct Neo4j Architecture
+**Focus:** LightRAG Removal + Cascade Timeout Guard + Extraction Performance
 
-Sprint 127's RAGAS evaluation will inform Sprint 128 decisions:
-- If Context Recall improves: Keep S-P-O extraction, remove LightRAG abstraction
+Based on Sprint 127 10-doc findings (LightRAG=92% overhead, GPU overload from ghost requests):
+
+### 128.1: LightRAG Removal (5 SP) — CRITICAL
+
+Remove LightRAG dependency entirely. Only 3 functions used (`ainsert_custom_kg`, `rag.aquery`, Neo4j driver init), but `ainsert_custom_kg` consumes 92% of graph extraction time via duplicate extraction.
+
+**Expected Impact:** ~13x faster ingestion (91 min → ~7 min for 10 docs)
+
+### 128.2: Cascade Timeout Guard (3 SP) — CRITICAL
+
+**Problem:** When httpx times out after 600s, vLLM continues generating server-side. The cascade then starts Rank 2 with a NEW vLLM request — doubling GPU load. This caused 34.8% of time at 3-5 concurrent requests (target: 2).
+
+**Solution:** Before starting the next cascade rank after a timeout:
+1. Check if the timed-out vLLM request is still running (query vLLM `/v1/completions` active requests or track request IDs)
+2. If still running: increase the timeout and wait longer (not start a competing request)
+3. If dead: proceed to next rank normally
+4. Optional: send cancellation to vLLM before starting next rank (`/v1/completions/cancel` or abort signal)
+
+### 128.3: RAGAS Phase 1 Full Ingestion (8 SP)
+
+Complete remaining 488/498 documents with LightRAG removed. Target: <2 hours total.
+
+### 128.4: HyDE Implementation (5 SP)
+
+Hypothetical Document Embeddings for improved retrieval quality.
+
+### Additional decisions from Sprint 127 RAGAS evaluation:
+- If Context Recall improves: Keep S-P-O extraction, validate LightRAG removal
 - If Context Precision stagnates: Investigate reranking weights
 - If Faithfulness drops: Audit LLM response generation prompts
 

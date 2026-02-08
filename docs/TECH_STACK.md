@@ -191,26 +191,34 @@ pip install --break-system-packages <package>
 
 | Spec | Value |
 |------|-------|
-| **Image** | `vllm/vllm-openai:latest` |
+| **Image** | `nvcr.io/nvidia/vllm:25.12.post1-py3` |
+| **vLLM Version** | 0.12.0+nv25.12.post1 |
+| **FlashInfer** | 0.6.0rc2 (SM121 stable, NOT 0.6.0 which has regression) |
 | **Model** | `nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-NVFP4` |
 | **Architecture** | Mamba2 + MoE + Attention (30B total / 3.5B active, 10% activation) |
 | **Quantization** | NVFP4 (optimized for Blackwell sm_121 FP4 tensor cores) |
-| **VRAM** | ~18GB (32K context), up to 51GB (256K context) |
+| **VRAM** | ~18GB (32K context), up to 68GB KV cache (4.7M tokens) |
 | **API** | OpenAI-compatible `/v1/chat/completions` on port 8001 |
 | **Max Concurrent Requests** | 256+ (continuous batching, 64x vs Ollama) |
-| **Expected Throughput** | 60-80 tok/s (DGX Spark), up to 793 tok/s (Red Hat A100 benchmark) |
+| **Expected Throughput** | 49.7 tok/s warm, ~54 tok/s peak (DGX Spark Sprint 126) |
 | **Docker Profile** | `--profile ingestion` (on-demand start with Ollama) |
-| **Environment** | `VLLM_USE_FLASHINFER_MOE_FP4=1`, `VLLM_FLASHINFER_MOE_BACKEND=throughput` |
+| **Environment** | `VLLM_USE_FLASHINFER_MOE_FP4=1`, `VLLM_FLASHINFER_MOE_BACKEND=throughput`, `VLLM_GPU_MEMORY_UTILIZATION=0.75`, `VLLM_FASTSAFETENSORS_NOGDS=1` |
+| **GPU Memory Util** | 0.75 (KV cache: 28 GiB → 68 GiB) |
 | **Default Port** | 8001 |
+| **Startup Time** | ~330s (model load 110s + kernel compile + CUDA graphs) |
+| **Stability** | ✅ Stable (Sprint 126: SM121 regression fixed, no crashes across 6+ requests) |
 
-**Performance Comparison (Ollama vs vLLM):**
+**Performance Comparison (Ollama vs vLLM, Sprint 126 Stable):**
 
-| Metric | Ollama (DGX Spark) | vLLM (DGX Spark) | vLLM (Red Hat A100) | Factor |
+| Metric | Ollama (DGX Spark) | vLLM (DGX Spark, 25.12.post1) | vLLM (Red Hat A100) | Factor |
 |--------|----------|------|--------|--------|
-| Peak Throughput | 41-74 tok/s | 60-80 tok/s | 793 tok/s | 1.0-19.3× |
-| TTFT P99 | 673 ms | ~150 ms | 80 ms | 4.5-8.4× |
+| Peak Throughput | 41-74 tok/s | **49.7 tok/s warm, ~54 tok/s peak** | 793 tok/s | 0.67-9.6× |
+| TTFT Warm | <10ms | ~9 tok/s (CUDA graph compile) | <10ms | Comparable |
+| TTFT Cold | 673 ms | ~54 tok/s (first request) | 80 ms | N/A |
 | Max Concurrent | 4 | 256+ | 256+ | 64× |
 | Batching | Sequential | Continuous | Continuous | Unlimited |
+| KV Cache | <1GB | 68 GiB / 4.7M tokens | >68 GiB | 64-68× |
+| Stability | ✅ Stable | ✅ Stable (Spring 126: SM121 fixed) | ✅ Stable | |
 | **Extraction Use Case** | 4 parallel uploads (bottleneck) | 256+ parallel uploads | 256+ parallel uploads | **64×** |
 
 **LLM Engine Mode (Sprint 126+ / ADR-062):**

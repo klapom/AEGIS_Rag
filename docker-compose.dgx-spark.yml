@@ -504,8 +504,9 @@ services:
       - VLLM_FASTSAFETENSORS_NOGDS=1
     # NGC vLLM image needs explicit entrypoint override (not vllm-openai)
     # Downloads reasoning parser plugin on startup, then launches vLLM serve
-    # Matches NVIDIA reference flags; gpu-memory-utilization=0.60 because shared GPU
-    # (Ollama ~30GB + BGE-M3 ~2GB + vLLM ~77GB at 0.60 = ~109GB/128GB unified)
+    # Matches NVIDIA reference flags; gpu-memory-utilization=0.45 because shared GPU
+    # (Ollama ~30GB + BGE-M3 ~2GB + vLLM ~64.5GB at 0.45 = ~96GB/128GB unified)
+    # Benchmark (2026-02-08): 0.45=stable+optimal, 0.50=reasoning leaks, 0.55=vLLM crashes
     entrypoint: /bin/bash
     command:
       - -c
@@ -514,7 +515,7 @@ services:
         exec vllm serve nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-NVFP4 \
           --host 0.0.0.0 \
           --port 8001 \
-          --gpu-memory-utilization 0.60 \
+          --gpu-memory-utilization 0.45 \
           --trust-remote-code \
           --enable-auto-tool-choice \
           --tool-call-parser qwen3_coder \

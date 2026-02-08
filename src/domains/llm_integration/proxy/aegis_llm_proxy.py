@@ -34,8 +34,17 @@ import time
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 
+import logging
+
 import httpx
 import structlog
+from tenacity import (
+    before_sleep_log,
+    retry,
+    retry_if_exception,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 # Lazy import for optional ANY-LLM dependency
 # ANY-LLM is planned for future integration (ADR-033) but not yet installed
@@ -89,6 +98,18 @@ from src.domains.llm_integration.models import (
 )
 
 logger = structlog.get_logger(__name__)
+
+# For tenacity before_sleep_log which expects stdlib logger
+_stdlib_logger = logging.getLogger(__name__)
+
+
+def _is_retryable_vllm_error(exc: BaseException) -> bool:
+    """Return True for transient vLLM errors that should be retried."""
+    if isinstance(exc, (httpx.TimeoutException, httpx.ConnectError)):
+        return True
+    if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code >= 500:
+        return True
+    return False
 
 
 class AegisLLMProxy:
@@ -879,14 +900,23 @@ class AegisLLMProxy:
         # Sprint 126: Route to configured engine (vllm/ollama/auto)
         return (local_provider, f"default_local_{local_reason_suffix}")
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=5, min=5, max=30),
+        retry=retry_if_exception(_is_retryable_vllm_error),
+        before_sleep=before_sleep_log(_stdlib_logger, logging.WARNING),
+        reraise=True,
+    )
     async def _call_vllm(
         self,
         task: LLMTask,
     ) -> LLMResponse:
         """
-        Call vLLM OpenAI-compatible endpoint.
+        Call vLLM OpenAI-compatible endpoint with retry on transient errors.
 
         Sprint 125 Feature 125.2: vLLM provider for high-concurrency extraction.
+        Sprint 127: Added tenacity retry (3 attempts, 5-30s backoff) for
+        transient errors (timeouts, connection errors, 5xx).
 
         Args:
             task: LLM task
@@ -895,7 +925,7 @@ class AegisLLMProxy:
             LLMResponse with generated content and metadata
 
         Raises:
-            Exception: If vLLM execution fails
+            Exception: If vLLM execution fails after all retries
 
         Example:
             response = await self._call_vllm(task)
@@ -980,11 +1010,13 @@ class AegisLLMProxy:
                 )
 
         except Exception as e:
+            retryable = _is_retryable_vllm_error(e)
             logger.error(
                 "vllm_request_failed",
                 base_url=self._vllm_base_url,
                 model=self._vllm_model,
-                error=str(e),
+                error=repr(e),
+                retryable=retryable,
             )
             raise
 

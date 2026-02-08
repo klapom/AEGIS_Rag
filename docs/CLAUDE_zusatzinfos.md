@@ -158,6 +158,76 @@ Nemotron3 Nano 30B/3B (`nemotron_h_moe`) ist KEIN normaler Transformer:
 - `docker/Dockerfile.docling-spark` - Production Dockerfile
 - `DGX_SPARK_SM121_REFERENCE.md` - Vollständige technische Referenz
 
+## vLLM SM121 Stability Fix (Sprint 126)
+
+### Container Image & FlashInfer Regression
+
+**Problem:** vLLM 26.01-py3 with FlashInfer 0.6.0 (stable) crashes with `cudaErrorIllegalInstruction` after 1-2 requests on DGX Spark (SM121).
+
+**Root Cause:** FlashInfer 0.6.0 stable has SM121 regression — autotuner kernel selection broken for CUDA graph DECODE mode. Autotuner selects incompatible SM120 TMA WS grouped GEMM tactics, causing illegal instruction traps.
+
+**Solution (Sprint 126):** Use earlier FlashInfer version from NGC container `25.12.post1-py3` (FlashInfer 0.6.0rc2) which correctly skips incompatible tactics.
+
+```bash
+# BEFORE (crashes):
+nvcr.io/nvidia/vllm:26.01-py3  # FlashInfer 0.6.0 stable (SM121 regression)
+
+# AFTER (stable):
+nvcr.io/nvidia/vllm:25.12.post1-py3  # FlashInfer 0.6.0rc2 (SM121 safe)
+```
+
+### Updated Configuration (Sprint 126)
+
+| Parameter | Old Value | New Value | Reason |
+|-----------|-----------|-----------|--------|
+| **Container Image** | 26.01-py3 | **25.12.post1-py3** | FlashInfer regression fix |
+| **vLLM Version** | 0.12.1 | **0.12.0+nv25.12.post1** | NGC build |
+| **FlashInfer** | 0.6.0 stable | **0.6.0rc2** | SM121 safe |
+| **MOE Backend** | `latency` | **`throughput`** | Recommended for 25.12.post1 |
+| **gpu-memory-utilization** | 0.40 | **0.75** | KV cache: 28 GB → 68 GB (4.7M tokens) |
+
+### Performance Results (Sprint 126)
+
+| Metric | Value |
+|--------|-------|
+| **Generation Throughput** | 49.7 tok/s (stable) |
+| **TTFT Cold** | ~9 tok/s (first request: CUDA graph compile) |
+| **TTFT Warm** | ~54 tok/s (subsequent requests) |
+| **KV Cache Size** | 68 GiB / 4.7M tokens |
+| **Stability** | ✅ Stable across 6+ consecutive requests (no crashes) |
+| **Startup Time** | ~330s (model load 110s + kernel compile + CUDA graphs) |
+
+**Previous Behavior:** 26.01-py3 crashed with `cudaErrorIllegalInstruction` after 1-2 requests, forcing container restart.
+
+### Docker Compose Update
+
+```yaml
+# docker-compose.dgx-spark.yml
+services:
+  vllm:
+    image: nvcr.io/nvidia/vllm:25.12.post1-py3  # Changed from 26.01-py3
+    environment:
+      - VLLM_USE_FLASHINFER_MOE_FP4=1
+      - VLLM_FLASHINFER_MOE_BACKEND=throughput  # Changed from latency
+      - VLLM_FASTSAFETENSORS_NOGDS=1
+      - VLLM_GPU_MEMORY_UTILIZATION=0.75  # Changed from 0.40
+```
+
+### Ollama Thinking Optimization
+
+Extraction model no longer uses thinking tokens (too slow for ingestion):
+
+```bash
+# .env
+AEGIS_LLM_THINKING=false  # Disable thinking for extraction
+```
+
+**Impact:** 668s → 33s per document (~20x faster when thinking disabled)
+
+**Forum Reference:** https://forums.developer.nvidia.com/t/nemotron-3-nano-30b-a3b-nvfp4/359074
+
+---
+
 ## Links
 - vLLM Setup: https://github.com/eelbaz/dgx-spark-vllm-setup
 - NVIDIA Playbooks: https://build.nvidia.com/spark
