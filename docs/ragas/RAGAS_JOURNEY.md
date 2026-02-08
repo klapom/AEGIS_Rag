@@ -4021,3 +4021,47 @@ Graph extraction time includes LightRAG's `ainsert_custom_kg` which performs a *
 3. **Domain sub-types not preserved** — LightRAG's storage path bypasses AegisRAG's sub_type property
 4. **Namespace isolation broken** — Upload with `ragas_phase1_sprint127` but stored as `ragas_phase1_sprint124` by LightRAG
 5. **Sprint 128 LightRAG removal** is the critical path to achieving >70% relation diversity target
+
+---
+
+### Sprint 127.2: RAGAS Metrics Baseline (2026-02-08)
+
+**Configuration:**
+- Eval LLM: nemotron-3-nano:128k (Ollama, num_ctx=32768, num_predict=4096)
+- Answer LLM: nemotron-3-nano:128k (via AegisLLMProxy)
+- Retrieval: FourWayHybridSearch, top_k=10, namespace ragas_phase1_sprint124
+- Corpus: 45 documents (90 vectors in Qdrant), 20 sample questions
+- Duration: 87 min (5,244s) for 80 metric jobs
+
+**Results:**
+
+| Metric | Score | Target | Status | Valid |
+|--------|-------|--------|--------|-------|
+| Context Precision | 0.739 | >0.85 | BELOW | 20/20 |
+| Context Recall | 0.760 | >0.75 | PASS | 20/20 |
+| Faithfulness | 0.699 | >0.90 | BELOW | 14/20 |
+| Answer Relevancy | 0.828 | >0.95 | BELOW | 20/20 |
+
+**Key Findings:**
+1. **Context Recall passes** — retrieval pipeline finds relevant content (76% of ground truth attributable)
+2. **Faithfulness has 6 NaN samples** — `statement_generator_prompt` parsing failures (Nemotron truncates long NLI statements at num_predict=4096)
+3. **4 questions show CR=0.00** — multi-hop questions requiring documents not in the 45-doc corpus
+4. **Answer Relevancy at 0.83** — some answers include verbose reasoning sections (markdown headings, bullet points) that reduce relevancy scores
+
+**Technical Breakthrough — RAGAS + Local Ollama Models:**
+
+Previous RAGAS evaluation attempts (gpt-oss:20b, nemotron with num_ctx=8192) failed with 57%+ parsing errors. Root causes discovered and fixed:
+
+1. **Prompt truncation** (root cause): RAGAS prompts with 10 contexts are ~15K tokens. With `num_ctx=8192`, Ollama truncates from the beginning, removing the classification instruction and JSON schema. The model sees only contexts + question and answers like a Q&A task. **Fix**: `num_ctx=32768`.
+
+2. **LangChain LLM bypass** (root cause): RAGAS detects `ChatOllama` as a LangChain LLM and routes through `model_validate_json()` (strict Pydantic, no preprocessing). This bypasses RAGAS's tolerant `parse_output_string()` → `extract_json()` path. **Fix**: Wrap in `LangchainLLMWrapper` which returns `is_langchain_llm=False`.
+
+3. **Boolean vs integer** (minor): Local models output `"attributed": true` instead of `"attributed": 1`. **Fix**: Monkey-patch `extract_json()` with boolean→integer regex conversion.
+
+4. **Missing wrapper objects** (minor): Models output `[{...}]` instead of `{"classifications": [{...}]}`. **Fix**: Auto-wrap in monkey-patched `extract_json()`.
+
+**Optimization Targets for Sprint 128+:**
+- **Context Precision**: Reduce noise in retrieved contexts → better reranking, lower top_k
+- **Faithfulness**: Reduce hallucination in answers → constrained generation, post-generation verification
+- **Answer Relevancy**: Remove verbose reasoning from answers → strip markdown formatting before scoring
+- **Faithfulness NaN rate**: Increase num_predict or simplify statement_generator_prompt for local models

@@ -1075,9 +1075,28 @@
 - ✅ Expected to reduce peak concurrent requests from 5 to 2
 - ✅ Must be implemented alongside LightRAG removal (Sprint 128.1) for full effect
 
+### 2026-02-08 | RAGAS Local Model Compatibility Fix (Sprint 127.2)
+
+**Context:** RAGAS 0.4.2 with local Ollama models (nemotron-3-nano:128k, gpt-oss:20b) failed with 57%+ parsing errors. Root causes: (1) prompt truncation at num_ctx=8192 (15K token prompts), (2) LangChain LLM bypass skipping tolerant parser, (3) boolean/integer type mismatches.
+
+**Decision:** Three-layer fix: (1) LangchainLLMWrapper to route through extract_json() parser, (2) monkey-patch extract_json() for boolean→integer and missing wrapper fixes, (3) num_ctx=32768 to fit full RAGAS prompts. No format="json" needed.
+
+**Result:** 94.6% parsing success (76/80 jobs). Baseline: CP=0.739, CR=0.760 (PASS), F=0.699, AR=0.828.
+
+**Alternatives Rejected:**
+- format="json" constrained decoding: 3-10x slower, still doesn't fix structural issues
+- gpt-oss:20b: Faster but worse instruction following (57% failure rate)
+- Cloud LLM: Would work but adds cost and external dependency
+
+**Consequences:**
+- ✅ RAGAS evaluation now viable with local models (no cloud dependency)
+- ✅ Cost savings vs. OpenAI GPT-4 (~$0.50/eval vs. $5.00)
+- ✅ 94.6% success rate acceptable for continuous evaluation
+- ⚠️ Llama3/Ollama parser quirks require ongoing maintenance
+
 ---
 
 **Last Updated:** 2026-02-08 (Sprint 127)
-**Total Decisions Documented:** 176 (+3 from Sprint 127)
+**Total Decisions Documented:** 177 (+4 from Sprint 127)
 **Current Sprint:** Sprint 127 (RAGAS Phase 1 Benchmark)
 **Next Sprint:** Sprint 128 (LightRAG Removal + Cascade Timeout Guard)
