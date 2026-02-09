@@ -27,7 +27,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from qdrant_client.models import Distance
 
-from src.components.graph_rag.lightrag_wrapper import get_lightrag_wrapper_async
+from src.components.graph_rag.neo4j_client import get_neo4j_client
 from src.components.shared.embedding_service import get_embedding_service
 from src.components.vector_search.qdrant_client import get_qdrant_client
 from src.core.config import settings
@@ -189,8 +189,8 @@ async def reindex_progress_stream(
 
             # Clear Neo4j graph data (Sprint 16 Feature 16.7: Simultaneous Qdrant + Neo4j indexing)
             try:
-                lightrag_wrapper = await get_lightrag_wrapper_async()
-                await lightrag_wrapper._clear_neo4j_database()
+                neo4j_client = get_neo4j_client()
+                await neo4j_client.execute_write("MATCH (n) DETACH DELETE n")
                 logger.info("cleared_neo4j_database")
                 yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'deletion', 'progress_percent': 15, 'message': 'Clearing Neo4j graph database...'})}\n\n"
             except Exception as e:
@@ -280,10 +280,15 @@ async def reindex_progress_stream(
 
             # Validate Neo4j graph
             try:
-                lightrag_wrapper = await get_lightrag_wrapper_async()
-                graph_stats = await lightrag_wrapper.get_stats()
-                entity_count = graph_stats.get("entity_count", 0)
-                relationship_count = graph_stats.get("relationship_count", 0)
+                neo4j_client = get_neo4j_client()
+                entity_result = await neo4j_client.execute_read(
+                    "MATCH (e:base) RETURN count(e) AS count"
+                )
+                entity_count = entity_result[0]["count"] if entity_result else 0
+                rel_result = await neo4j_client.execute_read(
+                    "MATCH ()-[r]->() RETURN count(r) AS count"
+                )
+                relationship_count = rel_result[0]["count"] if rel_result else 0
                 logger.info(
                     "neo4j_validation_complete",
                     entities=entity_count,
@@ -1775,8 +1780,8 @@ async def reindex_with_vlm_enrichment(
 
             # Clear Neo4j graph
             try:
-                lightrag_wrapper = await get_lightrag_wrapper_async()
-                await lightrag_wrapper._clear_neo4j_database()
+                neo4j_client = get_neo4j_client()
+                await neo4j_client.execute_write("MATCH (n) DETACH DELETE n")
                 logger.info("cleared_neo4j_database")
             except Exception as e:
                 logger.warning("neo4j_clear_failed", error=str(e))
@@ -1878,10 +1883,15 @@ async def reindex_with_vlm_enrichment(
             qdrant_points = collection_info.points_count if collection_info else 0
 
             try:
-                lightrag_wrapper = await get_lightrag_wrapper_async()
-                graph_stats = await lightrag_wrapper.get_stats()
-                neo4j_entities = graph_stats.get("entity_count", 0)
-                neo4j_relations = graph_stats.get("relationship_count", 0)
+                neo4j_client = get_neo4j_client()
+                entity_result = await neo4j_client.execute_read(
+                    "MATCH (e:base) RETURN count(e) AS count"
+                )
+                neo4j_entities = entity_result[0]["count"] if entity_result else 0
+                rel_result = await neo4j_client.execute_read(
+                    "MATCH ()-[r]->() RETURN count(r) AS count"
+                )
+                neo4j_relations = rel_result[0]["count"] if rel_result else 0
             except Exception as e:
                 logger.warning("neo4j_validation_failed", error=str(e))
                 neo4j_entities = 0

@@ -44,7 +44,7 @@ Example:
 Sprint Context:
     Sprint 64 Feature 64.6 fixes the critical bug where:
     - Admin UI shows: "entity_extraction = qwen3:32b"
-    - Backend uses: settings.lightrag_llm_model = "nemotron-3-nano" (WRONG!)
+    - Backend uses: settings.extraction_llm_model = "nemotron-3-nano" (WRONG!)
 
     This service ensures backend respects Admin UI configuration.
 """
@@ -75,7 +75,7 @@ class LLMUseCase(str, Enum):
 
     Mapping to Backend Services:
         INTENT_CLASSIFICATION → src/agents/router.py (ollama_model_router)
-        ENTITY_EXTRACTION → src/components/domain_training/* (lightrag_llm_model)
+        ENTITY_EXTRACTION → src/components/domain_training/* (extraction_llm_model)
         ANSWER_GENERATION → src/agents/answer_generator.py (ollama_model_generation)
         FOLLOWUP_TITLES → src/agents/multi_turn/* (TBD)
         QUERY_DECOMPOSITION → src/agents/multi_turn/* (TBD)
@@ -284,7 +284,7 @@ class LLMConfigService:
 
         Sprint 64 Context:
             This method fixes the critical bug where domain training used
-            settings.lightrag_llm_model="nemotron-3-nano" instead of
+            settings.extraction_llm_model="nemotron-3-nano" instead of
             admin-configured "qwen3:32b".
         """
         config = await self.get_config()
@@ -383,7 +383,7 @@ class LLMConfigService:
                 ),
                 LLMUseCase.ENTITY_EXTRACTION: UseCaseModelConfig(
                     use_case=LLMUseCase.ENTITY_EXTRACTION,
-                    model_id=f"ollama/{settings.lightrag_llm_model}",
+                    model_id=f"ollama/{settings.extraction_llm_model}",
                 ),
                 LLMUseCase.ANSWER_GENERATION: UseCaseModelConfig(
                     use_case=LLMUseCase.ANSWER_GENERATION,
@@ -421,7 +421,7 @@ class LLMConfigService:
 
         fallback_map = {
             LLMUseCase.INTENT_CLASSIFICATION: settings.ollama_model_router,
-            LLMUseCase.ENTITY_EXTRACTION: settings.lightrag_llm_model,
+            LLMUseCase.ENTITY_EXTRACTION: settings.extraction_llm_model,
             LLMUseCase.ANSWER_GENERATION: settings.ollama_model_generation,
             LLMUseCase.FOLLOWUP_TITLES: settings.ollama_model_generation,
             LLMUseCase.QUERY_DECOMPOSITION: settings.ollama_model_router,

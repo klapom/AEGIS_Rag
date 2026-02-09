@@ -4,7 +4,7 @@ Sprint 23 Feature 23.6 migrated 4 LLM components from direct Ollama to AegisLLMP
 1. AnswerGenerator (answer_generator.py)
 2. RelationExtractor (relation_extractor.py)
 3. QueryDecomposer (query_decomposition.py)
-4. LightRAGWrapper (lightrag_wrapper.py via aegis_llm_complete)
+4. ExtractionService (extraction_service.py via AegisLLMProxy)
 
 These tests verify:
 - Multi-cloud routing (Local → Alibaba Cloud → OpenAI)
@@ -80,7 +80,7 @@ def sample_contexts():
             "source": "docs/vector_search.md",
         },
         {
-            "text": "Graph reasoning leverages LightRAG and Neo4j for multi-hop queries.",
+            "text": "Graph reasoning leverages Neo4j and graph traversal for multi-hop queries.",
             "source": "docs/graph_rag.md",
         },
     ]
@@ -501,91 +501,10 @@ class TestQueryDecomposerIntegration:
 
 
 # ============================================================================
-# LightRAGWrapper Integration Tests
+# LightRAG Integration Tests - REMOVED in Sprint 128.1
 # ============================================================================
-
-
-@pytest.mark.asyncio
-@pytest.mark.integration
-class TestLightRAGWrapperIntegration:
-    """Integration tests for LightRAGWrapper with AegisLLMProxy."""
-
-    async def test_aegis_llm_complete_function(self, mock_acompletion_response):
-        """Test aegis_llm_complete function within LightRAG context."""
-        with patch("src.components.llm_proxy.aegis_llm_proxy.acompletion") as mock_acomp:
-            mock_acomp.return_value = mock_acompletion_response
-
-            # Import here to avoid import errors if LightRAG not installed
-            try:
-                from src.components.graph_rag.lightrag_wrapper import LightRAGWrapper
-
-                wrapper = LightRAGWrapper()
-                await wrapper._ensure_initialized()
-
-                # Extract the aegis_llm_complete function from initialization
-                # This is an internal function, so we test it indirectly
-                assert wrapper._initialized
-                assert wrapper.rag is not None
-
-            except ImportError:
-                pytest.skip("LightRAG not installed")
-            except Exception as e:
-                # Skip if Neo4j not available (check exception type and message)
-                exception_name = type(e).__name__
-                if exception_name == "ServiceUnavailable" or "connect" in str(e).lower():
-                    pytest.skip(f"Neo4j not available: {exception_name}: {e}")
-                raise
-
-    async def test_lightrag_with_system_prompt(self, mock_acompletion_response):
-        """Test LightRAG LLM calls with system + user prompt combination."""
-        with patch("src.components.llm_proxy.aegis_llm_proxy.acompletion") as mock_acomp:
-            mock_acomp.return_value = mock_acompletion_response
-
-            try:
-                from src.components.graph_rag.lightrag_wrapper import LightRAGWrapper
-
-                wrapper = LightRAGWrapper()
-                await wrapper._ensure_initialized()
-
-                # Verify LLM function is configured
-                assert hasattr(wrapper.rag, "llm_model_func")
-
-            except ImportError:
-                pytest.skip("LightRAG not installed")
-            except Exception as e:
-                # Skip if Neo4j not available (check exception type and message)
-                exception_name = type(e).__name__
-                if exception_name == "ServiceUnavailable" or "connect" in str(e).lower():
-                    pytest.skip(f"Neo4j not available: {exception_name}: {e}")
-                raise
-
-    async def test_lightrag_cost_tracking(self):
-        """Test that LightRAG LLM calls are tracked in cost database."""
-        with patch("src.components.llm_proxy.aegis_llm_proxy.acompletion") as mock_acomp:
-            response = MagicMock()
-            response.choices = [MagicMock()]
-            response.choices[0].message.content = "Entity extraction result"
-            response.usage = MagicMock()
-            response.usage.total_tokens = 200
-            mock_acomp.return_value = response
-
-            try:
-                from src.components.graph_rag.lightrag_wrapper import LightRAGWrapper
-
-                wrapper = LightRAGWrapper()
-                await wrapper._ensure_initialized()
-
-                # LLM calls through LightRAG should be tracked
-                # (Verified by checking cost_tracker in AegisLLMProxy)
-
-            except ImportError:
-                pytest.skip("LightRAG not installed")
-            except Exception as e:
-                # Skip if Neo4j not available (check exception type and message)
-                exception_name = type(e).__name__
-                if exception_name == "ServiceUnavailable" or "connect" in str(e).lower():
-                    pytest.skip(f"Neo4j not available: {exception_name}: {e}")
-                raise
+# LightRAGWrapper class and related functionality removed.
+# Graph extraction now handled by ExtractionService + Neo4jClient directly.
 
 
 # ============================================================================

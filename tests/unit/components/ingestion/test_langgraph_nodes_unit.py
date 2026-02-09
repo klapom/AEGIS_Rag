@@ -470,7 +470,7 @@ async def test_embedding_node_uses_bge_m3_1024d(sample_state, sample_chunks):
 
 @pytest.mark.asyncio
 async def test_graph_extraction_node_success(sample_state, sample_chunks):
-    """Test graph_extraction_node extracts entities/relations via LightRAG."""
+    """Test graph_extraction_node extracts entities/relations via extract_and_store_entities."""
     # Add chunks to state (Sprint 21 Feature 21.6: enhanced format)
     sample_state["chunks"] = [{"chunk": c, "image_bboxes": []} for c in sample_chunks]
 
@@ -483,23 +483,24 @@ async def test_graph_extraction_node_success(sample_state, sample_chunks):
     sample_state["chunking_status"] = "completed"
     sample_state["embedding_status"] = "completed"
 
-    # Mock graph statistics
-    mock_graph_stats = {
-        "total_entities": 42,
-        "total_relations": 18,
-        "total_chunks": 3,
+    # Mock extraction result
+    mock_extract_result = {
+        "document_id": "test_doc_001",
+        "status": "success",
+        "stats": {
+            "total_chunks": 3,
+            "total_entities": 42,
+            "total_relations": 18,
+            "total_mentioned_in": 84,
+        },
+        "total_time_seconds": 2.5,
     }
 
     with patch(
-        "src.components.ingestion.nodes.graph_extraction.get_lightrag_wrapper_async"
-    ) as mock_get_lightrag:
-        # Mock LightRAG wrapper
-        mock_lightrag = AsyncMock()
-        # Sprint 42: Use insert_prechunked_documents instead of insert_documents_optimized
-        mock_lightrag.insert_prechunked_documents = AsyncMock(
-            return_value={"stats": mock_graph_stats}
-        )
-        mock_get_lightrag.return_value = mock_lightrag
+        "src.components.ingestion.nodes.graph_extraction.extract_and_store_entities"
+    ) as mock_extract:
+        # Mock extract_and_store_entities
+        mock_extract.return_value = mock_extract_result
 
         # Run node
         updated_state = await graph_extraction_node(sample_state)
@@ -508,20 +509,16 @@ async def test_graph_extraction_node_success(sample_state, sample_chunks):
         assert updated_state["graph_status"] == "completed"
         assert updated_state["overall_progress"] == 1.0  # Final node (100%)
 
-        # Verify LightRAG called with correct format (Sprint 42: insert_prechunked_documents)
-        mock_lightrag.insert_prechunked_documents.assert_called_once()
-        # Get the 'chunks' keyword argument (use index-based access for AsyncMock compatibility)
-        call_kwargs = mock_lightrag.insert_prechunked_documents.call_args[
-            1
-        ]  # call_args = (args, kwargs)
-        lightrag_docs = call_kwargs.get("chunks", [])
-        assert len(lightrag_docs) == 3
-        # Sprint 42: Prechunked format has chunk_id, text, chunk_index
-        assert "chunk_id" in lightrag_docs[0]
-        assert "text" in lightrag_docs[0]
-        assert "chunk_index" in lightrag_docs[0]
-        # Verify text contains chunk content
-        assert sample_chunks[0].content in lightrag_docs[0]["text"]
+        # Verify extract_and_store_entities called with correct format
+        mock_extract.assert_called_once()
+        call_kwargs = mock_extract.call_args[1]  # call_args = (args, kwargs)
+        chunks = call_kwargs.get("chunks", [])
+        assert len(chunks) == 3
+        # Verify chunk format has chunk objects
+        assert "chunk" in chunks[0]
+        assert hasattr(chunks[0]["chunk"], "content")
+        # Verify content preserved
+        assert sample_chunks[0].content == chunks[0]["chunk"].content
 
 
 @pytest.mark.asyncio
@@ -536,19 +533,14 @@ async def test_graph_extraction_node_no_chunks(sample_state):
 
 
 @pytest.mark.asyncio
-async def test_graph_extraction_node_lightrag_error(sample_state, sample_chunks):
-    """Test graph_extraction_node handles LightRAG errors gracefully."""
+async def test_graph_extraction_node_extraction_error(sample_state, sample_chunks):
+    """Test graph_extraction_node handles extraction errors gracefully."""
     sample_state["chunks"] = sample_chunks
 
     with patch(
-        "src.components.ingestion.nodes.graph_extraction.get_lightrag_wrapper_async"
-    ) as mock_get_lightrag:
-        mock_lightrag = AsyncMock()
-        # Sprint 42: Use insert_prechunked_documents instead of insert_documents_optimized
-        mock_lightrag.insert_prechunked_documents = AsyncMock(
-            side_effect=Exception("Neo4j connection timeout")
-        )
-        mock_get_lightrag.return_value = mock_lightrag
+        "src.components.ingestion.nodes.graph_extraction.extract_and_store_entities"
+    ) as mock_extract:
+        mock_extract.side_effect = Exception("Neo4j connection timeout")
 
         # Run node (should raise exception)
         with pytest.raises(Exception, match="Neo4j connection timeout"):
@@ -597,8 +589,8 @@ async def test_full_pipeline_node_sequence(sample_state, sample_chunks):
             "src.components.ingestion.nodes.vector_embedding.QdrantClientWrapper"
         ) as mock_qdrant_class,
         patch(
-            "src.components.ingestion.nodes.graph_extraction.get_lightrag_wrapper_async"
-        ) as mock_get_lightrag,
+            "src.components.ingestion.nodes.graph_extraction.extract_and_store_entities"
+        ) as mock_extract,
     ):
         # Mock all services
         mock_memory.return_value = MagicMock(
@@ -623,9 +615,13 @@ async def test_full_pipeline_node_sequence(sample_state, sample_chunks):
         mock_qdrant.upsert_points = AsyncMock()
         mock_qdrant_class.return_value = mock_qdrant
 
-        mock_lightrag = AsyncMock()
-        mock_lightrag.insert_documents_optimized = AsyncMock(return_value=mock_graph_stats)
-        mock_get_lightrag.return_value = mock_lightrag
+        mock_extract_result = {
+            "document_id": sample_state["document_id"],
+            "status": "success",
+            "stats": mock_graph_stats,
+            "total_time_seconds": 1.5,
+        }
+        mock_extract.return_value = mock_extract_result
 
         # Execute all 5 nodes sequentially
         state = sample_state

@@ -6,15 +6,15 @@ Subdomains:
 - extraction: Entity and relation extraction from text
 - deduplication: Semantic entity and relation deduplication
 - communities: Community detection and summarization
-- querying: Graph queries via LightRAG
+- querying: Graph queries via DualLevelSearch
 - persistence: Neo4j storage operations
 - analytics: Graph analytics and recommendations
 - utilities: Protocols, templates, and utilities
 
 Usage:
     from src.domains.knowledge_graph import (
-        LightRAGClient,
-        get_lightrag_client,
+        DualLevelSearch,
+        get_dual_level_search,
         Neo4jClient,
         get_neo4j_client,
         CommunitySummarizer,
@@ -101,13 +101,7 @@ from src.domains.knowledge_graph.protocols import (
 # Querying
 from src.domains.knowledge_graph.querying import (
     DualLevelSearch,
-    LightRAGClient,
-    LightRAGWrapper,
     get_dual_level_search,
-    get_lightrag_client,
-    get_lightrag_client_async,
-    get_lightrag_wrapper,
-    get_lightrag_wrapper_async,
 )
 
 # Utilities
@@ -140,12 +134,6 @@ __all__ = [
     "TemporalQueryBuilder",
     "get_temporal_query_builder",
     # Querying
-    "LightRAGClient",
-    "LightRAGWrapper",
-    "get_lightrag_client",
-    "get_lightrag_client_async",
-    "get_lightrag_wrapper",
-    "get_lightrag_wrapper_async",
     "DualLevelSearch",
     "get_dual_level_search",
     # Extraction

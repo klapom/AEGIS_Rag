@@ -64,7 +64,7 @@ TEST_CONTENT = {
             "content": """Knowledge graphs represent information as entities and relationships.
             Neo4j is a popular graph database. Entity extraction identifies people, organizations,
             and concepts. Relationship extraction finds connections between entities.
-            AegisRAG uses LightRAG for graph-based retrieval.""",
+            AegisRAG uses Neo4j for graph-based retrieval.""",
         },
     ],
     "entities_expected": [
@@ -79,7 +79,6 @@ TEST_CONTENT = {
         "Hugging Face",
         "Neo4j",
         "AegisRAG",
-        "LightRAG",
     ],
     "table_data": [
         ["Framework", "Type", "Language"],

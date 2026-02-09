@@ -1,13 +1,13 @@
-"""Graph Querying via LightRAG.
+"""Graph Querying via DualLevelSearch.
 
 Sprint 56.2: Querying subdomain of knowledge_graph.
 Sprint 62.1: Section-aware graph queries.
+Sprint 128: LightRAG removed — DualLevelSearch is the sole query path.
 
 Usage:
     from src.domains.knowledge_graph.querying import (
-        LightRAGClient,
-        get_lightrag_client,
         DualLevelSearch,
+        get_dual_level_search,
         SectionGraphService,
     )
 """
@@ -16,14 +16,6 @@ Usage:
 from src.components.graph_rag.dual_level_search import (
     DualLevelSearch,
     get_dual_level_search,
-)
-from src.components.graph_rag.lightrag import (
-    LightRAGClient,
-    LightRAGWrapper,
-    get_lightrag_client,
-    get_lightrag_client_async,
-    get_lightrag_wrapper,
-    get_lightrag_wrapper_async,
 )
 
 # Sprint 62.1: Section-aware queries
@@ -38,13 +30,6 @@ from src.domains.knowledge_graph.querying.section_graph_service import (
 )
 
 __all__ = [
-    # LightRAG Client
-    "LightRAGClient",
-    "LightRAGWrapper",
-    "get_lightrag_client",
-    "get_lightrag_client_async",
-    "get_lightrag_wrapper",
-    "get_lightrag_wrapper_async",
     # Dual Level Search
     "DualLevelSearch",
     "get_dual_level_search",

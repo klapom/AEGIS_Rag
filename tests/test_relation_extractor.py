@@ -66,14 +66,11 @@ async def main():
         print("-" * 40)
 
         try:
-            from src.components.graph_rag.lightrag_wrapper import get_lightrag_wrapper_async
-
-            lightrag = await get_lightrag_wrapper_async()
-
-            # First, ensure entities exist in Neo4j
             from src.components.graph_rag.neo4j_client import get_neo4j_client
+            from src.components.graph_rag.neo4j_storage import Neo4jStorage
 
             neo4j = get_neo4j_client()
+            storage = Neo4jStorage(neo4j)
 
             # Create test entities if they don't exist
             for entity in test_entities:
@@ -86,9 +83,9 @@ async def main():
                 )
             print(f"Created/merged {len(test_entities)} test entities in Neo4j")
 
-            # Store relations
+            # Store relations via Neo4jStorage
             chunk_id = "test_chunk_001"
-            relations_created = await lightrag._store_relations_to_neo4j(
+            relations_created = await storage.store_relations(
                 relations=relations, chunk_id=chunk_id
             )
             print(f"Relations stored to Neo4j: {relations_created}")

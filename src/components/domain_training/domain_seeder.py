@@ -200,7 +200,7 @@ async def seed_default_domains() -> None:
         await repo.create_domain(
             name=DEFAULT_DOMAIN_CONFIG["name"],
             description=DEFAULT_DOMAIN_CONFIG["description"],
-            llm_model=settings.lightrag_llm_model,  # Use system default LLM
+            llm_model=settings.extraction_llm_model,  # Use system default LLM
             description_embedding=zero_embedding,
             status=DEFAULT_DOMAIN_CONFIG["status"],
         )
@@ -297,9 +297,9 @@ async def seed_domain(domain_id: str, catalog: dict[str, Any] | None = None) -> 
 
     # Build LLM config (use system defaults)
     llm_config = DomainLLMConfig(
-        training_model=settings.lightrag_llm_model,
-        extraction_model=settings.lightrag_llm_model,
-        classification_model=settings.lightrag_llm_model,
+        training_model=settings.extraction_llm_model,
+        extraction_model=settings.extraction_llm_model,
+        classification_model=settings.extraction_llm_model,
     )
 
     # Create domain in Neo4j with MERGE semantics
@@ -307,7 +307,7 @@ async def seed_domain(domain_id: str, catalog: dict[str, Any] | None = None) -> 
         await repo.create_domain(
             name=domain_id,
             description=domain_config.get("description", ""),
-            llm_model=settings.lightrag_llm_model,
+            llm_model=settings.extraction_llm_model,
             description_embedding=zero_embedding,
             status="pending",  # Will be set to "active" after training
             llm_config=llm_config,

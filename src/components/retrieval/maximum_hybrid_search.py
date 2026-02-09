@@ -1,24 +1,24 @@
 """Maximum Hybrid Search - 4-Signal Fusion for AegisRAG.
 
 Sprint 51 - Feature 51.7: Maximum Hybrid Search Foundation
+Sprint 128: Replaced LightRAG with DualLevelSearch for graph queries.
 
 This module implements the ultimate hybrid search by combining ALL retrieval signals:
 1. Qdrant Embeddings (semantic similarity)
 2. BM25 Keywords (exact keyword matching)
-3. LightRAG Local Mode (entity-level facts)
-4. LightRAG Global Mode (community/theme summaries)
+3. Graph Local Search (entity-level facts via DualLevelSearch)
+4. Graph Global Search (community/theme summaries via DualLevelSearch)
 
 Architecture:
     Query → [4 Parallel Queries] → Layer RRF → Cross-Modal Fusion → Context Assembly
 
 Layer-wise Fusion:
     - Layer 1 (Chunks): RRF fusion of Qdrant + BM25 → unified chunk ranking
-    - Layer 2 (Entities): Parse LightRAG local/global → entity list
+    - Layer 2 (Entities): DualLevelSearch local/global → entity list
     - Layer 3 (Cross-Modal): Align entities to chunks via MENTIONED_IN → boost chunk scores
 
 Academic References:
     - GraphRAG (Edge et al., 2024) - arXiv:2404.16130
-    - LightRAG (Guo et al., EMNLP 2025) - arXiv:2410.05779
     - RAG-Fusion (2024) - arXiv:2402.03367
     - HybridRAG (2024) - arXiv:2408.04948
 
@@ -34,13 +34,8 @@ from typing import TYPE_CHECKING, Any
 
 import structlog
 
-from src.components.graph_rag.lightrag_wrapper import LightRAGClient
+from src.components.graph_rag.dual_level_search import get_dual_level_search
 from src.components.retrieval.cross_modal_fusion import cross_modal_fusion
-from src.components.retrieval.lightrag_context_parser import (
-    extract_entity_names,
-    parse_lightrag_global_context,
-    parse_lightrag_local_context,
-)
 from src.utils.fusion import reciprocal_rank_fusion
 
 # Lazy import to avoid circular dependency
@@ -62,8 +57,8 @@ class MaximumHybridResult:
     # Signal counts
     qdrant_results_count: int
     bm25_results_count: int
-    lightrag_local_entities_count: int
-    lightrag_global_communities_count: int
+    graph_local_entities_count: int
+    graph_global_communities_count: int
 
     # Cross-modal fusion metadata
     chunks_boosted_count: int
@@ -72,14 +67,14 @@ class MaximumHybridResult:
     # Latency breakdown
     qdrant_latency_ms: float
     bm25_latency_ms: float
-    lightrag_local_latency_ms: float
-    lightrag_global_latency_ms: float
+    graph_local_latency_ms: float
+    graph_global_latency_ms: float
     fusion_latency_ms: float
     total_latency_ms: float
 
-    # LightRAG context strings (for debugging)
-    lightrag_local_context: str
-    lightrag_global_context: str
+    # Graph context strings (for debugging)
+    graph_local_context: str
+    graph_global_context: str
 
 
 async def maximum_hybrid_search(
@@ -94,8 +89,8 @@ async def maximum_hybrid_search(
     This is the ultimate hybrid search that combines all retrieval methods:
     1. Qdrant embeddings (semantic)
     2. BM25 keywords (exact match)
-    3. LightRAG local (entities)
-    4. LightRAG global (communities)
+    3. Graph local search (entities via DualLevelSearch)
+    4. Graph global search (communities via DualLevelSearch)
 
     Args:
         query: User query string
@@ -131,14 +126,14 @@ async def maximum_hybrid_search(
     from src.components.vector_search.hybrid_search import HybridSearch
 
     hybrid_search = HybridSearch()
-    lightrag_client = LightRAGClient()
+    dual_search = get_dual_level_search()
 
     # Step 1: Execute 4 parallel queries
     tasks = [
         _qdrant_search(hybrid_search, query, top_k * 2, namespaces),
         _bm25_search(hybrid_search, query, top_k * 2, namespaces),
-        _lightrag_local_search(lightrag_client, query),
-        _lightrag_global_search(lightrag_client, query),
+        _graph_local_search(dual_search, query, namespaces),
+        _graph_global_search(dual_search, query, namespaces),
     ]
 
     results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -151,14 +146,22 @@ async def maximum_hybrid_search(
         results[1] if not isinstance(results[1], Exception) else {"results": [], "latency_ms": 0}
     )
     local_result = (
-        results[2] if not isinstance(results[2], Exception) else {"context": "", "latency_ms": 0}
+        results[2]
+        if not isinstance(results[2], Exception)
+        else {"entities": [], "context": "", "latency_ms": 0}
     )
     global_result = (
-        results[3] if not isinstance(results[3], Exception) else {"context": "", "latency_ms": 0}
+        results[3]
+        if not isinstance(results[3], Exception)
+        else {"entities": [], "context": "", "latency_ms": 0, "communities_count": 0}
     )
 
     qdrant_chunks = qdrant_result["results"]
     bm25_chunks = bm25_result["results"]
+
+    # Sprint 128: Entity names come directly from DualLevelSearch (no text parsing needed)
+    local_entities = local_result["entities"]
+    global_entities = global_result["entities"]
     local_context = local_result["context"]
     global_context = global_result["context"]
 
@@ -166,8 +169,8 @@ async def maximum_hybrid_search(
         "parallel_queries_complete",
         qdrant_results=len(qdrant_chunks),
         bm25_results=len(bm25_chunks),
-        local_context_length=len(local_context),
-        global_context_length=len(global_context),
+        local_entities=len(local_entities),
+        global_entities=len(global_entities),
     )
 
     # Step 2: Layer-wise RRF fusion for chunk layer (Qdrant + BM25)
@@ -186,19 +189,11 @@ async def maximum_hybrid_search(
         fused_chunks=len(chunk_ranking),
     )
 
-    # Step 3: Parse LightRAG contexts into structured entities
-    local_parsed = parse_lightrag_local_context(local_context)
-    global_parsed = parse_lightrag_global_context(global_context)
-
-    # Extract entity names for cross-modal fusion
-    local_entities = extract_entity_names(local_parsed)
-    global_entities = extract_entity_names(global_parsed)
-
-    # Combine entity lists (local entities first - they're more specific)
+    # Step 3: Combine entity lists (local entities first - they're more specific)
     all_entities = local_entities + [e for e in global_entities if e not in local_entities]
 
     logger.debug(
-        "entity_parsing_complete",
+        "entity_extraction_complete",
         local_entities=len(local_entities),
         global_entities=len(global_entities),
         combined_entities=len(all_entities),
@@ -234,18 +229,18 @@ async def maximum_hybrid_search(
         total_results=len(chunk_ranking),
         qdrant_results_count=len(qdrant_chunks),
         bm25_results_count=len(bm25_chunks),
-        lightrag_local_entities_count=len(local_entities),
-        lightrag_global_communities_count=len(global_parsed.get("communities", [])),
+        graph_local_entities_count=len(local_entities),
+        graph_global_communities_count=global_result.get("communities_count", 0),
         chunks_boosted_count=chunks_boosted,
         boost_percentage=boost_percentage,
         qdrant_latency_ms=qdrant_result["latency_ms"],
         bm25_latency_ms=bm25_result["latency_ms"],
-        lightrag_local_latency_ms=local_result["latency_ms"],
-        lightrag_global_latency_ms=global_result["latency_ms"],
+        graph_local_latency_ms=local_result["latency_ms"],
+        graph_global_latency_ms=global_result["latency_ms"],
         fusion_latency_ms=fusion_latency_ms,
         total_latency_ms=total_latency_ms,
-        lightrag_local_context=local_context,
-        lightrag_global_context=global_context,
+        graph_local_context=local_context,
+        graph_global_context=global_context,
     )
 
     logger.info(
@@ -255,8 +250,8 @@ async def maximum_hybrid_search(
         final_results=len(final_results),
         qdrant_count=result.qdrant_results_count,
         bm25_count=result.bm25_results_count,
-        local_entities=result.lightrag_local_entities_count,
-        global_communities=result.lightrag_global_communities_count,
+        local_entities=result.graph_local_entities_count,
+        global_communities=result.graph_global_communities_count,
         chunks_boosted=chunks_boosted,
         boost_pct=boost_percentage,
         total_latency_ms=round(total_latency_ms, 2),
@@ -372,86 +367,108 @@ async def _bm25_search(
         return {"results": [], "latency_ms": 0}
 
 
-async def _lightrag_local_search(
-    lightrag_client: LightRAGClient,
+async def _graph_local_search(
+    dual_search: Any,
     query: str,
+    namespaces: list[str] | None = None,
 ) -> dict[str, Any]:
-    """Execute LightRAG local mode query (entity-level).
+    """Execute graph local search via DualLevelSearch (entity-level).
+
+    Sprint 128: Replaced LightRAG with DualLevelSearch.local_search().
+    Returns structured entity names directly — no text parsing needed.
 
     Args:
-        lightrag_client: LightRAGClient instance
+        dual_search: DualLevelSearch instance
         query: Search query
+        namespaces: Namespaces to filter by
 
     Returns:
-        Dictionary with context string and latency_ms
+        Dictionary with entities list, context string, and latency_ms
     """
     start = time.perf_counter()
 
     try:
-        # Query LightRAG in local mode (only_need_context=True returns raw context)
-        # Note: This requires LightRAG to support only_need_context parameter
-        # Fallback: Use regular query_graph and extract context
-
-        result = await lightrag_client.query_graph(
-            query=query,
-            mode="local",
+        graph_entities, metadata = await dual_search.local_search(
+            query=query, top_k=5, namespaces=namespaces
         )
 
-        # Extract context from result
-        # LightRAG returns GraphQueryResult with 'answer' field
-        # For maximum_hybrid_search, we treat 'answer' as the context string
-        context = result.answer if hasattr(result, "answer") else ""
+        # Extract entity names from GraphEntity.properties["matched_entities"]
+        entity_names = []
+        for ge in graph_entities:
+            matched = ge.properties.get("matched_entities", []) if ge.properties else []
+            entity_names.extend(matched)
+        entity_names = sorted(set(entity_names))
+
+        # Build context string for debugging
+        context = "; ".join(f"{ge.name}" for ge in graph_entities)
 
         latency_ms = (time.perf_counter() - start) * 1000
 
         logger.debug(
-            "lightrag_local_search_complete",
+            "graph_local_search_complete",
             query=query[:50],
-            context_length=len(context),
+            entities_found=len(entity_names),
+            chunks_found=len(graph_entities),
             latency_ms=round(latency_ms, 2),
         )
 
-        return {"context": context, "latency_ms": latency_ms}
+        return {"entities": entity_names, "context": context, "latency_ms": latency_ms}
 
     except Exception as e:
-        logger.error("lightrag_local_search_failed", error=str(e), query=query[:50])
-        return {"context": "", "latency_ms": 0}
+        logger.error("graph_local_search_failed", error=str(e), query=query[:50])
+        return {"entities": [], "context": "", "latency_ms": 0}
 
 
-async def _lightrag_global_search(
-    lightrag_client: LightRAGClient,
+async def _graph_global_search(
+    dual_search: Any,
     query: str,
+    namespaces: list[str] | None = None,
 ) -> dict[str, Any]:
-    """Execute LightRAG global mode query (community-level).
+    """Execute graph global search via DualLevelSearch (community-level).
+
+    Sprint 128: Replaced LightRAG with DualLevelSearch.global_search().
+    Returns Topic objects with entity lists — no text parsing needed.
 
     Args:
-        lightrag_client: LightRAGClient instance
+        dual_search: DualLevelSearch instance
         query: Search query
+        namespaces: Namespaces to filter by
 
     Returns:
-        Dictionary with context string and latency_ms
+        Dictionary with entities list, context string, communities count, and latency_ms
     """
     start = time.perf_counter()
 
     try:
-        result = await lightrag_client.query_graph(
-            query=query,
-            mode="global",
-        )
+        topics = await dual_search.global_search(query=query, top_k=3, namespaces=namespaces)
 
-        context = result.answer if hasattr(result, "answer") else ""
+        # Extract entity names from Topic.entities and Topic.keywords
+        entity_names = []
+        for topic in topics:
+            entity_names.extend(topic.entities)
+            entity_names.extend(topic.keywords)
+        entity_names = sorted(set(entity_names))
+
+        # Build context string for debugging
+        context = "; ".join(f"{t.name}: {t.summary[:100]}" for t in topics if t.summary)
 
         latency_ms = (time.perf_counter() - start) * 1000
 
         logger.debug(
-            "lightrag_global_search_complete",
+            "graph_global_search_complete",
             query=query[:50],
-            context_length=len(context),
+            topics_found=len(topics),
+            entities_found=len(entity_names),
             latency_ms=round(latency_ms, 2),
         )
 
-        return {"context": context, "latency_ms": latency_ms}
+        return {
+            "entities": entity_names,
+            "context": context,
+            "latency_ms": latency_ms,
+            "communities_count": len(topics),
+        }
 
     except Exception as e:
-        logger.error("lightrag_global_search_failed", error=str(e), query=query[:50])
-        return {"context": "", "latency_ms": 0}
+        logger.error("graph_global_search_failed", error=str(e), query=query[:50])
+        return {"entities": [], "context": "", "latency_ms": 0, "communities_count": 0}

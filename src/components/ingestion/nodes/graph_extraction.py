@@ -1,10 +1,11 @@
 """Graph Extraction Node for LangGraph Ingestion Pipeline.
 
 Sprint 54 Feature 54.7: Extracted from langgraph_nodes.py
+Sprint 128: Removed LightRAG dependency — uses Neo4jClient directly.
 
 This module handles knowledge graph extraction and Neo4j storage:
-- Extract entities/relations using ThreePhaseExtractor (SpaCy + Semantic Dedup + Gemma 3 4B)
-- Store entities and relations in Neo4j via LightRAG wrapper
+- Extract entities/relations using ExtractionService (3-Rank Cascade)
+- Store entities and relations in Neo4j via Neo4jClient
 - Create RELATES_TO relationships between entities
 - Create Section nodes for document structure
 - Run Community Detection for 4-Way Hybrid RRF
@@ -19,7 +20,7 @@ from typing import Any
 import structlog
 
 from src.components.graph_rag.community_detector import get_community_detector
-from src.components.graph_rag.lightrag_wrapper import get_lightrag_wrapper_async
+from src.components.graph_rag.extraction_pipeline import extract_and_store_entities
 from src.components.ingestion.ingestion_state import (
     IngestionState,
     add_error,
@@ -50,15 +51,15 @@ async def graph_extraction_node(state: IngestionState) -> IngestionState:
     - Auto-classify domain using BGE-M3 DomainClassifier if domain_id not set
     - Use domain-trained prompts when available
 
-    Uses ThreePhaseExtractor (SpaCy + Semantic Dedup + Gemma 3 4B)
-    via LightRAG wrapper for Neo4j storage.
+    Uses ExtractionService (3-Rank Cascade) with Neo4jClient for storage.
+    Sprint 128: LightRAG removed — direct Neo4j storage via extraction_pipeline.
 
     Workflow:
     1. Get enhanced chunks from state
     2. Auto-classify domain if not set (Sprint 125.7)
     3. Add minimal provenance to metadata
-    4. Extract entities/relations via LightRAG (with domain prompts)
-    5. Store in Neo4j graph database
+    4. Extract entities/relations via extraction_pipeline (with domain prompts)
+    5. Store in Neo4j graph database via Neo4jClient
 
     Args:
         state: Current ingestion state
@@ -203,9 +204,6 @@ async def graph_extraction_node(state: IngestionState) -> IngestionState:
         # Get embedded chunk IDs (from embedding_node)
         embedded_chunk_ids = state.get("embedded_chunk_ids", [])
 
-        # Get LightRAG wrapper
-        lightrag = await get_lightrag_wrapper_async()
-
         # Sprint 42: Convert chunks to pre-chunked format with Qdrant chunk_ids
         # This ensures chunk IDs are aligned between Qdrant and Neo4j
         prechunked_docs = []
@@ -259,13 +257,13 @@ async def graph_extraction_node(state: IngestionState) -> IngestionState:
                 }
             )
 
-        # Sprint 42: Use insert_prechunked_documents to preserve chunk IDs
-        lightrag_insert_start = time.perf_counter()
+        # Sprint 128: Extract entities/relations and store in Neo4j via extraction_pipeline
+        extraction_start = time.perf_counter()
         total_chunks = len(prechunked_docs)
         logger.info(
-            "TIMING_lightrag_insert_start",
+            "TIMING_extraction_start",
             stage="graph_extraction",
-            substage="lightrag_prechunked_insert",
+            substage="entity_extraction",
             chunk_count=total_chunks,
             document_id=state["document_id"],
         )
@@ -277,14 +275,14 @@ async def graph_extraction_node(state: IngestionState) -> IngestionState:
             current=0,
             total=total_chunks,
             message=f"Extracting entities from {total_chunks} chunks...",
-            details={"stage": "lightrag_insert"},
+            details={"stage": "extraction_pipeline"},
         )
 
         # Sprint 76 Features 76.1 & 76.2 (TD-084 & TD-085): Use namespace and domain from state
         namespace_id = state.get("namespace_id", "default")
         domain_id = state.get("domain_id")  # Optional
 
-        graph_stats = await lightrag.insert_prechunked_documents(
+        graph_stats = await extract_and_store_entities(
             chunks=prechunked_docs,
             document_id=state["document_id"],
             document_path=state["document_path"],
@@ -300,29 +298,30 @@ async def graph_extraction_node(state: IngestionState) -> IngestionState:
             current=total_chunks,
             total=total_chunks,
             message=f"Extracted {entities_extracted} entities from {total_chunks} chunks",
-            details={"total_entities": entities_extracted, "total_relations": 0},
+            details={
+                "total_entities": entities_extracted,
+                "total_relations": graph_stats.get("stats", {}).get("total_relations", 0),
+            },
         )
-        lightrag_insert_end = time.perf_counter()
-        lightrag_insert_ms = (lightrag_insert_end - lightrag_insert_start) * 1000
+        extraction_end = time.perf_counter()
+        extraction_ms = (extraction_end - extraction_start) * 1000
 
         logger.info(
-            "TIMING_lightrag_insert_complete",
+            "TIMING_extraction_complete",
             stage="graph_extraction",
-            substage="lightrag_prechunked_insert",
-            duration_ms=round(lightrag_insert_ms, 2),
+            substage="entity_extraction",
+            duration_ms=round(extraction_ms, 2),
             chunks_processed=len(prechunked_docs),
-            entities_extracted=graph_stats.get("stats", {}).get("total_entities", 0),
+            entities_extracted=entities_extracted,
             relations_extracted=graph_stats.get("stats", {}).get("total_relations", 0),
         )
 
         # Sprint 83 Feature 83.1: Log phase summary with percentile metrics
-        # Note: LightRAG insert processes all chunks in batch, so we can't track per-chunk latencies
-        # We log total time and average time per chunk
         log_phase_summary(
             phase="entity_extraction",
-            total_time_ms=lightrag_insert_ms,
+            total_time_ms=extraction_ms,
             items_processed=len(prechunked_docs),
-            entities_extracted=graph_stats.get("stats", {}).get("total_entities", 0),
+            entities_extracted=entities_extracted,
         )
 
         # Sprint 33 FIX: Wait for Neo4j to commit the entities before querying
@@ -335,7 +334,7 @@ async def graph_extraction_node(state: IngestionState) -> IngestionState:
         )
 
         # Sprint 34 Feature 34.1 & 34.2: Extract and store RELATES_TO relationships
-        # After LightRAG stores entities, extract relations between them
+        # Round 2: Re-extract relations using entities now stored in Neo4j
         relation_extraction_start = time.perf_counter()
         total_relations_created = 0
 
@@ -468,10 +467,10 @@ async def graph_extraction_node(state: IngestionState) -> IngestionState:
                     # Store relations to Neo4j with RELATES_TO relationships
                     # Sprint 76 Feature 76.1 (TD-084): Use namespace_id from state
                     if relations:
-                        relations_created = await lightrag._store_relations_to_neo4j(
+                        relations_created = await neo4j_client.store_relations(
                             relations=relations,
                             chunk_id=chunk_id,
-                            namespace_id=namespace_id,  # Multi-tenant isolation from state
+                            namespace_id=namespace_id,
                         )
                         total_relations_created += relations_created
 
@@ -783,7 +782,7 @@ async def graph_extraction_node(state: IngestionState) -> IngestionState:
             section_nodes_created=state.get("section_node_stats", {}).get("sections_created", 0),
             communities_detected=community_detection_stats.get("communities_detected", 0),
             timing_breakdown={
-                "lightrag_insert_ms": round(lightrag_insert_ms, 2),
+                "extraction_ms": round(extraction_ms, 2),
                 "section_nodes_ms": round(section_nodes_ms, 2),
                 "community_detection_ms": round(community_detection_ms, 2),
             },

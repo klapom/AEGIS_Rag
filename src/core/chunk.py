@@ -207,23 +207,6 @@ class Chunk(BaseModel):
             **self.metadata,
         }
 
-    def to_lightrag_format(self) -> dict[str, Any]:
-        """Convert chunk to LightRAG format for Neo4j storage.
-
-        Returns:
-            Dictionary with chunk metadata for Neo4j :chunk nodes
-        """
-        return {
-            "chunk_id": self.chunk_id,
-            "text": self.content,
-            "document_id": self.document_id,
-            "chunk_index": self.chunk_index,
-            "tokens": self.token_count,
-            "start_char": self.start_char,
-            "end_char": self.end_char,
-            "document_type": self.document_type,
-        }
-
     model_config = {
         "json_schema_extra": {
             "examples": [

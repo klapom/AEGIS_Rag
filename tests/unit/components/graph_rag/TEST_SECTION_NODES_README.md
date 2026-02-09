@@ -256,7 +256,7 @@ async def test_e2e_flow():
 
 - `src/components/ingestion/langgraph_nodes.py` - SectionMetadata & AdaptiveChunk definitions
 - `src/components/ingestion/section_extraction.py` - Section extraction logic
-- `src/components/graph_rag/lightrag_wrapper.py` - Neo4j integration
+- `src/components/graph_rag/neo4j_storage.py` - Neo4j integration (Sprint 128: LightRAG removed)
 - `tests/conftest.py` - Global pytest fixtures
 - `tests/unit/components/graph_rag/conftest.py` - Graph RAG-specific fixtures
 

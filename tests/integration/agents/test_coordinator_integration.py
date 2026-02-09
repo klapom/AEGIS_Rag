@@ -49,9 +49,9 @@ def mock_graph_agent():
     agent = MagicMock()
     agent.query = AsyncMock(
         return_value={
-            "answer": "Graph reasoning uses LightRAG and Neo4j for multi-hop queries.",
-            "entities": ["LightRAG", "Neo4j", "AEGIS RAG"],
-            "relationships": [{"source": "AEGIS RAG", "target": "LightRAG", "type": "USES"}],
+            "answer": "Graph reasoning uses Neo4j and graph traversal for multi-hop queries.",
+            "entities": ["Neo4j", "AEGIS RAG", "Graph Database"],
+            "relationships": [{"source": "AEGIS RAG", "target": "Neo4j", "type": "USES"}],
         }
     )
     return agent
@@ -96,7 +96,7 @@ async def test_coordinator_route_to_vector_agent(intent_classifier):
 @pytest.mark.asyncio
 async def test_coordinator_route_to_graph_agent(intent_classifier):
     """Test routing complex query to graph agent."""
-    query = "How does LightRAG connect to Neo4j and what entities does it extract?"
+    query = "How does the system connect to Neo4j and what entities does it extract?"
 
     intent = await intent_classifier.classify_intent(query)
 

@@ -228,29 +228,7 @@ class TestChunk:
         assert bm25_doc["token_count"] == 5
         assert bm25_doc["category"] == "technical"
 
-    def test_to_lightrag_format(self):
-        """Test conversion to LightRAG format for Neo4j."""
-        chunk = Chunk(
-            chunk_id="abc123def4567890",
-            document_id="doc_001",
-            chunk_index=3,
-            content="Sample chunk for LightRAG",
-            start_char=200,
-            end_char=226,
-            metadata={"author": "test"},
-            token_count=5,
-            overlap_tokens=2,
-        )
-
-        lightrag_chunk = chunk.to_lightrag_format()
-
-        assert lightrag_chunk["chunk_id"] == "abc123def4567890"
-        assert lightrag_chunk["text"] == "Sample chunk for LightRAG"
-        assert lightrag_chunk["document_id"] == "doc_001"
-        assert lightrag_chunk["chunk_index"] == 3
-        assert lightrag_chunk["tokens"] == 5
-        assert lightrag_chunk["start_char"] == 200
-        assert lightrag_chunk["end_char"] == 226
+    # to_lightrag_format() removed in Sprint 128.1 - LightRAG no longer used
 
     def test_chunk_defaults(self):
         """Test chunk with default values."""

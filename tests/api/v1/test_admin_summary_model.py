@@ -3,7 +3,7 @@
 Sprint 52 Feature 52.1: Community Summary Model Selection
 
 Tests the GET and PUT endpoints for configuring the LLM model
-used for community summary generation in LightRAG global mode.
+used for community summary generation in graph-based retrieval.
 """
 
 import json

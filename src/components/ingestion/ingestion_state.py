@@ -245,6 +245,12 @@ def create_initial_state(
     """
     import time
 
+    # Sprint 128: Normalize domain_id="auto" to None before state creation
+    # "auto" means auto-classify via BGE-M3 — must not propagate as literal string
+    # to embedding node (which writes Qdrant payload before graph_extraction resolves it)
+    if domain_id and domain_id.lower() == "auto":
+        domain_id = None
+
     return IngestionState(
         # Input fields
         document_path=document_path,

@@ -207,7 +207,7 @@ def extract_stage_timings(timing_logs: list[dict]) -> dict[str, dict]:
                 "total_relations": parsed.get("total_relations"),
                 "total_chunks": parsed.get("total_chunks"),
                 "section_nodes_created": parsed.get("section_nodes_created"),
-                "lightrag_insert_ms": timing_breakdown.get("lightrag_insert_ms"),
+                "neo4j_insert_ms": timing_breakdown.get("neo4j_insert_ms"),
                 "section_nodes_ms": timing_breakdown.get("section_nodes_ms"),
             }
 

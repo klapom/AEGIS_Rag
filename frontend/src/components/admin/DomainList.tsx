@@ -48,10 +48,10 @@ export function DomainList({ domains, isLoading, onRefresh }: DomainListProps) {
   };
 
   const handleDeleteConfirm = async () => {
-    if (!deleteConfirmDomain?.id) return;
+    if (!deleteConfirmDomain?.name) return;
 
     try {
-      await deleteDomain(deleteConfirmDomain.id);
+      await deleteDomain(deleteConfirmDomain.name);
       setDeleteConfirmDomain(null);
       setDeleteError(null);
       // Trigger refresh after successful deletion

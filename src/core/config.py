@@ -627,18 +627,13 @@ class Settings(BaseSettings):
     )
 
     # Entity/Relation Extraction Pipeline Selection (Sprint 14: Feature 14.2, Sprint 20+21)
-    # Sprint 25 Feature 25.7: Removed "three_phase" option (deprecated per ADR-026)
-    extraction_pipeline: Literal["lightrag_default", "llm_extraction"] = Field(
+    # Sprint 127: Removed LightRAG options (ADR-061)
+    extraction_pipeline: str = Field(
         default="llm_extraction",
         description=(
             "Entity/relation extraction pipeline to use:\n"
-            "- 'llm_extraction': Pure LLM (NO SpaCy, high quality, ~200-300s/doc) - DEFAULT Sprint 21+\n"
-            "- 'lightrag_default': Legacy LightRAG baseline (for comparison only)\n"
-            "Note: 'three_phase' removed in Sprint 25 (deprecated per ADR-026)"
+            "- 'llm_extraction': Pure LLM (NO SpaCy, high quality, ~200-300s/doc) - DEFAULT"
         ),
-    )
-    enable_legacy_extraction: bool = Field(
-        default=False, description="Enable legacy LightRAG extraction for A/B comparison"
     )
     extraction_batch_size: int = Field(
         default=10, ge=1, le=100, description="Batch size for extraction operations"
@@ -876,48 +871,10 @@ class Settings(BaseSettings):
         description="Maximum recursion depth for LangGraph execution",
     )
 
-    # LightRAG Settings (Sprint 5: Graph RAG)
-    lightrag_enabled: bool = Field(default=True, description="Enable LightRAG graph retrieval")
-    lightrag_working_dir: str = Field(
-        default="./data/lightrag", description="LightRAG working directory for graph storage"
-    )
-
-    # LightRAG LLM Configuration
-    # Sprint 51: Updated default to nemotron-3-nano (fast MoE model on DGX Spark)
-    lightrag_llm_model: str = Field(
+    # Extraction LLM Configuration (Sprint 127: renamed from lightrag_llm_model)
+    extraction_llm_model: str = Field(
         default="nemotron-3-nano",
-        description="Ollama LLM model for LightRAG entity extraction - use LIGHTRAG_LLM_MODEL env var to override",
-    )
-    lightrag_llm_temperature: float = Field(
-        default=0.1,
-        ge=0.0,
-        le=2.0,
-        description="LLM temperature for extraction (low for consistency)",
-    )
-    lightrag_llm_max_tokens: int = Field(
-        default=8192,
-        ge=100,
-        le=32768,
-        description="Max tokens for LLM response (Nemotron 32k context)",
-    )
-
-    # LightRAG Embedding Configuration
-    lightrag_embedding_model: str = Field(
-        default="nomic-embed-text", description="Ollama embedding model"
-    )
-    lightrag_embedding_dim: int = Field(
-        default=768, ge=128, le=4096, description="Embedding dimension (nomic-embed-text=768)"
-    )
-
-    # Graph Construction Settings
-    lightrag_entity_extraction_batch_size: int = Field(
-        default=5, ge=1, le=50, description="Batch size for entity extraction"
-    )
-    lightrag_max_tokens_per_chunk: int = Field(
-        default=1200, ge=500, le=4000, description="Max tokens per chunk for extraction"
-    )
-    lightrag_max_entities_per_doc: int = Field(
-        default=50, ge=10, le=200, description="Maximum entities to extract per document"
+        description="Ollama LLM model for entity extraction - use EXTRACTION_LLM_MODEL env var to override",
     )
 
     # MCP Server

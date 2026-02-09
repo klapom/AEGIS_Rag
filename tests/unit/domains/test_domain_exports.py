@@ -92,15 +92,7 @@ class TestKnowledgeGraphDomain:
         assert Neo4jClient is not None
         assert callable(get_neo4j_client)
 
-    def test_import_querying(self):
-        """Test querying exports are importable."""
-        from src.domains.knowledge_graph import (
-            LightRAGClient,
-            LightRAGWrapper,
-        )
-
-        assert LightRAGClient is not None
-        assert LightRAGWrapper is not None
+    # LightRAG removed in Sprint 128.1 - querying now handled by Neo4jClient and DualLevelSearch
 
     def test_import_extraction(self):
         """Test extraction exports are importable."""
@@ -256,19 +248,7 @@ class TestBackwardCompatibility:
         assert callable(get_community_summarizer)
         assert SemanticDeduplicator is not None
 
-    def test_components_graph_rag_lightrag_imports(self):
-        """Test components/graph_rag/lightrag backward compatibility."""
-        from src.components.graph_rag.lightrag import (
-            LightRAGClient,
-            LightRAGWrapper,
-            QueryMode,
-            get_lightrag_client,
-        )
-
-        assert LightRAGClient is not None
-        assert LightRAGWrapper is not None
-        assert callable(get_lightrag_client)
-        assert QueryMode is not None
+    # LightRAG removed in Sprint 128.1 - graph_rag.lightrag module no longer exists
 
     def test_components_ingestion_imports(self):
         """Test components/ingestion backward compatibility."""

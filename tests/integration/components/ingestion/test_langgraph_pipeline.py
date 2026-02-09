@@ -176,19 +176,17 @@ def mock_qdrant_client():
 
 
 @pytest.fixture
-def mock_lightrag_wrapper():
-    """Mock LightRAGWrapper for testing."""
+def mock_extract_and_store():
+    """Mock extract_and_store_entities for testing."""
     with patch(
-        "src.components.ingestion.langgraph_nodes.get_lightrag_wrapper_async"
-    ) as mock_get_wrapper:
-        mock_wrapper = AsyncMock()
-        mock_wrapper.insert_documents_optimized.return_value = {
+        "src.components.ingestion.nodes.graph_extraction.extract_and_store_entities"
+    ) as mock_extract:
+        mock_extract.return_value = {
             "total_entities": 15,
             "total_relations": 20,
             "total_chunks": 3,
         }
-        mock_get_wrapper.return_value = mock_wrapper
-        yield mock_wrapper
+        yield mock_extract
 
 
 @pytest.fixture
@@ -525,7 +523,7 @@ async def test_embedding_node_no_chunks(mock_embedding_service, mock_qdrant_clie
 
 @pytest.mark.integration
 @pytest.mark.asyncio
-async def test_graph_extraction_node_success(mock_lightrag_wrapper):
+async def test_graph_extraction_node_success(mock_extract_and_store):
     """Test graph extraction node successfully extracts entities/relations."""
     from src.core.chunk import Chunk
 
@@ -556,21 +554,13 @@ async def test_graph_extraction_node_success(mock_lightrag_wrapper):
     assert result["graph_status"] == "completed"
     assert result["overall_progress"] == 1.0  # Pipeline complete
 
-    # Verify LightRAG called
-    mock_lightrag_wrapper.insert_documents_optimized.assert_called_once()
-
-    # Verify minimal provenance added to metadata
-    call_args = mock_lightrag_wrapper.insert_documents_optimized.call_args
-    docs = call_args[0][0]  # First positional argument
-
-    for doc in docs:
-        assert "qdrant_point_id" in doc["metadata"]
-        assert "has_image_annotation" in doc["metadata"]
+    # Verify extraction function called
+    mock_extract_and_store.assert_called_once()
 
 
 @pytest.mark.integration
 @pytest.mark.asyncio
-async def test_graph_extraction_node_no_chunks(mock_lightrag_wrapper):
+async def test_graph_extraction_node_no_chunks(mock_extract_and_store):
     """Test graph extraction node handles empty chunks list."""
     state = create_initial_state(
         document_path="/tmp/test.pdf",
@@ -630,7 +620,7 @@ async def test_end_to_end_pipeline_success(
     mock_chunking_service,
     mock_embedding_service,
     mock_qdrant_client,
-    mock_lightrag_wrapper,
+    mock_extract_and_store,
     sample_pdf_path,
 ):
     """Test complete pipeline execution from PDF to Qdrant + Neo4j."""
@@ -687,7 +677,7 @@ async def test_pipeline_streaming_yields_progress(
     mock_chunking_service,
     mock_embedding_service,
     mock_qdrant_client,
-    mock_lightrag_wrapper,
+    mock_extract_and_store,
     sample_pdf_path,
 ):
     """Test streaming pipeline yields progress updates after each node."""
@@ -784,7 +774,7 @@ async def test_batch_processing_sequential_execution(
     mock_chunking_service,
     mock_embedding_service,
     mock_qdrant_client,
-    mock_lightrag_wrapper,
+    mock_extract_and_store,
     tmp_path,
 ):
     """Test batch processing executes documents sequentially."""
@@ -925,7 +915,7 @@ async def test_pipeline_continues_after_non_fatal_error(
     mock_chunking_service,
     mock_embedding_service,
     mock_qdrant_client,
-    mock_lightrag_wrapper,
+    mock_extract_and_store,
     sample_pdf_path,
 ):
     """Test pipeline continues after non-fatal errors (e.g., VLM enrichment)."""

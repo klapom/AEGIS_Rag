@@ -77,7 +77,7 @@ def integration_test_docs(tmp_path: Path) -> Path:
 
     (docs_dir / "doc3.md").write_text(
         "# Graph Reasoning\n\n"
-        "Graph reasoning is powered by LightRAG and Neo4j. "
+        "Graph reasoning is powered by Neo4j and graph traversal algorithms. "
         "It enables multi-hop reasoning across knowledge graphs for complex queries."
     )
 

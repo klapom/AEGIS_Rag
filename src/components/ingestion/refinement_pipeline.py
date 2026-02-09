@@ -26,7 +26,7 @@ from typing import Any
 
 import structlog
 
-from src.components.graph_rag.lightrag_wrapper import get_lightrag_wrapper_async
+from src.components.graph_rag.extraction_pipeline import extract_and_store_entities
 from src.components.ingestion.background_jobs import get_background_job_queue
 from src.components.vector_search.qdrant_client import QdrantClientWrapper
 from src.core.config import settings
@@ -110,8 +110,8 @@ async def extract_entities_and_relations_llm(
     chunks: list[dict[str, Any]],
     document_id: str,
     domain: str,
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    """Extract entities and relations using full LLM pipeline with gleaning.
+) -> tuple[int, int]:
+    """Extract entities and relations using extraction pipeline.
 
     Args:
         chunks: List of chunk payloads from Qdrant
@@ -119,57 +119,47 @@ async def extract_entities_and_relations_llm(
         domain: Document domain (for domain-specific prompts)
 
     Returns:
-        Tuple of (entities, relations) lists
+        Tuple of (entity_count, relation_count)
 
     Performance: 20-40s for 10 chunks with gleaning
     """
     start_time = time.perf_counter()
 
     try:
-        # Get LightRAG wrapper (handles ThreePhaseExtractor + gleaning)
-        lightrag = await get_lightrag_wrapper_async()
+        # Prepare chunks for extraction
+        chunks_for_extraction = [
+            {
+                "chunk_id": chunk.get("chunk_id", f"{document_id}_chunk_{i}"),
+                "text": chunk.get("content", ""),
+                "chunk_index": i,
+            }
+            for i, chunk in enumerate(chunks)
+        ]
 
-        # Extract text from chunks
-        chunk_texts = [chunk["content"] for chunk in chunks]
+        # Extract and store entities using extraction_pipeline
+        result = await extract_and_store_entities(
+            chunks=chunks_for_extraction,
+            document_id=document_id,
+            document_path=f"{document_id}.txt",
+            namespace_id=chunks[0].get("namespace_id", "default") if chunks else "default",
+            domain_id=domain,
+        )
 
-        # Run full LLM extraction
-        # Note: This uses ThreePhaseExtractor (SpaCy + Semantic Dedup + LLM)
-        # with gleaning for higher quality
-        entities = []
-        relations = []
-
-        for i, text in enumerate(chunk_texts):
-            try:
-                # Extract from single chunk (LightRAG handles batching internally)
-                extraction_result = await lightrag.extract_from_text(
-                    text=text,
-                    chunk_id=chunks[i].get("chunk_id"),
-                )
-
-                entities.extend(extraction_result.get("entities", []))
-                relations.extend(extraction_result.get("relations", []))
-
-            except Exception as e:
-                logger.warning(
-                    "refinement_chunk_extraction_failed",
-                    document_id=document_id,
-                    chunk_index=i,
-                    error=str(e),
-                )
-                # Continue with other chunks
+        entity_count = result.get("entity_count", 0)
+        relation_count = result.get("relation_count", 0)
 
         duration_ms = (time.perf_counter() - start_time) * 1000
 
         logger.info(
             "refinement_llm_extraction_complete",
             document_id=document_id,
-            chunks_processed=len(chunk_texts),
-            entities_extracted=len(entities),
-            relations_extracted=len(relations),
+            chunks_processed=len(chunks),
+            entities_extracted=entity_count,
+            relations_extracted=relation_count,
             duration_ms=round(duration_ms, 2),
         )
 
-        return entities, relations
+        return entity_count, relation_count
 
     except Exception as e:
         logger.error(
@@ -184,16 +174,18 @@ async def extract_entities_and_relations_llm(
 
 
 async def update_neo4j_graph(
-    entities: list[dict[str, Any]],
-    relations: list[dict[str, Any]],
+    entity_count: int,
+    relation_count: int,
     document_id: str,
     namespace: str,
 ) -> None:
-    """Index entities and relations in Neo4j graph database.
+    """Log Neo4j graph indexing completion.
+
+    Note: Entity/relation storage is now handled by extract_and_store_entities().
 
     Args:
-        entities: List of entity dicts
-        relations: List of relation dicts
+        entity_count: Number of entities indexed
+        relation_count: Number of relations indexed
         document_id: Document ID
         namespace: Document namespace
 
@@ -201,51 +193,28 @@ async def update_neo4j_graph(
         IngestionError: If Neo4j indexing fails
     """
     start_time = time.perf_counter()
+    duration_ms = (time.perf_counter() - start_time) * 1000
 
-    try:
-        lightrag = await get_lightrag_wrapper_async()
-
-        # Store entities and relations in Neo4j
-        # LightRAG wrapper handles namespace isolation
-        await lightrag.store_entities_and_relations(
-            entities=entities,
-            relations=relations,
-            namespace=namespace,
-        )
-
-        duration_ms = (time.perf_counter() - start_time) * 1000
-
-        logger.info(
-            "refinement_neo4j_indexing_complete",
-            document_id=document_id,
-            entities_indexed=len(entities),
-            relations_indexed=len(relations),
-            duration_ms=round(duration_ms, 2),
-        )
-
-    except Exception as e:
-        logger.error(
-            "refinement_neo4j_indexing_failed",
-            document_id=document_id,
-            error=str(e),
-        )
-        raise IngestionError(
-            document_id=document_id,
-            reason=f"Neo4j indexing failed: {e}",
-        ) from e
+    logger.info(
+        "refinement_neo4j_indexing_complete",
+        document_id=document_id,
+        entities_indexed=entity_count,
+        relations_indexed=relation_count,
+        duration_ms=round(duration_ms, 2),
+    )
 
 
 async def update_qdrant_metadata(
     document_id: str,
     namespace: str,
-    entities: list[dict[str, Any]],
 ) -> None:
-    """Update Qdrant chunk metadata with LLM-extracted entities.
+    """Mark Qdrant chunks as refined.
+
+    Note: Entity metadata is now stored during extraction pipeline.
 
     Args:
         document_id: Document ID
         namespace: Document namespace
-        entities: List of entity dicts
 
     Raises:
         IngestionError: If Qdrant update fails
@@ -256,47 +225,54 @@ async def update_qdrant_metadata(
         qdrant = QdrantClientWrapper()
         collection_name = settings.qdrant_collection
 
-        # Group entities by chunk_id
-        entities_by_chunk: dict[str, list[dict[str, Any]]] = {}
-        for entity in entities:
-            chunk_id = entity.get("chunk_id")
-            if chunk_id:
-                if chunk_id not in entities_by_chunk:
-                    entities_by_chunk[chunk_id] = []
-                entities_by_chunk[chunk_id].append(entity)
+        # Get all chunks for this document
+        points = []
+        offset = None
 
-        # Update each chunk's metadata
-        update_count = 0
-        for chunk_id, chunk_entities in entities_by_chunk.items():
-            try:
-                # Update payload with LLM entities
-                await qdrant.async_client.set_payload(
-                    collection_name=collection_name,
-                    payload={
-                        "entities": [
-                            {"text": e["text"], "type": e["type"]} for e in chunk_entities
-                        ],
-                        "refinement_pending": False,  # Mark as refined
-                        "refinement_timestamp": time.time(),
-                    },
-                    points=[chunk_id],
-                )
-                update_count += 1
+        while True:
+            result = await qdrant.async_client.scroll(
+                collection_name=collection_name,
+                scroll_filter={
+                    "must": [
+                        {"key": "document_id", "match": {"value": document_id}},
+                        {"key": "namespace_id", "match": {"value": namespace}},
+                    ]
+                },
+                limit=100,
+                offset=offset,
+                with_payload=False,
+                with_vectors=False,
+            )
 
-            except Exception as e:
-                logger.warning(
-                    "refinement_qdrant_update_chunk_failed",
-                    chunk_id=chunk_id,
-                    error=str(e),
-                )
-                # Continue with other chunks
+            batch_points, next_offset = result
+
+            if not batch_points:
+                break
+
+            points.extend([p.id for p in batch_points])
+
+            if next_offset is None:
+                break
+
+            offset = next_offset
+
+        # Mark all chunks as refined
+        if points:
+            await qdrant.async_client.set_payload(
+                collection_name=collection_name,
+                payload={
+                    "refinement_pending": False,
+                    "refinement_timestamp": time.time(),
+                },
+                points=points,
+            )
 
         duration_ms = (time.perf_counter() - start_time) * 1000
 
         logger.info(
             "refinement_qdrant_metadata_updated",
             document_id=document_id,
-            chunks_updated=update_count,
+            chunks_updated=len(points),
             duration_ms=round(duration_ms, 2),
         )
 
@@ -378,7 +354,7 @@ async def run_background_refinement(
             domain=domain,
         )
 
-        entities, relations = await extract_entities_and_relations_llm(
+        entity_count, relation_count = await extract_entities_and_relations_llm(
             chunks=chunks,
             document_id=document_id,
             domain=domain,
@@ -395,8 +371,8 @@ async def run_background_refinement(
         )
 
         await update_neo4j_graph(
-            entities=entities,
-            relations=relations,
+            entity_count=entity_count,
+            relation_count=relation_count,
             document_id=document_id,
             namespace=namespace,
         )
@@ -414,7 +390,6 @@ async def run_background_refinement(
         await update_qdrant_metadata(
             document_id=document_id,
             namespace=namespace,
-            entities=entities,
         )
 
         # Step 5: Mark as ready
@@ -434,8 +409,8 @@ async def run_background_refinement(
             document_id=document_id,
             total_duration_ms=round(total_duration, 2),
             chunks_processed=len(chunks),
-            entities_extracted=len(entities),
-            relations_extracted=len(relations),
+            entities_extracted=entity_count,
+            relations_extracted=relation_count,
         )
 
         # Check if target met (30-60s)

@@ -225,19 +225,19 @@ export interface DeleteDomainResponse {
  * Delete a domain
  * Sprint 51 Feature 51.4: Domain deletion
  *
- * Calls DELETE /admin/domains/{domain_id}
+ * Calls DELETE /admin/domains/{domain_name}
  * This will remove all indexed documents for the domain
  */
 export function useDeleteDomain() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  const mutateAsync = useCallback(async (domainId: string): Promise<DeleteDomainResponse> => {
+  const mutateAsync = useCallback(async (domainName: string): Promise<DeleteDomainResponse> => {
     setIsLoading(true);
     setError(null);
     try {
       const response = await apiClient.delete<DeleteDomainResponse>(
-        `/api/v1/admin/domains/${domainId}`
+        `/api/v1/admin/domains/${domainName}`
       );
       return response;
     } catch (err) {

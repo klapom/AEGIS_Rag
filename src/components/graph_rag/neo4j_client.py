@@ -545,6 +545,278 @@ class Neo4jClient:
             )
             raise DatabaseConnectionError("Neo4j", f"Section nodes creation failed: {e}") from e
 
+    async def store_chunks_and_provenance(
+        self,
+        chunks: list[dict[str, Any]],
+        entities: list[dict[str, Any]],
+        namespace_id: str = "default",
+    ) -> dict[str, int]:
+        """Store chunk nodes, entity nodes, and MENTIONED_IN relationships in Neo4j.
+
+        Sprint 128: Migrated from lightrag/neo4j_storage.py to use Neo4jClient directly.
+        Replaces the LightRAG rag._driver dependency.
+
+        Creates Neo4j schema:
+        - :chunk nodes with text, document_id, chunk_index, namespace_id metadata
+        - :base entity nodes with namespace_id for isolation
+        - MENTIONED_IN relationships from :base entities to :chunk nodes
+
+        Args:
+            chunks: List of chunk metadata dicts with chunk_id, text, document_id, etc.
+            entities: List of entities with entity_id, entity_name, entity_type, source_id
+            namespace_id: Namespace for multi-tenant isolation (default: "default")
+
+        Returns:
+            Dictionary with counts: chunks_created, entities_created, mentioned_in_created
+        """
+        logger.info(
+            "storing_chunks_and_provenance",
+            total_chunks=len(chunks),
+            total_entities=len(entities),
+            namespace_id=namespace_id,
+        )
+
+        stats = {
+            "chunks_created": 0,
+            "entities_created": 0,
+            "mentioned_in_created": 0,
+        }
+
+        try:
+            async with self.driver.session() as session:
+                # Step 1: Create :chunk nodes
+                for chunk in chunks:
+                    chunk_id = chunk["chunk_id"]
+                    tokens = chunk.get("tokens", chunk.get("token_count", 0))
+                    start_token = chunk.get("start_token", 0)
+                    end_token = chunk.get("end_token", tokens)
+
+                    await session.run(
+                        """
+                        MERGE (c:chunk {chunk_id: $chunk_id})
+                        SET c.text = $text,
+                            c.document_id = $document_id,
+                            c.document_path = $document_path,
+                            c.chunk_index = $chunk_index,
+                            c.tokens = $tokens,
+                            c.start_token = $start_token,
+                            c.end_token = $end_token,
+                            c.namespace_id = $namespace_id,
+                            c.domain_id = $domain_id,
+                            c.created_at = datetime()
+                        """,
+                        chunk_id=chunk_id,
+                        text=chunk.get("text", chunk.get("content", "")),
+                        document_id=chunk["document_id"],
+                        document_path=chunk.get("document_path", ""),
+                        chunk_index=chunk["chunk_index"],
+                        tokens=tokens,
+                        start_token=start_token,
+                        end_token=end_token,
+                        namespace_id=namespace_id,
+                        domain_id=chunk.get("domain_id"),
+                    )
+                    stats["chunks_created"] += 1
+
+                logger.info("chunk_nodes_created", count=stats["chunks_created"])
+
+                # Step 2: Create :base entity nodes
+                entities_created = 0
+                entities_skipped = 0
+
+                for entity in entities:
+                    entity_id = entity.get("entity_id", "")
+                    entity_name = entity.get("entity_name", entity_id)
+                    entity_type = entity.get("entity_type", "UNKNOWN")
+
+                    if not entity_id:
+                        entities_skipped += 1
+                        continue
+
+                    # Sanitize entity_type label for Cypher safety
+                    sanitized_type = entity_type.replace("`", "\\`")
+                    labels_str = f"base:`{sanitized_type}`"
+
+                    entity_sub_type = entity.get("entity_sub_type")
+
+                    try:
+                        if entity_sub_type:
+                            await session.run(
+                                f"""
+                                MERGE (e:{labels_str} {{entity_id: $entity_id}})
+                                SET e.entity_name = $entity_name,
+                                    e.entity_type = $entity_type,
+                                    e.entity_sub_type = $entity_sub_type,
+                                    e.description = $description,
+                                    e.source_id = $source_id,
+                                    e.file_path = $file_path,
+                                    e.chunk_index = $chunk_index,
+                                    e.namespace_id = $namespace_id,
+                                    e.domain_id = $domain_id,
+                                    e.created_at = datetime()
+                                """,
+                                entity_id=entity_id,
+                                entity_name=entity_name,
+                                entity_type=entity_type,
+                                entity_sub_type=entity_sub_type,
+                                description=entity.get("description", ""),
+                                source_id=entity.get("source_id", ""),
+                                file_path=entity.get("file_path", ""),
+                                chunk_index=entity.get("chunk_index", 0),
+                                namespace_id=namespace_id,
+                                domain_id=entity.get("domain_id"),
+                            )
+                        else:
+                            await session.run(
+                                f"""
+                                MERGE (e:{labels_str} {{entity_id: $entity_id}})
+                                SET e.entity_name = $entity_name,
+                                    e.entity_type = $entity_type,
+                                    e.description = $description,
+                                    e.source_id = $source_id,
+                                    e.file_path = $file_path,
+                                    e.chunk_index = $chunk_index,
+                                    e.namespace_id = $namespace_id,
+                                    e.domain_id = $domain_id,
+                                    e.created_at = datetime()
+                                """,
+                                entity_id=entity_id,
+                                entity_name=entity_name,
+                                entity_type=entity_type,
+                                description=entity.get("description", ""),
+                                source_id=entity.get("source_id", ""),
+                                file_path=entity.get("file_path", ""),
+                                chunk_index=entity.get("chunk_index", 0),
+                                namespace_id=namespace_id,
+                                domain_id=entity.get("domain_id"),
+                            )
+                        entities_created += 1
+                    except Exception as e:
+                        logger.error("entity_creation_failed", entity_id=entity_id, error=str(e))
+                        entities_skipped += 1
+
+                stats["entities_created"] = entities_created
+                logger.info(
+                    "entity_nodes_created", created=entities_created, skipped=entities_skipped
+                )
+
+                # Step 3: Create MENTIONED_IN relationships
+                entities_by_chunk: dict[str, list[str]] = {}
+                for entity in entities:
+                    chunk_id = entity.get("source_id", "")
+                    if chunk_id:
+                        if chunk_id not in entities_by_chunk:
+                            entities_by_chunk[chunk_id] = []
+                        entities_by_chunk[chunk_id].append(entity["entity_id"])
+
+                mentioned_in_count = 0
+                for chunk_id, entity_ids in entities_by_chunk.items():
+                    await session.run(
+                        """
+                        UNWIND $entity_ids AS entity_id
+                        MATCH (e:base {entity_id: entity_id})
+                        MATCH (c:chunk {chunk_id: $chunk_id})
+                        MERGE (e)-[r:MENTIONED_IN]->(c)
+                        SET r.created_at = datetime(),
+                            r.source_chunk_id = $chunk_id,
+                            r.namespace_id = $namespace_id
+                        """,
+                        chunk_id=chunk_id,
+                        entity_ids=entity_ids,
+                        namespace_id=namespace_id,
+                    )
+                    mentioned_in_count += len(entity_ids)
+
+                stats["mentioned_in_created"] = mentioned_in_count
+
+            logger.info("chunks_and_provenance_stored_successfully", **stats)
+            return stats
+
+        except Exception as e:
+            logger.error("store_chunks_and_provenance_failed", error=str(e))
+            raise
+
+    async def store_relations(
+        self,
+        relations: list[dict[str, Any]],
+        chunk_id: str,
+        namespace_id: str = "default",
+    ) -> int:
+        """Store RELATES_TO relationships between entities in Neo4j.
+
+        Sprint 128: Migrated from lightrag/neo4j_storage.py to use Neo4jClient directly.
+
+        Args:
+            relations: List of relations with source, target, description, strength
+            chunk_id: Source chunk ID for provenance
+            namespace_id: Namespace for multi-tenant isolation
+
+        Returns:
+            Number of relationships created
+        """
+        if not relations:
+            return 0
+
+        logger.info(
+            "storing_relations",
+            total_relations=len(relations),
+            chunk_id=chunk_id[:8] if len(chunk_id) > 8 else chunk_id,
+        )
+
+        try:
+            async with self.driver.session() as session:
+                result = await session.run(
+                    """
+                    UNWIND $relations AS rel
+                    MATCH (e1:base {entity_name: rel.source})
+                    MATCH (e2:base {entity_name: rel.target})
+                    WHERE e1 <> e2
+                    MERGE (e1)-[r:RELATES_TO]->(e2)
+                    SET r.weight = toFloat(rel.strength) / 10.0,
+                        r.description = rel.description,
+                        r.relation_type = CASE
+                            WHEN rel.relation_type <> 'RELATES_TO' THEN rel.relation_type
+                            WHEN r.relation_type IS NOT NULL AND r.relation_type <> 'RELATES_TO' THEN r.relation_type
+                            ELSE rel.relation_type
+                        END,
+                        r.source_chunk_id = $chunk_id,
+                        r.namespace_id = $namespace_id,
+                        r.created_at = datetime()
+                    RETURN count(r) AS created
+                    """,
+                    relations=[
+                        {
+                            "source": r["source"],
+                            "target": r["target"],
+                            "description": r.get("description", ""),
+                            "strength": r.get("strength", 5),
+                            "relation_type": r.get("type")
+                            or r.get("relation_type")
+                            or r.get("relation", "RELATES_TO"),
+                        }
+                        for r in relations
+                    ],
+                    chunk_id=chunk_id,
+                    namespace_id=namespace_id,
+                )
+                record = await result.single()
+                created = record["created"] if record else 0
+
+            logger.info(
+                "relations_stored",
+                count=created,
+                input_relations=len(relations),
+            )
+            return created
+
+        except Exception as e:
+            logger.error(
+                "store_relations_failed",
+                error=str(e),
+                chunk_id=chunk_id[:8] if len(chunk_id) > 8 else chunk_id,
+            )
+            raise
+
     async def close(self) -> None:
         """Close the Neo4j driver connection."""
         if self._driver:

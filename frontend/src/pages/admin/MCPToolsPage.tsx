@@ -64,8 +64,6 @@ export function MCPToolsPage() {
 
         {/* Header */}
         <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-4">
-
           {/* Mobile Tab Navigation */}
           <div className="flex sm:hidden bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
             <button

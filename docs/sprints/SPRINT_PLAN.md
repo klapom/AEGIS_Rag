@@ -2123,21 +2123,22 @@ Sprint 117.1 (Domain CRUD) - Foundation
 
 ---
 
-## Sprint 128 🔄 **Next** (after Sprint 127)
+## Sprint 128 🔄 **IN PROGRESS** (started 2026-02-09)
 
-**Status:** 📝 PLANNED
-**Focus:** LightRAG Removal + Cascade Timeout Guard + Full RAGAS Ingestion
-**Story Points:** ~21 SP (estimated)
+**Status:** 🔄 IN PROGRESS
+**Focus:** LightRAG Removal + Cascade Timeout Guard + Full RAGAS Ingestion + LLM Config UI
+**Story Points:** ~29 SP (estimated)
 **Predecessor:** Sprint 127 ✅
 
 **Features:**
 
 | # | Feature | SP | Status |
 |---|---------|-----|--------|
-| 128.1 | LightRAG Removal (eliminate ainsert_custom_kg, 92% overhead) | 5 | 📝 |
+| 128.1 | LightRAG Removal (-6,660 LOC, 8 files deleted) + domain_id/namespace fix | 8 | ✅ DONE |
 | 128.2 | Cascade Timeout Guard (check vLLM active before next rank) | 3 | 📝 |
 | 128.3 | RAGAS Phase 1 Full Ingestion (488 remaining docs, post-LightRAG) | 8 | 📝 |
 | 128.4 | HyDE Query Expansion (Hypothetical Document Embeddings) | 5 | 📝 |
+| 128.5 | LLM Config Page — Engine-Aware Model Selection | 5 | 📝 |
 
 **Key Decisions:**
 - ADR-061: LightRAG provides only 3 functions; 92% extraction time is duplicate overhead

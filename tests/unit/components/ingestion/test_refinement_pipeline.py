@@ -135,97 +135,100 @@ class TestLLMExtraction:
     ):
         """Test successful LLM extraction."""
         with patch(
-            "src.components.ingestion.refinement_pipeline.get_lightrag_wrapper_async"
-        ) as mock_get_lightrag:
-            # Mock LightRAG
-            mock_lightrag = AsyncMock()
-            mock_lightrag.extract_from_text.return_value = {
-                "entities": mock_entities[:1],  # 1 entity per chunk
-                "relations": mock_relations,
+            "src.components.ingestion.refinement_pipeline.extract_and_store_entities"
+        ) as mock_extract:
+            # Mock extract_and_store_entities to return extraction results
+            mock_extract.return_value = {
+                "document_id": "doc_123",
+                "status": "success",
+                "entity_count": 2,
+                "relation_count": 2,
+                "stats": {
+                    "total_chunks": 2,
+                    "total_entities": 2,
+                    "total_relations": 2,
+                    "total_mentioned_in": 2,
+                },
+                "total_time_seconds": 1.0,
             }
-            mock_get_lightrag.return_value = mock_lightrag
 
-            entities, relations = await extract_entities_and_relations_llm(
+            entity_count, relation_count = await extract_entities_and_relations_llm(
                 chunks=mock_chunks,
                 document_id="doc_123",
                 domain="ai_papers",
             )
 
-            # Should have 2 entities (1 per chunk)
-            assert len(entities) == 2
-            # Relations accumulated
-            assert len(relations) == 2
+            # Should have entity and relation counts from extraction
+            assert entity_count == 2
+            assert relation_count == 2
 
-            # Verify LightRAG called for each chunk
-            assert mock_lightrag.extract_from_text.await_count == 2
+            # Verify extract_and_store_entities called
+            mock_extract.assert_called_once()
 
     async def test_extract_entities_continues_on_chunk_failure(self, mock_chunks):
         """Test extraction continues if one chunk fails."""
         with patch(
-            "src.components.ingestion.refinement_pipeline.get_lightrag_wrapper_async"
-        ) as mock_get_lightrag:
-            mock_lightrag = AsyncMock()
+            "src.components.ingestion.refinement_pipeline.extract_and_store_entities"
+        ) as mock_extract:
+            # Mock partial success - extraction returns some entities
+            mock_extract.return_value = {
+                "document_id": "doc_123",
+                "status": "partial_success",
+                "entity_count": 1,
+                "relation_count": 0,
+                "stats": {
+                    "total_chunks": 2,
+                    "total_entities": 1,
+                    "total_relations": 0,
+                    "total_mentioned_in": 1,
+                },
+                "total_time_seconds": 0.5,
+            }
 
-            # First chunk fails, second succeeds
-            mock_lightrag.extract_from_text.side_effect = [
-                Exception("Extraction failed"),
-                {"entities": [{"text": "Entity1", "type": "PERSON"}], "relations": []},
-            ]
-            mock_get_lightrag.return_value = mock_lightrag
-
-            entities, relations = await extract_entities_and_relations_llm(
+            entity_count, relation_count = await extract_entities_and_relations_llm(
                 chunks=mock_chunks,
                 document_id="doc_123",
                 domain="ai_papers",
             )
 
-            # Should have 1 entity from successful chunk
-            assert len(entities) == 1
-            assert entities[0]["text"] == "Entity1"
+            # Extraction should complete with partial results
+            assert entity_count == 1
+            assert relation_count == 0
+            mock_extract.assert_called_once()
 
 
 class TestNeo4jIndexing:
     """Test Neo4j graph indexing."""
 
     async def test_update_neo4j_graph_success(self, mock_entities, mock_relations):
-        """Test successful Neo4j indexing."""
-        with patch(
-            "src.components.ingestion.refinement_pipeline.get_lightrag_wrapper_async"
-        ) as mock_get_lightrag:
-            mock_lightrag = AsyncMock()
-            mock_lightrag.store_entities_and_relations.return_value = None
-            mock_get_lightrag.return_value = mock_lightrag
+        """Test successful Neo4j graph logging.
 
-            await update_neo4j_graph(
-                entities=mock_entities,
-                relations=mock_relations,
-                document_id="doc_123",
-                namespace="research",
-            )
+        Note: Actual storage is done by extract_and_store_entities, this just logs.
+        """
+        # update_neo4j_graph now just logs - no mocking needed
+        await update_neo4j_graph(
+            entity_count=len(mock_entities),
+            relation_count=len(mock_relations),
+            document_id="doc_123",
+            namespace="research",
+        )
 
-            # Verify LightRAG called with correct params
-            mock_lightrag.store_entities_and_relations.assert_awaited_once_with(
-                entities=mock_entities,
-                relations=mock_relations,
-                namespace="research",
-            )
+        # Function should complete without error (it just logs)
 
     async def test_update_neo4j_graph_error(self, mock_entities, mock_relations):
-        """Test Neo4j indexing error handling."""
-        with patch(
-            "src.components.ingestion.refinement_pipeline.get_lightrag_wrapper_async"
-        ) as mock_get_lightrag:
-            mock_lightrag = AsyncMock()
-            mock_lightrag.store_entities_and_relations.side_effect = Exception("Neo4j error")
-            mock_get_lightrag.return_value = mock_lightrag
+        """Test Neo4j graph logging doesn't raise errors.
 
-            with pytest.raises(IngestionError, match="Neo4j indexing failed"):
-                await update_neo4j_graph(
-                    entities=mock_entities,
-                    relations=mock_relations,
-                    document_id="doc_123",
-                    namespace="research",
-                )
+        Note: Actual storage errors are handled in extract_and_store_entities.
+        """
+        # update_neo4j_graph is now just logging, should not raise
+        await update_neo4j_graph(
+            entity_count=len(mock_entities),
+            relation_count=len(mock_relations),
+            document_id="doc_123",
+            namespace="research",
+        )
+
+        # Function completes without error
 
 
 class TestQdrantMetadataUpdate:

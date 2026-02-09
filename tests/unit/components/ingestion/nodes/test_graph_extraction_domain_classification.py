@@ -58,8 +58,8 @@ async def test_domain_classification_auto_when_not_set(sample_state):
         ) as mock_get_classifier,
         patch("src.components.domain_training.domain_seeder.get_active_domains") as mock_get_active,
         patch(
-            "src.components.ingestion.nodes.graph_extraction.get_lightrag_wrapper_async"
-        ) as mock_lightrag,
+            "src.components.ingestion.nodes.graph_extraction.extract_and_store_entities"
+        ) as mock_extract,
     ):
         # Setup classifier mock
         mock_classifier = MagicMock()
@@ -77,13 +77,18 @@ async def test_domain_classification_auto_when_not_set(sample_state):
             "entertainment",
         ]
 
-        # Setup LightRAG mock
-        mock_lightrag_instance = AsyncMock()
-        mock_lightrag_instance.insert_prechunked_documents = AsyncMock(
-            return_value={"stats": {"total_entities": 5, "total_relations": 3}}
-        )
-        mock_lightrag_instance._store_relations_to_neo4j = AsyncMock(return_value=2)
-        mock_lightrag.return_value = mock_lightrag_instance
+        # Setup extract_and_store_entities mock
+        mock_extract.return_value = {
+            "document_id": "doc_123",
+            "status": "success",
+            "stats": {
+                "total_chunks": 1,
+                "total_entities": 5,
+                "total_relations": 3,
+                "total_mentioned_in": 5,
+            },
+            "total_time_seconds": 1.0,
+        }
 
         # Mock Neo4j client for chunk queries
         with patch("src.components.graph_rag.neo4j_client.get_neo4j_client") as mock_neo4j:
@@ -97,9 +102,10 @@ async def test_domain_classification_auto_when_not_set(sample_state):
                     "defines_entity_rels": 0,
                 }
             )
+            mock_neo4j_client.store_relations = AsyncMock(return_value=2)
             mock_neo4j.return_value = mock_neo4j_client
 
-            # Mock community detector
+            # Mock community detector (patch where imported)
             with patch(
                 "src.components.ingestion.nodes.graph_extraction.get_community_detector"
             ) as mock_community:
@@ -133,16 +139,22 @@ async def test_domain_classification_skip_when_provided(sample_state):
             "src.components.domain_training.domain_classifier.get_domain_classifier"
         ) as mock_get_classifier,
         patch(
-            "src.components.ingestion.nodes.graph_extraction.get_lightrag_wrapper_async"
-        ) as mock_lightrag,
+            "src.components.ingestion.nodes.graph_extraction.extract_and_store_entities",
+            new_callable=AsyncMock,
+            return_value={
+                "document_id": "test_doc_123",
+                "status": "success",
+                "stats": {
+                    "total_chunks": 2,
+                    "total_entities": 5,
+                    "total_relations": 3,
+                    "total_mentioned_in": 5,
+                },
+                "total_time_seconds": 1.0,
+            },
+        ),
     ):
-        mock_lightrag_instance = AsyncMock()
-        mock_lightrag_instance.insert_prechunked_documents = AsyncMock(
-            return_value={"stats": {"total_entities": 5, "total_relations": 3}}
-        )
-        mock_lightrag.return_value = mock_lightrag_instance
-
-        # Mock Neo4j client
+        # Mock Neo4j client (lazy import - patch at source)
         with patch("src.components.graph_rag.neo4j_client.get_neo4j_client") as mock_neo4j:
             mock_neo4j_client = AsyncMock()
             mock_neo4j_client.execute_read = AsyncMock(return_value=[])
@@ -154,9 +166,10 @@ async def test_domain_classification_skip_when_provided(sample_state):
                     "defines_entity_rels": 0,
                 }
             )
+            mock_neo4j_client.store_relations = AsyncMock(return_value=2)
             mock_neo4j.return_value = mock_neo4j_client
 
-            # Mock community detector
+            # Mock community detector (patch where imported)
             with patch(
                 "src.components.ingestion.nodes.graph_extraction.get_community_detector"
             ) as mock_community:
@@ -183,8 +196,20 @@ async def test_domain_classification_fallback_on_error(sample_state):
             "src.components.domain_training.domain_classifier.get_domain_classifier"
         ) as mock_get_classifier,
         patch(
-            "src.components.ingestion.nodes.graph_extraction.get_lightrag_wrapper_async"
-        ) as mock_lightrag,
+            "src.components.ingestion.nodes.graph_extraction.extract_and_store_entities",
+            new_callable=AsyncMock,
+            return_value={
+                "document_id": "doc_123",
+                "status": "success",
+                "stats": {
+                    "total_chunks": 1,
+                    "total_entities": 5,
+                    "total_relations": 3,
+                    "total_mentioned_in": 5,
+                },
+                "total_time_seconds": 1.0,
+            },
+        ),
     ):
         # Setup classifier to raise error
         mock_classifier = MagicMock()
@@ -192,14 +217,7 @@ async def test_domain_classification_fallback_on_error(sample_state):
         mock_classifier.load_domains = AsyncMock(side_effect=Exception("Classifier error"))
         mock_get_classifier.return_value = mock_classifier
 
-        # Setup LightRAG mock
-        mock_lightrag_instance = AsyncMock()
-        mock_lightrag_instance.insert_prechunked_documents = AsyncMock(
-            return_value={"stats": {"total_entities": 5, "total_relations": 3}}
-        )
-        mock_lightrag.return_value = mock_lightrag_instance
-
-        # Mock Neo4j client
+        # Mock Neo4j client (lazy import - patch at source)
         with patch("src.components.graph_rag.neo4j_client.get_neo4j_client") as mock_neo4j:
             mock_neo4j_client = AsyncMock()
             mock_neo4j_client.execute_read = AsyncMock(return_value=[])
@@ -211,9 +229,10 @@ async def test_domain_classification_fallback_on_error(sample_state):
                     "defines_entity_rels": 0,
                 }
             )
+            mock_neo4j_client.store_relations = AsyncMock(return_value=2)
             mock_neo4j.return_value = mock_neo4j_client
 
-            # Mock community detector
+            # Mock community detector (patch where imported)
             with patch(
                 "src.components.ingestion.nodes.graph_extraction.get_community_detector"
             ) as mock_community:
@@ -238,8 +257,20 @@ async def test_domain_classification_inactive_domain_skipped(sample_state):
         ) as mock_get_classifier,
         patch("src.components.domain_training.domain_seeder.get_active_domains") as mock_get_active,
         patch(
-            "src.components.ingestion.nodes.graph_extraction.get_lightrag_wrapper_async"
-        ) as mock_lightrag,
+            "src.components.ingestion.nodes.graph_extraction.extract_and_store_entities",
+            new_callable=AsyncMock,
+            return_value={
+                "document_id": "doc_123",
+                "status": "success",
+                "stats": {
+                    "total_chunks": 1,
+                    "total_entities": 5,
+                    "total_relations": 3,
+                    "total_mentioned_in": 5,
+                },
+                "total_time_seconds": 1.0,
+            },
+        ),
     ):
         # Setup classifier to return inactive domain
         mock_classifier = MagicMock()
@@ -253,14 +284,7 @@ async def test_domain_classification_inactive_domain_skipped(sample_state):
         # Setup active domains (chemistry NOT included)
         mock_get_active.return_value = ["computer_science_it", "medicine_health"]
 
-        # Setup LightRAG mock
-        mock_lightrag_instance = AsyncMock()
-        mock_lightrag_instance.insert_prechunked_documents = AsyncMock(
-            return_value={"stats": {"total_entities": 5, "total_relations": 3}}
-        )
-        mock_lightrag.return_value = mock_lightrag_instance
-
-        # Mock Neo4j client
+        # Mock Neo4j client (lazy import - patch at source)
         with patch("src.components.graph_rag.neo4j_client.get_neo4j_client") as mock_neo4j:
             mock_neo4j_client = AsyncMock()
             mock_neo4j_client.execute_read = AsyncMock(return_value=[])
@@ -272,9 +296,10 @@ async def test_domain_classification_inactive_domain_skipped(sample_state):
                     "defines_entity_rels": 0,
                 }
             )
+            mock_neo4j_client.store_relations = AsyncMock(return_value=2)
             mock_neo4j.return_value = mock_neo4j_client
 
-            # Mock community detector
+            # Mock community detector (patch where imported)
             with patch(
                 "src.components.ingestion.nodes.graph_extraction.get_community_detector"
             ) as mock_community:

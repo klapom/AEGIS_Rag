@@ -23,11 +23,11 @@ async def test_document_ingestion_pipeline_e2e(
 ):
     """Test full document upload → indexing → retrieval pipeline.
 
-    Sprint 12: Full E2E test with all systems (Qdrant + BM25 + LightRAG).
+    Sprint 12: Full E2E test with all systems (Qdrant + BM25 + Neo4j).
 
     Validates:
     - Document upload via API
-    - Indexing to all 3 systems (Qdrant, BM25, LightRAG)
+    - Indexing to all 3 systems (Qdrant, BM25, Neo4j)
     - Retrieval from hybrid search
     - Answer generation from retrieved context
     """
@@ -338,7 +338,7 @@ async def test_large_document_processing_e2e(api_client, cleanup_databases):
 async def test_knowledge_graph_evolution_e2e(api_client, cleanup_databases):
     """Test graph updates over time (incremental updates).
 
-    Sprint 12: Validates LightRAG incremental indexing.
+    Sprint 12: Validates Neo4j incremental indexing.
 
     Validates:
     - Initial graph construction
@@ -396,7 +396,7 @@ async def test_system_degradation_with_failures_e2e(api_client):
     - Error messages are informative
     - No cascading failures
     """
-    # Query when LightRAG might not be available
+    # Query when Neo4j might not be available
     # (System should fall back to vector + BM25)
     response = await api_client.post(
         "/api/v1/query",

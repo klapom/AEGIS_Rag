@@ -194,7 +194,7 @@ class TestCounterIncrements:
         metrics.record_extraction_document("three_phase", "success")
         metrics.record_extraction_document("three_phase", "success")
         metrics.record_extraction_document("three_phase", "failed")
-        metrics.record_extraction_document("lightrag_default", "skipped")
+        metrics.record_extraction_document("three_phase", "skipped")
 
         # Verify no exceptions
 
@@ -391,7 +391,7 @@ class TestHelperFunctions:
             ("phase1_spacy", "three_phase", 0.5),
             ("phase2_dedup", "three_phase", 1.0),
             ("phase3_gemma", "three_phase", 3.5),
-            ("default", "lightrag_default", 2.0),
+            ("default", "three_phase", 2.0),
         ]
 
         for phase, pipeline_type, duration in test_cases:

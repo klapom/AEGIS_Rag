@@ -1,7 +1,7 @@
-# Sprint 128 Plan: LightRAG Removal + Cascade Timeout Guard + Full RAGAS Ingestion
+# Sprint 128 Plan: LightRAG Removal + Cascade Timeout Guard + Full RAGAS Ingestion + LLM Config UI
 
-**Status:** 📝 PLANNED
-**Story Points:** 24 SP (estimated)
+**Status:** 🔄 IN PROGRESS (128.1 COMPLETE)
+**Story Points:** 29 SP (estimated)
 **Duration:** 3-5 days
 **Predecessor:** Sprint 127 ✅ (RAGAS Phase 1 Benchmark)
 
@@ -13,6 +13,15 @@
 2. **Add Cascade Timeout Guard** — prevent ghost requests from overloading GPU
 3. **Complete RAGAS Phase 1 ingestion** — 488 remaining docs (post-LightRAG: ~6h vs 75h)
 4. **HyDE Query Expansion** — Hypothetical Document Embeddings for improved retrieval
+5. **LLM Config UI** — Engine-aware model selection, vLLM model display, Vision VLM handling
+
+| # | Feature | SP | Status |
+|---|---------|-----|--------|
+| 128.1 | LightRAG Removal + domain_id/namespace fix | 8 | ✅ DONE |
+| 128.2 | Cascade Timeout Guard | 3 | 📝 Planned |
+| 128.3 | RAGAS Phase 1 Full Ingestion | 8 | 📝 Planned |
+| 128.4 | HyDE Query Expansion | 5 | 📝 Planned |
+| 128.5 | LLM Config Page — Engine-Aware Model Selection | 5 | 📝 Planned |
 
 ---
 
@@ -40,7 +49,7 @@ Sprint 127 proved that LightRAG is the single biggest bottleneck in the pipeline
 
 ## Features
 
-### 128.1: LightRAG Removal (8 SP) — CRITICAL PATH
+### 128.1: LightRAG Removal (8 SP) — ✅ COMPLETE
 
 **Goal:** Remove `lightrag-hku` dependency entirely. Replace 3 used functions with existing AegisRAG code.
 
@@ -216,6 +225,76 @@ Query → LLM generates hypothetical answer → BGE-M3 embeds hypothetical → Q
 
 ---
 
+### 128.5: LLM Config Page — Engine-Aware Model Selection (5 SP)
+
+**Goal:** The `/admin/llm-config` page should only show models that are actually available based on the current engine mode (vLLM/Ollama/Auto). vLLM selections should be disabled (single model), and Vision VLM should be greyed out with a "not available" hint.
+
+**Current State:**
+- Engine Mode section (Sprint 126): 3 buttons (vLLM/Ollama/Auto) with health checks
+- Use Case Model Assignment: 6 dropdowns populated from Ollama `/api/tags` only
+- No awareness of vLLM model in dropdowns
+- Vision VLM shows cloud models (Qwen3-VL, GPT-4o) even though no local VLM is available
+- Backend `GET /llm/models` only queries Ollama, not vLLM
+
+**Changes Required:**
+
+#### Frontend (`AdminLLMConfigPage.tsx`)
+
+| Change | Detail |
+|--------|--------|
+| **Engine mode ↔ model list coupling** | When engine mode changes, update available models in dropdowns immediately |
+| **vLLM-only mode** | Show only the vLLM model (from new API). All 6 use case dropdowns show single model, **disabled** (no selection possible). Badge: "vLLM — single model" |
+| **Ollama-only mode** | Keep current behavior — show Ollama models from `/api/tags`. No change. |
+| **Auto mode** | Show both Ollama models AND vLLM model. Extraction use cases default to vLLM model (disabled). Chat use cases show Ollama models (selectable). |
+| **Vision VLM row** | Grey out with tooltip/badge: "Vision models not available — no VLM loaded". Disable dropdown. Keep existing cloud options visible but disabled. |
+| **vLLM model badge** | New badge type for vLLM models: blue "vLLM" pill (vs green "Local" for Ollama, purple "Cloud" for Alibaba/OpenAI) |
+
+#### Backend (`admin_llm.py`)
+
+| Change | Detail |
+|--------|--------|
+| **New endpoint: `GET /api/v1/admin/llm/vllm-model`** | Query vLLM `/v1/models` endpoint → return loaded model name + health. Response: `{ model: "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-NVFP4", healthy: true }`. Fallback: read `VLLM_MODEL` env var if vLLM unreachable. |
+| **Update `GET /api/v1/admin/llm/models`** | Add optional `?include_vllm=true` query param. When set, also queries vLLM and merges into model list with provider tag `"vllm"`. |
+| **Engine mode in model response** | Include current engine mode in models response so frontend can filter in a single API call |
+
+#### Behavior Matrix
+
+| Engine Mode | Use Case | Available Models | Selection |
+|-------------|----------|-----------------|-----------|
+| **vLLM** | All 6 | vLLM model only | **Disabled** (single model) |
+| **Ollama** | All 6 | Ollama models | Enabled (current behavior) |
+| **Auto** | `entity_extraction` | vLLM model | **Disabled** |
+| **Auto** | `intent_classification` | Ollama models | Enabled |
+| **Auto** | `answer_generation` | Ollama models | Enabled |
+| **Auto** | `followup_titles` | Ollama models | Enabled |
+| **Auto** | `query_decomposition` | Ollama models | Enabled |
+| **Auto** | `vision_vlm` | None (greyed out) | **Disabled** + hint |
+
+#### Vision VLM Handling
+
+- Check if any loaded model has vision capability (neither Nemotron-3-Nano nor current Ollama models support vision)
+- If no vision model available: grey out row, show info banner: "No vision-capable model loaded. Vision requires a VLM like LLaVA or Qwen3-VL."
+- Cloud vision models (Qwen3-VL, GPT-4o) remain visible but disabled unless cloud API key is configured
+
+#### Files to Modify
+
+| File | Changes |
+|------|---------|
+| `frontend/src/pages/admin/AdminLLMConfigPage.tsx` | Engine-aware model filtering, disabled states, vLLM badge, Vision VLM greyed out |
+| `src/api/v1/admin_llm.py` | New `GET /llm/vllm-model` endpoint, update `/llm/models` with vLLM merge |
+| `src/components/llm_config/llm_config_service.py` | Engine-mode-aware model validation (reject Ollama model in vLLM mode on save) |
+
+**Acceptance Criteria:**
+- [ ] vLLM mode: all dropdowns disabled, showing vLLM model name
+- [ ] Ollama mode: current behavior unchanged
+- [ ] Auto mode: extraction=vLLM (disabled), chat=Ollama (selectable)
+- [ ] Vision VLM greyed out with "not available" message
+- [ ] Backend validates model selection against engine mode on save
+- [ ] vLLM model fetched from `/v1/models` endpoint (with env var fallback)
+- [ ] No regression in existing LLM config save/load
+
+---
+
 ## Dependency Graph
 
 ```
@@ -224,11 +303,13 @@ Query → LLM generates hypothetical answer → BGE-M3 embeds hypothetical → Q
 128.2 (Cascade Guard) ─────→ 128.3 (Full Ingestion)
 
 128.4 (HyDE) ─────────────→ RAGAS comparison
+
+128.5 (LLM Config UI) ────→ independent (can be done anytime)
 ```
 
 128.1 and 128.2 can be done in parallel.
 128.3 depends on both 128.1 and 128.2.
-128.4 is independent.
+128.4 and 128.5 are independent.
 
 ---
 
@@ -268,13 +349,14 @@ not GPU allocation. The savings are in wall-clock time (13x) and relation qualit
 
 Sprint 128 is complete when:
 
-- [ ] `lightrag-hku` removed from pyproject.toml and environment
-- [ ] No `lightrag` imports in `src/` (grep returns 0 results)
+- [x] `lightrag-hku` removed from pyproject.toml and environment ✅ (128.1)
+- [x] No `lightrag` imports in `src/` (grep returns 0 results) ✅ (128.1)
 - [ ] 10-doc re-ingestion: >70% specific relations, <10 min total
 - [ ] 498/498 RAGAS Phase 1 docs ingested
 - [ ] RAGAS metrics stable or improved vs Sprint 127 baseline
 - [ ] Cascade timeout guard prevents competing requests
 - [ ] HyDE implemented and A/B tested
+- [ ] LLM Config page shows engine-aware models (vLLM disabled, Vision greyed out)
 - [ ] All tests pass (unit, integration)
 - [ ] Docker build succeeds
 - [ ] Documentation updated (TECH_STACK.md, ARCHITECTURE.md, ADR-061)

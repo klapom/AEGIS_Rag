@@ -93,9 +93,8 @@ langchain-ollama = "^1.0.0"  # Latest version, requires ollama>=0.6.0
 setfit = ">=1.0.0"  # Few-shot text classification with contrastive learning
 datasets = "^4.0.0"  # HuggingFace datasets for SetFit training (aligned with evaluation group)
 
-# LightRAG & Graph (Sprint 5: Graph RAG) - Core only, graspologic moved to optional
-lightrag-hku = "^1.4.9"  # LightRAG for knowledge graph construction
-networkx = "^3.2"  # Graph algorithms (CORE - needed by LightRAG)
+# Graph (Sprint 128: LightRAG removed, native Neo4jClient)
+networkx = "^3.2"  # Graph algorithms (community detection, analytics)
 scipy = "^1.11.0"  # Required by networkx.pagerank() in analytics_engine.py
 
 # Graphiti Memory (Sprint 7: Episodic Memory)
@@ -353,7 +352,6 @@ module = [
     "rank_bm25.*",
     "ragas.*",
     "datasets.*",
-    "lightrag.*",
     "networkx.*",
     "graspologic.*",
 ]

@@ -76,10 +76,10 @@ export function DomainDetailDialog({ domain, isOpen, onClose, onDeleted }: Domai
   };
 
   const handleDeleteConfirm = async () => {
-    if (!domain?.id) return;
+    if (!domain?.name) return;
 
     try {
-      await deleteDomain(domain.id);
+      await deleteDomain(domain.name);
       setShowDeleteConfirm(false);
       setDeleteError(null);
       // Close dialog and notify parent of deletion

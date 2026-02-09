@@ -99,16 +99,26 @@ def test_factory_creates_three_phase_pipeline(mock_config_three_phase):
 
 
 @pytest.mark.unit
-def test_factory_creates_lightrag_pipeline(mock_config_lightrag):
-    """Test factory creates LightRAG legacy wrapper when configured."""
-    with patch("src.components.graph_rag.lightrag_wrapper.LightRAGWrapper") as mock_wrapper:
-        ExtractionPipelineFactory.create(mock_config_lightrag)
+def test_factory_creates_lightrag_pipeline_falls_back(mock_config_lightrag, caplog):
+    """Test factory falls back to llm_extraction when lightrag_default is configured.
 
-        # Verify LightRAGWrapper was instantiated inside the adapter
-        mock_wrapper.assert_called_once()
-        assert mock_wrapper.call_args.kwargs["llm_model"] == "llama3.2:3b"
-        assert mock_wrapper.call_args.kwargs["embedding_model"] == "nomic-embed-text"
-        assert mock_wrapper.call_args.kwargs["neo4j_uri"] == "bolt://localhost:7687"
+    Sprint 128: LightRAG removed, lightrag_default config now falls back to llm_extraction.
+    """
+    mock_pipeline = Mock(spec=ExtractionPipeline)
+    with (
+        patch.object(
+            ExtractionPipelineFactory, "_create_llm_extraction", return_value=mock_pipeline
+        ) as mock_create,
+        caplog.at_level("WARNING"),
+    ):
+        pipeline = ExtractionPipelineFactory.create(mock_config_lightrag)
+
+        # Should fall back to llm_extraction
+        mock_create.assert_called_once()
+        assert pipeline is mock_pipeline
+
+        # Should log warning about fallback
+        assert any("lightrag_default_deprecated" in record.message for record in caplog.records)
 
 
 @pytest.mark.unit
@@ -149,9 +159,8 @@ def test_factory_raises_with_helpful_error_message():
         ExtractionPipelineFactory.create(config)
 
     error_msg = str(exc_info.value)
-    # Sprint 20: three_phase renamed to llm_extraction
+    # Sprint 128: only llm_extraction is valid
     assert "llm_extraction" in error_msg
-    assert "lightrag_default" in error_msg
 
 
 # ============================================================================
@@ -221,51 +230,22 @@ def test_factory_defaults_semantic_dedup_to_true():
 
 
 @pytest.mark.unit
-def test_factory_reads_lightrag_model_config(mock_config_lightrag):
-    """Test factory reads LightRAG model configuration."""
+def test_factory_reads_lightrag_model_config_falls_back(mock_config_lightrag):
+    """Test factory falls back when lightrag config is provided.
+
+    Sprint 128: LightRAG removed, config values no longer used.
+    """
     mock_config_lightrag.lightrag_llm_model = "custom-model:7b"
     mock_config_lightrag.lightrag_embedding_model = "custom-embed"
 
-    with patch("src.components.graph_rag.lightrag_wrapper.LightRAGWrapper") as mock_wrapper:
-        ExtractionPipelineFactory.create(mock_config_lightrag)
+    mock_pipeline = Mock(spec=ExtractionPipeline)
+    with patch.object(
+        ExtractionPipelineFactory, "_create_llm_extraction", return_value=mock_pipeline
+    ):
+        pipeline = ExtractionPipelineFactory.create(mock_config_lightrag)
 
-        assert mock_wrapper.call_args.kwargs["llm_model"] == "custom-model:7b"
-        assert mock_wrapper.call_args.kwargs["embedding_model"] == "custom-embed"
-
-
-@pytest.mark.unit
-def test_factory_uses_default_lightrag_models():
-    """Test factory uses default models if not specified in config."""
-    config = Mock()
-    config.extraction_pipeline = "lightrag_default"
-    config.neo4j_password = Mock()
-    config.neo4j_password.get_secret_value.return_value = "test"
-    # Remove optional attributes
-    del config.lightrag_llm_model
-    del config.lightrag_embedding_model
-    del config.lightrag_working_dir
-
-    with patch("src.components.graph_rag.lightrag_wrapper.LightRAGWrapper") as mock_wrapper:
-        ExtractionPipelineFactory.create(config)
-
-        # Check defaults
-        assert mock_wrapper.call_args.kwargs["llm_model"] == "llama3.2:3b"
-        assert mock_wrapper.call_args.kwargs["embedding_model"] == "nomic-embed-text"
-
-
-@pytest.mark.unit
-def test_factory_reads_neo4j_credentials(mock_config_lightrag):
-    """Test factory reads Neo4j credentials from config."""
-    mock_config_lightrag.neo4j_uri = "bolt://custom:7687"
-    mock_config_lightrag.neo4j_user = "custom_user"
-    mock_config_lightrag.neo4j_password.get_secret_value.return_value = "custom_pass"
-
-    with patch("src.components.graph_rag.lightrag_wrapper.LightRAGWrapper") as mock_wrapper:
-        ExtractionPipelineFactory.create(mock_config_lightrag)
-
-        assert mock_wrapper.call_args.kwargs["neo4j_uri"] == "bolt://custom:7687"
-        assert mock_wrapper.call_args.kwargs["neo4j_user"] == "custom_user"
-        assert mock_wrapper.call_args.kwargs["neo4j_password"] == "custom_pass"
+        # Should create llm_extraction pipeline (lightrag config ignored)
+        assert pipeline is mock_pipeline
 
 
 # ============================================================================
@@ -294,28 +274,20 @@ async def test_three_phase_pipeline_implements_protocol(mock_config_three_phase)
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_lightrag_pipeline_implements_protocol(mock_config_lightrag):
-    """Test that created lightrag pipeline implements ExtractionPipeline protocol."""
-    with patch("src.components.graph_rag.lightrag_wrapper.LightRAGWrapper"):
+async def test_lightrag_pipeline_falls_back_to_llm_extraction(mock_config_lightrag):
+    """Test that lightrag_default config falls back to llm_extraction pipeline.
+
+    Sprint 128: LightRAG removed, lightrag_default now creates llm_extraction pipeline.
+    """
+    mock_pipeline = Mock(spec=ExtractionPipeline)
+    with patch.object(
+        ExtractionPipelineFactory, "_create_llm_extraction", return_value=mock_pipeline
+    ):
         pipeline = ExtractionPipelineFactory.create(mock_config_lightrag)
 
         # Verify it has extract method
         assert hasattr(pipeline, "extract")
         assert callable(pipeline.extract)
-
-
-@pytest.mark.unit
-@pytest.mark.asyncio
-async def test_lightrag_legacy_extract_raises_not_implemented(mock_config_lightrag):
-    """Test that legacy LightRAG extract raises NotImplementedError."""
-    with patch("src.components.graph_rag.lightrag_wrapper.LightRAGWrapper"):
-        pipeline = ExtractionPipelineFactory.create(mock_config_lightrag)
-
-        # Legacy pipeline should raise NotImplementedError
-        with pytest.raises(
-            NotImplementedError, match="Legacy LightRAG extraction not fully implemented"
-        ):
-            await pipeline.extract("Test text", document_id="doc1")
 
 
 # ============================================================================
@@ -396,16 +368,22 @@ def test_factory_logs_pipeline_creation(mock_config_three_phase, caplog):
 
 
 @pytest.mark.unit
-def test_factory_logs_legacy_warning(mock_config_lightrag, caplog):
-    """Test factory logs warning when creating legacy pipeline."""
-    with patch("src.components.graph_rag.lightrag_wrapper.LightRAGWrapper"):
-        with caplog.at_level("WARNING"):
-            ExtractionPipelineFactory.create(mock_config_lightrag)
+def test_factory_logs_fallback_warning(mock_config_lightrag, caplog):
+    """Test factory logs warning when falling back from lightrag_default.
 
-        # Check that legacy warning was logged
-        assert any(
-            "legacy_lightrag_pipeline_created" in record.message for record in caplog.records
-        )
+    Sprint 128: LightRAG removed, factory should log fallback warning.
+    """
+    mock_pipeline = Mock(spec=ExtractionPipeline)
+    with (
+        patch.object(
+            ExtractionPipelineFactory, "_create_llm_extraction", return_value=mock_pipeline
+        ),
+        caplog.at_level("WARNING"),
+    ):
+        ExtractionPipelineFactory.create(mock_config_lightrag)
+
+        # Check that fallback warning was logged
+        assert any("lightrag_default_deprecated" in record.message for record in caplog.records)
 
 
 # ============================================================================
@@ -502,9 +480,12 @@ def test_factory_integration_with_real_extraction_service_import():
 
 
 @pytest.mark.unit
-def test_factory_integration_with_real_lightrag_import():
-    """Test factory can import real LightRAGWrapper (no instantiation)."""
-    from src.components.graph_rag.lightrag_wrapper import LightRAGWrapper
+def test_factory_integration_with_neo4j_client_import():
+    """Test factory can import Neo4jClient (replacement for LightRAGWrapper).
+
+    Sprint 128: LightRAG removed, tests now use Neo4jClient.
+    """
+    from src.components.graph_rag.neo4j_client import Neo4jClient
 
     # Should be importable
-    assert LightRAGWrapper is not None
+    assert Neo4jClient is not None

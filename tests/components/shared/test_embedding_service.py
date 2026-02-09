@@ -58,9 +58,9 @@ async def test_cache_sharing():
     # Simulate Qdrant embedding
     qdrant_emb = await service.embed_single("LangGraph")
 
-    # Simulate LightRAG embedding (same text as entity)
-    lightrag_emb = await service.embed_single("LangGraph")
+    # Simulate Neo4j entity embedding (same text as entity)
+    neo4j_emb = await service.embed_single("LangGraph")
 
     # Should hit cache
     assert service.cache.stats()["hits"] >= 1
-    assert qdrant_emb == lightrag_emb
+    assert qdrant_emb == neo4j_emb

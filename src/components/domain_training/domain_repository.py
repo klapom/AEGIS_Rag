@@ -279,7 +279,7 @@ class DomainRepository:
                 await self.create_domain(
                     name=DEFAULT_DOMAIN_NAME,
                     description=DEFAULT_DOMAIN_DESCRIPTION,
-                    llm_model=settings.lightrag_llm_model,
+                    llm_model=settings.extraction_llm_model,
                     description_embedding=zero_embedding,
                 )
                 logger.info("default_domain_created", name=DEFAULT_DOMAIN_NAME)

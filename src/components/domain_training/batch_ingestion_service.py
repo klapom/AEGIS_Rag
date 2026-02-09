@@ -457,7 +457,7 @@ class BatchIngestionService:
         try:
             # Import here to avoid circular dependencies
             from src.components.chunking import chunk_text
-            from src.components.graph_rag.lightrag_wrapper import get_lightrag_wrapper_async
+            from src.components.graph_rag.extraction_pipeline import extract_and_store_entities
             from src.components.shared.embedding_service import get_embedding_service
             from src.components.vector_search.qdrant_client import get_qdrant_client
 
@@ -509,21 +509,27 @@ class BatchIngestionService:
             relations_count = 0
 
             if options.extract_entities or options.extract_relations:
-                lightrag = await get_lightrag_wrapper_async()
+                # Prepare chunks for extraction
+                chunks_for_extraction = [
+                    {
+                        "chunk_id": f"{document.document_id}_chunk_{idx}",
+                        "text": chunk["text"],
+                        "chunk_index": idx,
+                    }
+                    for idx, chunk in enumerate(chunks)
+                ]
 
-                # Use domain-specific prompts if available
-                entity_prompt = domain_config.get("entity_prompt")
-                relation_prompt = domain_config.get("relation_prompt")
-
-                # Extract from document content
-                extraction_result = await lightrag.extract_entities_and_relations(
-                    text=document.content,
-                    entity_prompt=entity_prompt,
-                    relation_prompt=relation_prompt,
+                # Extract and store entities using extraction_pipeline
+                extraction_result = await extract_and_store_entities(
+                    chunks=chunks_for_extraction,
+                    document_id=document.document_id,
+                    document_path=document.metadata.get("source", f"{document.document_id}.txt"),
+                    namespace_id=domain_name,
+                    domain_id=domain_name,
                 )
 
-                entities_count = len(extraction_result.get("entities", []))
-                relations_count = len(extraction_result.get("relations", []))
+                entities_count = extraction_result.get("entity_count", 0)
+                relations_count = extraction_result.get("relation_count", 0)
 
                 logger.debug(
                     "entities_relations_extracted",
@@ -532,17 +538,6 @@ class BatchIngestionService:
                     entities_count=entities_count,
                     relations_count=relations_count,
                 )
-
-                # Create MENTIONED_IN relations for all entities
-                entities = extraction_result.get("entities", [])
-                for entity in entities:
-                    relations_count += 1  # Count MENTIONED_IN relations
-                    # Store MENTIONED_IN relation in Neo4j
-                    await lightrag.create_mentioned_in_relation(
-                        entity_name=entity.get("name"),
-                        document_id=document.document_id,
-                        metadata=document.metadata,
-                    )
 
             # Step 3: Generate embeddings and store in Qdrant
             if len(chunks) > 0:

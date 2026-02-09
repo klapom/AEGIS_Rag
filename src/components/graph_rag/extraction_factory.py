@@ -43,9 +43,9 @@ class ExtractionPipelineFactory:
 
     Supports:
     - "llm_extraction": Pure LLM extraction via ExtractionService (Sprint 20) - DEFAULT
-    - "lightrag_default": Legacy LightRAG extraction (for comparison)
 
     Sprint 25 Feature 25.7: Removed "three_phase" option (deprecated per ADR-026)
+    Sprint 127: Removed "lightrag_default" option (LightRAG module removed)
 
     Example:
         >>> from src.core.config import get_settings
@@ -72,7 +72,6 @@ class ExtractionPipelineFactory:
         logger.info(
             "extraction_factory_creating_pipeline",
             pipeline_type=pipeline_type,
-            enable_legacy=getattr(config, "enable_legacy_extraction", False),
         )
 
         # Sprint 25 Feature 25.7: Removed three_phase option (deprecated per ADR-026)
@@ -87,11 +86,15 @@ class ExtractionPipelineFactory:
         if pipeline_type == "llm_extraction":
             return ExtractionPipelineFactory._create_llm_extraction(config)
         elif pipeline_type == "lightrag_default":
-            return ExtractionPipelineFactory._create_lightrag_legacy(config)
+            logger.warning(
+                "lightrag_default_deprecated",
+                note="lightrag_default extraction was removed in Sprint 127. "
+                "Falling back to llm_extraction.",
+            )
+            return ExtractionPipelineFactory._create_llm_extraction(config)
         else:
             raise ValueError(
-                f"Unsupported extraction pipeline: {pipeline_type}. "
-                f"Must be 'llm_extraction' or 'lightrag_default'"
+                f"Unsupported extraction pipeline: {pipeline_type}. Must be 'llm_extraction'"
             )
 
     @staticmethod
@@ -118,14 +121,14 @@ class ExtractionPipelineFactory:
             llm_config = LLMProxyConfig()
             extraction_model = llm_config.get_default_model("local_ollama", "extraction")
             if not extraction_model:
-                extraction_model = getattr(config, "lightrag_llm_model", "nemotron-3-nano")
+                extraction_model = getattr(config, "extraction_llm_model", "nemotron-3-nano")
             logger.info(
                 "extraction_model_from_yaml_config",
                 model=extraction_model,
                 source="llm_config.yml",
             )
         except Exception as e:
-            extraction_model = getattr(config, "lightrag_llm_model", "nemotron-3-nano")
+            extraction_model = getattr(config, "extraction_llm_model", "nemotron-3-nano")
             logger.warning(
                 "extraction_model_yaml_fallback",
                 model=extraction_model,
@@ -144,12 +147,12 @@ class ExtractionPipelineFactory:
 
             def __init__(self, config, model_override: str = None):
                 # Sprint 51: Use model from YAML config
-                model = model_override or getattr(config, "lightrag_llm_model", "nemotron-3-nano")
+                model = model_override or getattr(config, "extraction_llm_model", "nemotron-3-nano")
                 self.service = ExtractionService(
                     llm_model=model,
                     ollama_base_url=getattr(config, "ollama_base_url", "http://localhost:11434"),
                     temperature=0.1,  # Low for consistent results
-                    max_tokens=getattr(config, "lightrag_llm_max_tokens", 4000),
+                    max_tokens=4000,
                 )
 
                 logger.info(
@@ -255,60 +258,6 @@ class ExtractionPipelineFactory:
                 return (lightrag_entities, lightrag_relations)
 
         return LLMExtractionPipeline(config, model_override=extraction_model)
-
-    @staticmethod
-    def _create_lightrag_legacy(config) -> ExtractionPipeline:
-        """Create legacy LightRAG extraction wrapper.
-
-        Note: This is a compatibility wrapper for A/B testing.
-        The legacy pipeline uses llama3.2:3b for extraction which is
-        slower (~300s/doc) but can be useful for quality comparisons.
-
-        Returns:
-            LegacyLightRAGExtractor instance
-        """
-        # Import here to avoid circular dependencies
-        from src.components.graph_rag.lightrag_wrapper import LightRAGWrapper
-
-        logger.warning(
-            "legacy_lightrag_pipeline_created",
-            note="This pipeline is slower (~300s/doc vs ~15s for three_phase). "
-            "Only use for A/B testing or quality comparison.",
-        )
-
-        # Create wrapper that adapts LightRAGWrapper to ExtractionPipeline protocol
-        class LegacyLightRAGExtractor:
-            def __init__(self, config):
-                self.wrapper = LightRAGWrapper(
-                    llm_model=getattr(config, "lightrag_llm_model", "llama3.2:3b"),
-                    embedding_model=getattr(config, "lightrag_embedding_model", "nomic-embed-text"),
-                    working_dir=str(getattr(config, "lightrag_working_dir", "./data/lightrag")),
-                    neo4j_uri=getattr(config, "neo4j_uri", "bolt://localhost:7687"),
-                    neo4j_user=getattr(config, "neo4j_user", "neo4j"),
-                    neo4j_password=config.neo4j_password.get_secret_value(),
-                )
-
-            async def extract(
-                self, text: str, document_id: str = None
-            ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-                """Extract using legacy LightRAG pipeline."""
-                logger.warning(
-                    "legacy_extraction_invoked",
-                    document_id=document_id,
-                    text_length=len(text),
-                    note="Using slow legacy pipeline",
-                )
-
-                # Use LightRAG's default extraction (slow but comprehensive)
-                # Note: This is a simplified wrapper - full implementation would
-                # require extracting entities/relations from LightRAG's internal state
-                # For now, we raise NotImplementedError to prevent accidental use
-                raise NotImplementedError(
-                    "Legacy LightRAG extraction not fully implemented. "
-                    "Use three_phase pipeline instead."
-                )
-
-        return LegacyLightRAGExtractor(config)
 
 
 def create_extraction_pipeline_from_config(config=None) -> ExtractionPipeline:

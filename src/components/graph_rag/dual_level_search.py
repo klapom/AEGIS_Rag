@@ -95,7 +95,7 @@ class DualLevelSearch:
         self.neo4j_uri = neo4j_uri or settings.neo4j_uri
         self.neo4j_user = neo4j_user or settings.neo4j_user
         self.neo4j_password = neo4j_password or settings.neo4j_password.get_secret_value()
-        self.llm_model = llm_model or settings.lightrag_llm_model
+        self.llm_model = llm_model or settings.extraction_llm_model
         self.ollama_base_url = ollama_base_url or settings.ollama_base_url
 
         # Initialize Neo4j client

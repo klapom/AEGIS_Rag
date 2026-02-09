@@ -121,7 +121,6 @@ class BenchmarkCorpusIngestionPipeline:
         self._namespace_manager = namespace_manager
         self._benchmark_loader = get_benchmark_loader()
         self._bm25_search: BM25Search | None = None
-        self._lightrag_wrapper: Any = None
 
         self.collection_name = collection_name or settings.qdrant_collection
         self.batch_size = batch_size
@@ -163,14 +162,6 @@ class BenchmarkCorpusIngestionPipeline:
         if self._bm25_search is None:
             self._bm25_search = BM25Search()
         return self._bm25_search
-
-    async def get_lightrag_wrapper(self) -> Any:
-        """Get LightRAG wrapper (lazy async initialization)."""
-        if self._lightrag_wrapper is None:
-            from src.components.graph_rag.lightrag_wrapper import get_lightrag_wrapper_async
-
-            self._lightrag_wrapper = await get_lightrag_wrapper_async()
-        return self._lightrag_wrapper
 
     def _get_namespace_id(self, dataset_name: str) -> str:
         """Get namespace ID for a dataset.
@@ -526,30 +517,31 @@ class BenchmarkCorpusIngestionPipeline:
         # Sprint 43: Graph Extraction (optional, can be slow)
         if self.enable_graph and contexts:
             try:
+                from src.components.graph_rag.extraction_pipeline import extract_and_store_entities
+
                 graph_start = time.perf_counter()
 
-                # Get LightRAG wrapper
-                lightrag = await self.get_lightrag_wrapper()
-
-                # Prepare documents for graph extraction
-                graph_documents = [
+                # Prepare chunks for extraction_pipeline
+                chunks_for_extraction = [
                     {
+                        "chunk_id": ctx["metadata"]["chunk_id"],
                         "text": ctx["text"],
-                        "id": ctx["metadata"]["chunk_id"],
-                        "metadata": {
-                            "namespace_id": namespace_id,
-                            "source": ctx["metadata"]["source"],
-                        },
+                        "chunk_index": ctx["metadata"]["context_index"],
                     }
                     for ctx in contexts
                 ]
 
-                # Insert documents for entity extraction
-                # Note: This uses the optimized three-phase pipeline
-                result = await lightrag.insert_documents_optimized(graph_documents)
+                # Extract and store entities using extraction_pipeline
+                result = await extract_and_store_entities(
+                    chunks=chunks_for_extraction,
+                    document_id=namespace_id,
+                    document_path=f"benchmark_{namespace_id}",
+                    namespace_id=namespace_id,
+                    domain_id=None,
+                )
 
                 graph_duration_ms = (time.perf_counter() - graph_start) * 1000
-                stats["graph_entities_extracted"] = result.get("entities_created", 0)
+                stats["graph_entities_extracted"] = result.get("entity_count", 0)
 
                 logger.info(
                     "Graph extraction complete",

@@ -1,8 +1,9 @@
 """Unit tests for Maximum Hybrid Search.
 
 Sprint 51 - Feature 51.7: Maximum Hybrid Search Foundation
+Sprint 128: Updated to use DualLevelSearch instead of LightRAG.
 
-Tests for 4-signal hybrid search combining Qdrant, BM25, and LightRAG local/global.
+Tests for 4-signal hybrid search combining Qdrant, BM25, and Graph local/global.
 """
 
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -11,8 +12,8 @@ import pytest
 
 from src.components.retrieval.maximum_hybrid_search import (
     _bm25_search,
-    _lightrag_global_search,
-    _lightrag_local_search,
+    _graph_global_search,
+    _graph_local_search,
     _qdrant_search,
     maximum_hybrid_search,
 )
@@ -61,12 +62,21 @@ class TestMaximumHybridSearch:
                 return_value=mock_bm25_result,
             ),
             patch(
-                "src.components.retrieval.maximum_hybrid_search._lightrag_local_search",
-                return_value={"context": mock_local_context, "latency_ms": 100.0},
+                "src.components.retrieval.maximum_hybrid_search._graph_local_search",
+                return_value={
+                    "entities": ["Amsterdam", "Netherlands"],
+                    "context": mock_local_context,
+                    "latency_ms": 100.0,
+                },
             ),
             patch(
-                "src.components.retrieval.maximum_hybrid_search._lightrag_global_search",
-                return_value={"context": mock_global_context, "latency_ms": 120.0},
+                "src.components.retrieval.maximum_hybrid_search._graph_global_search",
+                return_value={
+                    "entities": ["Amsterdam", "Netherlands", "Europe"],
+                    "context": mock_global_context,
+                    "latency_ms": 120.0,
+                    "communities_count": 1,
+                },
             ),
             patch(
                 "src.components.retrieval.maximum_hybrid_search.cross_modal_fusion"
@@ -83,8 +93,8 @@ class TestMaximumHybridSearch:
             # Verify all signals were queried
             assert result.qdrant_results_count == 2
             assert result.bm25_results_count == 2
-            assert result.lightrag_local_entities_count == 2
-            assert result.lightrag_global_communities_count == 1
+            assert result.graph_local_entities_count == 2
+            assert result.graph_global_communities_count == 1
 
             # Verify RRF fusion happened (combined chunks)
             assert result.total_results > 0
@@ -110,15 +120,21 @@ class TestMaximumHybridSearch:
                 return_value={"results": [], "latency_ms": 30.0},
             ),
             patch(
-                "src.components.retrieval.maximum_hybrid_search._lightrag_local_search",
+                "src.components.retrieval.maximum_hybrid_search._graph_local_search",
                 return_value={
+                    "entities": ["Amsterdam"],
                     "context": "# Entities\n- Amsterdam: Capital",
                     "latency_ms": 100.0,
                 },
             ),
             patch(
-                "src.components.retrieval.maximum_hybrid_search._lightrag_global_search",
-                return_value={"context": "", "latency_ms": 0},
+                "src.components.retrieval.maximum_hybrid_search._graph_global_search",
+                return_value={
+                    "entities": [],
+                    "context": "",
+                    "latency_ms": 0,
+                    "communities_count": 0,
+                },
             ),
             patch(
                 "src.components.retrieval.maximum_hybrid_search.cross_modal_fusion"
@@ -158,12 +174,21 @@ class TestMaximumHybridSearch:
                 return_value={"results": [], "latency_ms": 30.0},
             ),
             patch(
-                "src.components.retrieval.maximum_hybrid_search._lightrag_local_search",
-                return_value={"context": "# Entities\n- Amsterdam: Capital", "latency_ms": 100.0},
+                "src.components.retrieval.maximum_hybrid_search._graph_local_search",
+                return_value={
+                    "entities": ["Amsterdam"],
+                    "context": "# Entities\n- Amsterdam: Capital",
+                    "latency_ms": 100.0,
+                },
             ),
             patch(
-                "src.components.retrieval.maximum_hybrid_search._lightrag_global_search",
-                return_value={"context": "", "latency_ms": 0},
+                "src.components.retrieval.maximum_hybrid_search._graph_global_search",
+                return_value={
+                    "entities": [],
+                    "context": "",
+                    "latency_ms": 0,
+                    "communities_count": 0,
+                },
             ),
             patch(
                 "src.components.retrieval.maximum_hybrid_search.cross_modal_fusion"
@@ -192,12 +217,17 @@ class TestMaximumHybridSearch:
                 return_value={"results": [{"id": "chunk1", "score": 10.0}], "latency_ms": 30.0},
             ),
             patch(
-                "src.components.retrieval.maximum_hybrid_search._lightrag_local_search",
-                return_value={"context": "", "latency_ms": 0},
+                "src.components.retrieval.maximum_hybrid_search._graph_local_search",
+                return_value={"entities": [], "context": "", "latency_ms": 0},
             ),
             patch(
-                "src.components.retrieval.maximum_hybrid_search._lightrag_global_search",
-                return_value={"context": "", "latency_ms": 0},
+                "src.components.retrieval.maximum_hybrid_search._graph_global_search",
+                return_value={
+                    "entities": [],
+                    "context": "",
+                    "latency_ms": 0,
+                    "communities_count": 0,
+                },
             ),
             patch("src.components.retrieval.maximum_hybrid_search.cross_modal_fusion"),
         ):
@@ -289,76 +319,90 @@ class TestBM25Search:
         assert result["latency_ms"] == 0
 
 
-class TestLightRAGLocalSearch:
-    """Tests for _lightrag_local_search() helper function."""
+class TestGraphLocalSearch:
+    """Tests for _graph_local_search() helper function."""
 
     @pytest.mark.asyncio
-    async def test_lightrag_local_search_success(self):
-        """Test successful LightRAG local mode query."""
-        mock_lightrag = MagicMock()
-        mock_result = MagicMock()
-        mock_result.answer = "# Entities\n- Amsterdam: Capital city"
-        mock_lightrag.query_graph = AsyncMock(return_value=mock_result)
+    async def test_graph_local_search_success(self):
+        """Test successful graph local mode query."""
+        mock_dual_search = MagicMock()
 
-        result = await _lightrag_local_search(
-            lightrag_client=mock_lightrag,
+        # Create mock GraphEntity with matched_entities
+        mock_entity = MagicMock()
+        mock_entity.name = "Amsterdam"
+        mock_entity.properties = {"matched_entities": ["Amsterdam", "Capital city"]}
+
+        # local_search returns (list[GraphEntity], metadata)
+        mock_dual_search.local_search = AsyncMock(return_value=([mock_entity], {}))
+
+        result = await _graph_local_search(
+            dual_search=mock_dual_search,
             query="Amsterdam",
         )
 
-        assert result["context"] == "# Entities\n- Amsterdam: Capital city"
+        assert "Amsterdam" in result["context"]
+        assert "Amsterdam" in result["entities"]
         assert result["latency_ms"] > 0
 
-        # Verify query_graph called with local mode
-        mock_lightrag.query_graph.assert_called_once()
-        call_kwargs = mock_lightrag.query_graph.call_args.kwargs
-        assert call_kwargs["mode"] == "local"
+        # Verify local_search was called
+        mock_dual_search.local_search.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_lightrag_local_search_handles_error(self):
-        """Test error handling in LightRAG local search."""
-        mock_lightrag = MagicMock()
-        mock_lightrag.query_graph = AsyncMock(side_effect=Exception("LightRAG failed"))
+    async def test_graph_local_search_handles_error(self):
+        """Test error handling in graph local search."""
+        mock_dual_search = MagicMock()
+        mock_dual_search.local_search = AsyncMock(side_effect=Exception("Graph search failed"))
 
-        result = await _lightrag_local_search(
-            lightrag_client=mock_lightrag,
+        result = await _graph_local_search(
+            dual_search=mock_dual_search,
             query="test",
         )
 
         assert result["context"] == ""
+        assert result["entities"] == []
         assert result["latency_ms"] == 0
 
 
-class TestLightRAGGlobalSearch:
-    """Tests for _lightrag_global_search() helper function."""
+class TestGraphGlobalSearch:
+    """Tests for _graph_global_search() helper function."""
 
     @pytest.mark.asyncio
-    async def test_lightrag_global_search_success(self):
-        """Test successful LightRAG global mode query."""
-        mock_lightrag = MagicMock()
-        mock_result = MagicMock()
-        mock_result.answer = "## Community 1\n- Theme: Geography"
-        mock_lightrag.query_graph = AsyncMock(return_value=mock_result)
+    async def test_graph_global_search_success(self):
+        """Test successful graph global mode query."""
+        mock_dual_search = MagicMock()
 
-        result = await _lightrag_global_search(
-            lightrag_client=mock_lightrag,
+        # Create mock Topic
+        mock_topic = MagicMock()
+        mock_topic.name = "Geography"
+        mock_topic.summary = "Information about geographical locations"
+        mock_topic.entities = ["Amsterdam", "Netherlands"]
+        mock_topic.keywords = ["Europe", "city"]
+
+        # global_search returns list[Topic]
+        mock_dual_search.global_search = AsyncMock(return_value=[mock_topic])
+
+        result = await _graph_global_search(
+            dual_search=mock_dual_search,
             query="Amsterdam",
         )
 
-        assert result["context"] == "## Community 1\n- Theme: Geography"
+        assert "Geography" in result["context"]
+        assert "Amsterdam" in result["entities"]
+        assert "Netherlands" in result["entities"]
         assert result["latency_ms"] > 0
+        assert result["communities_count"] == 1
 
-        # Verify query_graph called with global mode
-        call_kwargs = mock_lightrag.query_graph.call_args.kwargs
-        assert call_kwargs["mode"] == "global"
+        # Verify global_search was called
+        mock_dual_search.global_search.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_lightrag_global_search_handles_error(self):
-        """Test error handling in LightRAG global search."""
-        mock_lightrag = MagicMock()
-        mock_lightrag.query_graph = AsyncMock(side_effect=Exception("LightRAG failed"))
+    async def test_graph_global_search_handles_error(self):
+        """Test error handling in graph global search."""
+        mock_dual_search = MagicMock()
+        mock_dual_search.global_search = AsyncMock(side_effect=Exception("Graph search failed"))
 
-        result = await _lightrag_global_search(
-            lightrag_client=mock_lightrag,
+        result = await _graph_global_search(
+            dual_search=mock_dual_search,
             query="test",
         )
 

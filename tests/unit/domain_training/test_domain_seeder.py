@@ -200,7 +200,7 @@ class TestDomainSeeder:
             ),
             patch("src.components.domain_training.domain_seeder.settings") as mock_settings,
         ):
-            mock_settings.lightrag_llm_model = "qwen3:32b"
+            mock_settings.extraction_llm_model = "qwen3:32b"
             await seed_default_domains()
 
             # Assert

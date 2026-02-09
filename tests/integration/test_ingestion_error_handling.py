@@ -254,9 +254,9 @@ async def test_graph_extraction_failure__neo4j_unavailable__vector_data_saved():
 
         # Mock Neo4j connection failure
         with patch(
-            "src.components.ingestion.langgraph_nodes.get_lightrag_wrapper_async"
-        ) as mock_lightrag:
-            mock_lightrag.side_effect = Exception("Neo4j connection refused")
+            "src.components.ingestion.nodes.graph_extraction.extract_and_store_entities"
+        ) as mock_extract:
+            mock_extract.side_effect = Exception("Neo4j connection refused")
 
             # Action: Run graph_extraction_node
             updated_state = await graph_extraction_node(state)
@@ -308,9 +308,9 @@ async def test_partial_failure__vlm_and_graph_fail__qdrant_succeeds():
     try:
         # Mock VLM and Graph failures, but allow Qdrant to succeed
         with patch(
-            "src.components.ingestion.langgraph_nodes.get_lightrag_wrapper_async"
-        ) as mock_lightrag:
-            mock_lightrag.side_effect = Exception("Neo4j unavailable")
+            "src.components.ingestion.nodes.graph_extraction.extract_and_store_entities"
+        ) as mock_extract:
+            mock_extract.side_effect = Exception("Neo4j unavailable")
 
             # Create state
             state = create_initial_state(

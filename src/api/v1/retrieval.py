@@ -736,6 +736,11 @@ async def upload_file(
             # Use new LangGraph ingestion pipeline (Sprint 21)
             from src.components.ingestion import run_ingestion_pipeline
 
+            # Sprint 128: Normalize domain_id="auto" to None before pipeline
+            # "auto" means auto-classify — must not be stored as literal string
+            if domain_id and domain_id.lower() == "auto":
+                domain_id = None
+
             start_time = datetime.now()
             final_state = await run_ingestion_pipeline(
                 document_path=str(temp_path),

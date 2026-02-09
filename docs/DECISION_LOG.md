@@ -1096,7 +1096,19 @@
 
 ---
 
-**Last Updated:** 2026-02-08 (Sprint 127 ✅)
-**Total Decisions Documented:** 177 (+4 from Sprint 127)
-**Current Sprint:** Sprint 127 ✅ COMPLETE (RAGAS Phase 1 Benchmark)
-**Next Sprint:** Sprint 128 (LightRAG Removal + Cascade Timeout Guard + Full RAGAS Ingestion)
+## SPRINT 128: LIGHTRAG REMOVAL + INGESTION FIXES
+
+### 2026-02-09 | Remove LightRAG dependency entirely (Sprint 128.1)
+**Decision:** Delete all 8 LightRAG files (~2,500 LOC), replace 3 used functions with existing AegisRAG code (Neo4jClient, DualLevelSearch), remove `lightrag-hku` from pyproject.toml.
+**Rationale:** Sprint 127 proved LightRAG caused 92% extraction overhead (double extraction via `ainsert_custom_kg`), 79% generic RELATED_TO relations (overwriting typed relations), and ghost requests (34.8% at 3-5 concurrent vLLM). Only 3 functions were used from 12,000 LOC dependency.
+
+### 2026-02-09 | Normalize domain_id="auto" at pipeline entry (Sprint 128.1b)
+**Decision:** Convert `domain_id="auto"` to `None` in `create_initial_state()` (central) and `upload_file()` (endpoint), instead of only in `graph_extraction_node()`.
+**Rationale:** Pipeline order is `embedding → graph`. The embedding node writes Qdrant payload BEFORE graph_extraction resolves "auto" to None. This caused `domain_id="auto"` to be stored literally in Qdrant payloads, breaking domain-filtered queries.
+
+---
+
+**Last Updated:** 2026-02-09 (Sprint 128 🔄)
+**Total Decisions Documented:** 179 (+2 from Sprint 128)
+**Current Sprint:** Sprint 128 🔄 IN PROGRESS (LightRAG Removal + Ingestion Fixes)
+**Next Sprint:** Sprint 129 (Domain Editor UI + Table Ingestion)

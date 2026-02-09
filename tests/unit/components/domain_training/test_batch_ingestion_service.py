@@ -226,8 +226,7 @@ class TestBatchIngestionService:
         with patch("src.components.chunking.chunk_text") as mock_chunk:
             mock_chunk.return_value = ["FastAPI is a modern web framework."]
 
-            mock_lightrag = AsyncMock()
-            mock_lightrag.extract_entities_and_relations = AsyncMock(
+            mock_extract = AsyncMock(
                 return_value={
                     "entities": [{"name": "FastAPI"}],
                     "relations": [
@@ -235,11 +234,10 @@ class TestBatchIngestionService:
                     ],
                 }
             )
-            mock_lightrag.create_mentioned_in_relation = AsyncMock()
 
             with patch(
-                "src.components.graph_rag.lightrag_wrapper.get_lightrag_wrapper_async",
-                return_value=mock_lightrag,
+                "src.components.domain_training.batch_ingestion_service.extract_and_store_entities",
+                mock_extract,
             ):
                 mock_embedding_service = AsyncMock()
                 mock_embedding_service.embed_batch = AsyncMock(return_value=[[0.1, 0.2, 0.3]])

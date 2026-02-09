@@ -46,12 +46,12 @@ def mock_redis_memory():
 
 
 @pytest.fixture
-def mock_lightrag_wrapper():
-    """Mock LightRAG wrapper."""
-    wrapper = AsyncMock()
-    wrapper._clear_neo4j_database = AsyncMock()
-    wrapper.get_stats = AsyncMock(return_value={"entity_count": 856, "relationship_count": 1204})
-    return wrapper
+def mock_neo4j_client():
+    """Mock Neo4j client."""
+    client = AsyncMock()
+    client.execute_query = AsyncMock()
+    client.get_stats = AsyncMock(return_value={"entity_count": 856, "relationship_count": 1204})
+    return client
 
 
 class TestGetLastReindexTimestamp:
