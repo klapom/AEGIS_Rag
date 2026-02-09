@@ -53,6 +53,8 @@ export function DomainDetailDialog({ domain, isOpen, onClose, onDeleted }: Domai
   const [editingMapping, setEditingMapping] = useState(false);
   const [draftMapping, setDraftMapping] = useState<Record<string, string>>({});
   const [draftHints, setDraftHints] = useState<string>('');
+  const [draftWindowSize, setDraftWindowSize] = useState<number | null>(null);
+  const [draftOverlap, setDraftOverlap] = useState<number | null>(null);
 
   // Delete functionality
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -391,7 +393,7 @@ export function DomainDetailDialog({ domain, isOpen, onClose, onDeleted }: Domai
               <InfoRow label="Name" value={domain.name} />
               <InfoRow label="Description" value={domain.description || '-'} />
               <div className="flex justify-between" data-testid="domain-llm-model">
-                <span className="text-sm text-gray-600">LLM Model</span>
+                <span className="text-sm text-gray-600">Extraction Model</span>
                 <span className="text-sm font-medium text-gray-900">{domain.llm_model || 'Not configured'}</span>
               </div>
               {domain.created_at && (
@@ -412,6 +414,8 @@ export function DomainDetailDialog({ domain, isOpen, onClose, onDeleted }: Domai
                   onClick={() => {
                     setDraftMapping(domainDetails?.entity_sub_type_mapping || {});
                     setDraftHints((domainDetails?.relation_hints || []).join('\n'));
+                    setDraftWindowSize(domainDetails?.cross_sentence_window_size ?? null);
+                    setDraftOverlap(domainDetails?.cross_sentence_overlap ?? null);
                     setEditingMapping(true);
                   }}
                   className="px-3 py-1 text-xs font-medium text-blue-600 border border-blue-300 rounded hover:bg-blue-50"
@@ -436,6 +440,8 @@ export function DomainDetailDialog({ domain, isOpen, onClose, onDeleted }: Domai
                         await updateDomain(domain.name, {
                           entity_sub_type_mapping: Object.keys(draftMapping).length > 0 ? draftMapping : undefined,
                           relation_hints: hints.length > 0 ? hints : undefined,
+                          cross_sentence_window_size: draftWindowSize,
+                          cross_sentence_overlap: draftOverlap,
                         });
                         setEditingMapping(false);
                         setOperationMessage({ type: 'success', text: 'Mapping updated successfully. Changes take effect on next extraction.' });
@@ -478,6 +484,51 @@ export function DomainDetailDialog({ domain, isOpen, onClose, onDeleted }: Domai
                   />
                 ) : (
                   <HintsDisplay hints={domainDetails?.relation_hints || []} />
+                )}
+              </div>
+
+              {/* Cross-Sentence Window Config (Sprint 128) */}
+              <div>
+                <p className="text-xs font-medium text-gray-500 mb-2">Cross-Sentence Extraction Windows</p>
+                {editingMapping ? (
+                  <div className="flex items-center gap-4" data-testid="edit-window-config">
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs text-gray-600 whitespace-nowrap">Window Size</label>
+                      <input
+                        type="number"
+                        min={2}
+                        max={10}
+                        value={draftWindowSize ?? ''}
+                        onChange={(e) => setDraftWindowSize(e.target.value ? Number(e.target.value) : null)}
+                        placeholder="3"
+                        className="w-16 px-2 py-1 border border-gray-300 rounded text-sm text-center focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        data-testid="edit-window-size"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs text-gray-600 whitespace-nowrap">Overlap</label>
+                      <input
+                        type="number"
+                        min={0}
+                        max={5}
+                        value={draftOverlap ?? ''}
+                        onChange={(e) => setDraftOverlap(e.target.value ? Number(e.target.value) : null)}
+                        placeholder="1"
+                        className="w-16 px-2 py-1 border border-gray-300 rounded text-sm text-center focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        data-testid="edit-window-overlap"
+                      />
+                    </div>
+                    <span className="text-xs text-gray-400">(empty = global default)</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-4 text-sm" data-testid="window-config-display">
+                    <span className="text-gray-600">
+                      Window Size: <span className="font-medium text-gray-900">{domainDetails?.cross_sentence_window_size ?? 'default (3)'}</span>
+                    </span>
+                    <span className="text-gray-600">
+                      Overlap: <span className="font-medium text-gray-900">{domainDetails?.cross_sentence_overlap ?? 'default (1)'}</span>
+                    </span>
+                  </div>
                 )}
               </div>
             </div>

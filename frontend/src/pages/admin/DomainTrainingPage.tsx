@@ -8,7 +8,6 @@
  */
 
 import { useState, lazy, Suspense } from 'react';
-import { Info } from 'lucide-react';
 import { useDomains } from '../../hooks/useDomainTraining';
 import { DomainList } from '../../components/admin/DomainList';
 import { AdminNavigationBar } from '../../components/admin/AdminNavigationBar';
@@ -36,23 +35,6 @@ export function DomainTrainingPage() {
       {/* Admin Navigation */}
       <div className="mb-4">
         <AdminNavigationBar />
-      </div>
-
-      {/* Under Development Banner (Feature 64.2) */}
-      <div
-        className="p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-3 mb-6"
-        data-testid="development-banner"
-        role="status"
-      >
-        <Info className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" aria-hidden="true" />
-        <div>
-          <h4 className="text-sm font-semibold text-blue-800">Feature Status</h4>
-          <p className="text-sm text-blue-700 mt-1">
-            DSPy domain training is currently in active development.
-            Core functionality is operational but metrics may be simulated during optimization.
-            Full production-ready implementation expected in next release.
-          </p>
-        </div>
       </div>
 
       {/* Header */}

@@ -269,14 +269,20 @@ def create_metrics_from_extraction(
     # Count entity types
     entity_types: dict[str, int] = {}
     for entity in entities:
-        entity_type = entity.type if hasattr(entity, "type") else entity.get("type", "UNKNOWN")
+        entity_type = (
+            entity.type
+            if hasattr(entity, "type")
+            else entity.get("entity_type", entity.get("type", "UNKNOWN"))
+        )
         entity_types[entity_type] = entity_types.get(entity_type, 0) + 1
 
     # Count relation types
     relation_types: dict[str, int] = {}
     for relation in relations:
         relation_type = (
-            relation.type if hasattr(relation, "type") else relation.get("type", "RELATES_TO")
+            relation.type
+            if hasattr(relation, "type")
+            else relation.get("relation_type", relation.get("type", "RELATES_TO"))
         )
         relation_types[relation_type] = relation_types.get(relation_type, 0) + 1
 

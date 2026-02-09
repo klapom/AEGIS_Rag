@@ -214,6 +214,14 @@ class DomainResponse(BaseModel):
         default=None,
         description="Sprint 126: Domain-specific relation examples",
     )
+    cross_sentence_window_size: int | None = Field(
+        default=None,
+        description="Sprint 128: Cross-sentence window size for relation extraction",
+    )
+    cross_sentence_overlap: int | None = Field(
+        default=None,
+        description="Sprint 128: Cross-sentence window overlap",
+    )
 
 
 class TrainingStep(BaseModel):
@@ -931,6 +939,8 @@ async def get_domain(domain_name: str) -> DomainResponse:
             trained_at=str(domain["trained_at"]) if domain.get("trained_at") else None,
             entity_sub_type_mapping=_parse_json_field(domain.get("entity_sub_type_mapping"), {}),
             relation_hints=_parse_json_field(domain.get("relation_hints"), []),
+            cross_sentence_window_size=domain.get("cross_sentence_window_size"),
+            cross_sentence_overlap=domain.get("cross_sentence_overlap"),
         )
 
     except HTTPException:
@@ -1011,6 +1021,11 @@ async def update_domain(
             update_data["entity_sub_type_mapping"] = update_request.entity_sub_type_mapping
         if update_request.relation_hints is not None:
             update_data["relation_hints"] = update_request.relation_hints
+        # Sprint 128: Per-domain cross-sentence window config
+        if update_request.cross_sentence_window_size is not None:
+            update_data["cross_sentence_window_size"] = update_request.cross_sentence_window_size
+        if update_request.cross_sentence_overlap is not None:
+            update_data["cross_sentence_overlap"] = update_request.cross_sentence_overlap
 
         # Update domain
         updated_domain = await repo.update_domain(domain_name, **update_data)

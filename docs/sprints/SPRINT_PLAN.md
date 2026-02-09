@@ -2139,6 +2139,7 @@ Sprint 117.1 (Domain CRUD) - Foundation
 | 128.3 | RAGAS Phase 1 Full Ingestion (488 remaining docs, post-LightRAG) | 8 | 📝 |
 | 128.4 | HyDE Query Expansion (5th RRF signal, LLM cache) | 5 | ✅ DONE |
 | 128.5 | LLM Config Page — Engine-Aware Model Selection | 5 | ✅ DONE |
+| 128.6 | E2E pipeline fixes + per-domain cross-sentence window config + LightRAG env cleanup | 3 | ✅ DONE |
 
 **Key Decisions:**
 - ADR-061: LightRAG provides only 3 functions; 92% extraction time is duplicate overhead

@@ -151,6 +151,37 @@ async def graph_extraction_node(state: IngestionState) -> IngestionState:
                                     method="bge_m3_auto",
                                     active_domains_count=len(active_domain_ids),
                                 )
+
+                                # Backfill Qdrant payloads with classified domain_id
+                                # (embedding_node runs before graph_extraction_node,
+                                #  so Qdrant vectors were stored with domain_id=null)
+                                backfill_ids = state.get("embedded_chunk_ids", [])
+                                if backfill_ids:
+                                    try:
+                                        from qdrant_client import QdrantClient
+                                        from src.core.config import settings as _settings
+
+                                        qdrant = QdrantClient(
+                                            host=_settings.qdrant_host,
+                                            port=_settings.qdrant_port,
+                                        )
+                                        qdrant.set_payload(
+                                            collection_name="documents_v1",
+                                            payload={"domain_id": classified_domain},
+                                            points=backfill_ids,
+                                        )
+                                        logger.info(
+                                            "qdrant_domain_backfill_complete",
+                                            document_id=state["document_id"],
+                                            domain=classified_domain,
+                                            points_updated=len(backfill_ids),
+                                        )
+                                    except Exception as e:
+                                        logger.warning(
+                                            "qdrant_domain_backfill_failed",
+                                            error=str(e),
+                                            document_id=state["document_id"],
+                                        )
                             else:
                                 logger.info(
                                     "domain_classified_but_inactive",

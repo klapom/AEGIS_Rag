@@ -462,7 +462,9 @@ class DomainRepository:
                        d.created_at as created_at, d.updated_at as updated_at,
                        d.trained_at as trained_at,
                        d.entity_sub_type_mapping as entity_sub_type_mapping,
-                       d.relation_hints as relation_hints
+                       d.relation_hints as relation_hints,
+                       d.cross_sentence_window_size as cross_sentence_window_size,
+                       d.cross_sentence_overlap as cross_sentence_overlap
                 """,
                 {"name": name},
             )
@@ -499,7 +501,9 @@ class DomainRepository:
                        d.status as status, d.created_at as created_at,
                        d.trained_at as trained_at,
                        d.entity_sub_type_mapping as entity_sub_type_mapping,
-                       d.relation_hints as relation_hints
+                       d.relation_hints as relation_hints,
+                       d.cross_sentence_window_size as cross_sentence_window_size,
+                       d.cross_sentence_overlap as cross_sentence_overlap
                 ORDER BY d.created_at DESC
                 """
             )
@@ -882,6 +886,8 @@ class DomainRepository:
         llm_config: dict[str, Any] | None = None,
         entity_sub_type_mapping: dict[str, str] | None = None,
         relation_hints: list[str] | None = None,
+        cross_sentence_window_size: int | None = None,
+        cross_sentence_overlap: int | None = None,
     ) -> dict[str, Any]:
         """Update domain configuration.
 
@@ -978,6 +984,15 @@ class DomainRepository:
         if relation_hints is not None:
             set_clauses.append("d.relation_hints = $relation_hints")
             params["relation_hints"] = json.dumps(relation_hints)
+
+        # Sprint 128: Per-domain cross-sentence window config
+        if cross_sentence_window_size is not None:
+            set_clauses.append("d.cross_sentence_window_size = $cross_sentence_window_size")
+            params["cross_sentence_window_size"] = cross_sentence_window_size
+
+        if cross_sentence_overlap is not None:
+            set_clauses.append("d.cross_sentence_overlap = $cross_sentence_overlap")
+            params["cross_sentence_overlap"] = cross_sentence_overlap
 
         set_clause = ", ".join(set_clauses)
 

@@ -22,6 +22,8 @@ export interface Domain {
   updated_at?: string;
   entity_sub_type_mapping?: Record<string, string>;
   relation_hints?: string[];
+  cross_sentence_window_size?: number | null;
+  cross_sentence_overlap?: number | null;
 }
 
 // Training sample format - matches API directly
@@ -61,6 +63,8 @@ export interface UpdateDomainRequest {
   llm_model?: string;
   entity_sub_type_mapping?: Record<string, string>;
   relation_hints?: string[];
+  cross_sentence_window_size?: number | null;
+  cross_sentence_overlap?: number | null;
 }
 
 export interface DomainsResponse {

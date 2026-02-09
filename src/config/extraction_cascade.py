@@ -82,8 +82,8 @@ class CascadeRankConfig:
 
 
 # Default 3-Rank Cascade Configuration
-# Sprint 124: Read model from environment (LIGHTRAG_LLM_MODEL) instead of hardcoding
-_DEFAULT_EXTRACTION_MODEL = os.environ.get("LIGHTRAG_LLM_MODEL", "nemotron-3-nano:128k")
+# Sprint 128: Read model from EXTRACTION_LLM_MODEL env var (was LIGHTRAG_LLM_MODEL)
+_DEFAULT_EXTRACTION_MODEL = os.environ.get("EXTRACTION_LLM_MODEL", "nemotron-3-nano:128k")
 
 DEFAULT_CASCADE: list[CascadeRankConfig] = [
     # Rank 1: Nemotron-3-Nano (LLM-Only) - Fast, local, 300s timeout

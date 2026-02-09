@@ -699,10 +699,15 @@ def _should_use_cross_sentence(text: str) -> bool:
     return sentence_count > CROSS_SENTENCE_THRESHOLD
 
 
-def _get_cross_sentence_windows(text: str) -> list[str]:
+def _get_cross_sentence_windows(
+    text: str,
+    window_size: int | None = None,
+    overlap: int | None = None,
+) -> list[str]:
     """Get cross-sentence windows for extraction.
 
     Sprint 86.8: Uses sliding window approach for relation extraction.
+    Sprint 128: Accepts per-domain window_size/overlap overrides.
 
     Args:
         text: Input text
@@ -720,8 +725,8 @@ def _get_cross_sentence_windows(text: str) -> list[str]:
 
         extractor = get_cross_sentence_extractor(
             lang="en",
-            window_size=3,
-            overlap=1,
+            window_size=window_size or settings.cross_sentence_window_size,
+            overlap=overlap if overlap is not None else settings.cross_sentence_overlap,
         )
 
         windows = list(extractor.create_windows(text))
@@ -1022,10 +1027,8 @@ class ExtractionService:
         """
         # Store explicit model or None (fetch from Admin UI config on first use)
         self._explicit_llm_model = llm_model
-        self.temperature = (
-            temperature if temperature is not None else settings.lightrag_llm_temperature
-        )
-        self.max_tokens = max_tokens or settings.lightrag_llm_max_tokens
+        self.temperature = temperature if temperature is not None else 0.1
+        self.max_tokens = max_tokens or 4096
 
         # Initialize AegisLLMProxy for multi-cloud routing
         self.llm_proxy = AegisLLMProxy()
@@ -3257,8 +3260,27 @@ class ExtractionService:
         Returns:
             Merged and deduplicated relationships
         """
+        # Sprint 128: Fetch per-domain window config (if domain is set)
+        domain_window_size = None
+        domain_overlap = None
+        if domain:
+            try:
+                from src.components.domain_training import get_domain_repository
+
+                repo = get_domain_repository()
+                domain_data = await repo.get_domain(domain)
+                if domain_data:
+                    domain_window_size = domain_data.get("cross_sentence_window_size")
+                    domain_overlap = domain_data.get("cross_sentence_overlap")
+            except Exception:  # noqa: B110 — intentional: fall back to global defaults
+                logger.debug("domain_window_config_fetch_failed", domain=domain)
+
         # Get windows
-        windows = _get_cross_sentence_windows(text)
+        windows = _get_cross_sentence_windows(
+            text,
+            window_size=domain_window_size,
+            overlap=domain_overlap,
+        )
 
         if len(windows) <= 1:
             # No windowing needed, use standard extraction

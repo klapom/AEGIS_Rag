@@ -237,8 +237,7 @@ class Settings(BaseSettings):
 
         extraction_pipeline (Literal): Entity/relation extraction pipeline
             - 'llm_extraction': Pure LLM (NO SpaCy, high quality) - DEFAULT (ADR-026, ADR-037)
-            - 'lightrag_default': Legacy LightRAG baseline
-            Note: 'three_phase' removed in Sprint 25 (deprecated per ADR-026)
+            Note: 'lightrag_default' and 'three_phase' removed (Sprint 128 LightRAG removal)
 
         retrieval_top_k (int): Number of documents to retrieve (default: 5)
         retrieval_score_threshold (float): Minimum relevance score (default: 0.7)
@@ -670,6 +669,14 @@ class Settings(BaseSettings):
         description="Timeout per chunk extraction in seconds (Sprint 37)",
     )
 
+    # Cross-Sentence Window Configuration (Sprint 128)
+    cross_sentence_window_size: int = Field(
+        default=3, ge=2, le=10, description="Number of entity groups per cross-sentence window"
+    )
+    cross_sentence_overlap: int = Field(
+        default=1, ge=0, le=5, description="Overlap between consecutive cross-sentence windows"
+    )
+
     # Neo4j Graph Database
     neo4j_uri: str = Field(default="bolt://localhost:7687", description="Neo4j connection URI")
     neo4j_user: str = Field(default="neo4j", description="Neo4j username")
@@ -871,10 +878,10 @@ class Settings(BaseSettings):
         description="Maximum recursion depth for LangGraph execution",
     )
 
-    # Extraction LLM Configuration (Sprint 127: renamed from lightrag_llm_model)
+    # Extraction LLM Configuration (Sprint 128: LIGHTRAG_LLM_MODEL → EXTRACTION_LLM_MODEL)
     extraction_llm_model: str = Field(
         default="nemotron-3-nano",
-        description="Ollama LLM model for entity extraction - use EXTRACTION_LLM_MODEL env var to override",
+        description="Ollama LLM model for entity/relation extraction fallback (vLLM is primary)",
     )
 
     # MCP Server

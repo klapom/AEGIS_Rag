@@ -3,16 +3,16 @@
 Sprint 13 Feature 13.9: ADR-018 - Initial implementation with Gemma 3 4B
 Sprint 14 Feature 14.5: Added retry logic and error handling
 Sprint 23 Feature 23.6: AegisLLMProxy Integration
-Sprint 124: Configurable model via LIGHTRAG_LLM_MODEL env var (no hardcoding)
+Sprint 124: Configurable model via env var (no hardcoding)
+Sprint 128: Renamed LIGHTRAG_LLM_MODEL → EXTRACTION_LLM_MODEL (LightRAG removed)
 Migrated from Ollama Client to multi-cloud LLM proxy (Local → Alibaba Cloud → OpenAI).
-Default model: Uses LIGHTRAG_LLM_MODEL env var, fallback to nemotron-3-nano.
+Default model: Uses settings.extraction_llm_model, fallback to nemotron-3-nano.
 
 Author: Claude Code
-Date: 2025-10-24, Updated: 2026-02-05
+Date: 2025-10-24, Updated: 2026-02-09
 """
 
 import json
-import os
 import re
 from typing import Any
 
@@ -120,7 +120,7 @@ class RelationExtractor:
 
     def __init__(
         self,
-        model: str | None = None,  # Sprint 124: Read from LIGHTRAG_LLM_MODEL env var
+        model: str | None = None,  # Sprint 128: Read from settings.extraction_llm_model
         temperature: float = 0.1,
         num_predict: int = 8192,
         num_ctx: int = 32768,
@@ -130,12 +130,12 @@ class RelationExtractor:
     ) -> None:
         """Initialize relation extractor with configurable model.
 
-        Sprint 124: Model is now configurable via LIGHTRAG_LLM_MODEL env var.
+        Sprint 128: Model reads from settings.extraction_llm_model (was LIGHTRAG_LLM_MODEL).
         This ensures RelationExtractor uses the same model as entity extraction.
 
         Args:
-            model: Preferred local model name. If None, reads from LIGHTRAG_LLM_MODEL
-                  env var, falling back to 'nemotron-3-nano' if not set.
+            model: Preferred local model name. If None, reads from settings.extraction_llm_model
+                  falling back to 'nemotron-3-nano' if not set.
             temperature: LLM temperature (0.0-1.0, lower = more deterministic)
             num_predict: Max tokens to generate
             num_ctx: Context window size
@@ -143,9 +143,11 @@ class RelationExtractor:
             retry_min_wait: Min wait time between retries in seconds (Sprint 14)
             retry_max_wait: Max wait time between retries in seconds (Sprint 14)
         """
-        # Sprint 124: Use LIGHTRAG_LLM_MODEL env var for consistency with entity extraction
+        # Sprint 128: Use settings.extraction_llm_model (was LIGHTRAG_LLM_MODEL env var)
         if model is None:
-            model = os.environ.get("LIGHTRAG_LLM_MODEL", "nemotron-3-nano")
+            from src.core.config import settings
+
+            model = settings.extraction_llm_model or "nemotron-3-nano"
         self.model = model
         # Sprint 23: Use AegisLLMProxy instead of direct Ollama client
         self.proxy = get_aegis_llm_proxy()
@@ -156,10 +158,8 @@ class RelationExtractor:
         self.retry_min_wait = retry_min_wait
         self.retry_max_wait = retry_max_wait
 
-        # Sprint 124: Log model source for debugging
-        model_source = (
-            "LIGHTRAG_LLM_MODEL env" if os.environ.get("LIGHTRAG_LLM_MODEL") else "default"
-        )
+        # Sprint 128: Log model source for debugging
+        model_source = "settings.extraction_llm_model"
         logger.info(
             "relation_extractor_initialized",
             model=model,
@@ -577,8 +577,8 @@ def create_relation_extractor_from_config(config) -> RelationExtractor:
         >>> extractor = create_relation_extractor_from_config(settings)
     """
     # Sprint 23: No longer need Ollama client - AegisLLMProxy handles routing
-    # Sprint 124: Env var LIGHTRAG_LLM_MODEL takes precedence over config
-    model = os.environ.get("LIGHTRAG_LLM_MODEL") or getattr(config, "gemma_model", None)
+    # Sprint 128: Use settings.extraction_llm_model (was LIGHTRAG_LLM_MODEL env var)
+    model = getattr(config, "extraction_llm_model", None) or getattr(config, "gemma_model", None)
     return RelationExtractor(
         model=model,  # Sprint 124: None triggers env var lookup in __init__
         temperature=getattr(config, "gemma_temperature", 0.1),

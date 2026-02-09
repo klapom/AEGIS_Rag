@@ -874,6 +874,18 @@ class DomainUpdateRequest(BaseModel):
         description="Updated domain-specific relation examples. "
         "Sprint 126: Overrides YAML factory defaults.",
     )
+    cross_sentence_window_size: int | None = Field(
+        default=None,
+        ge=2,
+        le=10,
+        description="Sprint 128: Cross-sentence window size for relation extraction (default: 3)",
+    )
+    cross_sentence_overlap: int | None = Field(
+        default=None,
+        ge=0,
+        le=5,
+        description="Sprint 128: Cross-sentence window overlap (default: 1)",
+    )
 
     @field_validator("entity_types")
     @classmethod
