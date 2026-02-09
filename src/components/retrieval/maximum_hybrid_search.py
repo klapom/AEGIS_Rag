@@ -1,19 +1,21 @@
-"""Maximum Hybrid Search - 4-Signal Fusion for AegisRAG.
+"""Maximum Hybrid Search - 5-Signal Fusion for AegisRAG.
 
 Sprint 51 - Feature 51.7: Maximum Hybrid Search Foundation
 Sprint 128: Replaced LightRAG with DualLevelSearch for graph queries.
+Sprint 128 Feature 128.4: Added HyDE (Hypothetical Document Embeddings) as 5th signal.
 
 This module implements the ultimate hybrid search by combining ALL retrieval signals:
 1. Qdrant Embeddings (semantic similarity)
-2. BM25 Keywords (exact keyword matching)
-3. Graph Local Search (entity-level facts via DualLevelSearch)
-4. Graph Global Search (community/theme summaries via DualLevelSearch)
+2. HyDE Embeddings (hypothetical answer document) - Sprint 128
+3. BM25 Keywords (exact keyword matching)
+4. Graph Local Search (entity-level facts via DualLevelSearch)
+5. Graph Global Search (community/theme summaries via DualLevelSearch)
 
 Architecture:
-    Query → [4 Parallel Queries] → Layer RRF → Cross-Modal Fusion → Context Assembly
+    Query → [5 Parallel Queries] → Layer RRF → Cross-Modal Fusion → Context Assembly
 
 Layer-wise Fusion:
-    - Layer 1 (Chunks): RRF fusion of Qdrant + BM25 → unified chunk ranking
+    - Layer 1 (Chunks): RRF fusion of Qdrant + HyDE + BM25 → unified chunk ranking
     - Layer 2 (Entities): DualLevelSearch local/global → entity list
     - Layer 3 (Cross-Modal): Align entities to chunks via MENTIONED_IN → boost chunk scores
 
@@ -36,6 +38,8 @@ import structlog
 
 from src.components.graph_rag.dual_level_search import get_dual_level_search
 from src.components.retrieval.cross_modal_fusion import cross_modal_fusion
+from src.components.retrieval.hyde import get_hyde_generator
+from src.core.config import settings
 from src.utils.fusion import reciprocal_rank_fusion
 
 # Lazy import to avoid circular dependency
@@ -48,7 +52,10 @@ logger = structlog.get_logger(__name__)
 
 @dataclass
 class MaximumHybridResult:
-    """Result from Maximum Hybrid Search with metadata."""
+    """Result from Maximum Hybrid Search with metadata.
+
+    Sprint 128 Feature 128.4: Added HyDE signal tracking.
+    """
 
     query: str
     results: list[dict[str, Any]]
@@ -56,6 +63,7 @@ class MaximumHybridResult:
 
     # Signal counts
     qdrant_results_count: int
+    hyde_results_count: int  # Sprint 128: HyDE signal
     bm25_results_count: int
     graph_local_entities_count: int
     graph_global_communities_count: int
@@ -66,6 +74,7 @@ class MaximumHybridResult:
 
     # Latency breakdown
     qdrant_latency_ms: float
+    hyde_latency_ms: float  # Sprint 128: HyDE latency
     bm25_latency_ms: float
     graph_local_latency_ms: float
     graph_global_latency_ms: float
@@ -76,6 +85,10 @@ class MaximumHybridResult:
     graph_local_context: str
     graph_global_context: str
 
+    # Sprint 128: HyDE metadata
+    hyde_enabled: bool
+    hypothetical_document: str | None
+
 
 async def maximum_hybrid_search(
     query: str,
@@ -84,13 +97,16 @@ async def maximum_hybrid_search(
     alpha: float = 0.3,
     use_cross_modal_fusion: bool = True,
 ) -> MaximumHybridResult:
-    """Execute 4-Signal Maximum Hybrid Search.
+    """Execute 5-Signal Maximum Hybrid Search.
+
+    Sprint 128 Feature 128.4: Added HyDE (Hypothetical Document Embeddings) as 5th signal.
 
     This is the ultimate hybrid search that combines all retrieval methods:
     1. Qdrant embeddings (semantic)
-    2. BM25 keywords (exact match)
-    3. Graph local search (entities via DualLevelSearch)
-    4. Graph global search (communities via DualLevelSearch)
+    2. HyDE embeddings (hypothetical answer document) - Sprint 128
+    3. BM25 keywords (exact match)
+    4. Graph local search (entities via DualLevelSearch)
+    5. Graph global search (communities via DualLevelSearch)
 
     Args:
         query: User query string
@@ -128,13 +144,20 @@ async def maximum_hybrid_search(
     hybrid_search = HybridSearch()
     dual_search = get_dual_level_search()
 
-    # Step 1: Execute 4 parallel queries
+    # Sprint 128 Feature 128.4: Initialize HyDE generator if enabled
+    hyde_generator = get_hyde_generator() if settings.hyde_enabled else None
+
+    # Step 1: Execute 5 parallel queries (4 base + HyDE if enabled)
     tasks = [
         _qdrant_search(hybrid_search, query, top_k * 2, namespaces),
         _bm25_search(hybrid_search, query, top_k * 2, namespaces),
         _graph_local_search(dual_search, query, namespaces),
         _graph_global_search(dual_search, query, namespaces),
     ]
+
+    # Sprint 128: Add HyDE search if enabled
+    if settings.hyde_enabled:
+        tasks.append(_hyde_search(hyde_generator, query, top_k * 2, namespaces))
 
     results = await asyncio.gather(*tasks, return_exceptions=True)
 
@@ -156,8 +179,18 @@ async def maximum_hybrid_search(
         else {"entities": [], "context": "", "latency_ms": 0, "communities_count": 0}
     )
 
+    # Sprint 128: Extract HyDE results if enabled
+    hyde_result = {"results": [], "latency_ms": 0, "hypothetical_doc": None}
+    if settings.hyde_enabled:
+        hyde_result = (
+            results[4]
+            if not isinstance(results[4], Exception)
+            else {"results": [], "latency_ms": 0, "hypothetical_doc": None}
+        )
+
     qdrant_chunks = qdrant_result["results"]
     bm25_chunks = bm25_result["results"]
+    hyde_chunks = hyde_result["results"]
 
     # Sprint 128: Entity names come directly from DualLevelSearch (no text parsing needed)
     local_entities = local_result["entities"]
@@ -168,18 +201,24 @@ async def maximum_hybrid_search(
     logger.debug(
         "parallel_queries_complete",
         qdrant_results=len(qdrant_chunks),
+        hyde_results=len(hyde_chunks),
         bm25_results=len(bm25_chunks),
         local_entities=len(local_entities),
         global_entities=len(global_entities),
     )
 
-    # Step 2: Layer-wise RRF fusion for chunk layer (Qdrant + BM25)
+    # Step 2: Layer-wise RRF fusion for chunk layer (Qdrant + HyDE + BM25)
     fusion_start = time.perf_counter()
 
     chunk_ranking = []
-    if qdrant_chunks or bm25_chunks:
+    if qdrant_chunks or hyde_chunks or bm25_chunks:
+        # Sprint 128: Include HyDE in RRF fusion if enabled
+        rankings = [qdrant_chunks, bm25_chunks]
+        if settings.hyde_enabled and hyde_chunks:
+            rankings.insert(1, hyde_chunks)  # Insert HyDE after dense search
+
         chunk_ranking = reciprocal_rank_fusion(
-            rankings=[qdrant_chunks, bm25_chunks],
+            rankings=rankings,
             k=60,
             id_field="id",
         )
@@ -187,6 +226,7 @@ async def maximum_hybrid_search(
     logger.debug(
         "chunk_layer_fusion_complete",
         fused_chunks=len(chunk_ranking),
+        hyde_included=settings.hyde_enabled and len(hyde_chunks) > 0,
     )
 
     # Step 3: Combine entity lists (local entities first - they're more specific)
@@ -222,18 +262,20 @@ async def maximum_hybrid_search(
 
     total_latency_ms = (time.perf_counter() - start_time) * 1000
 
-    # Build result object
+    # Build result object (Sprint 128: Include HyDE metadata)
     result = MaximumHybridResult(
         query=query,
         results=final_results,
         total_results=len(chunk_ranking),
         qdrant_results_count=len(qdrant_chunks),
+        hyde_results_count=len(hyde_chunks),  # Sprint 128
         bm25_results_count=len(bm25_chunks),
         graph_local_entities_count=len(local_entities),
         graph_global_communities_count=global_result.get("communities_count", 0),
         chunks_boosted_count=chunks_boosted,
         boost_percentage=boost_percentage,
         qdrant_latency_ms=qdrant_result["latency_ms"],
+        hyde_latency_ms=hyde_result["latency_ms"],  # Sprint 128
         bm25_latency_ms=bm25_result["latency_ms"],
         graph_local_latency_ms=local_result["latency_ms"],
         graph_global_latency_ms=global_result["latency_ms"],
@@ -241,6 +283,8 @@ async def maximum_hybrid_search(
         total_latency_ms=total_latency_ms,
         graph_local_context=local_context,
         graph_global_context=global_context,
+        hyde_enabled=settings.hyde_enabled,  # Sprint 128
+        hypothetical_document=hyde_result.get("hypothetical_doc"),  # Sprint 128
     )
 
     logger.info(
@@ -249,6 +293,8 @@ async def maximum_hybrid_search(
         total_results=result.total_results,
         final_results=len(final_results),
         qdrant_count=result.qdrant_results_count,
+        hyde_count=result.hyde_results_count,  # Sprint 128
+        hyde_enabled=result.hyde_enabled,  # Sprint 128
         bm25_count=result.bm25_results_count,
         local_entities=result.graph_local_entities_count,
         global_communities=result.graph_global_communities_count,
@@ -472,3 +518,63 @@ async def _graph_global_search(
     except Exception as e:
         logger.error("graph_global_search_failed", error=str(e), query=query[:50])
         return {"entities": [], "context": "", "latency_ms": 0, "communities_count": 0}
+
+
+async def _hyde_search(
+    hyde_generator: Any,
+    query: str,
+    top_k: int,
+    namespaces: list[str] | None = None,
+) -> dict[str, Any]:
+    """Execute HyDE (Hypothetical Document Embeddings) search.
+
+    Sprint 128 Feature 128.4: HyDE Query Expansion
+
+    Generates a hypothetical answer document, embeds it, and searches Qdrant
+    for semantically similar chunks. HyDE improves retrieval for abstract queries.
+
+    Args:
+        hyde_generator: HyDEGenerator instance
+        query: Search query
+        top_k: Number of results
+        namespaces: Namespaces to filter by
+
+    Returns:
+        Dictionary with results, latency_ms, and hypothetical_doc
+
+    Example:
+        >>> result = await _hyde_search(hyde_gen, "What is Amsterdam?", 10)
+        >>> print(f"HyDE found {len(result['results'])} results")
+    """
+    start = time.perf_counter()
+
+    try:
+        # Generate hypothetical document and search
+        results = await hyde_generator.hyde_search(
+            query=query,
+            top_k=top_k,
+            namespaces=namespaces,
+        )
+
+        # Get hypothetical document from cache for metadata
+        hypothetical_doc = await hyde_generator.generate_hypothetical_document(query)
+
+        latency_ms = (time.perf_counter() - start) * 1000
+
+        logger.debug(
+            "hyde_search_complete",
+            query=query[:50],
+            results=len(results),
+            latency_ms=round(latency_ms, 2),
+            hypothetical_length=len(hypothetical_doc),
+        )
+
+        return {
+            "results": results,
+            "latency_ms": latency_ms,
+            "hypothetical_doc": hypothetical_doc,
+        }
+
+    except Exception as e:
+        logger.error("hyde_search_failed", error=str(e), query=query[:50])
+        return {"results": [], "latency_ms": 0, "hypothetical_doc": None}

@@ -45,6 +45,10 @@ class OllamaModelsResponse(BaseModel):
     models: list[OllamaModel] = Field(default_factory=list, description="List of available models")
     ollama_available: bool = Field(..., description="Whether Ollama is reachable")
     error: str | None = Field(None, description="Error message if Ollama is not available")
+    engine_mode: str | None = Field(None, description="Current LLM engine mode (Sprint 128.5)")
+    vllm_model: str | None = Field(
+        None, description="vLLM model name if include_vllm=true (Sprint 128.5)"
+    )
 
 
 class SummaryModelConfig(BaseModel):
@@ -188,19 +192,49 @@ class LLMConfigAPI(BaseModel):
     summary="List available Ollama models",
     description="Fetch all locally installed Ollama models for LLM configuration",
 )
-async def list_ollama_models() -> OllamaModelsResponse:
+async def list_ollama_models(include_vllm: bool = False) -> OllamaModelsResponse:
     """List all available Ollama models.
 
     **Sprint 51: LLM Configuration Enhancement**
+    **Sprint 128.5: Engine-Aware Model Selection**
 
     Queries the local Ollama instance to get a list of all installed models.
     This endpoint is used by the LLM Configuration page to dynamically
     populate model selection dropdowns.
 
+    Args:
+        include_vllm: If True, also query vLLM and include engine mode in response
+
     Returns:
         OllamaModelsResponse with list of models or error info
     """
+    import redis.asyncio as aioredis
+
     ollama_url = settings.ollama_base_url or "http://localhost:11434"
+
+    # Fetch engine mode if requested
+    engine_mode = None
+    vllm_model = None
+    if include_vllm:
+        try:
+            redis_client = aioredis.from_url(
+                f"redis://{settings.redis_host}:{settings.redis_port}/0",
+                decode_responses=True,
+            )
+            stored = await redis_client.get(REDIS_KEY_LLM_ENGINE_MODE)
+            if stored and stored in VALID_ENGINE_MODES:
+                engine_mode = stored
+            await redis_client.close()
+        except Exception as e:
+            logger.warning("redis_engine_mode_read_failed", error=str(e))
+
+        # Query vLLM model
+        try:
+            vllm_info = await get_vllm_model()
+            if vllm_info.healthy:
+                vllm_model = vllm_info.model
+        except Exception as e:
+            logger.warning("vllm_model_query_failed_in_list", error=str(e))
 
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
@@ -224,6 +258,8 @@ async def list_ollama_models() -> OllamaModelsResponse:
                 models=models,
                 ollama_available=True,
                 error=None,
+                engine_mode=engine_mode,
+                vllm_model=vllm_model,
             )
 
     except httpx.ConnectError as e:
@@ -232,6 +268,8 @@ async def list_ollama_models() -> OllamaModelsResponse:
             models=[],
             ollama_available=False,
             error=f"Ollama not reachable at {ollama_url}",
+            engine_mode=engine_mode,
+            vllm_model=vllm_model,
         )
     except Exception as e:
         logger.error("ollama_models_fetch_failed", error=str(e), exc_info=True)
@@ -239,6 +277,8 @@ async def list_ollama_models() -> OllamaModelsResponse:
             models=[],
             ollama_available=False,
             error=str(e),
+            engine_mode=engine_mode,
+            vllm_model=vllm_model,
         )
 
 
@@ -636,3 +676,80 @@ async def set_llm_engine_mode(request: LLMEngineModeRequest) -> dict:
             status_code=500,
             detail=f"Failed to set engine mode: {str(e)}",
         ) from e
+
+
+# ============================================================================
+# Sprint 128.5: vLLM Model Information
+# ============================================================================
+
+
+class VLLMModelResponse(BaseModel):
+    """Response containing vLLM model information."""
+
+    model: str = Field(..., description="vLLM model name")
+    healthy: bool = Field(..., description="Whether vLLM service is healthy")
+    provider: str = Field(default="vllm", description="Provider type (always 'vllm')")
+
+
+@router.get(
+    "/llm/vllm-model",
+    response_model=VLLMModelResponse,
+    summary="Get vLLM model information",
+    description="Query vLLM service for loaded model name and health status",
+)
+async def get_vllm_model() -> VLLMModelResponse:
+    """Get vLLM model information from /v1/models endpoint.
+
+    Sprint 128.5: Engine-Aware Model Selection
+
+    Queries the vLLM service to get the loaded model name. Falls back to
+    environment variable if vLLM is unreachable.
+
+    Returns:
+        VLLMModelResponse with model name, health status, and provider
+
+    Example Response:
+        {
+            "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-NVFP4",
+            "healthy": true,
+            "provider": "vllm"
+        }
+    """
+    vllm_url = settings.vllm_base_url or "http://localhost:8001"
+    model_name = settings.vllm_model  # Fallback from env/config
+
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            # Query vLLM's OpenAI-compatible /v1/models endpoint
+            response = await client.get(f"{vllm_url}/v1/models")
+            response.raise_for_status()
+            data = response.json()
+
+            # Extract first model from response
+            # Response format: {"data": [{"id": "model_name", ...}], "object": "list"}
+            models = data.get("data", [])
+            if models and len(models) > 0:
+                model_name = models[0].get("id", model_name)
+
+            logger.info("vllm_model_queried", model=model_name, healthy=True)
+
+            return VLLMModelResponse(
+                model=model_name,
+                healthy=True,
+                provider="vllm",
+            )
+
+    except httpx.ConnectError as e:
+        logger.warning("vllm_not_reachable", error=str(e), url=vllm_url)
+        return VLLMModelResponse(
+            model=model_name,
+            healthy=False,
+            provider="vllm",
+        )
+    except Exception as e:
+        logger.error("vllm_model_query_failed", error=str(e), exc_info=True)
+        return VLLMModelResponse(
+            model=model_name,
+            healthy=False,
+            provider="vllm",
+        )

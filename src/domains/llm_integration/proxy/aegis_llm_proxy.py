@@ -296,6 +296,75 @@ class AegisLLMProxy:
             self._vllm_health_checked_at = current_time
             return False
 
+    async def get_vllm_active_requests(self) -> int:
+        """Query vLLM for number of active/pending requests.
+
+        Sprint 128 Feature 128.2: Cascade timeout guard to prevent competing requests.
+
+        Returns:
+            Number of active + waiting requests in vLLM queue (0 if vLLM unreachable)
+
+        Example:
+            active = await proxy.get_vllm_active_requests()
+            if active >= max_workers:
+                await asyncio.sleep(30)  # Wait for capacity
+        """
+        if not self._vllm_enabled:
+            return 0
+
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                # vLLM exposes Prometheus metrics at /metrics
+                response = await client.get(f"{self._vllm_base_url}/metrics")
+
+                if response.status_code != 200:
+                    logger.debug(
+                        "vllm_metrics_unavailable",
+                        status_code=response.status_code,
+                    )
+                    return 0
+
+                # Parse Prometheus metrics for active request counts
+                # Metrics format:
+                #   vllm:num_requests_running{model="..."} 2.0
+                #   vllm:num_requests_waiting{model="..."} 1.0
+                metrics_text = response.text
+                running = 0
+                waiting = 0
+
+                for line in metrics_text.split("\n"):
+                    if line.startswith("vllm:num_requests_running"):
+                        # Extract value (last token after space)
+                        parts = line.split()
+                        if len(parts) >= 2:
+                            try:
+                                running = int(float(parts[-1]))
+                            except ValueError:
+                                pass
+                    elif line.startswith("vllm:num_requests_waiting"):
+                        parts = line.split()
+                        if len(parts) >= 2:
+                            try:
+                                waiting = int(float(parts[-1]))
+                            except ValueError:
+                                pass
+
+                total = running + waiting
+                logger.debug(
+                    "vllm_active_requests_check",
+                    running=running,
+                    waiting=waiting,
+                    total=total,
+                )
+                return total
+
+        except Exception as e:
+            logger.debug(
+                "vllm_active_requests_check_failed",
+                error=repr(e),
+            )
+            return 0  # Assume no active requests if unreachable
+
     async def _get_engine_mode(self) -> str:
         """Get LLM engine mode from Redis with 30s cache.
 

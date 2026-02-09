@@ -958,6 +958,29 @@ class Settings(BaseSettings):
         "If False, always return top-k results regardless of quality.",
     )
 
+    # Sprint 128 Feature 128.4: HyDE (Hypothetical Document Embeddings) Configuration
+    hyde_enabled: bool = Field(
+        default=True,
+        description="Enable HyDE (Hypothetical Document Embeddings) query expansion. "
+        "HyDE generates a hypothetical answer document, embeds it, and uses it for retrieval. "
+        "Improves retrieval for abstract/complex queries. Adds ~100ms latency (with cache).",
+    )
+    hyde_weight: float = Field(
+        default=0.5,
+        ge=0.0,
+        le=1.0,
+        description="Weight for HyDE results in RRF fusion (0.0 = disabled, 1.0 = full weight). "
+        "Default 0.5 balances HyDE with dense search. Higher values favor hypothetical embeddings.",
+    )
+    hyde_max_tokens: int = Field(
+        default=512,
+        ge=100,
+        le=2048,
+        description="Max tokens for hypothetical document generation. "
+        "Typical hypothetical answers are 100-200 words (~150-300 tokens). "
+        "512 tokens provides buffer for complex queries.",
+    )
+
     # Vector Search Agent Configuration (Sprint 4.3)
     vector_agent_timeout: int = Field(
         default=30, description="Vector search agent timeout in seconds"

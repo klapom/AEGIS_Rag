@@ -1077,6 +1077,82 @@ class ExtractionService:
             )
             raise
 
+    async def _wait_for_vllm_capacity(
+        self,
+        rank_config: CascadeRankConfig,
+        max_workers: int,
+        max_wait_s: int = 60,
+    ) -> None:
+        """Wait for vLLM capacity if previous timed-out request is still running.
+
+        Sprint 128 Feature 128.2: Cascade timeout guard to prevent competing vLLM requests.
+
+        When a cascade rank times out (httpx.ReadTimeout or asyncio.TimeoutError), vLLM may
+        still be processing the request server-side. This guard prevents starting a new
+        vLLM request at the next cascade rank until capacity is available.
+
+        Args:
+            rank_config: Current cascade rank configuration
+            max_workers: Maximum concurrent vLLM requests (from AEGIS_EXTRACTION_WORKERS)
+            max_wait_s: Maximum time to wait for capacity (default: 60s)
+
+        Example:
+            # After timeout at Rank 1 (vLLM), before trying Rank 2:
+            await self._wait_for_vllm_capacity(rank_config, max_workers=2)
+        """
+        # Only guard if vLLM is enabled
+        if not self.llm_proxy._vllm_enabled:
+            return
+
+        # Check current active requests
+        active = await self.llm_proxy.get_vllm_active_requests()
+
+        if active < max_workers:
+            # Capacity available, proceed immediately
+            return
+
+        # Capacity exhausted - wait with exponential backoff
+        logger.warning(
+            "cascade_guard_waiting",
+            active_requests=active,
+            max_concurrent=max_workers,
+            rank=rank_config.rank,
+            model=rank_config.model,
+            max_wait_s=max_wait_s,
+        )
+
+        wait_time = 5  # Start with 5s
+        total_waited = 0
+
+        while total_waited < max_wait_s:
+            await asyncio.sleep(wait_time)
+            total_waited += wait_time
+
+            # Re-check active requests
+            active = await self.llm_proxy.get_vllm_active_requests()
+
+            if active < max_workers:
+                logger.info(
+                    "cascade_guard_released",
+                    active_requests=active,
+                    max_concurrent=max_workers,
+                    waited_s=total_waited,
+                    rank=rank_config.rank,
+                )
+                return
+
+            # Exponential backoff (5s → 10s → 20s)
+            wait_time = min(wait_time * 2, 20)
+
+        # Max wait exceeded, proceed anyway
+        logger.warning(
+            "cascade_guard_timeout",
+            active_requests=active,
+            max_concurrent=max_workers,
+            waited_s=total_waited,
+            rank=rank_config.rank,
+        )
+
     async def get_extraction_prompts(self, domain: str | None = None) -> tuple[str, str]:
         """Get extraction prompts for a given domain.
 
@@ -2527,10 +2603,21 @@ class ExtractionService:
         cascade = get_cascade_for_domain(domain)
 
         last_error: Exception | None = None
+        previous_rank_timed_out = False  # Sprint 128.2: Track timeout for guard
 
         # Try each rank in cascade
         for rank_config in cascade:
             try:
+                # Sprint 128.2: Cascade timeout guard
+                # If previous rank timed out and was likely vLLM, wait for capacity
+                if previous_rank_timed_out:
+                    await self._wait_for_vllm_capacity(
+                        rank_config=rank_config,
+                        max_workers=EXTRACTION_WORKERS,
+                        max_wait_s=60,
+                    )
+                    previous_rank_timed_out = False  # Reset flag
+
                 logger.info(
                     "trying_cascade_rank",
                     rank=rank_config.rank,
@@ -2554,8 +2641,30 @@ class ExtractionService:
 
                 return entities
 
+            except (asyncio.TimeoutError, TimeoutError) as e:
+                # Sprint 128.2: Mark timeout for guard on next rank
+                last_error = e
+                previous_rank_timed_out = True
+
+                # Log fallback if not last rank
+                if rank_config.rank < len(cascade):
+                    next_rank = cascade[rank_config.rank]  # rank_config.rank is 1-indexed
+                    log_cascade_fallback(
+                        from_rank=rank_config.rank,
+                        to_rank=next_rank.rank,
+                        reason=type(e).__name__,
+                        document_id=document_id,
+                    )
+                else:
+                    logger.error(
+                        "all_cascade_ranks_failed",
+                        document_id=document_id,
+                        error=str(e),
+                    )
+
             except Exception as e:
                 last_error = e
+                previous_rank_timed_out = False  # Non-timeout error, no guard needed
 
                 # Log fallback if not last rank
                 if rank_config.rank < len(cascade):
@@ -3301,10 +3410,21 @@ class ExtractionService:
         cascade = get_cascade_for_domain(domain)
 
         last_error: Exception | None = None
+        previous_rank_timed_out = False  # Sprint 128.2: Track timeout for guard
 
         # Try each rank in cascade
         for rank_config in cascade:
             try:
+                # Sprint 128.2: Cascade timeout guard
+                # If previous rank timed out and was likely vLLM, wait for capacity
+                if previous_rank_timed_out:
+                    await self._wait_for_vllm_capacity(
+                        rank_config=rank_config,
+                        max_workers=EXTRACTION_WORKERS,
+                        max_wait_s=60,
+                    )
+                    previous_rank_timed_out = False  # Reset flag
+
                 logger.info(
                     "trying_cascade_rank_relationships",
                     rank=rank_config.rank,
@@ -3329,8 +3449,30 @@ class ExtractionService:
 
                 return relationships
 
+            except (asyncio.TimeoutError, TimeoutError) as e:
+                # Sprint 128.2: Mark timeout for guard on next rank
+                last_error = e
+                previous_rank_timed_out = True
+
+                # Log fallback if not last rank
+                if rank_config.rank < len(cascade):
+                    next_rank = cascade[rank_config.rank]  # rank_config.rank is 1-indexed
+                    log_cascade_fallback(
+                        from_rank=rank_config.rank,
+                        to_rank=next_rank.rank,
+                        reason=type(e).__name__,
+                        document_id=document_id,
+                    )
+                else:
+                    logger.error(
+                        "all_cascade_ranks_failed_relationships",
+                        document_id=document_id,
+                        error=str(e),
+                    )
+
             except Exception as e:
                 last_error = e
+                previous_rank_timed_out = False  # Non-timeout error, no guard needed
 
                 # Log fallback if not last rank
                 if rank_config.rank < len(cascade):

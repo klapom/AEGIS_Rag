@@ -1106,9 +1106,21 @@
 **Decision:** Convert `domain_id="auto"` to `None` in `create_initial_state()` (central) and `upload_file()` (endpoint), instead of only in `graph_extraction_node()`.
 **Rationale:** Pipeline order is `embedding → graph`. The embedding node writes Qdrant payload BEFORE graph_extraction resolves "auto" to None. This caused `domain_id="auto"` to be stored literally in Qdrant payloads, breaking domain-filtered queries.
 
+### 2026-02-09 | Cascade Timeout Guard via vLLM /metrics polling (Sprint 128.2)
+**Decision:** Before starting a new cascade rank, query vLLM Prometheus metrics (`/metrics`) for `vllm:num_requests_running` + `vllm:num_requests_waiting`. If requests are active, exponential backoff (5s→10s→20s, max 60s) before proceeding. Prevents ghost request accumulation.
+**Rationale:** Sprint 127 discovered cascade timeout ghost requests — httpx times out after 600s but vLLM continues server-side. Next cascade rank starts a NEW request → 3-5 concurrent requests (34.8% of time), GPU overload. Polling /metrics is lightweight (<10ms) and avoids the need for request cancellation.
+
+### 2026-02-09 | HyDE as 5th RRF signal in MaximumHybridSearch (Sprint 128.4)
+**Decision:** Add Hypothetical Document Embeddings (HyDE) as a 5th signal in RRF fusion alongside dense, sparse, graph-local, and graph-global. HyDE generates a hypothetical answer via LLM, embeds it with BGE-M3, and searches Qdrant. Results are fused with configurable weight (default 0.3). Controlled by `HYDE_ENABLED` env var (default: off).
+**Rationale:** HyDE (Gao et al., 2022) embeds hypothetical answers instead of raw queries, producing embeddings closer to actual relevant documents. Especially effective for abstract/conceptual queries. Redis cache (1h TTL) amortizes LLM cost. Weight 0.3 balances HyDE benefit against existing dense/sparse signals.
+
+### 2026-02-09 | Engine-aware LLM Config UI with vLLM model display (Sprint 128.5)
+**Decision:** LLM Config page dynamically filters available models by engine mode. In vLLM mode, all dropdowns show only the vLLM model and are disabled. In auto mode, extraction use cases are locked to vLLM while chat remains Ollama. New `GET /api/v1/admin/llm/vllm-model` endpoint queries vLLM `/v1/models` for health + model info. Service layer validates config changes against engine mode before saving.
+**Rationale:** Previous LLM Config page showed all Ollama models regardless of engine mode, allowing invalid configurations (e.g., selecting Ollama model for extraction while engine mode is vLLM). Engine-aware filtering prevents misconfiguration and clearly communicates which engine serves each use case.
+
 ---
 
 **Last Updated:** 2026-02-09 (Sprint 128 🔄)
-**Total Decisions Documented:** 179 (+2 from Sprint 128)
-**Current Sprint:** Sprint 128 🔄 IN PROGRESS (LightRAG Removal + Ingestion Fixes)
+**Total Decisions Documented:** 182 (+5 from Sprint 128)
+**Current Sprint:** Sprint 128 🔄 IN PROGRESS (128.1-128.2, 128.4-128.5 DONE, 128.3 remaining)
 **Next Sprint:** Sprint 129 (Domain Editor UI + Table Ingestion)

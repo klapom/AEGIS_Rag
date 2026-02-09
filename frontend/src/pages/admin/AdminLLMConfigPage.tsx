@@ -30,10 +30,11 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000
 
 interface ModelOption {
   id: string;
-  provider: 'ollama' | 'alibaba_cloud' | 'openai';
+  provider: 'ollama' | 'alibaba_cloud' | 'openai' | 'vllm';
   name: string;
   description: string;
   capabilities: ('text' | 'vision' | 'embedding')[];
+  disabled?: boolean; // Sprint 128.5: For vLLM models in certain modes
 }
 
 interface UseCaseConfig {
@@ -61,6 +62,8 @@ interface OllamaModelsResponse {
   models: OllamaModel[];
   ollama_available: boolean;
   error: string | null;
+  engine_mode?: string | null; // Sprint 128.5
+  vllm_model?: string | null; // Sprint 128.5
 }
 
 // Sprint 52 Feature 52.1: Community Summary Model Configuration
@@ -308,12 +311,85 @@ export function AdminLLMConfigPage() {
       setEngineMode(mode);
       setEngineSaveStatus('success');
       setTimeout(() => setEngineSaveStatus('idle'), 3000);
+
+      // Sprint 128.5: Refresh available models and auto-update selections
+      await refreshModelsAndUpdateConfig(mode);
     } catch (err) {
       console.error('Failed to save engine mode:', err);
       setEngineSaveStatus('error');
       setTimeout(() => setEngineSaveStatus('idle'), 3000);
     } finally {
       setIsSavingEngine(false);
+    }
+  };
+
+  // Sprint 128.5: Helper to refresh models and update config based on engine mode
+  const refreshModelsAndUpdateConfig = async (mode: 'vllm' | 'ollama' | 'auto') => {
+    setIsRefreshing(true);
+    setOllamaStatus('loading');
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/admin/llm/models?include_vllm=true`);
+      const data: OllamaModelsResponse = await response.json();
+
+      const allModels: ModelOption[] = [];
+
+      // Add Ollama models
+      if (data.ollama_available && data.models.length > 0) {
+        const ollamaModels: ModelOption[] = data.models.map((m) => ({
+          id: `ollama/${m.name}`,
+          provider: 'ollama' as const,
+          name: `${m.name} (Local)`,
+          description: `${formatModelSize(m.size)}, local inference, $0 cost`,
+          capabilities: getModelCapabilities(m.name),
+        }));
+        allModels.push(...ollamaModels);
+        setOllamaStatus('available');
+        setOllamaError(null);
+      } else {
+        setOllamaStatus('unavailable');
+        setOllamaError(data.error || 'No Ollama models found');
+      }
+
+      // Add vLLM model if available
+      let vllmModelId: string | null = null;
+      if (data.vllm_model) {
+        vllmModelId = `vllm/${data.vllm_model}`;
+        const vllmModel: ModelOption = {
+          id: vllmModelId,
+          provider: 'vllm' as const,
+          name: `${data.vllm_model} (vLLM)`,
+          description: 'High throughput (256+ batch), GPU-accelerated',
+          capabilities: ['text'],
+        };
+        allModels.push(vllmModel);
+      }
+
+      // Update model options
+      setModelOptions([...allModels, ...cloudModelOptions]);
+
+      // Auto-update config based on engine mode
+      if (vllmModelId && (mode === 'vllm' || mode === 'auto')) {
+        setConfig((prev) =>
+          prev.map((uc) => {
+            // In vLLM mode, all use cases use vLLM
+            if (mode === 'vllm') {
+              return { ...uc, modelId: vllmModelId };
+            }
+            // In auto mode, only extraction use cases use vLLM
+            if (mode === 'auto' && uc.useCase === 'entity_extraction') {
+              return { ...uc, modelId: vllmModelId };
+            }
+            return uc;
+          })
+        );
+      }
+    } catch (e) {
+      console.error('Failed to fetch models:', e);
+      setModelOptions(cloudModelOptions);
+      setOllamaStatus('unavailable');
+      setOllamaError(e instanceof Error ? e.message : 'Failed to connect');
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -407,11 +483,14 @@ export function AdminLLMConfigPage() {
     setIsRefreshing(true);
     setOllamaStatus('loading');
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/admin/llm/models`);
+      // Sprint 128.5: Include vLLM model info
+      const response = await fetch(`${API_BASE_URL}/api/v1/admin/llm/models?include_vllm=true`);
       const data: OllamaModelsResponse = await response.json();
 
+      const allModels: ModelOption[] = [];
+
+      // Add Ollama models
       if (data.ollama_available && data.models.length > 0) {
-        // Convert Ollama models to ModelOption format
         const ollamaModels: ModelOption[] = data.models.map((m) => ({
           id: `ollama/${m.name}`,
           provider: 'ollama' as const,
@@ -419,16 +498,28 @@ export function AdminLLMConfigPage() {
           description: `${formatModelSize(m.size)}, local inference, $0 cost`,
           capabilities: getModelCapabilities(m.name),
         }));
-
-        // Combine Ollama models with cloud options
-        setModelOptions([...ollamaModels, ...cloudModelOptions]);
+        allModels.push(...ollamaModels);
         setOllamaStatus('available');
         setOllamaError(null);
       } else {
-        setModelOptions(cloudModelOptions);
         setOllamaStatus('unavailable');
         setOllamaError(data.error || 'No Ollama models found');
       }
+
+      // Sprint 128.5: Add vLLM model if available
+      if (data.vllm_model) {
+        const vllmModel: ModelOption = {
+          id: `vllm/${data.vllm_model}`,
+          provider: 'vllm' as const,
+          name: `${data.vllm_model} (vLLM)`,
+          description: 'High throughput (256+ batch), GPU-accelerated',
+          capabilities: ['text'],
+        };
+        allModels.push(vllmModel);
+      }
+
+      // Combine with cloud options
+      setModelOptions([...allModels, ...cloudModelOptions]);
     } catch (e) {
       console.error('Failed to fetch Ollama models:', e);
       setModelOptions(cloudModelOptions);
@@ -584,22 +675,112 @@ export function AdminLLMConfigPage() {
 
   const getFilteredModels = (useCase: UseCaseType) => {
     const def = useCaseDefinitions[useCase];
+    let filteredModels = modelOptions;
+
+    // Filter by capability
     if (def.requiresVision) {
-      return modelOptions.filter((m) => m.capabilities.includes('vision'));
+      filteredModels = filteredModels.filter((m) => m.capabilities.includes('vision'));
+    } else {
+      filteredModels = filteredModels.filter((m) => m.capabilities.includes('text'));
     }
-    return modelOptions.filter((m) => m.capabilities.includes('text'));
+
+    // Sprint 128.5: Engine mode filtering
+    const extractionUseCases: UseCaseType[] = ['entity_extraction'];
+    const isExtractionUseCase = extractionUseCases.includes(useCase);
+
+    if (engineMode === 'vllm') {
+      // vLLM-only mode: only vLLM models
+      filteredModels = filteredModels.filter((m) => m.provider === 'vllm');
+    } else if (engineMode === 'auto') {
+      if (isExtractionUseCase) {
+        // Auto mode + extraction: only vLLM
+        filteredModels = filteredModels.filter((m) => m.provider === 'vllm');
+      } else {
+        // Auto mode + chat: only Ollama/cloud (no vLLM)
+        filteredModels = filteredModels.filter((m) => m.provider !== 'vllm');
+      }
+    } else {
+      // Ollama mode: only Ollama/cloud (no vLLM)
+      filteredModels = filteredModels.filter((m) => m.provider !== 'vllm');
+    }
+
+    return filteredModels;
+  };
+
+  const isUseCaseDisabled = (useCase: UseCaseType): boolean => {
+    // Sprint 128.5: Disable selection in vLLM-only mode (single model)
+    if (engineMode === 'vllm') {
+      return true;
+    }
+
+    // Auto mode: disable extraction use cases (vLLM-only)
+    if (engineMode === 'auto') {
+      const extractionUseCases: UseCaseType[] = ['entity_extraction'];
+      if (extractionUseCases.includes(useCase)) {
+        return true;
+      }
+    }
+
+    // Sprint 128.5: Disable vision VLM if no vision models available
+    if (useCase === 'vision_vlm') {
+      const availableModels = getFilteredModels(useCase);
+      if (availableModels.length === 0) {
+        return true;
+      }
+    }
+
+    return false;
+  };
+
+  const getUseCaseDisabledMessage = (useCase: UseCaseType): string | null => {
+    if (engineMode === 'vllm') {
+      return 'vLLM mode: All use cases use the same vLLM model';
+    }
+
+    if (engineMode === 'auto') {
+      const extractionUseCases: UseCaseType[] = ['entity_extraction'];
+      if (extractionUseCases.includes(useCase)) {
+        return 'Auto mode: Extraction uses vLLM (not configurable)';
+      }
+    }
+
+    // Sprint 128.5: Vision VLM special message
+    if (useCase === 'vision_vlm') {
+      const availableModels = getFilteredModels(useCase);
+      if (availableModels.length === 0) {
+        return 'No vision-capable model loaded';
+      }
+    }
+
+    return null;
   };
 
   const getProviderBadgeColor = (provider: string) => {
     switch (provider) {
       case 'ollama':
         return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
-      case 'alibaba_cloud':
+      case 'vllm':
         return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
+      case 'alibaba_cloud':
+        return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
       case 'openai':
         return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
       default:
         return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getProviderLabel = (provider: string) => {
+    switch (provider) {
+      case 'ollama':
+        return 'Local';
+      case 'vllm':
+        return 'vLLM';
+      case 'alibaba_cloud':
+      case 'openai':
+        return 'Cloud';
+      default:
+        return 'Unknown';
     }
   };
 
@@ -756,6 +937,9 @@ export function AdminLLMConfigPage() {
               );
               const availableModels = getFilteredModels(useCaseConfig.useCase);
 
+              const isDisabled = isUseCaseDisabled(useCaseConfig.useCase);
+              const disabledMessage = getUseCaseDisabledMessage(useCaseConfig.useCase);
+
               return (
                 <div
                   key={useCaseConfig.useCase}
@@ -763,13 +947,18 @@ export function AdminLLMConfigPage() {
                   data-testid={`usecase-selector-${useCaseConfig.useCase}`}
                 >
                   <div className="flex justify-between items-start mb-1.5">
-                    <div>
+                    <div className="flex-1">
                       <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
                         {def.label}
                       </h3>
                       <p className="text-xs text-gray-500 dark:text-gray-400">
                         {def.description}
                       </p>
+                      {disabledMessage && (
+                        <p className="text-xs text-blue-600 dark:text-blue-400 mt-0.5">
+                          {disabledMessage}
+                        </p>
+                      )}
                     </div>
                     {currentModel && (
                       <span
@@ -777,7 +966,7 @@ export function AdminLLMConfigPage() {
                           currentModel.provider
                         )}`}
                       >
-                        {currentModel.provider === 'ollama' ? 'Local' : 'Cloud'}
+                        {getProviderLabel(currentModel.provider)}
                       </span>
                     )}
                   </div>
@@ -787,7 +976,8 @@ export function AdminLLMConfigPage() {
                     onChange={(e) =>
                       handleModelChange(useCaseConfig.useCase, e.target.value)
                     }
-                    className="w-full mt-1.5 p-1.5 text-sm border dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    disabled={isDisabled}
+                    className="w-full mt-1.5 p-1.5 text-sm border dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                     data-testid={`model-dropdown-${useCaseConfig.useCase}`}
                   >
                     {availableModels.map((model) => (

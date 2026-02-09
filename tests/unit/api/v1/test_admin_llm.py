@@ -392,6 +392,131 @@ class TestLLMConfigModels:
         assert config.model_id == "ollama/qwen3:32b"
 
 
+class TestVLLMModelEndpoint:
+    """Tests for GET /admin/llm/vllm-model endpoint (Sprint 128.5)."""
+
+    def test_get_vllm_model_success(self, test_client):
+        """Test successful retrieval of vLLM model information."""
+        with patch("httpx.AsyncClient") as mock_client_cls:
+            mock_client = AsyncMock()
+            mock_response = MagicMock()
+            mock_response.status_code = 200
+            mock_response.json = MagicMock(
+                return_value={
+                    "data": [
+                        {"id": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-NVFP4", "object": "model"}
+                    ],
+                    "object": "list",
+                }
+            )
+            mock_response.raise_for_status = MagicMock()
+
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.get = AsyncMock(return_value=mock_response)
+
+            mock_client_cls.return_value = mock_client
+
+            response = test_client.get("/api/v1/admin/llm/vllm-model")
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["model"] == "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-NVFP4"
+            assert data["healthy"] is True
+            assert data["provider"] == "vllm"
+
+    def test_get_vllm_model_connection_error(self, test_client):
+        """Test vLLM model endpoint when vLLM is unreachable."""
+        with patch("httpx.AsyncClient") as mock_client_cls:
+            mock_client = AsyncMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.get = AsyncMock(side_effect=httpx.ConnectError("Connection refused"))
+
+            mock_client_cls.return_value = mock_client
+
+            response = test_client.get("/api/v1/admin/llm/vllm-model")
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["healthy"] is False
+            assert data["provider"] == "vllm"
+            # Should return fallback model from settings
+            assert "model" in data
+
+    def test_get_vllm_model_http_error(self, test_client):
+        """Test vLLM model endpoint when vLLM returns error."""
+        with patch("httpx.AsyncClient") as mock_client_cls:
+            mock_client = AsyncMock()
+            mock_response = MagicMock()
+            mock_response.raise_for_status = MagicMock(
+                side_effect=httpx.HTTPStatusError("500", request=None, response=None)
+            )
+
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.get = AsyncMock(return_value=mock_response)
+
+            mock_client_cls.return_value = mock_client
+
+            response = test_client.get("/api/v1/admin/llm/vllm-model")
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["healthy"] is False
+
+
+class TestListOllamaModelsWithVLLM:
+    """Tests for GET /admin/llm/models with include_vllm parameter (Sprint 128.5)."""
+
+    def test_list_models_with_vllm_include(self, test_client, sample_ollama_response):
+        """Test listing models with vLLM information included."""
+        with patch("httpx.AsyncClient") as mock_client_cls:
+            mock_client = AsyncMock()
+
+            # Mock Ollama response
+            mock_ollama_response = MagicMock()
+            mock_ollama_response.json = MagicMock(return_value=sample_ollama_response)
+            mock_ollama_response.raise_for_status = MagicMock()
+
+            # Mock vLLM response
+            mock_vllm_response = MagicMock()
+            mock_vllm_response.status_code = 200
+            mock_vllm_response.json = MagicMock(
+                return_value={
+                    "data": [{"id": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-NVFP4"}],
+                    "object": "list",
+                }
+            )
+            mock_vllm_response.raise_for_status = MagicMock()
+
+            # Mock Redis
+            mock_redis_client = AsyncMock()
+            mock_redis_client.get = AsyncMock(return_value="auto")
+            mock_redis_client.close = AsyncMock()
+
+            async def mock_get(url):
+                if "/v1/models" in url:
+                    return mock_vllm_response
+                return mock_ollama_response
+
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.get = AsyncMock(side_effect=mock_get)
+
+            mock_client_cls.return_value = mock_client
+
+            with patch("redis.asyncio.from_url", return_value=mock_redis_client):
+                response = test_client.get("/api/v1/admin/llm/models?include_vllm=true")
+
+                assert response.status_code == 200
+                data = response.json()
+                assert data["ollama_available"] is True
+                assert len(data["models"]) == 3
+                assert data["engine_mode"] == "auto"
+                assert data["vllm_model"] == "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-NVFP4"
+
+
 class TestLLMConfigIntegration:
     """Integration tests for LLM configuration."""
 

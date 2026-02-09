@@ -9,7 +9,7 @@ Tests focus on:
 """
 
 from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -27,7 +27,8 @@ from src.domains.llm_integration.proxy.aegis_llm_proxy import AegisLLMProxy
 class TestRoutingLogic:
     """Test provider routing decision logic."""
 
-    def test_routing_sensitive_data_always_local(self, aegis_proxy_with_config) -> None:
+    @pytest.mark.asyncio
+    async def test_routing_sensitive_data_always_local(self, aegis_proxy_with_config) -> None:
         """Test sensitive data (PII, HIPAA) always routes to local."""
         task = LLMTask(
             task_type=TaskType.EXTRACTION,
@@ -37,12 +38,13 @@ class TestRoutingLogic:
             complexity=Complexity.VERY_HIGH,
         )
 
-        provider, reason = aegis_proxy_with_config._route_task(task)
+        provider, reason = await aegis_proxy_with_config._route_task(task)
 
         assert provider == "local_ollama"
-        assert reason == "sensitive_data_local_only"
+        assert reason == "sensitive_data_local_only_engine_auto"
 
-    def test_routing_hipaa_data_always_local(self, aegis_proxy_with_config) -> None:
+    @pytest.mark.asyncio
+    async def test_routing_hipaa_data_always_local(self, aegis_proxy_with_config) -> None:
         """Test HIPAA data always routes to local."""
         task = LLMTask(
             task_type=TaskType.EXTRACTION,
@@ -50,12 +52,13 @@ class TestRoutingLogic:
             data_classification=DataClassification.HIPAA,
         )
 
-        provider, reason = aegis_proxy_with_config._route_task(task)
+        provider, reason = await aegis_proxy_with_config._route_task(task)
 
         assert provider == "local_ollama"
-        assert reason == "sensitive_data_local_only"
+        assert reason == "sensitive_data_local_only_engine_auto"
 
-    def test_routing_confidential_data_always_local(self, aegis_proxy_with_config) -> None:
+    @pytest.mark.asyncio
+    async def test_routing_confidential_data_always_local(self, aegis_proxy_with_config) -> None:
         """Test confidential data always routes to local."""
         task = LLMTask(
             task_type=TaskType.EXTRACTION,
@@ -63,36 +66,39 @@ class TestRoutingLogic:
             data_classification=DataClassification.CONFIDENTIAL,
         )
 
-        provider, reason = aegis_proxy_with_config._route_task(task)
+        provider, reason = await aegis_proxy_with_config._route_task(task)
 
         assert provider == "local_ollama"
-        assert reason == "sensitive_data_local_only"
+        assert reason == "sensitive_data_local_only_engine_auto"
 
-    def test_routing_embeddings_always_local(self, aegis_proxy_with_config) -> None:
+    @pytest.mark.asyncio
+    async def test_routing_embeddings_always_local(self, aegis_proxy_with_config) -> None:
         """Test embedding task type always routes to local."""
         task = LLMTask(
             task_type=TaskType.EMBEDDING,
             prompt="Generate embeddings",
         )
 
-        provider, reason = aegis_proxy_with_config._route_task(task)
+        provider, reason = await aegis_proxy_with_config._route_task(task)
 
         assert provider == "local_ollama"
-        assert reason == "embeddings_local_only"
+        assert reason == "embeddings_local_only_engine_auto"
 
-    def test_routing_vision_task_to_alibaba_cloud(self, aegis_proxy_with_config) -> None:
+    @pytest.mark.asyncio
+    async def test_routing_vision_task_to_alibaba_cloud(self, aegis_proxy_with_config) -> None:
         """Test vision tasks prefer Alibaba Cloud."""
         task = LLMTask(
             task_type=TaskType.VISION,
             prompt="Describe image",
         )
 
-        provider, reason = aegis_proxy_with_config._route_task(task)
+        provider, reason = await aegis_proxy_with_config._route_task(task)
 
         assert provider == "alibaba_cloud"
         assert reason == "vision_task_best_vlm"
 
-    def test_routing_vision_task_fallback_local(self, aegis_proxy_with_config) -> None:
+    @pytest.mark.asyncio
+    async def test_routing_vision_task_fallback_local(self, aegis_proxy_with_config) -> None:
         """Test vision task falls back to local if Alibaba Cloud disabled."""
         config = aegis_proxy_with_config.config
         config.providers.pop("alibaba_cloud", None)
@@ -102,12 +108,15 @@ class TestRoutingLogic:
             prompt="Describe image",
         )
 
-        provider, reason = aegis_proxy_with_config._route_task(task)
+        provider, reason = await aegis_proxy_with_config._route_task(task)
 
         assert provider == "local_ollama"
         assert reason == "vision_task_local_fallback"
 
-    def test_routing_critical_quality_high_complexity_openai(self, aegis_proxy_with_config) -> None:
+    @pytest.mark.asyncio
+    async def test_routing_critical_quality_high_complexity_openai(
+        self, aegis_proxy_with_config
+    ) -> None:
         """Test critical quality + high complexity routes to OpenAI."""
         task = LLMTask(
             task_type=TaskType.EXTRACTION,
@@ -116,12 +125,13 @@ class TestRoutingLogic:
             complexity=Complexity.HIGH,
         )
 
-        provider, reason = aegis_proxy_with_config._route_task(task)
+        provider, reason = await aegis_proxy_with_config._route_task(task)
 
         assert provider == "openai"
         assert reason == "critical_quality_high_complexity"
 
-    def test_routing_critical_quality_very_high_complexity_openai(
+    @pytest.mark.asyncio
+    async def test_routing_critical_quality_very_high_complexity_openai(
         self, aegis_proxy_with_config
     ) -> None:
         """Test critical quality + very high complexity routes to OpenAI."""
@@ -132,11 +142,14 @@ class TestRoutingLogic:
             complexity=Complexity.VERY_HIGH,
         )
 
-        provider, reason = aegis_proxy_with_config._route_task(task)
+        provider, reason = await aegis_proxy_with_config._route_task(task)
 
         assert provider == "openai"
 
-    def test_routing_high_quality_high_complexity_alibaba(self, aegis_proxy_with_config) -> None:
+    @pytest.mark.asyncio
+    async def test_routing_high_quality_high_complexity_alibaba(
+        self, aegis_proxy_with_config
+    ) -> None:
         """Test high quality + high complexity routes to Alibaba Cloud."""
         task = LLMTask(
             task_type=TaskType.EXTRACTION,
@@ -145,12 +158,13 @@ class TestRoutingLogic:
             complexity=Complexity.HIGH,
         )
 
-        provider, reason = aegis_proxy_with_config._route_task(task)
+        provider, reason = await aegis_proxy_with_config._route_task(task)
 
         assert provider == "alibaba_cloud"
         assert reason == "high_quality_high_complexity"
 
-    def test_routing_batch_processing_alibaba(self, aegis_proxy_with_config) -> None:
+    @pytest.mark.asyncio
+    async def test_routing_batch_processing_alibaba(self, aegis_proxy_with_config) -> None:
         """Test batch processing (>10 docs) routes to Alibaba Cloud."""
         task = LLMTask(
             task_type=TaskType.EXTRACTION,
@@ -158,12 +172,13 @@ class TestRoutingLogic:
             batch_size=100,
         )
 
-        provider, reason = aegis_proxy_with_config._route_task(task)
+        provider, reason = await aegis_proxy_with_config._route_task(task)
 
         assert provider == "alibaba_cloud"
         assert reason == "batch_processing"
 
-    def test_routing_small_batch_local(self, aegis_proxy_with_config) -> None:
+    @pytest.mark.asyncio
+    async def test_routing_small_batch_local(self, aegis_proxy_with_config) -> None:
         """Test small batch (<10 docs) routes to local."""
         task = LLMTask(
             task_type=TaskType.EXTRACTION,
@@ -171,12 +186,13 @@ class TestRoutingLogic:
             batch_size=5,
         )
 
-        provider, reason = aegis_proxy_with_config._route_task(task)
+        provider, reason = await aegis_proxy_with_config._route_task(task)
 
         assert provider == "local_ollama"
-        assert reason == "default_local"
+        assert reason == "default_local_engine_auto"
 
-    def test_routing_prefer_cloud_flag(self, aegis_proxy_with_config) -> None:
+    @pytest.mark.asyncio
+    async def test_routing_prefer_cloud_flag(self, aegis_proxy_with_config) -> None:
         """Test prefer_cloud routing configuration."""
         aegis_proxy_with_config.config.routing["prefer_cloud"] = True
 
@@ -185,12 +201,13 @@ class TestRoutingLogic:
             prompt="Extract entities",
         )
 
-        provider, reason = aegis_proxy_with_config._route_task(task)
+        provider, reason = await aegis_proxy_with_config._route_task(task)
 
         assert provider == "alibaba_cloud"
         assert reason == "prefer_cloud_extraction_generation"
 
-    def test_routing_budget_exceeded_fallback(self, aegis_proxy_with_config) -> None:
+    @pytest.mark.asyncio
+    async def test_routing_budget_exceeded_fallback(self, aegis_proxy_with_config) -> None:
         """Test fallback to local when budget exceeded."""
         # Set budget to exceeded
         aegis_proxy_with_config._monthly_spending["openai"] = 25.0
@@ -203,12 +220,13 @@ class TestRoutingLogic:
             complexity=Complexity.HIGH,
         )
 
-        provider, reason = aegis_proxy_with_config._route_task(task)
+        provider, reason = await aegis_proxy_with_config._route_task(task)
 
         # Should fall back from OpenAI due to budget
         assert provider in ["alibaba_cloud", "local_ollama"]
 
-    def test_routing_default_local(self, aegis_proxy_with_config) -> None:
+    @pytest.mark.asyncio
+    async def test_routing_default_local(self, aegis_proxy_with_config) -> None:
         """Test default routing to local for simple tasks."""
         task = LLMTask(
             task_type=TaskType.GENERATION,
@@ -217,10 +235,10 @@ class TestRoutingLogic:
             complexity=Complexity.LOW,
         )
 
-        provider, reason = aegis_proxy_with_config._route_task(task)
+        provider, reason = await aegis_proxy_with_config._route_task(task)
 
         assert provider == "local_ollama"
-        assert reason == "default_local"
+        assert reason == "default_local_engine_auto"
 
 
 class TestBudgetTracking:
@@ -408,16 +426,20 @@ class TestStreamingExecution:
     async def test_streaming_provider_error_fallback_to_local(
         self, aegis_proxy_with_config
     ) -> None:
-        """Test streaming falls back to local on provider error."""
+        """Test streaming falls back when cloud provider fails.
+
+        Sprint 128: Routing now checks engine_mode. In auto mode, if routed to
+        cloud and it fails, falls back to local_ollama.
+        """
         task = LLMTask(
             task_type=TaskType.GENERATION,
             prompt="Generate",
+            quality_requirement=QualityRequirement.HIGH,
+            complexity=Complexity.HIGH,
         )
 
-        # Mock execute_streaming to raise error then succeed
-        async def mock_fail(*args, **kwargs):
-            raise LLMExecutionError("Provider failed")
-
+        # Route to alibaba_cloud first (high quality + high complexity)
+        # then fallback to local_ollama
         async def mock_succeed():
             chunk = SimpleNamespace(
                 choices=[SimpleNamespace(delta=SimpleNamespace(content="Fallback"))]
@@ -429,8 +451,8 @@ class TestStreamingExecution:
         async def mock_execute_streaming(provider, task):
             nonlocal call_count
             call_count += 1
-            if call_count == 1:
-                await mock_fail()
+            if call_count == 1 and provider == "alibaba_cloud":
+                raise LLMExecutionError("Provider failed")
             else:
                 async for chunk in mock_succeed():
                     yield chunk
@@ -446,14 +468,18 @@ class TestStreamingExecution:
 
     @pytest.mark.asyncio
     async def test_streaming_all_providers_fail_raises_error(self, aegis_proxy_with_config) -> None:
-        """Test streaming raises error when all providers fail."""
+        """Test streaming raises error when provider fails with no fallback.
+
+        Sprint 128: In auto mode, when local_ollama fails there's no different
+        fallback (fallback_provider == provider), so it raises immediately.
+        """
         task = LLMTask(
             task_type=TaskType.GENERATION,
             prompt="Generate",
         )
 
         async def mock_fail(*args, **kwargs):
-            raise LLMExecutionError("All providers failed")
+            raise LLMExecutionError("Provider failed")
 
         with (
             patch.object(
@@ -461,7 +487,7 @@ class TestStreamingExecution:
                 "_execute_streaming",
                 side_effect=mock_fail,
             ),
-            pytest.raises(LLMExecutionError, match="All LLM providers failed"),
+            pytest.raises(LLMExecutionError, match="LLM provider local_ollama failed"),
         ):
             async for _ in aegis_proxy_with_config.generate_streaming(task):
                 pass
@@ -572,4 +598,160 @@ def aegis_proxy_with_config(mock_llm_config):
 
         proxy = AegisLLMProxy(config=mock_llm_config)
         proxy.cost_tracker = mock_tracker_instance
+        # Mock _get_engine_mode to avoid Redis dependency (Sprint 128)
+        proxy._get_engine_mode = AsyncMock(return_value="auto")
+        # Disable vLLM in unit tests to test original routing logic
+        proxy._vllm_enabled = False
         return proxy
+
+
+class TestVLLMActiveRequests:
+    """Test vLLM active request monitoring for cascade guard.
+
+    Sprint 128 Feature 128.2: Cascade timeout guard.
+    """
+
+    @pytest.mark.asyncio
+    async def test_get_vllm_active_requests_success(self) -> None:
+        """Test parsing vLLM Prometheus metrics for active requests."""
+        # Mock vLLM metrics response
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.text = """
+# HELP vllm:num_requests_running Number of requests currently running
+# TYPE vllm:num_requests_running gauge
+vllm:num_requests_running{model="nemotron-3-nano:128k"} 2.0
+# HELP vllm:num_requests_waiting Number of requests waiting in queue
+# TYPE vllm:num_requests_waiting gauge
+vllm:num_requests_waiting{model="nemotron-3-nano:128k"} 1.0
+"""
+
+        # Create proxy with vLLM enabled
+        proxy = AegisLLMProxy()
+        proxy._vllm_enabled = True
+        proxy._vllm_base_url = "http://localhost:8001"
+
+        # Mock httpx client with AsyncMock for async context manager
+        with patch("httpx.AsyncClient") as mock_httpx_client:
+            mock_client_instance = AsyncMock()
+            mock_client_instance.get = AsyncMock(return_value=mock_response)
+            mock_httpx_client.return_value.__aenter__.return_value = mock_client_instance
+
+            # Get active requests
+            active = await proxy.get_vllm_active_requests()
+
+            # Assertions
+            assert active == 3  # 2 running + 1 waiting
+            mock_client_instance.get.assert_called_once_with("http://localhost:8001/metrics")
+
+    @pytest.mark.asyncio
+    async def test_get_vllm_active_requests_vllm_disabled(self) -> None:
+        """Test get_vllm_active_requests returns 0 when vLLM is disabled."""
+        # Create proxy with vLLM disabled
+        proxy = AegisLLMProxy()
+        proxy._vllm_enabled = False
+
+        # Get active requests (should return 0 immediately)
+        active = await proxy.get_vllm_active_requests()
+
+        # Assertions
+        assert active == 0
+        # No need to check httpx - it's not called
+
+    @pytest.mark.asyncio
+    async def test_get_vllm_active_requests_metrics_unavailable(self) -> None:
+        """Test get_vllm_active_requests returns 0 when metrics endpoint fails."""
+        # Mock vLLM metrics response with error status
+        mock_response = MagicMock()
+        mock_response.status_code = 404
+
+        # Create proxy with vLLM enabled
+        proxy = AegisLLMProxy()
+        proxy._vllm_enabled = True
+        proxy._vllm_base_url = "http://localhost:8001"
+
+        with patch("httpx.AsyncClient") as mock_httpx_client:
+            mock_client_instance = AsyncMock()
+            mock_client_instance.get = AsyncMock(return_value=mock_response)
+            mock_httpx_client.return_value.__aenter__.return_value = mock_client_instance
+
+            # Get active requests
+            active = await proxy.get_vllm_active_requests()
+
+            # Assertions
+            assert active == 0  # Default to 0 on error
+
+    @pytest.mark.asyncio
+    async def test_get_vllm_active_requests_connection_error(self) -> None:
+        """Test get_vllm_active_requests returns 0 when connection fails."""
+        # Create proxy with vLLM enabled
+        proxy = AegisLLMProxy()
+        proxy._vllm_enabled = True
+        proxy._vllm_base_url = "http://localhost:8001"
+
+        with patch("httpx.AsyncClient") as mock_httpx_client:
+            # Mock httpx client to raise exception
+            mock_client_instance = AsyncMock()
+            mock_client_instance.get = AsyncMock(side_effect=Exception("Connection refused"))
+            mock_httpx_client.return_value.__aenter__.return_value = mock_client_instance
+
+            # Get active requests
+            active = await proxy.get_vllm_active_requests()
+
+            # Assertions
+            assert active == 0  # Default to 0 on error
+
+    @pytest.mark.asyncio
+    async def test_get_vllm_active_requests_malformed_metrics(self) -> None:
+        """Test get_vllm_active_requests handles malformed metrics gracefully."""
+        # Mock vLLM metrics response with malformed data
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.text = """
+# HELP vllm:num_requests_running Number of requests currently running
+vllm:num_requests_running{model="nemotron-3-nano:128k"} invalid_value
+vllm:num_requests_waiting{model="nemotron-3-nano:128k"} also_invalid
+"""
+
+        # Create proxy with vLLM enabled
+        proxy = AegisLLMProxy()
+        proxy._vllm_enabled = True
+        proxy._vllm_base_url = "http://localhost:8001"
+
+        with patch("httpx.AsyncClient") as mock_httpx_client:
+            mock_client_instance = AsyncMock()
+            mock_client_instance.get = AsyncMock(return_value=mock_response)
+            mock_httpx_client.return_value.__aenter__.return_value = mock_client_instance
+
+            # Get active requests
+            active = await proxy.get_vllm_active_requests()
+
+            # Assertions
+            assert active == 0  # Falls back to 0 on parse error
+
+    @pytest.mark.asyncio
+    async def test_get_vllm_active_requests_zero_active(self) -> None:
+        """Test get_vllm_active_requests correctly returns 0 when no requests active."""
+        # Mock vLLM metrics response with zero active requests
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.text = """
+vllm:num_requests_running{model="nemotron-3-nano:128k"} 0.0
+vllm:num_requests_waiting{model="nemotron-3-nano:128k"} 0.0
+"""
+
+        # Create proxy with vLLM enabled
+        proxy = AegisLLMProxy()
+        proxy._vllm_enabled = True
+        proxy._vllm_base_url = "http://localhost:8001"
+
+        with patch("httpx.AsyncClient") as mock_httpx_client:
+            mock_client_instance = AsyncMock()
+            mock_client_instance.get = AsyncMock(return_value=mock_response)
+            mock_httpx_client.return_value.__aenter__.return_value = mock_client_instance
+
+            # Get active requests
+            active = await proxy.get_vllm_active_requests()
+
+            # Assertions
+            assert active == 0

@@ -330,6 +330,7 @@ class LLMConfigService:
 
         Raises:
             Exception: If Redis save fails (caller should handle)
+            ValueError: If config violates engine mode constraints (Sprint 128.5)
 
         Example:
             >>> service = LLMConfigService()
@@ -339,6 +340,9 @@ class LLMConfigService:
             >>> # Config takes effect immediately (cache updated)
         """
         from src.components.memory import get_redis_memory
+
+        # Sprint 128.5: Validate config against current engine mode
+        await self._validate_config_against_engine_mode(config)
 
         redis_memory = get_redis_memory()
         redis_client = await redis_memory.client
@@ -361,6 +365,71 @@ class LLMConfigService:
             use_cases_count=len(config.use_cases),
             updated_at=config.updated_at,
         )
+
+    async def _validate_config_against_engine_mode(self, config: LLMConfig) -> None:
+        """Validate LLM config against current engine mode.
+
+        Sprint 128.5: Engine-Aware Model Selection
+
+        In vLLM-only mode, all use cases must use vLLM model (no Ollama models allowed).
+        In auto mode, extraction use cases must use vLLM, chat use cases can use Ollama.
+
+        Args:
+            config: LLM configuration to validate
+
+        Raises:
+            ValueError: If config violates engine mode constraints
+        """
+        from src.core.config import settings
+
+        try:
+            import redis.asyncio as aioredis
+
+            redis_client = aioredis.from_url(
+                f"redis://{settings.redis_host}:{settings.redis_port}/0",
+                decode_responses=True,
+            )
+            engine_mode = await redis_client.get("aegis:llm_engine_mode")
+            await redis_client.close()
+
+            if not engine_mode:
+                engine_mode = "auto"  # Default
+
+            # vLLM-only mode: reject Ollama models
+            if engine_mode == "vllm":
+                for uc, uc_config in config.use_cases.items():
+                    if uc_config.model_id.startswith("ollama/"):
+                        raise ValueError(
+                            f"vLLM-only mode: Cannot use Ollama model '{uc_config.model_id}' "
+                            f"for use case '{uc.value}'. Switch to 'auto' or 'ollama' mode first."
+                        )
+
+            # Auto mode: extraction use cases must use vLLM
+            elif engine_mode == "auto":
+                extraction_use_cases = [
+                    LLMUseCase.ENTITY_EXTRACTION,
+                ]
+                for uc in extraction_use_cases:
+                    if uc in config.use_cases:
+                        uc_config = config.use_cases[uc]
+                        if uc_config.model_id.startswith("ollama/"):
+                            raise ValueError(
+                                f"Auto mode: Extraction use case '{uc.value}' must use vLLM model, "
+                                f"not '{uc_config.model_id}'. Only chat use cases can use Ollama in auto mode."
+                            )
+
+            # Ollama-only mode: reject vLLM models (if we add vLLM model IDs in future)
+            # For now, no validation needed since UI won't show vLLM models in ollama mode
+
+        except ValueError:
+            raise  # Re-raise validation errors
+        except Exception as e:
+            logger.warning(
+                "llm_config_validation_skipped",
+                error=str(e),
+                reason="Could not fetch engine mode from Redis",
+            )
+            # Don't block save if Redis is unavailable
 
     def _build_default_config_from_settings(self) -> LLMConfig:
         """Build default config from config.py settings.

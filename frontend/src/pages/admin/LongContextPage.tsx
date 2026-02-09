@@ -14,7 +14,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft,
   FileText,
   Upload,
   Download,
@@ -245,24 +244,15 @@ export function LongContextPage() {
       <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => navigate('/admin')}
-                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                data-testid="back-button"
-              >
-                <ArrowLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-              </button>
-              <div className="flex items-center gap-3">
-                <FileText className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                <div>
-                  <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-                    Long Context Manager
-                  </h1>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Manage large documents and context window
-                  </p>
-                </div>
+            <div className="flex items-center gap-3">
+              <FileText className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <div>
+                <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                  Long Context Manager
+                </h1>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Manage large documents and context window
+                </p>
               </div>
             </div>
 

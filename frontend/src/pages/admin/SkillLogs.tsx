@@ -9,7 +9,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, RefreshCw, Clock, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+import { RefreshCw, Clock, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
 import { getSkill } from '../../api/skills';
 import type { SkillDetail } from '../../types/skills';
 import { AdminNavigationBar } from '../../components/admin/AdminNavigationBar';
@@ -117,13 +117,6 @@ export function SkillLogs() {
       {/* Header */}
       <header className="bg-white dark:bg-gray-800 border-b-2 border-gray-200 dark:border-gray-700 px-6 py-4">
         <div className="max-w-7xl mx-auto">
-          <Link
-            to="/admin/skills/registry"
-            className="inline-flex items-center gap-1 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 mb-3"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Registry
-          </Link>
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
