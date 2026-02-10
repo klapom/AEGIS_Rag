@@ -15,185 +15,53 @@ import os
 # Set AEGIS_USE_LEGACY_PROMPTS=1 to revert to old generic prompts if needed
 USE_DSPY_PROMPTS = os.environ.get("AEGIS_USE_LEGACY_PROMPTS", "0") != "1"
 
-# Entity Extraction Prompt with Few-Shot Examples
-# Sprint 13: Optimized for llama3.2:3b model to ensure reliable JSON output
-ENTITY_EXTRACTION_PROMPT = """Extract entities from the following text. For each entity, identify:
-1. Entity name (exact string from text)
-2. Entity type (PERSON, ORGANIZATION, LOCATION, CONCEPT, TECHNOLOGY, PRODUCT, EVENT, or other)
-3. Short description (1 sentence, based on context in text)
-
-Few-shot examples:
-
-Example 1:
-Text: "John Smith is a software engineer at Google, working on machine learning projects."
-Entities:
-[
-  {{"name": "John Smith", "type": "PERSON", "description": "Software engineer at Google"}},
-  {{"name": "Google", "type": "ORGANIZATION", "description": "Technology company"}},
-  {{"name": "machine learning", "type": "CONCEPT", "description": "Field of artificial intelligence"}}
-]
-
-Example 2:
-Text: "The Python programming language was created by Guido van Rossum in 1991."
-Entities:
-[
-  {{"name": "Python", "type": "TECHNOLOGY", "description": "Programming language"}},
-  {{"name": "Guido van Rossum", "type": "PERSON", "description": "Creator of Python"}},
-  {{"name": "1991", "type": "EVENT", "description": "Year Python was created"}}
-]
-
-Example 3:
-Text: "Microsoft was founded by Bill Gates and Paul Allen in 1975 in Albuquerque."
-Entities:
-[
-  {{"name": "Microsoft", "type": "ORGANIZATION", "description": "Technology company founded in 1975"}},
-  {{"name": "Bill Gates", "type": "PERSON", "description": "Co-founder of Microsoft"}},
-  {{"name": "Paul Allen", "type": "PERSON", "description": "Co-founder of Microsoft"}},
-  {{"name": "1975", "type": "EVENT", "description": "Year Microsoft was founded"}},
-  {{"name": "Albuquerque", "type": "LOCATION", "description": "City where Microsoft was founded"}}
-]
-
-Now extract entities from this text:
-
-Text:
-{text}
-
-CRITICAL OUTPUT INSTRUCTIONS:
-- You MUST return ONLY a valid JSON array
-- Do NOT include any explanatory text before the JSON array
-- Do NOT include any explanatory text after the JSON array
-- Do NOT use markdown code fences (no ``` or ```json)
-- Do NOT say "Here are the entities" or similar phrases
-- Just output the raw JSON array starting with [ and ending with ]
-- Extract at least 3-5 entities if the text contains them
-
-Required JSON format (copy this structure exactly):
-[
-  {{"name": "Entity Name", "type": "ENTITY_TYPE", "description": "One sentence description"}},
-  ...
-]
-
-Additional guidelines:
-- Extract ALL significant entities mentioned in the text
-- Use standard entity types: PERSON, ORGANIZATION, LOCATION, CONCEPT, TECHNOLOGY, PRODUCT, EVENT
-- Be comprehensive but avoid duplicates
-- Keep descriptions concise (1 sentence)
-
-Output (JSON array only):
-"""
-
-# Relationship Extraction Prompt with Few-Shot Examples
-# Sprint 85: Enhanced with GraphRAG/LightRAG best practices
-RELATIONSHIP_EXTRACTION_PROMPT = """---Role---
-You are a Knowledge Graph Specialist extracting ALL relationships between entities.
-
----Goal---
-Identify ALL relationships among the identified entities. Be EXHAUSTIVE.
-A good knowledge graph has at least 1 relationship per entity.
-
----Few-shot Examples---
-
-Example 1:
-Entities: John Smith (PERSON), Google (ORGANIZATION), machine learning (CONCEPT)
-Text: "John Smith is a software engineer at Google, working on machine learning projects."
-
-Relationships:
-[
-  {{"source": "John Smith", "target": "Google", "type": "WORKS_AT", "description": "John Smith is employed by Google as a software engineer", "strength": 9}},
-  {{"source": "John Smith", "target": "machine learning", "type": "WORKS_ON", "description": "John Smith works on machine learning projects", "strength": 8}},
-  {{"source": "Google", "target": "machine learning", "type": "USES", "description": "Google uses machine learning in its projects", "strength": 6}}
-]
-
-Example 2:
-Entities: Python (TECHNOLOGY), Guido van Rossum (PERSON), 1991 (EVENT)
-Text: "The Python programming language was created by Guido van Rossum in 1991."
-
-Relationships:
-[
-  {{"source": "Guido van Rossum", "target": "Python", "type": "CREATED", "description": "Guido van Rossum created the Python programming language", "strength": 10}},
-  {{"source": "Python", "target": "1991", "type": "CREATED_IN", "description": "Python was created in 1991", "strength": 9}}
-]
-
----Task---
-Extract ALL relationships from this text:
-
-Entities found:
-{entities}
-
-Text:
-{text}
-
----Instructions---
-1. Extract ALL relationships - be exhaustive, not conservative
-2. Decompose N-ary relationships: "A and B founded C" → A FOUNDED C, B FOUNDED C
-3. Include implicit relationships (co-occurrence in same sentence often implies relation)
-4. Rate strength 1-10: 10=explicit statement, 7=strong implication, 4=weak inference
-
----Output Format---
-[
-  {{"source": "Entity1", "target": "Entity2", "type": "RELATIONSHIP_TYPE", "description": "Why related", "strength": 8}},
-  ...
-]
-
-Common types: WORKS_AT, CREATED, FOUNDED, DIRECTED, PRODUCED, STARS_IN, LOCATED_IN,
-PART_OF, MANAGES, USES, COLLABORATES_WITH, BASED_ON, CONTAINS, LEADS_TO, ASSOCIATED_WITH
-
-Output (JSON array only):
-"""
 
 # Sprint 45 Feature 45.8: Generic Extraction Prompts for Domain Fallback
 # These prompts are used when no domain-specific prompts are available
 
-GENERIC_ENTITY_EXTRACTION_PROMPT = """Extract all significant entities from the following text.
+GENERIC_ENTITY_EXTRACTION_PROMPT = """Extract all named entities from the text. Return ONLY a valid JSON array.
 
-An entity is any named thing: person, organization, place, concept, technology, product, event, etc.
-Do NOT limit yourself to predefined types - extract whatever is meaningful in the context.
+Entity types (ADR-060): PERSON, ORGANIZATION, LOCATION, EVENT, DATE_TIME, CONCEPT, TECHNOLOGY, PRODUCT, METRIC, DOCUMENT, PROCESS, MATERIAL, REGULATION, QUANTITY, FIELD
+
+Rules:
+- Entity name: max 4 words, canonical form
+- One entity per concept, no duplicates
+- Confidence: 1.0 = explicit mention, 0.7 = implied, 0.4 = inferred
 
 Text:
 {text}
 
-Return a JSON array of entities. Each entity should have:
-- name: The exact name as it appears in text
-- type: Your best categorization (use natural language, e.g., "Software Framework")
-- description: Brief description based on context (1 sentence)
-
-Output (JSON array only):
-"""
-
-GENERIC_RELATION_EXTRACTION_PROMPT = """Extract ALL relationships between the given entities from the text.
-
----Role---
-You are a Knowledge Graph Specialist extracting relationships from text.
-
----Goal---
-Identify ALL relationships among the provided entities. Be EXHAUSTIVE.
-A good knowledge graph has at least 1 relationship per entity.
-
----Entities---
-{entities}
-
----Text---
-{text}
-
----Instructions---
-1. For EVERY pair of entities that interact or relate, extract a relationship
-2. Decompose complex N-ary relationships into multiple binary pairs
-   Example: "John and Mary founded Company" → John FOUNDED Company, Mary FOUNDED Company
-3. Include both explicit relationships (stated in text) and implicit ones (strongly implied)
-4. Rate relationship strength from 1-10 (10 = explicitly stated, 5 = implied, 1 = weak inference)
-
----Output Format---
-Return a JSON array with this structure:
+Output example:
 [
-  {{"source": "Entity1", "target": "Entity2", "type": "RELATIONSHIP_TYPE", "description": "Why they are related", "strength": 8}},
-  ...
+  {{"name": "NVIDIA", "type": "ORGANIZATION", "description": "GPU manufacturer", "confidence": 1.0}},
+  {{"name": "machine learning", "type": "CONCEPT", "description": "AI training methodology", "confidence": 0.7}}
 ]
 
-Common relationship types: WORKS_AT, CREATED, FOUNDED, LOCATED_IN, PART_OF, MANAGES, USES,
-COLLABORATES_WITH, DIRECTED, PRODUCED, STARS_IN, BASED_ON, CONTAINS, LEADS_TO
+Entities:"""
 
-Output (JSON array only):
-"""
+GENERIC_RELATION_EXTRACTION_PROMPT = """Extract ALL relationships between the given entities. Return ONLY a valid JSON array.
+
+Relation types (ADR-060): PART_OF, CONTAINS, INSTANCE_OF, TYPE_OF, EMPLOYS, MANAGES, FOUNDED_BY, OWNS, LOCATED_IN, CAUSES, ENABLES, REQUIRES, LEADS_TO, PRECEDES, FOLLOWS, USES, CREATES, IMPLEMENTS, DEPENDS_ON, SIMILAR_TO, ASSOCIATED_WITH, RELATED_TO (last resort only)
+
+Rules:
+- Be exhaustive: at least 1 relationship per entity
+- Decompose N-ary: "A and B founded C" → two triples
+- Subject/object: max 4 words, must match entity name exactly
+- Strength: 10 = explicit statement, 7 = strong implication, 4 = weak inference
+
+Entities:
+{entities}
+
+Text:
+{text}
+
+Output example:
+[
+  {{"subject": "NVIDIA", "relation": "CREATES", "object": "DGX Spark", "description": "NVIDIA designed the DGX Spark", "strength": 10}},
+  {{"subject": "DGX Spark", "relation": "CONTAINS", "object": "GB10 GPU", "description": "DGX Spark includes GB10 GPU", "strength": 9}}
+]
+
+Relations:"""
 
 # Sprint 83 Feature 83.3: Gleaning Multi-Pass Extraction (TD-100)
 # Based on Microsoft GraphRAG approach
@@ -235,27 +103,16 @@ Focus on:
 - Domain-specific terminology that was overlooked
 - Products, technologies, or events mentioned but not extracted
 
-For each missing entity, identify:
-1. Entity name (exact string from text)
-2. Entity type (PERSON, ORGANIZATION, LOCATION, CONCEPT, TECHNOLOGY, PRODUCT, EVENT, or other)
-3. Short description (1 sentence, based on context in text)
+For each missing entity use the 15 ADR-060 types: PERSON, ORGANIZATION, LOCATION, EVENT, DATE_TIME, CONCEPT, TECHNOLOGY, PRODUCT, METRIC, DOCUMENT, PROCESS, MATERIAL, REGULATION, QUANTITY, FIELD
 
-CRITICAL OUTPUT INSTRUCTIONS:
-- You MUST return ONLY a valid JSON array
-- Do NOT include any explanatory text before the JSON array
-- Do NOT include any explanatory text after the JSON array
-- Do NOT use markdown code fences (no ``` or ```json)
-- Do NOT say "Here are the missing entities" or similar phrases
-- Just output the raw JSON array starting with [ and ending with ]
-- If there are NO missing entities, return an empty array: []
+Return ONLY a valid JSON array. No markdown, no explanatory text. If none missing, return [].
 
-Required JSON format (copy this structure exactly):
+Output example:
 [
-  {{"name": "Entity Name", "type": "ENTITY_TYPE", "description": "One sentence description"}},
-  ...
+  {{"name": "Entity Name", "type": "CONCEPT", "description": "One sentence description", "confidence": 0.7}}
 ]
 
-Output (JSON array only):"""
+Entities:"""
 
 
 # Sprint 85 Feature 85.8: Relationship Gleaning Prompts
@@ -302,33 +159,21 @@ Full document text:
 Please extract ONLY the relationships that were MISSED in the previous extraction.
 Do NOT repeat relationships that were already extracted in the list above.
 
-Focus on extracting:
-- CAUSAL relationships: CAUSES, LEADS_TO, ENABLES, RESULTS_IN, TRIGGERS
-- FUNCTIONAL relationships: USES, IMPLEMENTS, EXTENDS, INTEGRATES_WITH
-- ORGANIZATIONAL relationships: MANAGES, OWNS, CONTROLS, CONTAINS, PART_OF
-- KNOWLEDGE relationships: KNOWS, CREATED, DEVELOPED, DISCOVERED, INVENTED
-- TEMPORAL relationships: PRECEDES, FOLLOWS, CONCURRENT_WITH
-- SEMANTIC relationships: RELATES_TO, SIMILAR_TO, CONTRASTS_WITH, DEPENDS_ON
+Focus on these ADR-060 relation types:
+- Causal: CAUSES, LEADS_TO, ENABLES, REQUIRES
+- Functional: USES, CREATES, IMPLEMENTS, DEPENDS_ON
+- Organizational: MANAGES, OWNS, EMPLOYS, FOUNDED_BY, LOCATED_IN
+- Structural: PART_OF, CONTAINS, INSTANCE_OF, TYPE_OF
+- Temporal: PRECEDES, FOLLOWS
+- Semantic: SIMILAR_TO, ASSOCIATED_WITH
+- Fallback: RELATED_TO (only when nothing else fits)
 
-CRITICAL: For each pair of related entities, try to find AT LEAST ONE relationship.
-If two entities appear in the same sentence or context, they likely have a relationship.
+Extract AT LEAST ONE relationship per entity pair that co-occurs in the text.
+Return ONLY a valid JSON array. No markdown, no explanatory text. If none missing, return [].
 
-For each missing relationship, identify:
-1. Source entity (must be from the entity list)
-2. Target entity (must be from the entity list)
-3. Relationship type (use UPPERCASE_WITH_UNDERSCORES)
-4. Description (1 sentence explaining the relationship)
-
-CRITICAL OUTPUT INSTRUCTIONS:
-- You MUST return ONLY a valid JSON array
-- Do NOT include any explanatory text before or after the JSON array
-- Do NOT use markdown code fences (no ``` or ```json)
-- If there are NO missing relationships, return an empty array: []
-
-Required JSON format:
+Output example:
 [
-  {{"source": "Entity1", "target": "Entity2", "type": "RELATIONSHIP_TYPE", "description": "One sentence description"}},
-  ...
+  {{"subject": "Entity1", "relation": "CAUSES", "object": "Entity2", "description": "Evidence from text", "strength": 7}}
 ]
 
 Output (JSON array only):"""
@@ -338,152 +183,86 @@ Output (JSON array only):"""
 # These prompts were optimized using DSPy MIPROv2 with 80% combined score
 # Source: data/dspy_prompts/pipeline_gptoss/pipeline_extraction_20260113_060510.json
 
-DSPY_OPTIMIZED_ENTITY_PROMPT = """You are a data annotator working with a structured knowledge‑extraction pipeline.
-Given a **Document Text** and a **Domain** label, your job is to identify all relevant named entities, classify each one with a type from the controlled list below, and give a brief description.
+DSPY_OPTIMIZED_ENTITY_PROMPT = """Extract all named entities from the text. Return ONLY a valid JSON array.
 
-**Procedure**
+Entity types:
+- PERSON: Named individuals
+- ORGANIZATION: Companies, agencies, institutions
+- LOCATION: Places, regions, countries
+- EVENT: Named events, milestones
+- DATE_TIME: Dates, periods, timestamps
+- CONCEPT: Abstract ideas, theories, methods
+- TECHNOLOGY: Frameworks, platforms, tools, protocols
+- PRODUCT: Software, hardware, consumer products
+- METRIC: Measurements, KPIs, scores
+- DOCUMENT: Standards, laws, papers, patents
+- PROCESS: Procedures, workflows, algorithms
+- MATERIAL: Physical substances, compounds
+- REGULATION: Laws, policies, compliance rules
+- QUANTITY: Numerical values with units
+- FIELD: Academic disciplines, professional fields
 
-1. **Read** the entire text and the domain (`technical`, `scientific`, or `organizational`).
-2. **Think step by step**: For every entity you plan to list, write a short justification that explains *why* it belongs in the output.
-3. **Output** exactly two sections, in this order:
-   - `Reasoning:` – a single line that starts with `Reasoning:` followed by your step‑by‑step reasoning.
-   - `Entities:` – a single line that starts with `Entities:` followed by a **valid JSON array** of objects.
-     Each object must contain the keys:
-     * `name`   – the canonical entity string as it appears in the text (MAX 4 WORDS, use shortest common name).
-     * `type`   – one of the 15 universal type tags (see below).
-     * `description` – a concise, one‑sentence explanation of the entity's role in the text.
-
-**15 Universal Entity Types (ADR-060 Standard)**
-
-| Tag | Typical meaning | Examples |
-|-----|-----------------|----------|
-| `PERSON` | Individual person | "John Smith", "Einstein" |
-| `ORGANIZATION` | Company, lab, institute, agency | "NVIDIA", "WHO", "MIT" |
-| `LOCATION` | City, country, address, region | "Berlin", "Europe", "GPS coordinates" |
-| `EVENT` | Conference, meeting, occurrence | "WWII", "NeurIPS 2025" |
-| `DATE_TIME` | Calendar year, month, day, period | "2025", "Q1 2026" |
-| `CONCEPT` | Abstract idea, theory, method | "machine learning", "democracy" |
-| `TECHNOLOGY` | Software, framework, platform, protocol | "Docker", "TCP/IP", "React" |
-| `PRODUCT` | Physical or digital product, service | "iPhone", "ChatGPT", "AWS" |
-| `METRIC` | Measurements, KPIs, scores | "accuracy 95%", "GDP", "F1 score" |
-| `DOCUMENT` | Standards, laws, papers, patents | "RFC 2616", "GDPR", "ISO 9001" |
-| `PROCESS` | Procedures, workflows, algorithms | "gradient descent", "CI/CD" |
-| `MATERIAL` | Physical substances, compounds | "silicon", "H2O", "steel" |
-| `REGULATION` | Laws, policies, compliance rules | "GDPR Article 17", "FDA approval" |
-| `QUANTITY` | Numerical values with units | "5 GB", "100 meters", "3 days" |
-| `FIELD` | Academic discipline, professional field | "neuroscience", "engineering" |
-
-**IMPORTANT Entity Naming Rules**
-- **MAX 4 WORDS**: Use concise names (e.g., "NVIDIA" not "NVIDIA Corporation headquartered in Santa Clara")
-- **Canonical names**: Use most common name (e.g., "Einstein" not "Albert Einstein, German physicist")
-- If entity name in text is > 4 words, shorten it to canonical form
-
-If no entities match the domain or the text, output an empty JSON array: `[]`.
-
-**Formatting rules**
-
-- Do **not** wrap the entire answer in markdown or code fences.
-- The JSON array must be syntactically correct; no trailing commas.
-- Do not add any extra keys, comments, or explanatory text beyond the two required sections.
-
----
+Rules:
+- Entity name: max 4 words, canonical form
+- One entity per concept, no duplicates
+- Confidence: 1.0 = explicit mention, 0.7 = implied, 0.4 = inferred
 
 Text: {text}
 Domain: {domain}
 
-Reasoning: Let's think step by step in order to identify all named entities.
-Entities:"""
-
-DSPY_OPTIMIZED_RELATION_PROMPT = """Extract ALL relationships between entities from the text as Subject-Predicate-Object triples.
-
----Role---
-You are a Knowledge Graph Specialist extracting structured S-P-O triples for a graph database.
-
----Goal---
-Identify ALL relationships among the provided entities. Be EXHAUSTIVE.
-A good knowledge graph has at least 1 relationship per entity.
-
----Entities---
-{entities}
-
----Text---
-{text}
-
----Instructions---
-1. Extract ALL relationships - be exhaustive, not conservative
-2. Decompose N-ary relationships: "A and B founded C" → A FOUNDED C, B FOUNDED C
-3. Include implicit relationships (co-occurrence in same sentence often implies relation)
-4. Rate strength 1-10: 10=explicit statement, 7=strong implication, 4=weak inference
-5. CRITICAL: Use a SPECIFIC relationship type from the 22 universal types below
-6. Keep entity names concise (MAX 4 WORDS). Use the most common/canonical name
-7. Relationship type must be 1-3 words in UPPER_SNAKE_CASE
-8. Use "RELATED_TO" ONLY as fallback when no specific type fits
-
----22 Universal Relation Types (ADR-060 Standard)---
-Use ONLY these types (pick the closest match):
-
-**Structural Relations:**
-- PART_OF: Component is part of whole (e.g., "GPU is PART_OF DGX Spark")
-- CONTAINS: Whole contains component (e.g., "DGX Spark CONTAINS GPU")
-- INSTANCE_OF: Specific instance of a type (e.g., "Fido INSTANCE_OF Dog")
-- TYPE_OF: Subtype relationship (e.g., "Dog TYPE_OF Animal")
-
-**Organizational Relations:**
-- EMPLOYS: Organization employs person (e.g., "NVIDIA EMPLOYS John")
-- MANAGES: Person manages entity (e.g., "John MANAGES team")
-- FOUNDED_BY: Organization founded by person (e.g., "Microsoft FOUNDED_BY Bill Gates")
-- OWNS: Entity owns another entity (e.g., "Google OWNS YouTube")
-- LOCATED_IN: Entity located in location (e.g., "Office LOCATED_IN Berlin")
-
-**Causal Relations:**
-- CAUSES: X causes Y (e.g., "Fire CAUSES smoke")
-- ENABLES: X enables Y (e.g., "API ENABLES integration")
-- REQUIRES: X requires Y (e.g., "Python REQUIRES interpreter")
-- LEADS_TO: X leads to Y (e.g., "Training LEADS_TO model")
-
-**Temporal Relations:**
-- PRECEDES: X happens before Y (e.g., "Testing PRECEDES deployment")
-- FOLLOWS: X happens after Y (e.g., "Q2 FOLLOWS Q1")
-
-**Functional Relations:**
-- USES: X uses Y (e.g., "Application USES database")
-- CREATES: X creates Y (e.g., "Model CREATES predictions")
-- IMPLEMENTS: X implements Y (e.g., "Code IMPLEMENTS algorithm")
-- DEPENDS_ON: X depends on Y (e.g., "Service DEPENDS_ON API")
-
-**Semantic Relations:**
-- SIMILAR_TO: X is similar to Y (e.g., "BERT SIMILAR_TO GPT")
-- ASSOCIATED_WITH: X is associated with Y (e.g., "Research ASSOCIATED_WITH paper")
-
-**Fallback (use ONLY when no specific type fits):**
-- RELATED_TO: Generic relationship (e.g., "Topic RELATED_TO concept")
-
----S-P-O Triple Output Format---
-Return ONLY a valid JSON array with this structure:
+Output example:
 [
-  {{
-    "subject": "Entity1",
-    "subject_type": "ORGANIZATION",
-    "relation": "DEVELOPED",
-    "object": "Entity2",
-    "object_type": "PRODUCT",
-    "description": "Entity1 developed Entity2 to solve problem X",
-    "strength": 9
-  }},
-  ...
+  {{"name": "NVIDIA", "type": "ORGANIZATION", "description": "GPU manufacturer", "confidence": 1.0}},
+  {{"name": "machine learning", "type": "CONCEPT", "description": "AI training methodology", "confidence": 0.7}}
 ]
 
-**IMPORTANT:**
-- "subject" = source entity (short name, max 4 words)
-- "subject_type" = one of the 15 universal entity types
-- "relation" = one of the 21 universal relation types (1-3 words, UPPER_SNAKE_CASE)
-- "object" = target entity (short name, max 4 words)
-- "object_type" = one of the 15 universal entity types
-- "description" = evidence from text explaining the relationship (1 sentence)
-- "strength" = confidence score 1-10
+Entities:"""
 
-Output (JSON array only):
-"""
+DSPY_OPTIMIZED_RELATION_PROMPT = """Extract ALL relationships between the given entities. Return ONLY a valid JSON array.
+
+Relation types:
+- PART_OF: Component → Whole
+- CONTAINS: Whole → Component
+- INSTANCE_OF: Instance → Type
+- TYPE_OF: Subtype → Supertype
+- EMPLOYS: Organization → Person
+- MANAGES: Person → Entity
+- FOUNDED_BY: Organization → Person
+- OWNS: Entity → Entity
+- LOCATED_IN: Entity → Location
+- CAUSES: Cause → Effect
+- ENABLES: Enabler → Enabled
+- REQUIRES: Dependent → Dependency
+- LEADS_TO: Antecedent → Consequent
+- PRECEDES: Earlier → Later
+- FOLLOWS: Later → Earlier
+- USES: User → Tool/Resource
+- CREATES: Creator → Creation
+- IMPLEMENTS: Implementation → Specification
+- DEPENDS_ON: Dependent → Dependency
+- SIMILAR_TO: Entity → Entity
+- ASSOCIATED_WITH: Entity → Entity
+- RELATED_TO: Entity → Entity (ONLY as last resort)
+
+Rules:
+- Be exhaustive: extract ALL relationships, at least 1 per entity
+- Decompose N-ary: "A and B founded C" → two triples
+- Subject/object: max 4 words, must match entity name exactly
+- Strength: 10 = explicit statement, 7 = strong implication, 4 = weak inference
+- Use RELATED_TO ONLY when no specific type fits
+
+Entities:
+{entities}
+
+Text: {text}
+
+Output example:
+[
+  {{"subject": "NVIDIA", "relation": "CREATES", "object": "DGX Spark", "description": "NVIDIA designed the DGX Spark workstation", "strength": 10}},
+  {{"subject": "DGX Spark", "relation": "CONTAINS", "object": "GB10 GPU", "description": "DGX Spark includes the GB10 Blackwell GPU", "strength": 9}}
+]
+
+Relations:"""
 
 
 # Sprint 89 Feature 89.1: SpaCy-First Pipeline Prompts (TD-102 Iteration 1)
@@ -522,14 +301,16 @@ Find ONLY entities that SpaCy MISSED. Do NOT repeat SpaCy entities.
 
 ---Output Format---
 Return ONLY a valid JSON array of NEW entities (not already in SpaCy list):
+
+Output example:
 [
-  {{"name": "Entity Name", "type": "ENTITY_TYPE", "description": "Brief description"}},
-  ...
+  {{"name": "gradient descent", "type": "PROCESS", "description": "Optimization algorithm for neural networks", "confidence": 1.0}},
+  {{"name": "Docker", "type": "TECHNOLOGY", "description": "Container platform", "confidence": 0.7}}
 ]
 
 If no additional entities found, return: []
 
-Entities (JSON array only):"""
+Entities:"""
 
 
 RELATION_EXTRACTION_FROM_ENTITIES_PROMPT = """Extract ALL relationships between the given entities.
@@ -578,52 +359,6 @@ IMPORTANT: Every entity should have at least one relationship!
 Relationships (JSON array only):"""
 
 
-# Enhanced relationship extraction prompt for better ER ratio (Sprint 85)
-ENHANCED_RELATIONSHIP_EXTRACTION_PROMPT = """Extract ALL relationships between entities from the following text.
-
-IMPORTANT: Be thorough! For a knowledge graph to be useful, we need MANY relationships.
-A good knowledge graph has at least 1 relationship per entity.
-
-Entities found in this text:
-{entities}
-
-Text:
-{text}
-
-For EVERY pair of entities that interact or relate in the text, extract a relationship.
-
-Relationship types to consider:
-- FUNCTIONAL: USES, CREATES, IMPLEMENTS, PROCESSES, GENERATES, TRANSFORMS
-- CAUSAL: CAUSES, ENABLES, LEADS_TO, RESULTS_IN, INFLUENCES, TRIGGERS
-- HIERARCHICAL: CONTAINS, PART_OF, MANAGES, OWNS, CONTROLS, BELONGS_TO
-- TEMPORAL: PRECEDES, FOLLOWS, DURING, CONCURRENT_WITH
-- KNOWLEDGE: KNOWS, CREATED_BY, DEVELOPED_BY, DISCOVERED_BY, INVENTED_BY
-- LOCATION: LOCATED_IN, BASED_IN, OPERATES_IN, HEADQUARTERED_IN
-- ASSOCIATION: WORKS_AT, WORKS_WITH, COLLABORATES_WITH, ASSOCIATED_WITH
-- SEMANTIC: RELATES_TO, SIMILAR_TO, CONTRASTS_WITH, DEPENDS_ON, EXTENDS
-
-For each relationship, provide:
-1. source: The entity that is the subject of the relationship
-2. target: The entity that is the object of the relationship
-3. type: Relationship type from the list above (UPPERCASE_WITH_UNDERSCORES)
-4. description: One sentence explaining the relationship based on text
-
-CRITICAL OUTPUT INSTRUCTIONS:
-- Return ONLY a valid JSON array
-- Do NOT include any explanatory text
-- Do NOT use markdown code fences
-- Extract ALL possible relationships (aim for at least {min_relations} relationships)
-
-Output format:
-[
-  {{"source": "Entity1", "target": "Entity2", "type": "RELATIONSHIP_TYPE", "description": "Explanation"}},
-  ...
-]
-
-Output (JSON array only):
-"""
-
-
 def get_active_extraction_prompts(domain: str = "technical") -> tuple[str, str]:
     """Get the active extraction prompts based on configuration.
 
@@ -664,17 +399,16 @@ def get_domain_enriched_extraction_prompts(
     entity_sub_type_mapping: dict[str, str] | None = None,
     relation_hints: list[str] | None = None,
 ) -> tuple[str, str]:
-    """Generate domain-enriched extraction prompts from generic DSPy templates.
+    """Generate domain-specific extraction prompts from seed_domains.yaml metadata.
 
     Sprint 126: Bridges seed_domains.yaml metadata into extraction prompts.
-    When no DSPy-trained prompts exist for a domain, this enriches the generic
-    prompts with domain-specific entity sub-types and relation hint patterns
-    from the seed catalog (ADR-060).
+    Sprint 128: Rewritten to produce compact, domain-specific prompts with
+    domain types listed directly (no universal type table) and concrete JSON examples.
 
     Priority chain in extraction_service.get_extraction_prompts():
         1. DSPy-trained prompts from Neo4j (fully trained)
-        2. THIS: Generic DSPy + domain enrichment from seed_domains.yaml
-        3. Generic DSPy prompts (no domain enrichment)
+        2. THIS: Domain-specific prompts built from seed_domains.yaml
+        3. Generic prompts (no domain enrichment)
         4. Legacy prompts
 
     Args:
@@ -686,49 +420,172 @@ def get_domain_enriched_extraction_prompts(
     Returns:
         Tuple of (enriched_entity_prompt, enriched_relation_prompt)
     """
-    entity_prompt = DSPY_OPTIMIZED_ENTITY_PROMPT
-    relation_prompt = DSPY_OPTIMIZED_RELATION_PROMPT
+    # If no domain-specific types available, fall back to generic prompts
+    if not entity_sub_types and not relation_hints:
+        return (DSPY_OPTIMIZED_ENTITY_PROMPT, DSPY_OPTIMIZED_RELATION_PROMPT)
 
-    # Enrich entity prompt with domain-specific sub-types
-    # Sprint 126: LLM uses domain-specific types directly (e.g., DISEASE, COMPONENT)
-    # Post-processing maps them to universal types and preserves the original as sub_type
+    # ── Build domain-specific entity prompt ──────────────────────────────
+    domain_label = domain.replace("_", " ").title()
+
+    # Build entity type list from domain sub-types + universal types
+    entity_type_lines = []
     if entity_sub_types and entity_sub_type_mapping:
-        sub_type_lines = []
         for sub_type in entity_sub_types:
-            parent_type = entity_sub_type_mapping.get(sub_type, "CONCEPT")
-            sub_type_lines.append(f"- `{sub_type}` (maps to `{parent_type}` in post-processing)")
+            entity_type_lines.append(f"- {sub_type}")
+        # Add essential universal types not covered by domain sub-types
+        covered_universal = set(entity_sub_type_mapping.values())
+        essential_universal = ["PERSON", "ORGANIZATION", "LOCATION", "EVENT", "DATE_TIME"]
+        for u_type in essential_universal:
+            if u_type not in covered_universal:
+                entity_type_lines.append(f"- {u_type}")
+    else:
+        # No sub-types: use all 15 universal types
+        entity_type_lines = [
+            "- PERSON",
+            "- ORGANIZATION",
+            "- LOCATION",
+            "- EVENT",
+            "- DATE_TIME",
+            "- CONCEPT",
+            "- TECHNOLOGY",
+            "- PRODUCT",
+            "- METRIC",
+            "- DOCUMENT",
+            "- PROCESS",
+            "- MATERIAL",
+            "- REGULATION",
+            "- QUANTITY",
+            "- FIELD",
+        ]
 
-        sub_type_section = (
-            f"\n\n**Domain-Specific Entity Types ({domain})**\n"
-            "In this domain, use these specialized type tags DIRECTLY instead of the "
-            "universal types above. They will be automatically mapped to universal types "
-            "in post-processing, while preserving the domain-specific type:\n\n"
-            + "\n".join(sub_type_lines)
-            + "\n\n"
+    entity_types_block = "\n".join(entity_type_lines)
+
+    # Build entity example from first two sub-types (or generic)
+    if entity_sub_types and len(entity_sub_types) >= 2:
+        ex1_type = entity_sub_types[0]
+        ex2_type = entity_sub_types[1]
+        entity_example = (
+            f'  {{"name": "example A", "type": "{ex1_type}", '
+            f'"description": "Description of entity A", "confidence": 1.0}},\n'
+            f'  {{"name": "example B", "type": "{ex2_type}", '
+            f'"description": "Description of entity B", "confidence": 0.7}}'
+        )
+    else:
+        entity_example = (
+            '  {"name": "NVIDIA", "type": "ORGANIZATION", '
+            '"description": "GPU manufacturer", "confidence": 1.0},\n'
+            '  {"name": "machine learning", "type": "CONCEPT", '
+            '"description": "AI training methodology", "confidence": 1.0}'
         )
 
-        # Inject before "**IMPORTANT Entity Naming Rules**"
-        entity_prompt = entity_prompt.replace(
-            "**IMPORTANT Entity Naming Rules**",
-            sub_type_section + "**IMPORTANT Entity Naming Rules**",
-        )
+    entity_prompt = f"""Extract all named entities from the text. Return ONLY a valid JSON array.
 
-    # Enrich relation prompt with domain-specific relation patterns
-    # Sprint 126: LLM uses domain-specific relation types directly (e.g., TREATS, ENCODES)
-    # Post-processing maps them to universal types
+Entity types for {domain_label}:
+{entity_types_block}
+
+Rules:
+- Entity name: max 4 words, canonical form
+- One entity per concept, no duplicates
+- Confidence: 1.0 = explicit mention, 0.7 = implied, 0.4 = inferred
+
+Text: {{text}}
+Domain: {{domain}}
+
+Output example:
+[
+{entity_example}
+]
+
+Entities:"""
+
+    # ── Build domain-specific relation prompt ────────────────────────────
     if relation_hints:
-        hint_lines = "\n".join(f"- {hint}" for hint in relation_hints)
+        relation_type_lines = []
+        for hint in relation_hints:
+            relation_type_lines.append(f"- {hint}")
+        # Add essential universal relation types
+        relation_type_lines.extend(
+            [
+                "- PART_OF → Component → Whole",
+                "- CONTAINS → Whole → Component",
+                "- LOCATED_IN → Entity → Location",
+                "- USES → User → Tool/Resource",
+                "- CREATES → Creator → Creation",
+                "- RELATED_TO → Entity → Entity (ONLY as last resort)",
+            ]
+        )
+        relation_types_block = "\n".join(relation_type_lines)
 
-        hint_section = (
-            f"\n\n**Domain-Specific Relation Types ({domain})**\n"
-            "Use these domain-specific relationship types DIRECTLY. They will be "
-            "automatically mapped to universal types in post-processing:\n\n" + hint_lines + "\n"
+        # Build relation example from first hint
+        first_hint_parts = relation_hints[0].split("→")
+        if len(first_hint_parts) >= 3:
+            ex_rel = first_hint_parts[0].strip()
+            ex_subj_type = first_hint_parts[1].strip()
+            ex_obj_type = first_hint_parts[2].strip()
+            relation_example = (
+                f'  {{"subject": "{ex_subj_type.lower()} A", "relation": "{ex_rel}", '
+                f'"object": "{ex_obj_type.lower()} B", '
+                f'"description": "{ex_subj_type} A {ex_rel.lower().replace("_", " ")} {ex_obj_type} B", '
+                f'"strength": 10}}'
+            )
+        else:
+            relation_example = (
+                '  {"subject": "entity A", "relation": "USES", '
+                '"object": "entity B", "description": "A uses B", "strength": 10}'
+            )
+    else:
+        # No relation hints: use generic universal types
+        relation_types_block = (
+            "- PART_OF: Component → Whole\n"
+            "- CONTAINS: Whole → Component\n"
+            "- INSTANCE_OF: Instance → Type\n"
+            "- TYPE_OF: Subtype → Supertype\n"
+            "- EMPLOYS: Organization → Person\n"
+            "- MANAGES: Person → Entity\n"
+            "- FOUNDED_BY: Organization → Person\n"
+            "- OWNS: Entity → Entity\n"
+            "- LOCATED_IN: Entity → Location\n"
+            "- CAUSES: Cause → Effect\n"
+            "- ENABLES: Enabler → Enabled\n"
+            "- REQUIRES: Dependent → Dependency\n"
+            "- LEADS_TO: Antecedent → Consequent\n"
+            "- PRECEDES: Earlier → Later\n"
+            "- FOLLOWS: Later → Earlier\n"
+            "- USES: User → Tool/Resource\n"
+            "- CREATES: Creator → Creation\n"
+            "- IMPLEMENTS: Implementation → Specification\n"
+            "- DEPENDS_ON: Dependent → Dependency\n"
+            "- SIMILAR_TO: Entity → Entity\n"
+            "- ASSOCIATED_WITH: Entity → Entity\n"
+            "- RELATED_TO: Entity → Entity (ONLY as last resort)"
+        )
+        relation_example = (
+            '  {"subject": "NVIDIA", "relation": "CREATES", '
+            '"object": "DGX Spark", "description": "NVIDIA designed the DGX Spark", "strength": 10}'
         )
 
-        # Inject before "---S-P-O Triple Output Format---"
-        relation_prompt = relation_prompt.replace(
-            "---S-P-O Triple Output Format---",
-            hint_section + "\n---S-P-O Triple Output Format---",
-        )
+    relation_prompt = f"""Extract ALL relationships between the given entities. Return ONLY a valid JSON array.
+
+Relation types for {domain_label}:
+{relation_types_block}
+
+Rules:
+- Be exhaustive: extract ALL relationships, at least 1 per entity
+- Decompose N-ary: "A and B founded C" → two triples
+- Subject/object: max 4 words, must match entity name exactly
+- Strength: 10 = explicit statement, 7 = strong implication, 4 = weak inference
+- Use RELATED_TO ONLY when no specific type fits
+
+Entities:
+{{entities}}
+
+Text: {{text}}
+
+Output example:
+[
+{relation_example}
+]
+
+Relations:"""
 
     return (entity_prompt, relation_prompt)

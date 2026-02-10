@@ -327,28 +327,75 @@ async def llamaindex_parse_node(state: IngestionState) -> IngestionState:
     # Load llama_index only when this LlamaIndex-specific node is called.
     # This allows the core application to run without llama_index installed.
     # ========================================================================
+    # Sprint 128: Plain text fallback when llama_index is not installed
+    # For .txt and .md files, we can read them directly without any parser
+    doc_path = Path(state["document_path"])
+    file_extension = doc_path.suffix.lower()
+    llama_index_available = True
+
     try:
         from llama_index.core import SimpleDirectoryReader
     except ImportError as e:
-        error_msg = (
-            "llama_index is required for LlamaIndex parsing but is not installed.\n\n"
-            "INSTALLATION OPTIONS:\n"
-            "1. poetry install --with ingestion\n"
-            "2. poetry install --all-extras\n\n"
-            "NOTE: This node is only needed for LlamaIndex-exclusive formats (.epub, .rtf, .tex, etc.).\n"
-            "For PDF/DOCX/PPTX, use docling_extraction_node instead."
-        )
-        logger.error(
-            "llamaindex_import_failed",
-            document_id=state["document_id"],
-            error=str(e),
-            install_command="poetry install --with ingestion",
-        )
-        raise ImportError(error_msg) from e
+        if file_extension in (".txt", ".md"):
+            # Plain text/markdown: read directly, no parser needed
+            llama_index_available = False
+            logger.info(
+                "llamaindex_unavailable_plaintext_fallback",
+                document_id=state["document_id"],
+                format=file_extension,
+                note="Reading plain text directly without llama_index",
+            )
+        else:
+            error_msg = (
+                "llama_index is required for LlamaIndex parsing but is not installed.\n\n"
+                "INSTALLATION OPTIONS:\n"
+                "1. poetry install --with ingestion\n"
+                "2. poetry install --all-extras\n\n"
+                "NOTE: This node is only needed for LlamaIndex-exclusive formats (.epub, .rtf, .tex, etc.).\n"
+                "For PDF/DOCX/PPTX, use docling_extraction_node instead."
+            )
+            logger.error(
+                "llamaindex_import_failed",
+                document_id=state["document_id"],
+                error=str(e),
+                install_command="poetry install --with ingestion",
+            )
+            raise ImportError(error_msg) from e
+
+    # Plain text fallback path (no llama_index needed)
+    if not llama_index_available:
+        try:
+            full_text = doc_path.read_text(encoding="utf-8")
+            state["document"] = None
+            state["page_dimensions"] = {}
+            state["parsed_content"] = full_text
+            state["parsed_metadata"] = {
+                "source": str(doc_path),
+                "format": file_extension,
+                "parser": "plaintext_fallback",
+                "page_count": 1,
+            }
+            state["parsed_tables"] = []
+            state["parsed_images"] = []
+            state["parsed_layout"] = {}
+            state["docling_status"] = "completed"
+            state["docling_end_time"] = time.time()
+            state["overall_progress"] = calculate_progress(state)
+            logger.info(
+                "plaintext_fallback_complete",
+                document_id=state["document_id"],
+                text_length=len(full_text),
+                format=file_extension,
+            )
+            return state
+        except Exception as read_err:
+            raise IngestionError(
+                document_id=state["document_id"],
+                reason=f"Failed to read plain text file: {read_err}",
+            ) from read_err
 
     try:
-        # Get document path
-        doc_path = Path(state["document_path"])
+        # Get document path (already set above)
 
         if not doc_path.exists():
             raise IngestionError(

@@ -502,6 +502,11 @@ services:
       - HF_HOME=/root/.cache/huggingface
       # Disable GPU Direct Storage (not available on DGX Spark)
       - VLLM_FASTSAFETENSORS_NOGDS=1
+      # Sprint 128: Disable DeepGemm (FP8-specific optimization, not needed for NVFP4)
+      # DeepGemm uses aggressive CUTLASS grouped GEMM kernels that may trigger
+      # cudaErrorIllegalInstruction on SM121 under concurrency. Since our model
+      # (Nemotron-3-Nano) uses NVFP4 quantization, DeepGemm is not in the active path.
+      - VLLM_MOE_USE_DEEP_GEMM=0
     # NGC vLLM image needs explicit entrypoint override (not vllm-openai)
     # Downloads reasoning parser plugin on startup, then launches vLLM serve
     # Matches NVIDIA reference flags; gpu-memory-utilization=0.45 because shared GPU

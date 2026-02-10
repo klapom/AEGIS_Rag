@@ -68,13 +68,11 @@ from src.prompts.extraction_prompts import (
     DSPY_OPTIMIZED_ENTITY_PROMPT,
     DSPY_OPTIMIZED_RELATION_PROMPT,
     ENTITY_ENRICHMENT_PROMPT,
-    ENTITY_EXTRACTION_PROMPT,
     GENERIC_ENTITY_EXTRACTION_PROMPT,
     GENERIC_RELATION_EXTRACTION_PROMPT,
     RELATION_EXTRACTION_FROM_ENTITIES_PROMPT,
     RELATIONSHIP_COMPLETENESS_CHECK_PROMPT,
     RELATIONSHIP_CONTINUATION_PROMPT,
-    RELATIONSHIP_EXTRACTION_PROMPT,
     USE_DSPY_PROMPTS,
     get_active_extraction_prompts,
 )
@@ -233,40 +231,10 @@ RELATION_TYPE_ALIASES = {
     "DELETES": "USES",
 }
 
-# Sprint 126: Domain-specific relation type mappings
-# These map domain-specific relation names from seed_domains.yaml relation_hints
-# to the closest universal relation type. Parsed from "TREATS → Medication → Disease" patterns.
-DOMAIN_RELATION_TYPE_ALIASES = {
-    # medicine_health
-    "TREATS": "USES",
-    "DIAGNOSED_BY": "USES",
-    "CONTRAINDICATED_WITH": "ASSOCIATED_WITH",
-    "INDICATES": "ASSOCIATED_WITH",
-    "ADMINISTERED_VIA": "USES",
-    "SIDE_EFFECT_OF": "CAUSES",
-    # biology_life_sciences
-    "ENCODES": "CREATES",
-    "REGULATES": "MANAGES",
-    "INHABITS": "LOCATED_IN",
-    "EVOLVES_FROM": "TYPE_OF",
-    "PARTICIPATES_IN": "PART_OF",
-    "PREYS_ON": "USES",
-    # engineering
-    "CONTROLS": "MANAGES",
-    "POWERED_BY": "DEPENDS_ON",
-    "MEETS_STANDARD": "IMPLEMENTS",
-    "TESTED_BY": "USES",
-    "FAILS_DUE_TO": "CAUSES",
-    "TOLERATES": "ASSOCIATED_WITH",
-    # computer_science_it
-    "RUNS_ON": "DEPENDS_ON",
-    "TRAINS_ON": "USES",
-    "COMPILES_TO": "CREATES",
-    "QUERIES": "USES",
-    "AUTHENTICATES": "USES",
-    "DEPLOYS_TO": "USES",
-    "EXPLOITS": "USES",
-}
+# Sprint 126/128: Domain-specific relation type mappings
+# Auto-generated from seed_domains.yaml relation_hints by _load_domain_type_mappings()
+# Manual overrides for common domain relations (fallback if not in YAML):
+DOMAIN_RELATION_TYPE_ALIASES: dict[str, str] = {}
 
 
 _domain_db_mappings_loaded = False
@@ -332,12 +300,11 @@ async def _refresh_domain_type_mappings_from_db():
 
 
 def _load_domain_type_mappings():
-    """Load entity sub-type mappings from seed_domains.yaml into ENTITY_TYPE_ALIASES.
+    """Load entity sub-type and relation type mappings from seed_domains.yaml.
 
     Sprint 126: Sync bootstrap from YAML (factory defaults). Called once on first use.
+    Sprint 128: Also auto-generates relation type aliases from relation_hints.
     For runtime overrides from Neo4j (user edits via UI), see _refresh_domain_type_mappings_from_db().
-
-    Also merges DOMAIN_RELATION_TYPE_ALIASES into RELATION_TYPE_ALIASES.
     """
     global _domain_mappings_loaded
     if _domain_mappings_loaded:
@@ -370,12 +337,166 @@ def _load_domain_type_mappings():
                         ENTITY_TYPE_ALIASES[sub_upper] = uni_upper
                         added_count += 1
 
-        # Merge domain relation aliases
+        # Sprint 128: Auto-generate relation type aliases from relation_hints
+        # Parses "TREATS → Medication → Disease" → maps TREATS to closest universal type
         rel_added = 0
-        for rel_type, universal_type in DOMAIN_RELATION_TYPE_ALIASES.items():
-            if rel_type not in RELATION_TYPE_ALIASES and rel_type not in UNIVERSAL_RELATION_TYPES:
-                RELATION_TYPE_ALIASES[rel_type] = universal_type
-                rel_added += 1
+        _RELATION_HINT_TO_UNIVERSAL = {
+            # Causal-like
+            "CAUSES": "CAUSES",
+            "INDUCED_BY": "CAUSES",
+            "TRIGGERS": "CAUSES",
+            "SIDE_EFFECT_OF": "CAUSES",
+            "FAILS_DUE_TO": "CAUSES",
+            "ERODES": "CAUSES",
+            "DESTABILIZES": "CAUSES",
+            "ACCELERATES": "CAUSES",
+            "INHIBITS": "CAUSES",
+            "CATALYZES": "CAUSES",
+            "STIMULATES": "CAUSES",
+            # Enables-like
+            "ENABLES": "ENABLES",
+            "SUPPORTS": "ENABLES",
+            "FACILITATES": "ENABLES",
+            "PROMOTES": "ENABLES",
+            "AMPLIFIES": "ENABLES",
+            # Uses-like
+            "TREATS": "USES",
+            "USES": "USES",
+            "QUERIES": "USES",
+            "EXPLOITS": "USES",
+            "TRAINS_ON": "USES",
+            "TESTED_BY": "USES",
+            "DIAGNOSED_BY": "USES",
+            "ADMINISTERED_VIA": "USES",
+            "PREYS_ON": "USES",
+            "APPLIES_TO": "USES",
+            "MEASURES": "USES",
+            "ANALYZES": "USES",
+            "PROCESSES": "USES",
+            "EXTRACTS": "USES",
+            "CONSUMES": "USES",
+            "ABSORBS": "USES",
+            "DEPLOYS_TO": "USES",
+            "AUTHENTICATES": "USES",
+            # Creates-like
+            "CREATES": "CREATES",
+            "PRODUCES": "CREATES",
+            "GENERATES": "CREATES",
+            "ENCODES": "CREATES",
+            "COMPILES_TO": "CREATES",
+            "SYNTHESIZES": "CREATES",
+            "EMITS": "CREATES",
+            "PUBLISHES": "CREATES",
+            "COMPOSES": "CREATES",
+            "WRITES": "CREATES",
+            "DESIGNS": "CREATES",
+            # Manages-like
+            "MANAGES": "MANAGES",
+            "REGULATES": "MANAGES",
+            "CONTROLS": "MANAGES",
+            "GOVERNS": "MANAGES",
+            "SUPERVISES": "MANAGES",
+            "MODERATES": "MANAGES",
+            "ENFORCES": "MANAGES",
+            "ADJUDICATES": "MANAGES",
+            "LEGISLATES": "MANAGES",
+            # Located-like
+            "LOCATED_IN": "LOCATED_IN",
+            "INHABITS": "LOCATED_IN",
+            "BASED_IN": "LOCATED_IN",
+            "OCCURS_IN": "LOCATED_IN",
+            "OPERATES_IN": "LOCATED_IN",
+            "SET_IN": "LOCATED_IN",
+            "HOSTS": "LOCATED_IN",
+            # Part-of-like
+            "PART_OF": "PART_OF",
+            "PARTICIPATES_IN": "PART_OF",
+            "BELONGS_TO": "PART_OF",
+            "MEMBER_OF": "PART_OF",
+            "COMPONENT_OF": "PART_OF",
+            # Contains-like
+            "CONTAINS": "CONTAINS",
+            "INCLUDES": "CONTAINS",
+            "COMPRISES": "CONTAINS",
+            # Type-of-like
+            "TYPE_OF": "TYPE_OF",
+            "EVOLVES_FROM": "TYPE_OF",
+            "DERIVED_FROM": "TYPE_OF",
+            "GENERALIZES": "TYPE_OF",
+            "SPECIALIZES": "TYPE_OF",
+            # Depends-on-like
+            "DEPENDS_ON": "DEPENDS_ON",
+            "REQUIRES": "REQUIRES",
+            "RUNS_ON": "DEPENDS_ON",
+            "POWERED_BY": "DEPENDS_ON",
+            "FUNDED_BY": "DEPENDS_ON",
+            "INFLUENCED_BY": "DEPENDS_ON",
+            "BASED_ON": "DEPENDS_ON",
+            # Implements-like
+            "IMPLEMENTS": "IMPLEMENTS",
+            "MEETS_STANDARD": "IMPLEMENTS",
+            "COMPLIES_WITH": "IMPLEMENTS",
+            "CONFORMS_TO": "IMPLEMENTS",
+            # Associated-like
+            "ASSOCIATED_WITH": "ASSOCIATED_WITH",
+            "CONTRAINDICATED_WITH": "ASSOCIATED_WITH",
+            "INDICATES": "ASSOCIATED_WITH",
+            "CORRELATES_WITH": "ASSOCIATED_WITH",
+            "TOLERATES": "ASSOCIATED_WITH",
+            "INTERACTS_WITH": "ASSOCIATED_WITH",
+            "SYMBOLIZES": "ASSOCIATED_WITH",
+            "REPRESENTS": "ASSOCIATED_WITH",
+            "REFERENCES": "ASSOCIATED_WITH",
+            "CITES": "ASSOCIATED_WITH",
+            "ALLUDES_TO": "ASSOCIATED_WITH",
+            "CRITIQUES": "ASSOCIATED_WITH",
+            # Similar-like
+            "SIMILAR_TO": "SIMILAR_TO",
+            "ANALOGOUS_TO": "SIMILAR_TO",
+            "EQUIVALENT_TO": "SIMILAR_TO",
+            "CONTRASTS_WITH": "SIMILAR_TO",
+            # Temporal
+            "PRECEDES": "PRECEDES",
+            "FOLLOWS": "FOLLOWS",
+            "CONTEMPORANEOUS_WITH": "ASSOCIATED_WITH",
+            # Structural
+            "INSTANCE_OF": "INSTANCE_OF",
+            "FOUNDED_BY": "FOUNDED_BY",
+            "EMPLOYS": "EMPLOYS",
+            "OWNS": "OWNS",
+            # Leads-to-like
+            "LEADS_TO": "LEADS_TO",
+            "PROVES": "LEADS_TO",
+            "DISPROVES": "LEADS_TO",
+            "DEFINES": "LEADS_TO",
+            "DEFINED_IN": "PART_OF",
+            # Domain-specific not elsewhere covered
+            "ADAPTS_TO": "ASSOCIATED_WITH",
+            "RESISTS": "ASSOCIATED_WITH",
+            "BONDS_WITH": "ASSOCIATED_WITH",
+            "REACTS_WITH": "ASSOCIATED_WITH",
+            "DISSOLVES_IN": "ASSOCIATED_WITH",
+            "ALLOYS_WITH": "ASSOCIATED_WITH",
+            "DECOMPOSES_INTO": "CREATES",
+            "TRANSFORMS_INTO": "CREATES",
+        }
+
+        for domain in catalog.get("domains", []):
+            hints = domain.get("relation_hints", [])
+            for hint in hints:
+                # Parse "TREATS → Medication → Disease" → extract "TREATS"
+                parts = hint.split("→")
+                if parts:
+                    rel_type = parts[0].strip().upper()
+                    if (
+                        rel_type not in RELATION_TYPE_ALIASES
+                        and rel_type not in UNIVERSAL_RELATION_TYPES
+                    ):
+                        # Map to closest universal type
+                        universal = _RELATION_HINT_TO_UNIVERSAL.get(rel_type, "ASSOCIATED_WITH")
+                        RELATION_TYPE_ALIASES[rel_type] = universal
+                        DOMAIN_RELATION_TYPE_ALIASES[rel_type] = universal
+                        rel_added += 1
 
         logger.info(
             "domain_type_mappings_loaded",
@@ -931,6 +1052,7 @@ def _extract_json_objects_individually(
                             "name": validate_entity_name_length(obj["name"], max_words=4),
                             "type": validate_entity_type(obj["type"]),
                             "description": obj.get("description", ""),
+                            "confidence": min(max(float(obj.get("confidence", 1.0)), 0.0), 1.0),
                         }
                         objects.append(validated_entity)
                 elif data_type == "relationship":
@@ -938,7 +1060,7 @@ def _extract_json_objects_individually(
                     # Sprint 125 Feature 125.3: Add S-P-O format support
                     # Format 1: {source, target, type} (standard)
                     # Format 2: {subject, predicate, object} (generic prompt)
-                    # Format 3: {subject, relation, object, subject_type, object_type} (S-P-O)
+                    # Format 3: {subject, relation, object} (S-P-O)
 
                     if "source" in obj and "target" in obj and "type" in obj:
                         # Standard format - validate and normalize
@@ -949,15 +1071,6 @@ def _extract_json_objects_individually(
                             "description": obj.get("description", ""),
                             "strength": obj.get("strength", 5),
                         }
-                        # Add subject/object types if present (S-P-O format)
-                        if "subject_type" in obj:
-                            validated_relation["subject_type"] = validate_entity_type(
-                                obj["subject_type"]
-                            )
-                        if "object_type" in obj:
-                            validated_relation["object_type"] = validate_entity_type(
-                                obj["object_type"]
-                            )
 
                         objects.append(validated_relation)
 
@@ -972,15 +1085,6 @@ def _extract_json_objects_individually(
                             "description": obj.get("description", relation_type),
                             "strength": obj.get("strength", 5),
                         }
-                        # Add subject/object types if present (S-P-O format)
-                        if "subject_type" in obj:
-                            validated_relation["subject_type"] = validate_entity_type(
-                                obj["subject_type"]
-                            )
-                        if "object_type" in obj:
-                            validated_relation["object_type"] = validate_entity_type(
-                                obj["object_type"]
-                            )
 
                         objects.append(validated_relation)
                 else:
@@ -1404,6 +1508,9 @@ class ExtractionService:
                                     "name": validate_entity_name_length(item["name"], max_words=4),
                                     "type": validate_entity_type(item["type"]),
                                     "description": item.get("description", ""),
+                                    "confidence": min(
+                                        max(float(item.get("confidence", 1.0)), 0.0), 1.0
+                                    ),
                                 }
                                 valid_items.append(validated_entity)
                         elif data_type == "relationship":
@@ -1411,7 +1518,7 @@ class ExtractionService:
                             # Sprint 125 Feature 125.3: Add S-P-O format support and validation
                             # Format 1: {source, target, type} (standard)
                             # Format 2: {subject, predicate, object} (generic prompt)
-                            # Format 3: {subject, relation, object, subject_type, object_type} (S-P-O)
+                            # Format 3: {subject, relation, object} (S-P-O)
 
                             if "source" in item and "target" in item and "type" in item:
                                 # Standard format - validate and normalize
@@ -1426,15 +1533,6 @@ class ExtractionService:
                                     "description": item.get("description", ""),
                                     "strength": item.get("strength", 5),
                                 }
-                                # Add subject/object types if present (S-P-O format)
-                                if "subject_type" in item:
-                                    validated_relation["subject_type"] = validate_entity_type(
-                                        item["subject_type"]
-                                    )
-                                if "object_type" in item:
-                                    validated_relation["object_type"] = validate_entity_type(
-                                        item["object_type"]
-                                    )
 
                                 valid_items.append(validated_relation)
 
@@ -1455,15 +1553,6 @@ class ExtractionService:
                                     "description": item.get("description", relation_type),
                                     "strength": item.get("strength", 5),
                                 }
-                                # Add subject/object types if present (S-P-O format)
-                                if "subject_type" in item:
-                                    validated_relation["subject_type"] = validate_entity_type(
-                                        item["subject_type"]
-                                    )
-                                if "object_type" in item:
-                                    validated_relation["object_type"] = validate_entity_type(
-                                        item["object_type"]
-                                    )
 
                                 valid_items.append(validated_relation)
 
@@ -1651,12 +1740,11 @@ class ExtractionService:
 
         # LLM-Only extraction
         # Sprint 86: DSPy prompts require domain parameter
+        # Sprint 128 Fix: Use .replace() instead of .format() because domain-enriched
+        # prompts contain JSON examples with curly braces that .format() misinterprets
+        # as placeholders, causing KeyError and cascade fallback to SpaCy Rank 3.
         entity_prompt, _ = await self.get_extraction_prompts(domain)
-        try:
-            prompt = entity_prompt.format(text=text, domain=domain or "technical")
-        except KeyError:
-            # Fallback for prompts without domain placeholder
-            prompt = entity_prompt.format(text=text)
+        prompt = entity_prompt.replace("{text}", text).replace("{domain}", domain or "technical")
 
         # Sprint 125: DSPy MIPROv2 domain-trained prompts may not have {text} placeholder.
         # Python .format() silently ignores unused kwargs, so the text never gets injected.
@@ -1713,6 +1801,13 @@ class ExtractionService:
                     # that was mapped to a universal type (e.g., DISEASE → CONCEPT)
                     sub_type = raw_upper if raw_upper != validated_type else None
 
+                    # Sprint 128: Extract confidence from LLM output
+                    raw_confidence = entity_dict.get("confidence", 1.0)
+                    try:
+                        confidence = min(max(float(raw_confidence), 0.0), 1.0)
+                    except (ValueError, TypeError):
+                        confidence = 1.0
+
                     entity = GraphEntity(
                         id=str(uuid.uuid4()),
                         name=entity_dict.get("name", ""),
@@ -1721,7 +1816,7 @@ class ExtractionService:
                         description=entity_dict.get("description", ""),
                         properties={},
                         source_document=document_id,
-                        confidence=1.0,
+                        confidence=confidence,
                     )
                     entities.append(entity)
                 except Exception as e:
@@ -2823,6 +2918,13 @@ class ExtractionService:
                     raw_upper = raw_type.upper().strip()
                     sub_type = raw_upper if raw_upper != validated_type else None
 
+                    # Sprint 128: Extract confidence from LLM output
+                    raw_confidence = entity_dict.get("confidence", 1.0)
+                    try:
+                        confidence = min(max(float(raw_confidence), 0.0), 1.0)
+                    except (ValueError, TypeError):
+                        confidence = 1.0
+
                     entity = GraphEntity(
                         id=str(uuid.uuid4()),
                         name=entity_dict.get("name", ""),
@@ -2831,7 +2933,7 @@ class ExtractionService:
                         description=entity_dict.get("description", ""),
                         properties={},
                         source_document=document_id,
-                        confidence=1.0,
+                        confidence=confidence,
                     )
                     new_entities.append(entity)
                 except Exception as e:
@@ -3111,13 +3213,10 @@ class ExtractionService:
         entity_list = "\n".join([f"- {e.name} ({e.type})" for e in entities])
 
         # Format prompt
-        try:
-            prompt = relation_prompt.format(
-                entities=entity_list,
-                text=text,
-            )
-        except KeyError:
-            prompt = relation_prompt
+        # Sprint 128 Fix: Use .replace() instead of .format() because domain-enriched
+        # prompts contain JSON examples with curly braces that .format() misinterprets
+        # as placeholders, causing the LLM to receive raw template without text/entities.
+        prompt = relation_prompt.replace("{text}", text).replace("{entities}", entity_list)
 
         # Sprint 125: DSPy MIPROv2 domain-trained prompts may lack {text}/{entities}.
         # Python .format() silently ignores unused kwargs — detect and append.
@@ -3126,7 +3225,7 @@ class ExtractionService:
                 f"{prompt}\n\n"
                 f"Entities:\n{entity_list}\n\n"
                 f"Text:\n{text}\n\n"
-                f'Output (valid JSON with "relations" array of {{"subject", "relation", "object", "description", "strength"}}):'
+                f'Output (valid JSON array of {{"subject", "relation", "object", "description", "strength"}}):'
             )
 
         # Create LLM task with rank-specific model
@@ -3179,6 +3278,16 @@ class ExtractionService:
                         or rel_dict.get("relation")
                         or rel_dict.get("predicate", "RELATED_TO")
                     )
+                    # Sprint 128: Extract strength (1-10) from LLM output
+                    raw_strength = rel_dict.get("strength")
+                    strength = None
+                    if raw_strength is not None:
+                        try:
+                            s = int(raw_strength)
+                            strength = max(1, min(10, s))
+                        except (ValueError, TypeError):
+                            pass
+
                     relationship = GraphRelationship(
                         id=str(uuid.uuid4()),
                         source=source,
@@ -3188,6 +3297,7 @@ class ExtractionService:
                         properties={},
                         source_document=document_id,
                         confidence=1.0,
+                        strength=strength,
                     )
                     relationships.append(relationship)
                 except Exception as e:
@@ -3272,7 +3382,7 @@ class ExtractionService:
                 if domain_data:
                     domain_window_size = domain_data.get("cross_sentence_window_size")
                     domain_overlap = domain_data.get("cross_sentence_overlap")
-            except Exception:  # noqa: B110 — intentional: fall back to global defaults
+            except Exception:
                 logger.debug("domain_window_config_fetch_failed", domain=domain)
 
         # Get windows

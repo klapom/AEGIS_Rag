@@ -649,8 +649,8 @@ async def chunking_node(state: IngestionState) -> IngestionState:
         enriched_doc = state.get("document")
 
         # Sprint 121 Feature 121.1 (TD-054): Require Docling-parsed content
-        # Legacy ChunkingService fallback removed - Docling is mandatory
-        if enriched_doc is None:
+        # Sprint 128: Allow plaintext fallback when parsed_content exists but document is None
+        if enriched_doc is None and not state.get("parsed_content"):
             raise IngestionError(
                 document_id=state.get("document_id", "unknown"),
                 reason=(
@@ -705,9 +705,12 @@ async def chunking_node(state: IngestionState) -> IngestionState:
                 fallback_action="creating single section from document text",
             )
 
-            # Extract all text from DoclingDocument
+            # Extract all text from DoclingDocument or parsed_content
             doc_text = ""
-            if hasattr(enriched_doc, "export_to_markdown"):
+            if enriched_doc is None:
+                # Sprint 128: Plaintext fallback — use parsed_content directly
+                doc_text = state.get("parsed_content", "")
+            elif hasattr(enriched_doc, "export_to_markdown"):
                 doc_text = enriched_doc.export_to_markdown()
             elif hasattr(enriched_doc, "text"):
                 doc_text = enriched_doc.text

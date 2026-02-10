@@ -1,200 +1,196 @@
 """Unit tests for extraction prompts.
 
 Sprint 45: Feature 45.8 - Extraction Prompts Testing
-Tests for entity and relationship extraction prompts.
+Sprint 128: Updated to test active DSPy-optimized prompts (legacy prompts removed)
 """
 
 import pytest
 
 from src.prompts.extraction_prompts import (
-    ENTITY_EXTRACTION_PROMPT,
-    RELATIONSHIP_EXTRACTION_PROMPT,
+    DSPY_OPTIMIZED_ENTITY_PROMPT,
+    DSPY_OPTIMIZED_RELATION_PROMPT,
+    GENERIC_ENTITY_EXTRACTION_PROMPT,
+    GENERIC_RELATION_EXTRACTION_PROMPT,
+    get_active_extraction_prompts,
+    get_domain_enriched_extraction_prompts,
 )
 
 
-class TestEntityExtractionPrompt:
-    """Test entity extraction prompt structure and content."""
+class TestEntityPrompt:
+    """Test DSPy-optimized entity extraction prompt."""
 
-    def test_entity_extraction_prompt_not_empty(self) -> None:
-        """Test ENTITY_EXTRACTION_PROMPT is not empty."""
-        assert ENTITY_EXTRACTION_PROMPT is not None
-        assert len(ENTITY_EXTRACTION_PROMPT) > 0
-        assert isinstance(ENTITY_EXTRACTION_PROMPT, str)
+    def test_not_empty(self) -> None:
+        assert DSPY_OPTIMIZED_ENTITY_PROMPT is not None
+        assert len(DSPY_OPTIMIZED_ENTITY_PROMPT) > 0
 
-    def test_entity_extraction_prompt_contains_text_placeholder(self) -> None:
-        """Test ENTITY_EXTRACTION_PROMPT contains {text} placeholder."""
-        assert "{text}" in ENTITY_EXTRACTION_PROMPT
-        # Verify it can be formatted with text parameter
-        formatted = ENTITY_EXTRACTION_PROMPT.format(text="test text")
+    def test_contains_text_placeholder(self) -> None:
+        assert "{text}" in DSPY_OPTIMIZED_ENTITY_PROMPT
+        formatted = DSPY_OPTIMIZED_ENTITY_PROMPT.format(text="test text", domain="general")
         assert "test text" in formatted
         assert "{text}" not in formatted
 
-    def test_entity_extraction_prompt_contains_json_instructions(self) -> None:
-        """Test ENTITY_EXTRACTION_PROMPT contains JSON output instructions."""
-        assert "JSON" in ENTITY_EXTRACTION_PROMPT
-        assert "json" in ENTITY_EXTRACTION_PROMPT.lower()
-        # Should mention required fields
-        assert "name" in ENTITY_EXTRACTION_PROMPT
-        assert "type" in ENTITY_EXTRACTION_PROMPT
+    def test_contains_json_instructions(self) -> None:
+        assert "JSON" in DSPY_OPTIMIZED_ENTITY_PROMPT
+        assert "name" in DSPY_OPTIMIZED_ENTITY_PROMPT
+        assert "type" in DSPY_OPTIMIZED_ENTITY_PROMPT
 
-    def test_entity_extraction_prompt_contains_examples(self) -> None:
-        """Test ENTITY_EXTRACTION_PROMPT contains few-shot examples."""
-        assert "Example" in ENTITY_EXTRACTION_PROMPT
-        # Should have multiple examples
-        assert ENTITY_EXTRACTION_PROMPT.count("Example") >= 2
+    def test_contains_adr060_entity_types(self) -> None:
+        prompt = DSPY_OPTIMIZED_ENTITY_PROMPT.upper()
+        for t in ["PERSON", "ORGANIZATION", "LOCATION", "CONCEPT", "TECHNOLOGY"]:
+            assert t in prompt
 
-    def test_entity_extraction_prompt_contains_entity_types(self) -> None:
-        """Test ENTITY_EXTRACTION_PROMPT mentions standard entity types."""
-        prompt_text = ENTITY_EXTRACTION_PROMPT.lower()
-        entity_types = ["person", "organization", "location", "concept", "technology"]
-        for entity_type in entity_types:
-            assert entity_type in prompt_text
+    def test_contains_domain_placeholder(self) -> None:
+        assert "{domain}" in DSPY_OPTIMIZED_ENTITY_PROMPT
 
-    def test_entity_extraction_prompt_formatting_preserves_content(self) -> None:
-        """Test formatting the prompt doesn't lose content."""
-        test_text = "This is a test document with important content"
-        formatted = ENTITY_EXTRACTION_PROMPT.format(text=test_text)
+    def test_contains_confidence_field(self) -> None:
+        assert "confidence" in DSPY_OPTIMIZED_ENTITY_PROMPT
 
-        # Verify key instructions are still present
-        assert "Extract entities" in formatted
-        assert "JSON" in formatted
-        assert test_text in formatted
+    def test_contains_output_example(self) -> None:
+        assert "Output example:" in DSPY_OPTIMIZED_ENTITY_PROMPT
 
 
-class TestRelationshipExtractionPrompt:
-    """Test relationship extraction prompt structure and content."""
+class TestRelationPrompt:
+    """Test DSPy-optimized relation extraction prompt."""
 
-    def test_relationship_extraction_prompt_not_empty(self) -> None:
-        """Test RELATIONSHIP_EXTRACTION_PROMPT is not empty."""
-        assert RELATIONSHIP_EXTRACTION_PROMPT is not None
-        assert len(RELATIONSHIP_EXTRACTION_PROMPT) > 0
-        assert isinstance(RELATIONSHIP_EXTRACTION_PROMPT, str)
+    def test_not_empty(self) -> None:
+        assert DSPY_OPTIMIZED_RELATION_PROMPT is not None
+        assert len(DSPY_OPTIMIZED_RELATION_PROMPT) > 0
 
-    def test_relationship_extraction_prompt_contains_text_placeholder(self) -> None:
-        """Test RELATIONSHIP_EXTRACTION_PROMPT contains {text} placeholder."""
-        assert "{text}" in RELATIONSHIP_EXTRACTION_PROMPT
-        # Verify it can be formatted with text parameter
-        formatted = RELATIONSHIP_EXTRACTION_PROMPT.format(text="test text", entities="entity list")
-        assert "test text" in formatted
-        assert "{text}" not in formatted
+    def test_contains_text_placeholder(self) -> None:
+        assert "{text}" in DSPY_OPTIMIZED_RELATION_PROMPT
 
-    def test_relationship_extraction_prompt_contains_entities_placeholder(self) -> None:
-        """Test RELATIONSHIP_EXTRACTION_PROMPT contains {entities} placeholder."""
-        assert "{entities}" in RELATIONSHIP_EXTRACTION_PROMPT
-        # Verify it can be formatted with entities parameter
-        formatted = RELATIONSHIP_EXTRACTION_PROMPT.format(
+    def test_contains_entities_placeholder(self) -> None:
+        assert "{entities}" in DSPY_OPTIMIZED_RELATION_PROMPT
+        formatted = DSPY_OPTIMIZED_RELATION_PROMPT.format(
             text="test text", entities="- Entity1\n- Entity2"
         )
         assert "Entity1" in formatted
-        assert "{entities}" not in formatted
 
-    def test_relationship_extraction_prompt_contains_json_instructions(self) -> None:
-        """Test RELATIONSHIP_EXTRACTION_PROMPT contains JSON output instructions."""
-        assert "JSON" in RELATIONSHIP_EXTRACTION_PROMPT
-        assert "json" in RELATIONSHIP_EXTRACTION_PROMPT.lower()
-        # Should mention required fields
-        assert "source" in RELATIONSHIP_EXTRACTION_PROMPT
-        assert "target" in RELATIONSHIP_EXTRACTION_PROMPT
-        assert "type" in RELATIONSHIP_EXTRACTION_PROMPT
+    def test_contains_json_instructions(self) -> None:
+        assert "JSON" in DSPY_OPTIMIZED_RELATION_PROMPT
+        assert "subject" in DSPY_OPTIMIZED_RELATION_PROMPT
+        assert "relation" in DSPY_OPTIMIZED_RELATION_PROMPT
+        assert "object" in DSPY_OPTIMIZED_RELATION_PROMPT
 
-    def test_relationship_extraction_prompt_contains_examples(self) -> None:
-        """Test RELATIONSHIP_EXTRACTION_PROMPT contains few-shot examples."""
-        assert "Example" in RELATIONSHIP_EXTRACTION_PROMPT
-        # Should have multiple examples
-        assert RELATIONSHIP_EXTRACTION_PROMPT.count("Example") >= 2
+    def test_contains_adr060_relation_types(self) -> None:
+        prompt = DSPY_OPTIMIZED_RELATION_PROMPT.upper()
+        for t in ["PART_OF", "CONTAINS", "USES", "LOCATED_IN", "RELATED_TO"]:
+            assert t in prompt
 
-    def test_relationship_extraction_prompt_contains_relationship_types(self) -> None:
-        """Test RELATIONSHIP_EXTRACTION_PROMPT mentions standard relationship types."""
-        prompt_text = RELATIONSHIP_EXTRACTION_PROMPT.upper()
-        relationship_types = ["WORKS_AT", "KNOWS", "LOCATED_IN", "CREATED", "USES", "PART_OF"]
-        for rel_type in relationship_types:
-            assert rel_type in prompt_text
+    def test_contains_strength_field(self) -> None:
+        assert "strength" in DSPY_OPTIMIZED_RELATION_PROMPT
 
-    def test_relationship_extraction_prompt_formatting_preserves_content(self) -> None:
-        """Test formatting the prompt doesn't lose content."""
-        test_text = "This is a test document"
-        test_entities = "- Entity1 (PERSON)\n- Entity2 (ORG)"
-        formatted = RELATIONSHIP_EXTRACTION_PROMPT.format(text=test_text, entities=test_entities)
+    def test_no_subject_type_object_type(self) -> None:
+        """Removed in Sprint 128 — parser ignores these fields."""
+        assert "subject_type" not in DSPY_OPTIMIZED_RELATION_PROMPT
+        assert "object_type" not in DSPY_OPTIMIZED_RELATION_PROMPT
 
-        # Verify key instructions are still present
-        assert "Extract relationships" in formatted
-        assert "JSON" in formatted
-        assert test_text in formatted
-        assert "Entity1" in formatted
-        assert "Entity2" in formatted
+    def test_contains_output_example(self) -> None:
+        assert "Output example:" in DSPY_OPTIMIZED_RELATION_PROMPT
+
+
+class TestGenericPrompts:
+    """Test generic fallback prompts (used when AEGIS_USE_LEGACY_PROMPTS=1)."""
+
+    def test_generic_entity_has_text_placeholder(self) -> None:
+        assert "{text}" in GENERIC_ENTITY_EXTRACTION_PROMPT
+
+    def test_generic_relation_has_placeholders(self) -> None:
+        assert "{text}" in GENERIC_RELATION_EXTRACTION_PROMPT
+        assert "{entities}" in GENERIC_RELATION_EXTRACTION_PROMPT
+
+    def test_generic_entity_has_adr060_types(self) -> None:
+        prompt = GENERIC_ENTITY_EXTRACTION_PROMPT.upper()
+        assert "PERSON" in prompt
+        assert "ORGANIZATION" in prompt
+
+    def test_generic_relation_has_adr060_types(self) -> None:
+        prompt = GENERIC_RELATION_EXTRACTION_PROMPT.upper()
+        assert "PART_OF" in prompt
+        assert "RELATED_TO" in prompt
+
+
+class TestGetActiveExtractionPrompts:
+    """Test get_active_extraction_prompts dispatcher."""
+
+    def test_returns_tuple(self) -> None:
+        result = get_active_extraction_prompts()
+        assert isinstance(result, tuple)
+        assert len(result) == 2
+
+    def test_returns_strings(self) -> None:
+        entity_prompt, relation_prompt = get_active_extraction_prompts()
+        assert isinstance(entity_prompt, str)
+        assert isinstance(relation_prompt, str)
+        assert len(entity_prompt) > 100
+        assert len(relation_prompt) > 100
+
+    def test_prompts_have_required_placeholders(self) -> None:
+        entity_prompt, relation_prompt = get_active_extraction_prompts()
+        assert "{text}" in entity_prompt
+        assert "{text}" in relation_prompt
+        assert "{entities}" in relation_prompt
+
+
+class TestDomainEnrichedPrompts:
+    """Test domain-enriched prompt generation from YAML metadata."""
+
+    def test_returns_generic_for_no_subtypes(self) -> None:
+        entity_p, relation_p = get_domain_enriched_extraction_prompts(domain="unknown_domain")
+        # Should still return valid prompts with placeholders
+        assert "{text}" in entity_p
+        assert "{text}" in relation_p
+
+    def test_with_entity_subtypes(self) -> None:
+        entity_p, relation_p = get_domain_enriched_extraction_prompts(
+            domain="test_domain",
+            entity_sub_types=["Protein", "Gene", "Drug"],
+            entity_sub_type_mapping={"Protein": "CONCEPT", "Gene": "CONCEPT", "Drug": "PRODUCT"},
+        )
+        assert "Protein" in entity_p
+        assert "Gene" in entity_p
+        assert "Drug" in entity_p
+        assert "{text}" in entity_p
+
+    def test_with_relation_hints(self) -> None:
+        entity_p, relation_p = get_domain_enriched_extraction_prompts(
+            domain="test_domain",
+            entity_sub_types=["Protein", "Gene"],
+            entity_sub_type_mapping={"Protein": "CONCEPT", "Gene": "CONCEPT"},
+            relation_hints=["TARGETS → Drug → Protein", "ENCODES → Gene → Protein"],
+        )
+        assert "TARGETS" in relation_p
+        assert "ENCODES" in relation_p
+        assert "{text}" in relation_p
+        assert "{entities}" in relation_p
 
 
 class TestPromptsIntegration:
-    """Integration tests for both extraction prompts."""
-
-    def test_both_prompts_have_consistent_structure(self) -> None:
-        """Test both prompts follow consistent structure."""
-        # Both should have examples
-        assert "Example" in ENTITY_EXTRACTION_PROMPT
-        assert "Example" in RELATIONSHIP_EXTRACTION_PROMPT
-
-        # Both should mention JSON output
-        assert "JSON" in ENTITY_EXTRACTION_PROMPT
-        assert "JSON" in RELATIONSHIP_EXTRACTION_PROMPT
-
-        # Both should have clear instructions
-        assert "Extract" in ENTITY_EXTRACTION_PROMPT
-        assert "Extract" in RELATIONSHIP_EXTRACTION_PROMPT
+    """Integration tests for prompt pipeline."""
 
     def test_prompts_work_together_in_sequence(self) -> None:
         """Test prompts can be used in sequence for entity+relationship extraction."""
+        entity_prompt, relation_prompt = get_active_extraction_prompts()
         test_text = "John Smith works at Google on machine learning."
 
-        # First format entity extraction prompt
-        entity_prompt = ENTITY_EXTRACTION_PROMPT.format(text=test_text)
-        assert test_text in entity_prompt
+        formatted_entity = entity_prompt.format(text=test_text, domain="general")
+        assert test_text in formatted_entity
 
-        # Simulate extracted entities
         entity_list = "- John Smith (PERSON)\n- Google (ORGANIZATION)\n- machine learning (CONCEPT)"
-
-        # Then format relationship extraction prompt with same text and entities
-        rel_prompt = RELATIONSHIP_EXTRACTION_PROMPT.format(text=test_text, entities=entity_list)
-
-        assert test_text in rel_prompt
-        assert "John Smith" in rel_prompt
-        assert "Google" in rel_prompt
-        assert "machine learning" in rel_prompt
+        formatted_rel = relation_prompt.format(text=test_text, entities=entity_list)
+        assert test_text in formatted_rel
+        assert "John Smith" in formatted_rel
+        assert "Google" in formatted_rel
 
     @pytest.mark.parametrize(
         "entity_type",
         ["PERSON", "ORGANIZATION", "LOCATION", "CONCEPT", "TECHNOLOGY", "PRODUCT", "EVENT"],
     )
-    def test_entity_extraction_prompt_supports_all_entity_types(self, entity_type: str) -> None:
-        """Test ENTITY_EXTRACTION_PROMPT mentions all supported entity types."""
-        # Some types may be in examples, check if they're referenced
-        prompt_upper = ENTITY_EXTRACTION_PROMPT.upper()
-        assert entity_type in prompt_upper or entity_type.lower() in ENTITY_EXTRACTION_PROMPT
+    def test_entity_prompt_supports_all_entity_types(self, entity_type: str) -> None:
+        prompt_upper = DSPY_OPTIMIZED_ENTITY_PROMPT.upper()
+        assert entity_type in prompt_upper
 
-    def test_prompts_are_text_strings(self) -> None:
-        """Test prompts are properly defined as strings."""
-        # Should be able to call string methods on them
-        assert hasattr(ENTITY_EXTRACTION_PROMPT, "upper")
-        assert hasattr(ENTITY_EXTRACTION_PROMPT, "lower")
-        assert hasattr(ENTITY_EXTRACTION_PROMPT, "format")
-
-        assert hasattr(RELATIONSHIP_EXTRACTION_PROMPT, "upper")
-        assert hasattr(RELATIONSHIP_EXTRACTION_PROMPT, "lower")
-        assert hasattr(RELATIONSHIP_EXTRACTION_PROMPT, "format")
-
-    def test_prompts_mention_json_format_requirements(self) -> None:
-        """Test prompts specify JSON format requirements."""
-        # Entity prompt should specify JSON array format
-        assert "[" in ENTITY_EXTRACTION_PROMPT and "]" in ENTITY_EXTRACTION_PROMPT
-
-        # Relationship prompt should specify JSON array format
-        assert "[" in RELATIONSHIP_EXTRACTION_PROMPT and "]" in RELATIONSHIP_EXTRACTION_PROMPT
-
-    def test_prompts_include_validation_guidelines(self) -> None:
-        """Test prompts include validation and consistency guidelines."""
-        # Should mention avoiding duplicates or being comprehensive
-        entity_prompt_lower = ENTITY_EXTRACTION_PROMPT.lower()
-        assert "duplicate" in entity_prompt_lower or "extract" in entity_prompt_lower
-
-        # Relationship prompt should mention validation
-        rel_prompt_lower = RELATIONSHIP_EXTRACTION_PROMPT.lower()
-        assert "list" in rel_prompt_lower or "entity" in rel_prompt_lower
+    def test_prompts_mention_json_format(self) -> None:
+        entity_p, relation_p = get_active_extraction_prompts()
+        assert "[" in entity_p and "]" in entity_p
+        assert "[" in relation_p and "]" in relation_p

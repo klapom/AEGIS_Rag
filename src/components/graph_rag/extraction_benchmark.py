@@ -354,15 +354,16 @@ class ExtractionBenchmark:
             USER_PROMPT_TEMPLATE_RELATION,
         )
         from src.prompts.extraction_prompts import (
-            ENTITY_EXTRACTION_PROMPT,
-            RELATIONSHIP_EXTRACTION_PROMPT,
+            get_active_extraction_prompts,
         )
+
+        entity_prompt, relationship_prompt = get_active_extraction_prompts()
 
         # Pass 1: Entity extraction
         entity_start = time.time()
         entity_task = LLMTask(
             task_type=TaskType.EXTRACTION,
-            prompt=ENTITY_EXTRACTION_PROMPT.format(text=text),
+            prompt=entity_prompt.format(text=text),
             quality_requirement=QualityRequirement.HIGH,
             complexity=Complexity.HIGH,
             max_tokens=self.max_tokens,
@@ -390,7 +391,7 @@ class ExtractionBenchmark:
             entities_str = "\n".join([f"- {e.name} ({e.type})" for e in entities])
             rel_task = LLMTask(
                 task_type=TaskType.EXTRACTION,
-                prompt=RELATIONSHIP_EXTRACTION_PROMPT.format(text=text, entities=entities_str),
+                prompt=relationship_prompt.format(text=text, entities=entities_str),
                 quality_requirement=QualityRequirement.HIGH,
                 complexity=Complexity.HIGH,
                 max_tokens=self.max_tokens,

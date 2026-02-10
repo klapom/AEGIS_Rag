@@ -314,6 +314,12 @@ class GraphRelationship(BaseModel):
     confidence: float = Field(
         default=1.0, description="Extraction confidence score", ge=0.0, le=1.0
     )
+    strength: int | None = Field(
+        default=None,
+        description="Relation strength (1-10) from LLM extraction. Sprint 128.",
+        ge=1,
+        le=10,
+    )
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -326,6 +332,7 @@ class GraphRelationship(BaseModel):
                 "properties": {"since": "2020-01-01"},
                 "source_document": "doc_123",
                 "confidence": 0.92,
+                "strength": 8,
             }
         }
     )

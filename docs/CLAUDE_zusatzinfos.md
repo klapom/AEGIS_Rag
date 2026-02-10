@@ -228,6 +228,68 @@ AEGIS_LLM_THINKING=false  # Disable thinking for extraction
 
 ---
 
+## vLLM SM121 CUDA Crash Analysis & Stability Experiments (Sprint 128)
+
+### The Problem
+
+During Sprint 128.6 domain prompt verification (35 domains, 753 vLLM requests over ~36 hours), **49 requests failed (6.6%)** due to intermittent `cudaErrorIllegalInstruction`. Each crash kills vLLM's async engine, affecting all in-flight requests.
+
+**Crash location (consistent):**
+```
+flashinfer-fused_moe-sm_121a/flashinfer_moe_grouped_gemm.cu:1253
+in cutlass::gemm::collective::CollectiveMma<...>::load()
+```
+
+**Root cause:** DGX Spark (GB10) is SM121 architecture. NGC's vLLM image compiles CUTLASS kernels for SM120 and runs them on SM121 via PTX forward compatibility (`12.0+PTX`). Under concurrent load, some CUTLASS grouped GEMM instructions are illegal on SM121.
+
+### Experiment 1: `VLLM_MOE_USE_DEEP_GEMM=0` (Applied 2026-02-09)
+
+DeepGemm is an FP8-specific optimization. Our model (Nemotron-3-Nano-NVFP4) doesn't use FP8, so disabling it has ~0% performance impact. Added to `docker-compose.dgx-spark.yml`:
+
+```yaml
+- VLLM_MOE_USE_DEEP_GEMM=0
+```
+
+**Side effect:** Invalidates FlashInfer JIT cache → forces recompilation of 63 CUTLASS MoE kernels at startup (~90s with cached dependencies). Needs >20 GB RAM during compilation (`ninja -j 12`). OOM-killed when running concurrent with Docker builds.
+
+### Experiment 2: eugr/spark-vllm-docker (Community Image)
+
+Community Docker image that builds vLLM with **native SM121 compilation** (`TORCH_CUDA_ARCH_LIST=12.1a`, CUDA 13.1.1) instead of NGC's `12.0+PTX` forward compatibility. Uses latest vLLM release wheels for aarch64.
+
+**Source:** [`eugr/spark-vllm-docker`](https://github.com/eugr/spark-vllm-docker) — `Dockerfile.wheels`
+**Local tag:** `aegis-vllm-eugr:latest`
+
+**Key advantages:**
+- Native SM121 CUTLASS kernels (no PTX translation)
+- Latest vLLM release (potential SM121-specific fixes)
+- Latest FlashInfer (potential autotuner improvements)
+- Smaller image (~15-20 GB vs NGC ~30 GB)
+
+### A/B Test Protocol
+
+| Test | Image | Config | Target |
+|------|-------|--------|--------|
+| Baseline | NGC 25.12.post1-py3 | DeepGemm ON | 93.4% success (Sprint 128.6) |
+| Test A | NGC 25.12.post1-py3 | DeepGemm OFF | 0 crashes / 50 requests |
+| Test B | aegis-vllm-eugr | Default | 0 crashes / 50 requests |
+
+### FlashInfer JIT Cache Notes
+
+- **Cache location:** `~/.cache/flashinfer/0.6.0+.../121a/cached_ops/fused_moe_120/`
+- **63 CUTLASS MoE kernels** compiled at startup via ninja
+- **Parallelism:** `ninja -j 12` — requires >20 GB RAM
+- **Cache invalidation triggers:** Changing `VLLM_MOE_USE_DEEP_GEMM`, FlashInfer version update, clearing `~/.cache/flashinfer/`
+- **OOM protection:** Don't run Docker builds concurrently with FlashInfer JIT compilation
+
+### Relevant Links
+
+- **Forum post (planned):** NVIDIA Developer Forums — DGX Spark vLLM cudaErrorIllegalInstruction
+- **eugr image:** https://github.com/eugr/spark-vllm-docker
+- **eelbaz setup:** https://github.com/eelbaz/dgx-spark-vllm-setup
+- **avarok NVFP4:** https://github.com/avarok/vllm-nvfp4-gb10-sm120
+
+---
+
 ## Links
 - vLLM Setup: https://github.com/eelbaz/dgx-spark-vllm-setup
 - NVIDIA Playbooks: https://build.nvidia.com/spark

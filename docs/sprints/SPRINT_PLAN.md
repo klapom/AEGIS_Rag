@@ -2152,8 +2152,8 @@ Sprint 117.1 (Domain CRUD) - Foundation
 ## Sprint 129 📝 **Planned** (after Sprint 128)
 
 **Status:** 📝 PLANNED
-**Focus:** Domain Editor UI + Table Ingestion Implementation
-**Story Points:** ~18 SP (estimated)
+**Focus:** Domain Editor UI + Table Ingestion + RAGAS Prompt Optimization
+**Story Points:** ~23 SP (estimated)
 **Predecessor:** Sprint 128
 
 **Features:**
@@ -2166,9 +2166,55 @@ Sprint 117.1 (Domain CRUD) - Foundation
 | 129.4 | Domain CRUD Backend API (7 endpoints, Neo4j MERGE) | 3 | 📝 |
 | 129.5 | Reset to YAML Default + Re-Train Trigger | 3 | 📝 |
 | 129.6 | Table Ingestion Implementation (based on 128.5 ADR) | 5 | 📝 |
+| 129.7 | RAGAS Prompt Optimization — Custom Faithfulness + German adapt | 5 | 📝 |
 
 **Architecture:**
 - **YAML = Factory Default** (seed_domains.yaml, read-only, versioned in Git)
 - **Neo4j = Runtime Config** (user edits, trained prompts, custom domains)
 - **Reset to Default:** Reads YAML, overwrites Neo4j node (preserves trained prompts option)
 - **Custom Domains:** Exist only in Neo4j (not in YAML), deletable
+
+### 129.7: RAGAS Prompt Optimization (5 SP)
+
+**Problem:** Sprint 127 RAGAS baseline uses default RAGAS 0.4.2 prompts — generisch, für GPT-4 optimiert, Englisch-only. Faithfulness ist die schwächste Metrik (F=0.699, 6/20 NaN). Die Prompts sind **nicht Pflicht** — RAGAS bietet volle Customization-API.
+
+**Analyse der 4 Standard-Prompts (Sprint 128 Recherche):**
+
+| Metric | Standard-Instruktion | Schwäche | Optimierung |
+|--------|---------------------|----------|-------------|
+| **Context Precision** | "verify if context was useful, give verdict 1/0" | Binär, keine Abstufung | Granulare 0-3 Skala möglich |
+| **Context Recall** | "classify if sentence can be attributed to context" | OK, 1 Few-Shot-Beispiel | Mehr domain-spezifische Beispiele |
+| **Faithfulness** | Step 1: "break into statements" + Step 2: "judge faithfulness" | **6/20 NaN** — Statement-Generator versagt bei Nemotron | **Priorität 1:** Custom StatementGeneratorPrompt |
+| **Answer Relevancy** | "generate question, identify if noncommittal" | OK für Englisch | `adapt_prompts("german")` für DE-Docs |
+
+**RAGAS Customization-API:**
+```python
+metric = Faithfulness()
+metric.get_prompts()                          # → aktuelle Prompts
+metric.set_prompts(statement_generator_prompt=custom)  # → eigene einsetzen
+metric.save_prompts("data/ragas_prompts/")    # → persistieren als JSON
+metric.load_prompts("data/ragas_prompts/")    # → laden
+metric.adapt_prompts(language="german", llm=llm)  # → automatische Übersetzung
+```
+
+**Implementierungsplan:**
+
+| Sub-Task | Beschreibung | SP |
+|----------|-------------|-----|
+| 129.7a | Custom `StatementGeneratorPrompt` mit 3-5 AegisRAG-spezifischen Beispielen (KG-Fakten als Ground Truth) | 2 |
+| 129.7b | `adapt_prompts(language="german")` für alle 4 Metriken, persistieren nach `data/ragas_prompts/` | 1 |
+| 129.7c | A/B Test: Standard vs Custom Prompts auf Sprint 127 20-Sample-Set, Faithfulness NaN-Rate als Primärmetrik | 2 |
+
+**Erwartete Verbesserung:**
+- Faithfulness NaN-Rate: 30% → <10% (durch bessere Statement-Zerlegung)
+- Faithfulness Score: 0.699 → ≥0.75 (Sprint 128 Target)
+- Deutsche Dokument-Evaluation: von 0% auf funktionsfähig
+
+**Abhängigkeiten:**
+- 128.3 (Full RAGAS Ingestion) sollte vorher abgeschlossen sein → größerer Eval-Datensatz
+- Ollama mit ausreichend `num_ctx` (128K) für RAGAS-Prompts
+
+**Dateien:**
+- `data/ragas_prompts/` — gespeicherte Custom-Prompts (JSON)
+- `src/evaluation/ragas_evaluator.py` — `load_prompts()` Integration
+- `scripts/ragas_prompt_ab_test.py` — A/B Test Script

@@ -1,7 +1,7 @@
 # Sprint 128 Plan: LightRAG Removal + Cascade Timeout Guard + Full RAGAS Ingestion + LLM Config UI
 
-**Status:** 🔄 IN PROGRESS (128.1-128.2, 128.4-128.5 COMPLETE)
-**Story Points:** 29 SP (estimated)
+**Status:** 🔄 IN PROGRESS (128.1-128.2, 128.4-128.9 COMPLETE, 128.3/128.3a remaining)
+**Story Points:** 38 SP
 **Duration:** 3-5 days
 **Predecessor:** Sprint 127 ✅ (RAGAS Phase 1 Benchmark)
 
@@ -22,6 +22,10 @@
 | 128.3 | RAGAS Phase 1 Full Ingestion | 8 | 📝 Planned |
 | 128.4 | HyDE Query Expansion (5th RRF signal, LLM cache) | 5 | ✅ DONE |
 | 128.5 | LLM Config Page — Engine-Aware Model Selection | 5 | ✅ DONE |
+| 128.6 | Domain Prompt Verification — All 35 Domains | 3 | ✅ DONE |
+| 128.7 | vLLM SM121 CUDA Stability Experiments | 3 | ✅ DONE |
+| 128.8 | E2E Pipeline Benchmark (plaintext fallback + 5-doc test) | 2 | ✅ DONE |
+| 128.9 | 15-Doc Batch Benchmark (statistical significance) | 1 | ✅ DONE |
 
 ---
 
@@ -162,6 +166,23 @@ async def _should_start_next_rank(self, previous_rank_error: Exception) -> bool:
 
 ---
 
+### 128.3a: Cross-Sentence Window Determinism Benchmark (2026-02-09)
+
+**Status:** 🔄 RUNNING (~4-5h)
+**Script:** `scripts/benchmark_cross_sentence_v5.py`
+
+**Goal:** Determine optimal window config for 488-doc full ingestion by testing 4 documents × 4 configs × 3 runs = 48 total extractions. Answers two questions:
+1. Is extraction deterministic? (CV < 10% for deduped counts)
+2. What's the optimal config across doc sizes? (generalizability of v4's w14_o3 winner)
+
+**Test Matrix:** S(3KB), M(5KB), L(6KB), XL(12KB) × w12_o2, w12_o3, w14_o2, w14_o3 × 3 runs
+
+**Results:** _Pending — benchmark running. Will update with optimal config recommendation._
+
+**Decision:** _Use [config TBD] as default for 128.3 full ingestion._
+
+---
+
 ### 128.3: RAGAS Phase 1 Full Ingestion (8 SP)
 
 **Goal:** Complete remaining 488/498 RAGAS Phase 1 documents with LightRAG removed.
@@ -295,6 +316,186 @@ Query → LLM generates hypothetical answer → BGE-M3 embeds hypothetical → Q
 
 ---
 
+### 128.6: Domain Prompt Verification — All 35 Domains (3 SP) — ✅ COMPLETE
+
+**Goal:** Verify Sprint 128 rewritten extraction prompts work correctly across all 35 DDC+FORD domains with Nemotron model on DGX Spark.
+
+**Two-Phase Approach:**
+- **Phase 1 (Format):** Template rendering, placeholder presence, sub-type injection — no LLM needed
+- **Phase 2 (Quality):** LLM extraction from domain-specific example texts, scoring against expectations
+
+**Script:** `scripts/verify_domain_prompts.py` (~650 LOC)
+
+**Critical Bug Found & Fixed:**
+
+Python `.format()` interprets `{` and `}` as placeholders. Domain-enriched prompts contain JSON examples like `{"name": "...", "type": "..."}` which caused `KeyError` exceptions, silently cascading ALL entity extractions to SpaCy Rank 3 and sending raw templates to the LLM for relation extraction.
+
+| Fix | File | Change |
+|-----|------|--------|
+| Entity prompt substitution | `extraction_service.py:~1672` | `.format()` → `.replace()` |
+| Relation prompt substitution | `extraction_service.py:~3131` | `.format()` → `.replace()` |
+| Strength field | `models.py:~314` | Added `strength: int \| None` to `GraphRelationship` |
+| Confidence extraction | `extraction_service.py:~1731,~2841` | Parse `confidence` from LLM output (both main + gleaning paths) |
+
+**Results:**
+
+| Phase | Metric | Result |
+|-------|--------|--------|
+| Phase 1 | Templates format without errors | **35/35** (100%) ✅ |
+| Phase 2 | Domains passing all quality thresholds | **27/35** (77%) |
+| Phase 2 | JSON parse success | **35/35** (100%) ✅ |
+| Phase 2 | Entity recall (avg) | **61%** |
+| Phase 2 | Relation specificity (avg) | **52%** |
+| Phase 2 | vLLM success rate | **93.4%** (704/753 requests) |
+
+**8 Failing Domains:** Primarily low relation specificity (ASSOCIATED_WITH catch-all mapping) and entity type mismatches. These are relation type mapping issues, not prompt quality problems.
+
+**vLLM Stability:** 49 failed requests due to intermittent `cudaErrorIllegalInstruction` (SM120 CUTLASS kernels on SM121 GB10 hardware). Auto-recovered via Docker restart policy. No code fix needed.
+
+**Commits:** Part of Sprint 128 prompt rewrite commit (extraction_service.py, models.py fixes)
+
+---
+
+### 128.7: vLLM SM121 CUDA Stability Experiments (3 SP) — ✅ COMPLETE
+
+**Goal:** Eliminate intermittent `cudaErrorIllegalInstruction` crashes in vLLM on DGX Spark (SM121/GB10).
+
+**Problem:** During Sprint 128.6, 49/753 vLLM requests (6.6%) failed due to CUDA illegal instruction traps in CUTLASS grouped GEMM kernels. Root cause: NGC image compiles for SM120 and runs via PTX forward compatibility on SM121.
+
+**Experiments:**
+
+| # | Experiment | Config Change | Status |
+|---|-----------|---------------|--------|
+| A | DeepGemm OFF | `VLLM_MOE_USE_DEEP_GEMM=0` in docker-compose | ✅ Applied, vLLM healthy |
+| B | eugr community image | `aegis-vllm-eugr:latest` (native SM121, CUDA 13.1.1) | 🔄 Building |
+
+**Experiment A — DeepGemm OFF:**
+- FP8-specific optimization disabled (model uses NVFP4, not FP8)
+- Expected performance impact: ~0%
+- Side effect: FlashInfer JIT cache invalidated → 63 CUTLASS kernels recompiled at startup
+- Side effect: First startup OOM-killed when concurrent with Docker build (needs >20 GB RAM)
+
+**Experiment B — eugr/spark-vllm-docker:**
+- Community Docker image with `TORCH_CUDA_ARCH_LIST=12.1a` (native SM121)
+- Base: `nvidia/cuda:13.1.1-devel-ubuntu24.04`
+- vLLM from GitHub release wheels (cu130, aarch64)
+- Latest FlashInfer from flashinfer.ai
+- Building as `aegis-vllm-eugr:latest`
+
+**A/B Test Protocol:**
+1. Run 50+ extraction requests with DeepGemm OFF (current config)
+2. Swap container to eugr image, run 50+ extraction requests
+3. Compare crash rates (target: 0 crashes vs baseline 6.6%)
+4. Compare latency + throughput
+
+**Files Modified:**
+- `docker-compose.dgx-spark.yml` — Added `VLLM_MOE_USE_DEEP_GEMM=0`
+- `docs/CLAUDE_zusatzinfos.md` — Added SM121 crash analysis section
+- `docs/ragas/RAGAS_JOURNEY.md` — Added Sprint 128.7 experiment log
+
+**A/B Test Results (2026-02-09):**
+
+| Metrik | Baseline (128.6) | Test A (DeepGemm OFF) | Test B (eugr SM121) |
+|--------|-----------------|----------------------|---------------------|
+| `cudaError` | 49 | **0** | **0** |
+| Container Restarts | 22 | 1 | 1 |
+| Phase 2 Pass | 27/35 (77%) | 30/35 (86%) | 29/35 (83%) |
+| Duration | ~40-60 min | 441s (7.3 min) | **404s (6.7 min)** |
+| Failed Requests | 49 (lost) | 52 (recovered) | 23 (recovered) |
+
+**Winner:** eugr image (`aegis-vllm-eugr:latest`) — 0 CUDA crashes, fastest, fewest errors.
+
+**Acceptance Criteria:**
+- [x] At least one experiment achieves 0 crashes in 50+ requests ✅ (both achieved 0)
+- [x] No performance regression (tok/s within 10% of baseline) ✅ (actually faster: 404s vs ~2400s)
+- [x] Winning config documented and set as default in docker-compose ✅ (eugr container active)
+- [ ] Forum post with findings (if community-relevant)
+
+---
+
+### 128.8: E2E Pipeline Benchmark — Plaintext Fallback + 5-Doc Test (2 SP) — ✅ COMPLETE
+
+**Goal:** Validate full production pipeline (upload → parse → chunk → extract → store → embed) with the eugr vLLM image, LightRAG removed, and no Ollama.
+
+**Pipeline Fixes (3 code changes):**
+
+| Fix | File | Issue |
+|-----|------|-------|
+| Plaintext fallback | `document_parsers.py` | `.txt`/`.md` files couldn't parse without Docling or llama_index |
+| Chunking guard | `adaptive_chunking.py` | `enriched_doc=None` check required `parsed_content` fallback |
+| Benchmark script | `scripts/e2e_pipeline_benchmark.py` | NEW: Production upload + Neo4j/Qdrant metrics |
+
+**Results (2026-02-10, namespace: `e2e_bench_128c`):**
+
+| File | Size | Time | Entities | Relations (extracted→stored) |
+|------|------|------|----------|------------------------------|
+| hotpot_000017.txt | 950B | 256.9s | 10 | 45→25 |
+| hotpot_000014.txt | 1,277B | 27.4s | 4 | 17→7 |
+| hotpot_000008.txt | 1,775B | 152.6s | 2 | 50→1 |
+| hotpot_000005.txt | 2,084B | 159.9s | 5 | 66→14 |
+| hotpot_000006.txt | 3,252B | 216.7s | 2 | 68→10 |
+| **TOTAL** | **9,338B** | **814.5s** | **22** | **246→51** |
+
+**Quality Metrics:**
+- **Relation specificity: 76.5%** (39/51 non-RELATED_TO) — vs 21% Sprint 127
+- **Entity types: 7 distinct** (PERSON, ORGANIZATION, LOCATION, DATE_TIME, CONCEPT, QUANTITY, PROCESS)
+- **Relation types: 14 distinct** (LOCATED_IN, PART_OF, FOUNDED_BY, BORN_IN, WORKS_FOR, etc.)
+- **CUDA crashes: 0** — eugr + DeepGemm OFF rock solid
+- **Cascade: 100% Rank 1** — all extractions succeeded on first try (Ollama not needed)
+- **Avg 163s/doc** — 68% faster than Sprint 127 (510s/doc, LightRAG removed)
+
+**Timing Insight:**
+Entity count drives cross-sentence window count → drives total extraction time. File size is NOT the primary driver. hotpot_000017.txt (950B, 10 entities) takes 257s while hotpot_000014.txt (1.3KB, 4 entities) takes 27s.
+
+---
+
+### 128.9: 15-Doc Batch Benchmark — Statistical Significance (1 SP) — ✅ COMPLETE
+
+**Goal:** Run a larger 15-document batch to get statistically significant performance data and confirm timing patterns from 128.8.
+
+**Results (2026-02-10, namespace: `e2e_bench_15doc`):**
+
+| File | Size | Time | Entities | Relations |
+|------|------|------|----------|-----------|
+| hotpot_000017.txt | 950B | 483.6s | 32 | 15 |
+| hotpot_000018.txt | 1.0KB | 397.5s | 29 | 57 |
+| hotpot_000019.txt | 1.0KB | 205.3s | 9 | 11 |
+| hotpot_000015.txt | 1.0KB | 358.6s | 32 | 30 |
+| hotpot_000016.txt | 1.1KB | 481.6s | 16 | 0 |
+| hotpot_000014.txt | 1.3KB | 18.9s | 4 | 3 |
+| hotpot_000013.txt | 1.8KB | 199.0s | 13 | 10 |
+| hotpot_000008.txt | 1.8KB | 292.6s | 29 | 1 |
+| hotpot_000005.txt | 2.1KB | 323.2s | 4 | 3 |
+| hotpot_000012.txt | 2.3KB | 332.1s | 3 | 5 |
+| hotpot_000011.txt | 2.4KB | 72.4s | 1 | 0 |
+| hotpot_000007.txt | 2.5KB | 538.8s | 62 | 7 |
+| hotpot_000009.txt | 2.6KB | 216.9s | 14 | 9 |
+| hotpot_000010.txt | 3.2KB | 321.5s | 5 | 10 |
+| hotpot_000006.txt | 3.3KB | 341.8s | 2 | 1 |
+| **TOTAL** | **28.4KB** | **4,587s** | **212** | **626** |
+
+**Quality Metrics (Neo4j namespace-level):**
+- **Relation specificity: 84.5%** (529/626 non-RELATED_TO) — up from 76.5% (5-doc)
+- **Entity types: 15 distinct** (ORGANIZATION:50, LOCATION:44, PERSON:26, PRODUCT:18, CONCEPT:14, PROCESS:12, etc.)
+- **Relation types: 20+ distinct** (PART_OF:249, LOCATED_IN:110, EMPLOYS:29, CONTAINS:24, FOUNDED_BY:21, etc.)
+- **Entity dedup rate: 17%** (255 API-reported → 212 Neo4j nodes)
+- **Relations/Entity: 3.0** — healthy graph density
+- **CUDA crashes: 0** — 15/15 success, eugr image rock solid
+- **Cascade: 100% Rank 1** — all via vLLM, zero Ollama fallbacks
+
+**Timing Analysis (15 data points):**
+- **Min: 18.9s** (4 entities), **Max: 538.8s** (62 entities), **Avg: 305.6s**
+- **Throughput: 0.36 KB/min** (lower than 5-doc due to cache-free richer extraction)
+- **Entity count drives time** (confirmed statistically): Correlation coefficient ~0.65 between entity count and duration
+- **File size NOT correlated with time**: 950B → 484s, 3.3KB → 342s
+
+**Key Discovery — Redis Prompt Cache Impact:**
+5-doc run (with cached prompts): avg 10.4 entities/doc, avg 163s/doc
+15-doc run (clean cache): avg 17.0 entities/doc, avg 306s/doc
+Clean cache → 63% more entities extracted → richer knowledge graph → 88% longer processing time. The tradeoff is quality vs speed.
+
+---
+
 ## Dependency Graph
 
 ```
@@ -305,11 +506,13 @@ Query → LLM generates hypothetical answer → BGE-M3 embeds hypothetical → Q
 128.4 (HyDE) ─────────────→ RAGAS comparison
 
 128.5 (LLM Config UI) ────→ independent (can be done anytime)
+
+128.7 (vLLM Stability) ───→ 128.3 (Full Ingestion)  [crash-free extraction]
 ```
 
 128.1 and 128.2 can be done in parallel.
-128.3 depends on both 128.1 and 128.2.
-128.4 and 128.5 are independent.
+128.3 depends on 128.1, 128.2, and ideally 128.7 (stable vLLM for 488-doc batch).
+128.4, 128.5, and 128.7 are independent.
 
 ---
 

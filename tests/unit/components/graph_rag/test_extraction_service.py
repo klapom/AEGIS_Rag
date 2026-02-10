@@ -177,7 +177,7 @@ class TestExtractionService:
             assert isinstance(relationships[0], GraphRelationship)
             assert relationships[0].source == "John Smith"
             assert relationships[0].target == "Google"
-            assert relationships[0].type == "WORKS_AT"
+            assert relationships[0].type == "EMPLOYS"  # WORKS_AT maps to EMPLOYS
             assert relationships[0].source_document == "doc1"
 
     @pytest.mark.asyncio
@@ -324,28 +324,28 @@ class TestExtractionServiceDomainAware:
     async def test_get_extraction_prompts_no_domain(self, extraction_service):
         """Test getting extraction prompts without domain (Feature 45.8).
 
-        When no domain is specified, should return generic prompts.
+        When no domain is specified, should return generic DSPy prompts.
+        Sprint 128: Updated to match new compact prompt format.
         """
-        from src.prompts.extraction_prompts import (
-            GENERIC_ENTITY_EXTRACTION_PROMPT,
-            GENERIC_RELATION_EXTRACTION_PROMPT,
-        )
+        from src.prompts.extraction_prompts import get_active_extraction_prompts
+
+        expected_entity, expected_relation = get_active_extraction_prompts()
 
         entity_prompt, relation_prompt = await extraction_service.get_extraction_prompts(None)
 
-        assert entity_prompt == GENERIC_ENTITY_EXTRACTION_PROMPT
-        assert relation_prompt == GENERIC_RELATION_EXTRACTION_PROMPT
+        assert entity_prompt == expected_entity
+        assert relation_prompt == expected_relation
 
     @pytest.mark.asyncio
     async def test_get_extraction_prompts_domain_not_found(self, extraction_service):
         """Test getting prompts when domain doesn't exist (Feature 45.8).
 
-        When domain is not found, should fall back to generic prompts.
+        When domain is not found, should fall back to generic DSPy prompts.
+        Sprint 128: Updated to match new compact prompt format.
         """
-        from src.prompts.extraction_prompts import (
-            GENERIC_ENTITY_EXTRACTION_PROMPT,
-            GENERIC_RELATION_EXTRACTION_PROMPT,
-        )
+        from src.prompts.extraction_prompts import get_active_extraction_prompts
+
+        expected_entity, expected_relation = get_active_extraction_prompts()
 
         # Create a mock DomainRepository instance
         mock_repo = AsyncMock()
@@ -357,20 +357,20 @@ class TestExtractionServiceDomainAware:
                 "nonexistent_domain"
             )
 
-            assert entity_prompt == GENERIC_ENTITY_EXTRACTION_PROMPT
-            assert relation_prompt == GENERIC_RELATION_EXTRACTION_PROMPT
+            assert entity_prompt == expected_entity
+            assert relation_prompt == expected_relation
             assert mock_repo.get_domain.await_count >= 1
 
     @pytest.mark.asyncio
     async def test_get_extraction_prompts_domain_no_prompts(self, extraction_service):
         """Test getting prompts when domain exists but has no custom prompts (Feature 45.8).
 
-        When domain exists but entity_prompt/relation_prompt are None, fall back to generic.
+        When domain exists but entity_prompt/relation_prompt are None, fall back to generic DSPy.
+        Sprint 128: Updated to match new compact prompt format.
         """
-        from src.prompts.extraction_prompts import (
-            GENERIC_ENTITY_EXTRACTION_PROMPT,
-            GENERIC_RELATION_EXTRACTION_PROMPT,
-        )
+        from src.prompts.extraction_prompts import get_active_extraction_prompts
+
+        expected_entity, expected_relation = get_active_extraction_prompts()
 
         mock_repo = AsyncMock()
         mock_repo.get_domain = AsyncMock(
@@ -387,8 +387,8 @@ class TestExtractionServiceDomainAware:
                 "tech_docs"
             )
 
-            assert entity_prompt == GENERIC_ENTITY_EXTRACTION_PROMPT
-            assert relation_prompt == GENERIC_RELATION_EXTRACTION_PROMPT
+            assert entity_prompt == expected_entity
+            assert relation_prompt == expected_relation
 
     @pytest.mark.asyncio
     async def test_get_extraction_prompts_domain_with_custom_prompts(self, extraction_service):
@@ -422,12 +422,12 @@ class TestExtractionServiceDomainAware:
     async def test_get_extraction_prompts_fallback_on_error(self, extraction_service):
         """Test getting prompts falls back to generic on database error (Feature 45.8).
 
-        When domain repository raises an exception, should gracefully fall back to generic prompts.
+        When domain repository raises an exception, should gracefully fall back to generic DSPy prompts.
+        Sprint 128: Updated to match new compact prompt format.
         """
-        from src.prompts.extraction_prompts import (
-            GENERIC_ENTITY_EXTRACTION_PROMPT,
-            GENERIC_RELATION_EXTRACTION_PROMPT,
-        )
+        from src.prompts.extraction_prompts import get_active_extraction_prompts
+
+        expected_entity, expected_relation = get_active_extraction_prompts()
 
         mock_repo = AsyncMock()
         mock_repo.get_domain = AsyncMock(side_effect=Exception("Database connection failed"))
@@ -438,8 +438,8 @@ class TestExtractionServiceDomainAware:
             )
 
             # Should fall back to generic prompts even on error
-            assert entity_prompt == GENERIC_ENTITY_EXTRACTION_PROMPT
-            assert relation_prompt == GENERIC_RELATION_EXTRACTION_PROMPT
+            assert entity_prompt == expected_entity
+            assert relation_prompt == expected_relation
 
     @pytest.mark.asyncio
     async def test_entity_extraction_with_generic_prompts(
