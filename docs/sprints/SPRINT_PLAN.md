@@ -2153,9 +2153,9 @@ Sprint 117.1 (Domain CRUD) - Foundation
 
 ---
 
-## Sprint 129 📝 **Planned** (after Sprint 128)
+## Sprint 129 🔄 **In Progress** (started 2026-02-10)
 
-**Status:** 📝 PLANNED
+**Status:** 🔄 IN PROGRESS (5/10 features complete, ~15 SP delivered)
 **Focus:** Extraction Resilience + RAGAS Full Ingestion + Domain Editor UI
 **Story Points:** ~42 SP (estimated)
 **Predecessor:** Sprint 128 ✅
@@ -2164,16 +2164,16 @@ Sprint 117.1 (Domain CRUD) - Foundation
 
 | # | Feature | SP | Status |
 |---|---------|-----|--------|
-| 129.1 | Cross-Sentence Window Bisection Fallback | 3 | 📝 |
-| 129.2 | Metadata Artifact Filtering (clean_text, Doc Type) | 2 | 📝 |
+| 129.1 | Cross-Sentence Window Bisection Fallback | 3 | ✅ |
+| 129.2 | Metadata Artifact Filtering (clean_text, Doc Type) | 2 | ✅ |
 | 129.3 | RAGAS Phase 1 Full Ingestion (498 docs) | 8 | 📝 |
 | 129.4 | RAGAS Re-Evaluation (post-LightRAG baseline) | 3 | 📝 |
 | 129.5 | Domain Editor UI (Admin) | 5 | 📝 |
 | 129.6 | Table Ingestion (Docling structured extraction) | 8 | 📝 |
-| 129.7 | HyDE Query Classification (auto-enable for abstract queries) | 3 | 📝 |
+| 129.7 | HyDE Query Classification (auto-enable for abstract queries) | 3 | ✅ |
 | 129.8 | HyDE RAGAS A/B Evaluation | 3 | 📝 |
-| 129.9 | TD-102: Relation Type Validation (partial) | 5 | 📝 |
-| 129.10 | RAGAS Prompt Optimization — Custom Faithfulness + German adapt | 5 | 📝 |
+| 129.9 | TD-102: Relation Type Validation (partial) | 5 | ✅ |
+| 129.10 | MAX_RELATIONSHIPS Cap removed | 2 | ✅ |
 
 **Critical Path:** 129.1 → 129.2 → 129.3 → 129.4 → 129.8
 

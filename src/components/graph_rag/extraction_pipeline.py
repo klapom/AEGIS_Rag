@@ -34,6 +34,98 @@ from src.monitoring.metrics import record_deduplication_detail, record_extractio
 
 logger = structlog.get_logger(__name__)
 
+# Sprint 129.2: Metadata artifact blocklist
+# Document structure tokens that the LLM sometimes extracts as entities.
+# Case-insensitive matching. Configurable via AEGIS_ENTITY_BLOCKLIST env var.
+import os
+
+_DEFAULT_ENTITY_BLOCKLIST = {
+    "clean_text",
+    "doc type",
+    "document",
+    "chunk",
+    "text",
+    "content",
+    "file",
+    "section",
+    "paragraph",
+    "title",
+    "metadata",
+    "header",
+    "footer",
+    "abstract",
+    "summary",
+    "reference",
+    "bibliography",
+    "appendix",
+    "table of contents",
+}
+
+_env_blocklist = os.environ.get("AEGIS_ENTITY_BLOCKLIST", "")
+ENTITY_BLOCKLIST: set[str] = (
+    {name.strip().lower() for name in _env_blocklist.split(",") if name.strip()}
+    if _env_blocklist
+    else _DEFAULT_ENTITY_BLOCKLIST
+)
+
+
+def filter_metadata_artifacts(
+    entities: list[dict],
+    relations: list[dict],
+    blocklist: set[str] | None = None,
+) -> tuple[list[dict], list[dict], int, int]:
+    """Remove metadata artifacts from extracted entities and relations.
+
+    Sprint 129.2: Filters out document structure tokens (clean_text, Doc Type, etc.)
+    that the LLM incorrectly extracts as domain entities.
+
+    Args:
+        entities: List of entity dicts (with "name" or "entity_name" key)
+        relations: List of relation dicts (with "subject"/"object" or "source"/"target" keys)
+        blocklist: Optional custom blocklist (defaults to ENTITY_BLOCKLIST)
+
+    Returns:
+        Tuple of (filtered_entities, filtered_relations, entities_removed, relations_removed)
+    """
+    if blocklist is None:
+        blocklist = ENTITY_BLOCKLIST
+
+    if not blocklist:
+        return entities, relations, 0, 0
+
+    # Filter entities
+    filtered_entities = []
+    removed_entity_names: set[str] = set()
+    for entity in entities:
+        name = entity.get("name", entity.get("entity_name", "")).strip()
+        if name.lower() in blocklist:
+            removed_entity_names.add(name)
+        else:
+            filtered_entities.append(entity)
+
+    # Filter relations where BOTH subject and object are artifacts
+    filtered_relations = []
+    relations_removed = 0
+    for rel in relations:
+        subj = rel.get("subject", rel.get("source", "")).strip().lower()
+        obj = rel.get("object", rel.get("target", "")).strip().lower()
+        if subj in blocklist and obj in blocklist:
+            relations_removed += 1
+        else:
+            filtered_relations.append(rel)
+
+    entities_removed = len(entities) - len(filtered_entities)
+
+    if entities_removed > 0 or relations_removed > 0:
+        logger.info(
+            "metadata_artifacts_filtered",
+            entities_removed=entities_removed,
+            relations_removed=relations_removed,
+            removed_names=sorted(removed_entity_names)[:10],
+        )
+
+    return filtered_entities, filtered_relations, entities_removed, relations_removed
+
 
 async def extract_and_store_entities(
     chunks: list[dict[str, Any]],
@@ -142,6 +234,11 @@ async def extract_and_store_entities(
         except Exception as e:
             logger.error("chunk_extraction_failed", chunk_id=chunk_id, error=str(e))
             continue
+
+    # Sprint 129.2: Filter metadata artifacts before dedup
+    all_entities, all_relations, artifacts_removed, rel_artifacts_removed = (
+        filter_metadata_artifacts(all_entities, all_relations)
+    )
 
     # Apply entity deduplication
     entities_before_dedup = len(all_entities)

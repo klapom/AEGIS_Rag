@@ -220,6 +220,17 @@ RELATION_TYPE_ALIASES = {
     "BUILT": "CREATES",
     "PRODUCED": "CREATES",
     "INVENTED": "CREATES",
+    "DISCOVERED": "CREATES",
+    "OBSERVED": "USES",
+    "DETECTED": "USES",
+    "STUDIED": "USES",
+    "FORMULATED": "CREATES",
+    "PROPOSED": "CREATES",
+    "LAUNCHED": "CREATES",
+    "ACQUIRED": "OWNS",
+    "APPROVED": "MANAGES",
+    "REDUCED": "CAUSES",
+    "SURPASSED": "LEADS_TO",
     # Knowledge aliases
     "BASED_ON": "DEPENDS_ON",
     "EXTENDS": "TYPE_OF",
@@ -229,6 +240,40 @@ RELATION_TYPE_ALIASES = {
     "READS": "USES",
     "WRITES": "CREATES",
     "DELETES": "USES",
+    # Sprint 129.10: Common _BY/_IN/_AT forms that domain hint auto-loading
+    # would otherwise map to ASSOCIATED_WITH catch-all. These take precedence
+    # because RELATION_TYPE_ALIASES is checked before domain hint loading.
+    "DEVELOPED_BY": "CREATES",
+    "DISCOVERED_BY": "CREATES",
+    "INVENTED_BY": "CREATES",
+    "DESIGNED_BY": "CREATES",
+    "CREATED_BY": "CREATES",
+    "BUILT_BY": "CREATES",
+    "LAUNCHED_BY": "CREATES",
+    "PROPOSED_BY": "CREATES",
+    "FORMULATED_BY": "CREATES",
+    "PUBLISHED_BY": "CREATES",
+    "COMPOSED_BY": "CREATES",
+    "FOUNDED_IN": "LOCATED_IN",
+    "DISCOVERED_IN": "LOCATED_IN",
+    "OBSERVED_IN": "LOCATED_IN",
+    "DEPLOYED_IN": "LOCATED_IN",
+    "EXHIBITED_IN": "LOCATED_IN",
+    "MANUFACTURED_IN": "LOCATED_IN",
+    "DISCOVERED_AT": "LOCATED_IN",
+    "OBSERVED_AT": "LOCATED_IN",
+    "TREATED_BY": "USES",
+    "DIAGNOSED_BY": "USES",
+    "MANAGED_BY": "MANAGES",
+    "REGULATED_BY": "MANAGES",
+    "APPROVED_BY": "MANAGES",
+    "AUTHORIZED_BY": "MANAGES",
+    "ACQUIRED_BY": "OWNS",
+    "OWNED_BY": "OWNS",
+    "FUNDED_BY": "DEPENDS_ON",
+    "CAUSED_BY": "CAUSES",
+    "ENABLED_BY": "ENABLES",
+    "INFLUENCED_BY": "DEPENDS_ON",
 }
 
 # Sprint 126/128: Domain-specific relation type mappings
@@ -479,6 +524,63 @@ def _load_domain_type_mappings():
             "ALLOYS_WITH": "ASSOCIATED_WITH",
             "DECOMPOSES_INTO": "CREATES",
             "TRANSFORMS_INTO": "CREATES",
+            # Sprint 129.10: Common LLM-generated verbs not previously mapped
+            "DISCOVERED": "CREATES",
+            "OBSERVED": "USES",
+            "DETECTED": "USES",
+            "IDENTIFIED": "USES",
+            "STUDIED": "USES",
+            "INVESTIGATED": "USES",
+            "CLASSIFIED": "TYPE_OF",
+            "CATEGORIZED": "TYPE_OF",
+            "NAMED": "CREATES",
+            "DEVELOPED": "CREATES",
+            "FORMULATED": "CREATES",
+            "PROPOSED": "CREATES",
+            "INTRODUCED": "CREATES",
+            "ESTABLISHED": "CREATES",
+            "PIONEERED": "CREATES",
+            "INVENTED": "CREATES",
+            "ACQUIRED": "OWNS",
+            "PURCHASED": "OWNS",
+            "INVESTED_IN": "OWNS",
+            "FUNDED": "ENABLES",
+            "SPONSORED": "ENABLES",
+            "AWARDED": "ENABLES",
+            "STRENGTHENS": "ENABLES",
+            "IMPROVED": "ENABLES",
+            "ENHANCED": "ENABLES",
+            "REDUCED": "CAUSES",
+            "INCREASED": "CAUSES",
+            "AFFECTED": "CAUSES",
+            "DAMAGED": "CAUSES",
+            "DESTROYED": "CAUSES",
+            "SURPASSED": "LEADS_TO",
+            "ACHIEVED": "LEADS_TO",
+            "REACHED": "LEADS_TO",
+            "EXCEEDED": "LEADS_TO",
+            "RULED": "MANAGES",
+            "AUTHORIZED": "MANAGES",
+            "APPROVED": "MANAGES",
+            "RATIFIED": "MANAGES",
+            "CHALLENGED": "ASSOCIATED_WITH",
+            "DEBATED": "ASSOCIATED_WITH",
+            "ARGUED": "ASSOCIATED_WITH",
+            "CLAIMED": "ASSOCIATED_WITH",
+            "OPERATES": "USES",
+            "CARRIES": "CONTAINS",
+            "TRANSPORTS": "CONTAINS",
+            "CONNECTS": "ASSOCIATED_WITH",
+            "LAUNCHED": "CREATES",
+            "DEPLOYED": "CREATES",
+            "EXHIBITED": "LOCATED_IN",
+            "PERFORMED": "USES",
+            "RECORDED": "CREATES",
+            "COMPETED_IN": "PART_OF",
+            "WON": "LEADS_TO",
+            "SET": "CREATES",
+            "TEACHES": "USES",
+            "SPREAD": "LEADS_TO",
         }
 
         for domain in catalog.get("domains", []):
@@ -564,6 +666,29 @@ def validate_entity_type(entity_type: str) -> str:
     return "CONCEPT"
 
 
+# Sprint 129.10: Common suffixes that LLMs append to relation verbs.
+# Order matters — longer suffixes checked first.
+_RELATION_SUFFIXES = ["_BY", "_IN", "_AT", "_OF", "_TO", "_ON", "_WITH", "_FROM", "_FOR"]
+
+
+def _strip_relation_suffix(relation_type: str) -> str | None:
+    """Strip common directional suffixes from relation types.
+
+    Sprint 129.10: LLMs generate DEVELOPED_BY, LOCATED_AT, TREATED_BY etc.
+    Stripping the suffix often recovers a known root (DEVELOPED→CREATES).
+
+    Args:
+        relation_type: Uppercase relation type string
+
+    Returns:
+        Stripped root or None if no suffix found
+    """
+    for suffix in _RELATION_SUFFIXES:
+        if relation_type.endswith(suffix) and len(relation_type) > len(suffix):
+            return relation_type[: -len(suffix)]
+    return None
+
+
 def validate_relation_type(relation_type: str) -> str:
     """Validate and normalize relation type to universal type.
 
@@ -607,7 +732,29 @@ def validate_relation_type(relation_type: str) -> str:
         )
         return mapped_type
 
-    # Fallback to RELATED_TO for unknown types
+    # Sprint 129.10: Suffix-stripping normalization before RELATED_TO fallback.
+    # LLM often generates verb forms like DEVELOPED_BY, LOCATED_AT, TREATED_BY
+    # that aren't exact matches but share a root with known aliases.
+    stripped = _strip_relation_suffix(relation_type_upper)
+    if stripped and stripped != relation_type_upper:
+        if stripped in UNIVERSAL_RELATION_TYPES:
+            logger.debug(
+                "relation_type_suffix_stripped",
+                original=relation_type,
+                stripped=stripped,
+            )
+            return stripped
+        if stripped in RELATION_TYPE_ALIASES:
+            mapped = RELATION_TYPE_ALIASES[stripped]
+            logger.debug(
+                "relation_type_suffix_stripped_and_mapped",
+                original=relation_type,
+                stripped=stripped,
+                mapped=mapped,
+            )
+            return mapped
+
+    # Fallback to RELATED_TO for truly unknown types
     logger.warning(
         "unknown_relation_type_mapped_to_related_to",
         original=relation_type,
@@ -703,6 +850,37 @@ CROSS_SENTENCE_THRESHOLD = 5  # Minimum sentences to trigger windowed extraction
 # Default: 1 (sequential). Set to 2+ for parallel extraction.
 # Ollama supports OLLAMA_NUM_PARALLEL=4; vLLM supports 256+.
 EXTRACTION_WORKERS = int(os.environ.get("AEGIS_EXTRACTION_WORKERS", "1"))
+
+# Sprint 129.1: Window Bisection Fallback
+# When a window returns 0 relations, bisect into two halves and retry.
+# Minimum sentences required for bisection (smaller windows are genuinely empty).
+BISECTION_MIN_SENTENCES = int(os.environ.get("AEGIS_BISECTION_MIN_SENTENCES", "4"))
+# Sentence overlap between bisected halves (preserves cross-sentence context).
+BISECTION_OVERLAP = int(os.environ.get("AEGIS_BISECTION_OVERLAP", "1"))
+
+
+def _split_text_into_sentences(text: str) -> list[str]:
+    """Split text into sentences using SpaCy sentencizer.
+
+    Sprint 129.1: Used for window bisection fallback.
+
+    Args:
+        text: Input text to split
+
+    Returns:
+        List of sentence strings
+    """
+    try:
+        from src.components.graph_rag.cross_sentence_extractor import _load_spacy_model
+
+        nlp = _load_spacy_model("en")
+        doc = nlp(text)
+        return [sent.text.strip() for sent in doc.sents if sent.text.strip()]
+    except Exception:
+        # Fallback: simple period-based splitting
+        parts = [s.strip() for s in text.split(".") if s.strip()]
+        return [p + "." for p in parts]
+
 
 # Lazy import to avoid circular dependency
 _coreference_resolver = None
@@ -3410,8 +3588,31 @@ class ExtractionService:
         workers = max(1, EXTRACTION_WORKERS)
         semaphore = asyncio.Semaphore(workers)
 
+        async def _deduplicate_relations(
+            relations: list[GraphRelationship],
+        ) -> list[GraphRelationship]:
+            """Thread-safe deduplication of relations into shared accumulator."""
+            unique_rels: list[GraphRelationship] = []
+            async with dedup_lock:
+                for rel in relations:
+                    triple = (
+                        rel.source.lower().strip(),
+                        rel.target.lower().strip(),
+                        rel.type.upper().strip(),
+                    )
+                    if triple not in seen_triples:
+                        seen_triples.add(triple)
+                        all_relationships.append(rel)
+                        unique_rels.append(rel)
+            return unique_rels
+
         async def _extract_window(i: int, window_text: str) -> list[GraphRelationship]:
-            """Extract relations from a single window with concurrency limit."""
+            """Extract relations from a single window with concurrency limit.
+
+            Sprint 129.1: If extraction returns 0 relations and the window has
+            >= BISECTION_MIN_SENTENCES sentences, bisect the window into two
+            overlapping halves and retry extraction on each half.
+            """
             async with semaphore:
                 try:
                     window_relations = await self._extract_relationships_with_rank(
@@ -3422,19 +3623,60 @@ class ExtractionService:
                         domain=domain,
                     )
 
-                    # Thread-safe deduplication
-                    unique_rels: list[GraphRelationship] = []
-                    async with dedup_lock:
-                        for rel in window_relations:
-                            triple = (
-                                rel.source.lower().strip(),
-                                rel.target.lower().strip(),
-                                rel.type.upper().strip(),
+                    # Sprint 129.1: Bisection fallback for 0-relation windows
+                    if len(window_relations) == 0:
+                        sentences = _split_text_into_sentences(window_text)
+                        if len(sentences) >= BISECTION_MIN_SENTENCES:
+                            mid = len(sentences) // 2
+                            overlap = min(BISECTION_OVERLAP, mid)
+                            left_text = " ".join(sentences[: mid + overlap])
+                            right_text = " ".join(sentences[mid - overlap :])
+
+                            logger.info(
+                                "window_bisected",
+                                window_index=i,
+                                original_sentences=len(sentences),
+                                left_sentences=mid + overlap,
+                                right_sentences=len(sentences) - mid + overlap,
                             )
-                            if triple not in seen_triples:
-                                seen_triples.add(triple)
-                                all_relationships.append(rel)
-                                unique_rels.append(rel)
+
+                            left_rels = await self._extract_relationships_with_rank(
+                                text=left_text,
+                                entities=entities,
+                                rank_config=rank_config,
+                                document_id=(
+                                    f"{document_id}_window_{i}_left" if document_id else None
+                                ),
+                                domain=domain,
+                            )
+                            right_rels = await self._extract_relationships_with_rank(
+                                text=right_text,
+                                entities=entities,
+                                rank_config=rank_config,
+                                document_id=(
+                                    f"{document_id}_window_{i}_right" if document_id else None
+                                ),
+                                domain=domain,
+                            )
+
+                            window_relations = left_rels + right_rels
+
+                            logger.info(
+                                "window_bisection_result",
+                                window_index=i,
+                                left_relations=len(left_rels),
+                                right_relations=len(right_rels),
+                                total_relations=len(window_relations),
+                            )
+                        else:
+                            logger.debug(
+                                "window_bisection_skipped",
+                                window_index=i,
+                                sentence_count=len(sentences),
+                                min_required=BISECTION_MIN_SENTENCES,
+                            )
+
+                    unique_rels = await _deduplicate_relations(window_relations)
 
                     logger.debug(
                         "cross_sentence_window_extracted",

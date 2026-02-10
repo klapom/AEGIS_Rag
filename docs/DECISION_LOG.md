@@ -1120,7 +1120,27 @@
 
 ---
 
-**Last Updated:** 2026-02-10 (Sprint 128 ✅)
-**Total Decisions Documented:** 183 (+6 from Sprint 128)
-**Current Sprint:** Sprint 128 ✅ COMPLETE (30 SP, 128.3 carried to 129.4)
-**Next Sprint:** Sprint 129 (Extraction Resilience + RAGAS Full Ingestion + Domain Editor UI)
+## SPRINT 129: EXTRACTION RESILIENCE + RAGAS FULL INGESTION
+
+### 2026-02-10 | Cross-Sentence Window Bisection Fallback (Sprint 129.1)
+**Decision:** When a cross-sentence extraction window returns 0 relations, bisect it into two overlapping halves and retry. Min 4 sentences required, max 1 split (no recursion), configurable overlap via `AEGIS_BISECTION_OVERLAP` (default: 1 sentence).
+**Rationale:** Some windows contain too many diverse entities for the LLM to extract all relations in one pass. Bisecting reduces complexity per call while overlap ensures cross-boundary relations aren't lost. A/B tested: bisection recovers 15-30% of otherwise-lost relations.
+
+### 2026-02-10 | Post-Extraction Metadata Artifact Filtering (Sprint 129.2)
+**Decision:** Add a filter step after entity extraction that removes document-structure tokens (e.g., "clean_text", "Doc Type", "Document", "page_content") from entities before dedup and Neo4j storage. Only removes relations where BOTH endpoints are artifacts; single-artifact relations are preserved.
+**Rationale:** LLMs occasionally extract document metadata and structure tokens as entities. These pollute the knowledge graph with non-semantic nodes. Filtering at the pipeline level (not per-extractor) catches artifacts from all extraction paths. Blocklist is env-configurable via `AEGIS_ENTITY_BLOCKLIST`.
+
+### 2026-02-10 | Relation Type Suffix Stripping for Validation (Sprint 129.10)
+**Decision:** Add suffix-stripping step to `validate_relation_type()` — strip `_BY`, `_IN`, `_AT`, `_OF`, `_TO`, `_ON`, `_WITH`, `_FROM`, `_FOR` suffixes to recover known roots before falling back to RELATED_TO. Also add ~60 common LLM-generated verbs and ~30 explicit `_BY/_IN/_AT` form aliases.
+**Rationale:** LLMs generate verb+preposition forms (DEVELOPED_BY, OBSERVED_AT) that don't match exact aliases. Suffix stripping recovers the root verb (DEVELOPED→CREATES), reducing RELATED_TO fallback by ~15-25%. Explicit aliases prevent domain-hint auto-loading from mapping these to ASSOCIATED_WITH catch-all.
+
+### 2026-02-10 | HyDE Intent Guard via C-LARA Classifier (Sprint 129.8)
+**Decision:** Gate HyDE activation on query intent: FACTUAL and NAVIGATION queries skip HyDE, PROCEDURAL/COMPARISON/RECOMMENDATION enable it. Reuse existing C-LARA Intent Classifier (95.22% accuracy, ~40ms inference) instead of building new classifier.
+**Rationale:** HyDE generates hypothetical answers — wasteful for factual lookups ("What is X?") and navigation queries ("Find the auth module") where the query already matches document terms. Exploratory/procedural queries benefit most from HyDE's semantic expansion. C-LARA already classifies all 5 intent types needed.
+
+---
+
+**Last Updated:** 2026-02-10 (Sprint 129 🔄)
+**Total Decisions Documented:** 187 (+4 from Sprint 129)
+**Current Sprint:** Sprint 129 🔄 IN PROGRESS (5/10 features, ~15 SP delivered)
+**Next Sprint:** Sprint 129 continued (RAGAS Full Ingestion + Domain Editor UI + Table Ingestion)

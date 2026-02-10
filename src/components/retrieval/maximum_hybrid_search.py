@@ -144,8 +144,44 @@ async def maximum_hybrid_search(
     hybrid_search = HybridSearch()
     dual_search = get_dual_level_search()
 
-    # Sprint 128 Feature 128.4: Initialize HyDE generator if enabled
-    hyde_generator = get_hyde_generator() if settings.hyde_enabled else None
+    # Sprint 128 Feature 128.4 + Sprint 129.8: HyDE with intent guard
+    # Skip HyDE for factual queries (entity lookups benefit from graph, not hypothetical docs)
+    hyde_generator = None
+    hyde_skipped_reason = None
+    if settings.hyde_enabled:
+        try:
+            from src.components.retrieval.intent_classifier import CLARAIntent, classify_intent
+
+            intent_result = await classify_intent(query)
+            if intent_result.intent == CLARAIntent.FACTUAL:
+                hyde_skipped_reason = "factual_query"
+                logger.info(
+                    "hyde_skipped",
+                    reason="factual_query",
+                    intent=intent_result.intent.value,
+                    confidence=intent_result.confidence,
+                    query=query[:80],
+                )
+            elif intent_result.intent == CLARAIntent.NAVIGATION:
+                hyde_skipped_reason = "navigation_query"
+                logger.info(
+                    "hyde_skipped",
+                    reason="navigation_query",
+                    intent=intent_result.intent.value,
+                    confidence=intent_result.confidence,
+                    query=query[:80],
+                )
+            else:
+                hyde_generator = get_hyde_generator()
+                logger.debug(
+                    "hyde_enabled_for_query",
+                    intent=intent_result.intent.value,
+                    query=query[:80],
+                )
+        except Exception as e:
+            # If classification fails, enable HyDE as fallback
+            hyde_generator = get_hyde_generator()
+            logger.warning("hyde_intent_guard_failed", error=str(e))
 
     # Step 1: Execute 5 parallel queries (4 base + HyDE if enabled)
     tasks = [
@@ -155,8 +191,8 @@ async def maximum_hybrid_search(
         _graph_global_search(dual_search, query, namespaces),
     ]
 
-    # Sprint 128: Add HyDE search if enabled
-    if settings.hyde_enabled:
+    # Sprint 128 + 129.8: Add HyDE search if generator is active (intent-gated)
+    if hyde_generator is not None:
         tasks.append(_hyde_search(hyde_generator, query, top_k * 2, namespaces))
 
     results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -179,9 +215,9 @@ async def maximum_hybrid_search(
         else {"entities": [], "context": "", "latency_ms": 0, "communities_count": 0}
     )
 
-    # Sprint 128: Extract HyDE results if enabled
+    # Sprint 128 + 129.8: Extract HyDE results if generator was active
     hyde_result = {"results": [], "latency_ms": 0, "hypothetical_doc": None}
-    if settings.hyde_enabled:
+    if hyde_generator is not None:
         hyde_result = (
             results[4]
             if not isinstance(results[4], Exception)
@@ -212,9 +248,9 @@ async def maximum_hybrid_search(
 
     chunk_ranking = []
     if qdrant_chunks or hyde_chunks or bm25_chunks:
-        # Sprint 128: Include HyDE in RRF fusion if enabled
+        # Sprint 128 + 129.8: Include HyDE in RRF fusion if generator was active
         rankings = [qdrant_chunks, bm25_chunks]
-        if settings.hyde_enabled and hyde_chunks:
+        if hyde_generator is not None and hyde_chunks:
             rankings.insert(1, hyde_chunks)  # Insert HyDE after dense search
 
         chunk_ranking = reciprocal_rank_fusion(
@@ -283,7 +319,8 @@ async def maximum_hybrid_search(
         total_latency_ms=total_latency_ms,
         graph_local_context=local_context,
         graph_global_context=global_context,
-        hyde_enabled=settings.hyde_enabled,  # Sprint 128
+        hyde_enabled=hyde_generator
+        is not None,  # Sprint 129.8: reflects actual use (not just setting)
         hypothetical_document=hyde_result.get("hypothetical_doc"),  # Sprint 128
     )
 
