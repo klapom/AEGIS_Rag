@@ -2123,11 +2123,11 @@ Sprint 117.1 (Domain CRUD) - Foundation
 
 ---
 
-## Sprint 128 🔄 **IN PROGRESS** (started 2026-02-09)
+## Sprint 128 ✅ **Complete** (2026-02-10)
 
-**Status:** 🔄 IN PROGRESS
-**Focus:** LightRAG Removal + Cascade Timeout Guard + Full RAGAS Ingestion + LLM Config UI
-**Story Points:** ~29 SP (estimated)
+**Status:** ✅ COMPLETE (30 SP delivered, 128.3 carried to Sprint 129.4)
+**Focus:** LightRAG Removal + Cascade Timeout Guard + vLLM Stability + E2E Benchmarks
+**Story Points:** 30 SP delivered (8 SP carried)
 **Predecessor:** Sprint 127 ✅
 
 **Features:**
@@ -2136,85 +2136,50 @@ Sprint 117.1 (Domain CRUD) - Foundation
 |---|---------|-----|--------|
 | 128.1 | LightRAG Removal (-6,660 LOC, 8 files deleted) + domain_id/namespace fix | 8 | ✅ DONE |
 | 128.2 | Cascade Timeout Guard (vLLM /metrics polling, exp backoff) | 3 | ✅ DONE |
-| 128.3 | RAGAS Phase 1 Full Ingestion (488 remaining docs, post-LightRAG) | 8 | 📝 |
+| 128.3 | RAGAS Phase 1 Full Ingestion (498 docs) | 8 | ➡️ Moved to 129.4 |
 | 128.4 | HyDE Query Expansion (5th RRF signal, LLM cache) | 5 | ✅ DONE |
 | 128.5 | LLM Config Page — Engine-Aware Model Selection | 5 | ✅ DONE |
-| 128.6 | E2E pipeline fixes + per-domain cross-sentence window config + LightRAG env cleanup | 3 | ✅ DONE |
+| 128.6 | Domain Prompt Verification — 35 domains (27/35 pass) | 3 | ✅ DONE |
+| 128.7 | vLLM SM121 CUDA Stability — eugr native SM121 image (0 crashes) | 3 | ✅ DONE |
+| 128.8 | E2E Pipeline Benchmark — 5-doc (100% success, 76.5% specificity) | 2 | ✅ DONE |
+| 128.9 | 15-Doc Batch Benchmark — 212 entities, 626 relations, 84.5% specificity | 1 | ✅ DONE |
 
-**Key Decisions:**
-- ADR-061: LightRAG provides only 3 functions; 92% extraction time is duplicate overhead
-- Cascade timeout ghost requests cause GPU overload (34.8% at 3-5 concurrent) — guard needed
-- Full ingestion only practical after LightRAG removal (75h → ~6h estimated)
-- RAGAS benchmark comparison: Sprint 127 10-doc baseline vs Sprint 128 post-removal
+**Key Achievements:**
+- LightRAG removed: -6,660 LOC, relation specificity 21%→84.5%, ingestion 13x faster
+- vLLM eugr image: 0 CUDA crashes (vs 49 baseline), native SM121 compilation
+- MAX_RELATIONSHIPS_PER_DOC cap removed (Sprint 5 legacy, blocked valid relations)
+- Chat benchmark: vLLM 55 tok/s vs Ollama 64 tok/s (Ollama wins single-user chat)
+- Cross-sentence benchmark (128.3a) running: w12_o3 most stable config (CV=7.6%)
 
 ---
 
 ## Sprint 129 📝 **Planned** (after Sprint 128)
 
 **Status:** 📝 PLANNED
-**Focus:** Domain Editor UI + Table Ingestion + RAGAS Prompt Optimization
-**Story Points:** ~23 SP (estimated)
-**Predecessor:** Sprint 128
+**Focus:** Extraction Resilience + RAGAS Full Ingestion + Domain Editor UI
+**Story Points:** ~42 SP (estimated)
+**Predecessor:** Sprint 128 ✅
 
 **Features:**
 
 | # | Feature | SP | Status |
 |---|---------|-----|--------|
-| 129.1 | Domain Management Admin Page (list, filter, search) | 2 | 📝 |
-| 129.2 | Domain Detail Editor (keywords, entity sub-types, relation hints) | 3 | 📝 |
-| 129.3 | Custom Domain Creation Wizard (with template copy) | 2 | 📝 |
-| 129.4 | Domain CRUD Backend API (7 endpoints, Neo4j MERGE) | 3 | 📝 |
-| 129.5 | Reset to YAML Default + Re-Train Trigger | 3 | 📝 |
-| 129.6 | Table Ingestion Implementation (based on 128.5 ADR) | 5 | 📝 |
-| 129.7 | RAGAS Prompt Optimization — Custom Faithfulness + German adapt | 5 | 📝 |
+| 129.1 | Cross-Sentence Window Bisection Fallback | 3 | 📝 |
+| 129.2 | Metadata Artifact Filtering (clean_text, Doc Type) | 2 | 📝 |
+| 129.3 | RAGAS Phase 1 Full Ingestion (498 docs) | 8 | 📝 |
+| 129.4 | RAGAS Re-Evaluation (post-LightRAG baseline) | 3 | 📝 |
+| 129.5 | Domain Editor UI (Admin) | 5 | 📝 |
+| 129.6 | Table Ingestion (Docling structured extraction) | 8 | 📝 |
+| 129.7 | HyDE Query Classification (auto-enable for abstract queries) | 3 | 📝 |
+| 129.8 | HyDE RAGAS A/B Evaluation | 3 | 📝 |
+| 129.9 | TD-102: Relation Type Validation (partial) | 5 | 📝 |
+| 129.10 | RAGAS Prompt Optimization — Custom Faithfulness + German adapt | 5 | 📝 |
 
-**Architecture:**
-- **YAML = Factory Default** (seed_domains.yaml, read-only, versioned in Git)
-- **Neo4j = Runtime Config** (user edits, trained prompts, custom domains)
-- **Reset to Default:** Reads YAML, overwrites Neo4j node (preserves trained prompts option)
-- **Custom Domains:** Exist only in Neo4j (not in YAML), deletable
+**Critical Path:** 129.1 → 129.2 → 129.3 → 129.4 → 129.8
 
-### 129.7: RAGAS Prompt Optimization (5 SP)
+**Key Motivations:**
+- Sprint 128.3a Benchmark revealed 0-relation windows → bisection fallback (129.1)
+- Metadata artifacts (`clean_text`, `Doc Type`) pollute knowledge graph → filtering (129.2)
+- 498-doc RAGAS ingestion carried from Sprint 128.3 → now feasible with stable vLLM (129.3)
 
-**Problem:** Sprint 127 RAGAS baseline uses default RAGAS 0.4.2 prompts — generisch, für GPT-4 optimiert, Englisch-only. Faithfulness ist die schwächste Metrik (F=0.699, 6/20 NaN). Die Prompts sind **nicht Pflicht** — RAGAS bietet volle Customization-API.
-
-**Analyse der 4 Standard-Prompts (Sprint 128 Recherche):**
-
-| Metric | Standard-Instruktion | Schwäche | Optimierung |
-|--------|---------------------|----------|-------------|
-| **Context Precision** | "verify if context was useful, give verdict 1/0" | Binär, keine Abstufung | Granulare 0-3 Skala möglich |
-| **Context Recall** | "classify if sentence can be attributed to context" | OK, 1 Few-Shot-Beispiel | Mehr domain-spezifische Beispiele |
-| **Faithfulness** | Step 1: "break into statements" + Step 2: "judge faithfulness" | **6/20 NaN** — Statement-Generator versagt bei Nemotron | **Priorität 1:** Custom StatementGeneratorPrompt |
-| **Answer Relevancy** | "generate question, identify if noncommittal" | OK für Englisch | `adapt_prompts("german")` für DE-Docs |
-
-**RAGAS Customization-API:**
-```python
-metric = Faithfulness()
-metric.get_prompts()                          # → aktuelle Prompts
-metric.set_prompts(statement_generator_prompt=custom)  # → eigene einsetzen
-metric.save_prompts("data/ragas_prompts/")    # → persistieren als JSON
-metric.load_prompts("data/ragas_prompts/")    # → laden
-metric.adapt_prompts(language="german", llm=llm)  # → automatische Übersetzung
-```
-
-**Implementierungsplan:**
-
-| Sub-Task | Beschreibung | SP |
-|----------|-------------|-----|
-| 129.7a | Custom `StatementGeneratorPrompt` mit 3-5 AegisRAG-spezifischen Beispielen (KG-Fakten als Ground Truth) | 2 |
-| 129.7b | `adapt_prompts(language="german")` für alle 4 Metriken, persistieren nach `data/ragas_prompts/` | 1 |
-| 129.7c | A/B Test: Standard vs Custom Prompts auf Sprint 127 20-Sample-Set, Faithfulness NaN-Rate als Primärmetrik | 2 |
-
-**Erwartete Verbesserung:**
-- Faithfulness NaN-Rate: 30% → <10% (durch bessere Statement-Zerlegung)
-- Faithfulness Score: 0.699 → ≥0.75 (Sprint 128 Target)
-- Deutsche Dokument-Evaluation: von 0% auf funktionsfähig
-
-**Abhängigkeiten:**
-- 128.3 (Full RAGAS Ingestion) sollte vorher abgeschlossen sein → größerer Eval-Datensatz
-- Ollama mit ausreichend `num_ctx` (128K) für RAGAS-Prompts
-
-**Dateien:**
-- `data/ragas_prompts/` — gespeicherte Custom-Prompts (JSON)
-- `src/evaluation/ragas_evaluator.py` — `load_prompts()` Integration
-- `scripts/ragas_prompt_ab_test.py` — A/B Test Script
+**Detailed plan:** See [SPRINT_129_PLAN.md](SPRINT_129_PLAN.md)

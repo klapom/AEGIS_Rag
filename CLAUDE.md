@@ -661,6 +661,7 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
 **Sprint 125 Complete:** vLLM dual-engine (ADR-059, port 8001), S-P-O extraction (15+22 universal types, ADR-060), domain taxonomy (35 DDC+FORD domains), domain-aware ingestion (BGE-M3 classification → domain prompts), domain-aware frontend (detection, profiles, filter), 45 SP (100%).
 **Sprint 126 Complete:** LLM Engine Mode (ADR-062, vLLM/Ollama/Auto hot-reload via Redis), community detection as nightly batch job (**85% faster ingestion**, 732s→107s/doc), DSPy EntityExtractionSig fix (list[str]→list[dict]), NULL relation backfill (1,021→0), domain sub-type pipeline (253 entity + 43 relation aliases, 4-tier prompt priority), AdminNavigationBar on ~28 pages, 35 domains seeded into Neo4j, 14 SP (100%).
 **Sprint 127 Complete:** RAGAS Phase 1 Benchmark — **CP=0.739** (+27%), **CR=0.760** (+162%), F=0.699, AR=0.828 (vs Sprint 82). vLLM tenacity retry (0 retries/199 calls), 10-doc ingestion (204 entities, 1,376 relations), parallel benchmark (2 workers/0.45 GPU optimal), RAGAS local model fix (LangchainLLMWrapper + extract_json monkey-patch, 94.6% parse success). LightRAG bottleneck confirmed (92% overhead, 79% generic RELATED_TO). 13 SP (100%).
+**Sprint 128 Complete:** LightRAG Removal (-6,660 LOC), Cascade Guard, HyDE, vLLM eugr SM121 (**0 CUDA crashes**), Domain Prompt Verification (27/35), E2E Benchmarks (15-doc: 212 entities, 626 relations, **84.5% relation specificity**), MAX_RELATIONSHIPS cap removed, Chat Benchmark (Ollama 64 vs vLLM 55 tok/s). 30 SP (128.3 carried to 129).
 
 ---
 

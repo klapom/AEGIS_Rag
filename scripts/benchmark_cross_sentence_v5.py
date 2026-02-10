@@ -36,10 +36,10 @@ sys.path.insert(0, "/app")
 # ---------------------------------------------------------------------------
 
 DOCUMENTS = {
-    "S": "ragas_phase1_0174_ragbench_1544.txt",
-    "M": "ragas_phase1_0050_ragbench_5041.txt",
-    "L": "ragas_phase1_0015_hotpot_5ae0d91e.txt",
-    "XL": "ragas_phase1_0119_ragbench_techqaTR.txt",
+    "S": "ragas_phase1_0398_ragbench_1384.txt",  # ~2.0KB (fresh)
+    "M": "ragas_phase1_0386_ragbench_1062.txt",  # ~4.0KB (fresh)
+    "L": "ragas_phase1_3490_hotpot_5adddd57.txt",  # ~5.6KB (fresh)
+    "XL": "ragas_phase1_0267_ragbench_techqaTR.txt",  # ~10.7KB (fresh)
 }
 
 DATA_DIR = Path("/app/data/ragas_phase1_contexts")

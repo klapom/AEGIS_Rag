@@ -1099,7 +1099,6 @@ def _extract_json_objects_individually(
 
 # Constants
 MAX_ENTITIES_PER_DOC = 50
-MAX_RELATIONSHIPS_PER_DOC = 100
 
 
 class ExtractionService:
@@ -3256,15 +3255,6 @@ class ExtractionService:
 
             # Parse JSON response
             relationships_data = self._parse_json_response(result.content, data_type="relationship")
-
-            # Limit relationships per document
-            if len(relationships_data) > MAX_RELATIONSHIPS_PER_DOC:
-                logger.warning(
-                    "max_relationships_exceeded",
-                    count=len(relationships_data),
-                    max_allowed=MAX_RELATIONSHIPS_PER_DOC,
-                )
-                relationships_data = relationships_data[:MAX_RELATIONSHIPS_PER_DOC]
 
             # Create GraphRelationship objects
             relationships = []

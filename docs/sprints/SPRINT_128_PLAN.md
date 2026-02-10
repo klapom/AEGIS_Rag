@@ -1,7 +1,7 @@
 # Sprint 128 Plan: LightRAG Removal + Cascade Timeout Guard + Full RAGAS Ingestion + LLM Config UI
 
-**Status:** 🔄 IN PROGRESS (128.1-128.2, 128.4-128.9 COMPLETE, 128.3/128.3a remaining)
-**Story Points:** 38 SP
+**Status:** ✅ COMPLETE (128.1-128.2, 128.4-128.9 DONE — 128.3/128.3a moved to Sprint 129)
+**Story Points:** 38 SP (30 SP delivered, 8 SP carried to Sprint 129.4)
 **Duration:** 3-5 days
 **Predecessor:** Sprint 127 ✅ (RAGAS Phase 1 Benchmark)
 
@@ -19,7 +19,7 @@
 |---|---------|-----|--------|
 | 128.1 | LightRAG Removal + domain_id/namespace fix | 8 | ✅ DONE |
 | 128.2 | Cascade Timeout Guard (vLLM /metrics polling, exp backoff) | 3 | ✅ DONE |
-| 128.3 | RAGAS Phase 1 Full Ingestion | 8 | 📝 Planned |
+| 128.3 | RAGAS Phase 1 Full Ingestion | 8 | ➡️ Moved to 129.4 |
 | 128.4 | HyDE Query Expansion (5th RRF signal, LLM cache) | 5 | ✅ DONE |
 | 128.5 | LLM Config Page — Engine-Aware Model Selection | 5 | ✅ DONE |
 | 128.6 | Domain Prompt Verification — All 35 Domains | 3 | ✅ DONE |
@@ -563,6 +563,51 @@ Sprint 128 is complete when:
 - [ ] All tests pass (unit, integration)
 - [ ] Docker build succeeds
 - [ ] Documentation updated (TECH_STACK.md, ARCHITECTURE.md, ADR-061)
+
+---
+
+## Sprint 129 — Backlog / Vorplanung
+
+| # | Feature | SP (est.) | Priority | Origin |
+|---|---------|-----------|----------|--------|
+| 129.1 | Cross-Sentence Window Bisection Fallback | 3 | HIGH | Sprint 128.3a Benchmark (0-relation windows) |
+
+### 129.1: Cross-Sentence Window Bisection Fallback (3 SP)
+
+**Problem:** During Sprint 128.3a Cross-Sentence Window Benchmark, some windows return **0 relations** from the LLM. This happens especially with medium-to-large documents (Doc M: `w12_o3` produced [0, 0, 0] across 3 runs). The content is valid — the window is simply too large or too complex for the model to extract relations in a single call.
+
+**Solution:** If a cross-sentence window returns 0 relations, **bisect the window** into two halves and retry extraction on each half. This ensures no content is silently dropped from the knowledge graph.
+
+**Algorithm:**
+```
+extract_relations(window) → results
+if len(results) == 0 AND len(window.sentences) >= 4:
+    mid = len(window.sentences) // 2
+    left_window  = window.sentences[:mid + overlap]
+    right_window = window.sentences[mid - overlap:]
+    results = extract_relations(left_window) + extract_relations(right_window)
+    deduplicate(results)
+```
+
+**Constraints:**
+- Only bisect once (no recursive splitting) — avoids exponential LLM calls
+- Minimum window size for bisection: 4 sentences (smaller windows are genuinely empty)
+- Preserve sentence overlap between halves (e.g., 1-2 sentences) to avoid missing cross-boundary relations
+- Log bisection events for monitoring: `window_bisected count=1 original_sentences=12 left=7 right=7`
+- Count bisected extractions separately in metrics (don't inflate normal window stats)
+
+**Files to Modify:**
+- `src/components/graph_rag/extraction_service.py` — `_extract_relations_for_window()` or equivalent
+- `src/components/graph_rag/cross_sentence_extractor.py` — Window splitting logic
+
+**Acceptance Criteria:**
+- [ ] 0-relation windows trigger automatic bisection retry
+- [ ] Bisected halves include configurable sentence overlap
+- [ ] No recursive bisection (max 1 split per window)
+- [ ] Windows with <4 sentences are NOT bisected
+- [ ] Bisection events logged with structured fields
+- [ ] Unit tests for bisection logic (empty window, small window skip, overlap correctness)
+- [ ] Re-run Doc M benchmark: 0-relation configs should now produce >0 relations
 
 ---
 

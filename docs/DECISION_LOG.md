@@ -1120,7 +1120,7 @@
 
 ---
 
-**Last Updated:** 2026-02-09 (Sprint 128 🔄)
-**Total Decisions Documented:** 182 (+5 from Sprint 128)
-**Current Sprint:** Sprint 128 🔄 IN PROGRESS (128.1-128.2, 128.4-128.5 DONE, 128.3 remaining)
-**Next Sprint:** Sprint 129 (Domain Editor UI + Table Ingestion)
+**Last Updated:** 2026-02-10 (Sprint 128 ✅)
+**Total Decisions Documented:** 183 (+6 from Sprint 128)
+**Current Sprint:** Sprint 128 ✅ COMPLETE (30 SP, 128.3 carried to 129.4)
+**Next Sprint:** Sprint 129 (Extraction Resilience + RAGAS Full Ingestion + Domain Editor UI)
