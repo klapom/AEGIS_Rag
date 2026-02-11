@@ -56,12 +56,14 @@ class GraniteDoclingClient:
 
         payload = {
             "options": {
-                "to_formats": ["json"],
+                "from_formats": ["image"],
+                "to_formats": ["md"],
                 "do_table_structure": True,
+                "do_ocr": True,
             },
-            "http_sources": [],
-            "file_sources": [
+            "sources": [
                 {
+                    "kind": "file",
                     "base64_string": b64_image,
                     "filename": "page.png",
                 }
@@ -83,7 +85,17 @@ class GraniteDoclingClient:
             logger.warning("granite_vlm_error", error=repr(e))
             return []
 
-        return self._parse_docling_tables(data)
+        # Try structured JSON tables first, fall back to markdown parsing
+        structured = self._parse_docling_tables(data)
+        if structured:
+            return structured
+
+        # Fall back: parse markdown content with shared markdown table parser
+        md_content = data.get("document", {}).get("md_content", "")
+        if md_content:
+            return _parse_markdown_tables(md_content)
+
+        return []
 
     def _parse_docling_tables(self, data: dict) -> list[list[list[str]]]:
         """Parse docling-serve JSON response into 2D cell grids.

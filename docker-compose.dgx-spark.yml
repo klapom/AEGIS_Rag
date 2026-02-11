@@ -696,6 +696,10 @@ services:
       - AEGIS_USE_CROSS_SENTENCE=${AEGIS_USE_CROSS_SENTENCE:-1}
       # Parallel extraction workers for cross-sentence windows (default: 1=sequential)
       - AEGIS_EXTRACTION_WORKERS=${AEGIS_EXTRACTION_WORKERS:-1}
+      # Sprint 129.6c-e: VLM Cross-Validation for table quality
+      - TABLE_CROSS_VALIDATION_ENABLED=${TABLE_CROSS_VALIDATION_ENABLED:-false}
+      - GRANITE_DOCLING_URL=${GRANITE_DOCLING_URL:-http://docling-vlm:5001}
+      - DEEPSEEK_OCR_URL=${DEEPSEEK_OCR_URL:-http://deepseek-ocr:8002}
       # Sprint 124: Thinking mode control (default: false)
       - AEGIS_LLM_THINKING=${AEGIS_LLM_THINKING:-false}
       - VLM_BACKEND=ollama
