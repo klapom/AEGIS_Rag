@@ -2155,8 +2155,8 @@ Sprint 117.1 (Domain CRUD) - Foundation
 
 ## Sprint 129 🔄 **In Progress** (started 2026-02-10)
 
-**Status:** 🔄 IN PROGRESS (5/10 features complete, ~15 SP delivered)
-**Focus:** Extraction Resilience + RAGAS Full Ingestion + Domain Editor UI
+**Status:** 🔄 IN PROGRESS (8/10 features complete, ~21 SP delivered)
+**Focus:** Extraction Resilience + RAGAS Full Ingestion + Domain Editor UI + Table Ingestion
 **Story Points:** ~42 SP (estimated)
 **Predecessor:** Sprint 128 ✅
 
@@ -2169,17 +2169,54 @@ Sprint 117.1 (Domain CRUD) - Foundation
 | 129.3 | RAGAS Phase 1 Full Ingestion (498 docs) | 8 | 📝 |
 | 129.4 | RAGAS Re-Evaluation (post-LightRAG baseline) | 3 | 📝 |
 | 129.5 | Domain Editor UI (Admin) | 5 | 📝 |
-| 129.6 | Table Ingestion (Docling structured extraction) | 8 | 📝 |
+| 129.6a | Table Content Extraction (Docling data.cells/rows parsing) | 2 | ✅ |
+| 129.6b | Table Quality Heuristics (composite scoring, 6 metrics) | 2 | ✅ |
+| 129.6c | Granite-Docling-258M VLM Integration (docling-serve VlmPipeline) | 3 | 📝 |
+| 129.6d | DeepSeek-OCR-2 Cross-Validation Service | 3 | 📝 |
+| 129.6e | Cross-Validation Logic + Pipeline Integration | 3 | 📝 |
+| 129.6f | Table Ingestion E2E Benchmark (DP-Bench PDFs) | 2 | ✅ |
 | 129.7 | HyDE Query Classification (auto-enable for abstract queries) | 3 | ✅ |
 | 129.8 | HyDE RAGAS A/B Evaluation | 3 | 📝 |
 | 129.9 | TD-102: Relation Type Validation (partial) | 5 | ✅ |
 | 129.10 | MAX_RELATIONSHIPS Cap removed | 2 | ✅ |
 
 **Critical Path:** 129.1 → 129.2 → 129.3 → 129.4 → 129.8
+**Table Path:** 129.6a+129.6b (parallel) → 129.6c+129.6d (parallel) → 129.6e → 129.6f
 
 **Key Motivations:**
 - Sprint 128.3a Benchmark revealed 0-relation windows → bisection fallback (129.1)
 - Metadata artifacts (`clean_text`, `Doc Type`) pollute knowledge graph → filtering (129.2)
 - 498-doc RAGAS ingestion carried from Sprint 128.3 → now feasible with stable vLLM (129.3)
+- Tables completely discarded in current pipeline → full extraction + quality-gated ingestion (129.6a-f)
+- Cross-validation via Granite-Docling + DeepSeek-OCR-2 for table confidence scoring (129.6c-e)
+
+### Sprint 129.6 Table Ingestion Results (2026-02-11)
+
+**Features 129.6a + 129.6b + 129.6f COMPLETE — Tables now flow through full pipeline**
+
+Previously, Docling parsed table structures but they were discarded during chunking. Sprint 129.6 adds:
+- **129.6a**: Docling field extraction (`table_cells`, `grid`, `num_rows`, `num_cols`, `column_header`), markdown conversion, `_build_cells_2d()` grid builder
+- **129.6b**: Composite quality scoring (6 metrics: header presence, density, consistency, cell length, column stability, row uniformity), grades EXCELLENT/GOOD/FAIR/POOR
+- **129.6f**: E2E benchmark with 5 DP-Bench PDFs (pixel-rendered tables in real PDFs)
+
+**Bugs Fixed:**
+1. Docling field name mismatch: `cells`→`table_cells`, `rows`→`num_rows`, `columns`→`num_cols`, added `grid` support
+2. Qdrant metadata gap: `is_table`, `table_quality_score`, `table_quality_grade` not propagated to Qdrant payload (whitelist in `vector_embedding.py`)
+3. Empty chunk guard: Table-only PDFs produce empty prose text → Pydantic `min_length=1` validation error. Added skip for empty/whitespace-only chunks in `adaptive_chunking.py`
+4. Test data format: 84/84 tests updated from old cell format to Docling format
+
+**E2E Benchmark (5 DP-Bench PDFs):**
+
+| File | Status | Time | Table Dim | Quality | Grade |
+|------|--------|------|-----------|---------|-------|
+| 01030000000045.pdf | success | 109s | 9x3 | 0.956 | EXCELLENT |
+| 01030000000046.pdf | success | 342s | 12x7 | 0.946 | EXCELLENT |
+| 01030000000047.pdf | failed* | 2s | — | — | — |
+| 01030000000051.pdf | success | 132s | 9x4 | 0.961 | EXCELLENT |
+| 01030000000052.pdf | success | 414s | 12x4 | 0.973 | EXCELLENT |
+
+*Doc 47 = table-only PDF with no prose text → empty Chunk.content (fixed with empty chunk guard, needs rebuild + retest)
+
+**Aggregate:** 4/5 success, 119 entities (12 types), 283 relations (18 types), 50.2% specificity, 4 table vectors in Qdrant (all EXCELLENT grade, scores 0.946-0.973)
 
 **Detailed plan:** See [SPRINT_129_PLAN.md](SPRINT_129_PLAN.md)

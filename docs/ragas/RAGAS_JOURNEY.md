@@ -4401,3 +4401,90 @@ Full 15-document batch for statistical significance. Redis prompt cache cleared 
 | Cascade fallbacks | ~35% Ollama | **0%** | **100% vLLM** |
 | Relation specificity | ~21% | **84.5%** | **4x better** |
 | LightRAG overhead | 92% of time | **0%** | **removed** |
+
+---
+
+## Sprint 129.6: Table Ingestion E2E Benchmark (2026-02-11)
+
+### Overview
+
+Sprint 129.6 extends the ingestion pipeline to handle **tables inside PDFs**. Previously, Docling parsed table structures but they were discarded during chunking. Now tables flow through the full pipeline: Docling → table content extraction → quality scoring → chunk creation → embedding → graph extraction.
+
+### Configuration
+
+| Setting | Value |
+|---------|-------|
+| Engine mode | `vllm` (eugr SM121, 0 Ollama fallbacks) |
+| Workers | 2 (`AEGIS_EXTRACTION_WORKERS`) |
+| GPU memory | 0.45 (`gpu-memory-utilization`) |
+| vLLM model | Nemotron-3-Nano-30B-A3B-NVFP4 |
+| Namespace | `table_benchmark_sprint129` |
+| Dataset | DP-Bench (5 pixel-rendered PDFs with tables) |
+
+### Changes Made
+
+**Feature 129.6a — Table Content Extraction:**
+1. `docling_client.py`: Fixed `_convert_table_to_markdown()` — Docling uses `table_cells` (not `cells`), position indices (`start_row_offset_idx`/`start_col_offset_idx`), `num_rows`/`num_cols`, `column_header` boolean, and optional `grid` (pre-built 2D array)
+2. `adaptive_chunking.py`: Rewrote `_build_cells_2d()` — grid-first strategy with position-index fallback for building 2D cell arrays from Docling data
+
+**Feature 129.6b — Table Quality Heuristics:**
+- `table_quality.py`: Composite scoring with 6 weighted metrics (header presence 15%, density 25%, consistency 20%, cell length 15%, column stability 15%, row uniformity 10%)
+- Grades: EXCELLENT (≥0.85), GOOD (≥0.70), FAIR (≥0.50), POOR (<0.50)
+- Hard gate: Tables smaller than 2x2 rejected
+
+**Feature 129.6f — E2E Benchmark + Pipeline Fixes:**
+1. `vector_embedding.py`: Added table metadata propagation to Qdrant payload (`is_table`, `table_quality_score`, `table_quality_grade`, `table_ingest_mode`, `table_ref`, `table_num_rows`, `table_num_cols`)
+2. `adaptive_chunking.py`: Added empty chunk guard — table-only PDFs with no prose text produce empty `adaptive_chunk.text` → Pydantic `min_length=1` validation error. Now skips empty/whitespace-only chunks.
+3. `benchmark_table_ingestion.py`: E2E benchmark script with auth, upload, Neo4j/Qdrant verification
+
+### Results: 4/5 PDFs Ingested Successfully
+
+| # | File | Table Dim | Time | Entities | Relations | Quality | Grade |
+|---|------|-----------|------|----------|-----------|---------|-------|
+| 1 | 01030000000045.pdf | 9x3 | 109s | 23 | 9 | 0.956 | EXCELLENT |
+| 2 | 01030000000046.pdf | 12x7 | 342s | 65 | 95 | 0.946 | EXCELLENT |
+| 3 | 01030000000047.pdf | — | 2s | — | — | — | FAILED* |
+| 4 | 01030000000051.pdf | 9x4 | 132s | 24 | 21 | 0.961 | EXCELLENT |
+| 5 | 01030000000052.pdf | 12x4 | 414s | 41 | 66 | 0.973 | EXCELLENT |
+
+*Doc 3 = table-only PDF with no prose text → empty Chunk.content. Fixed with empty chunk guard (needs rebuild + retest).
+
+### Aggregate Stats
+
+| Metric | Value |
+|--------|-------|
+| **Docs ingested** | 4/5 (80%, 1 edge case) |
+| **Total entities** | 119 (12 types, after dedup) |
+| **Total relations** | 283 (18 types) |
+| **Relation specificity** | 50.2% |
+| **Total chunks** | 8 (4 prose + 4 table) |
+| **Table vectors in Qdrant** | 4 (all with `is_table=true`) |
+| **Table quality scores** | 0.946, 0.956, 0.961, 0.973 |
+| **All table grades** | EXCELLENT |
+| **Total benchmark time** | 999s (16.7 min) |
+| **Avg time/doc** | 249s (successful only) |
+
+### Table Quality Assessment
+
+All 4 successfully ingested tables scored EXCELLENT (≥0.85). The quality scoring validates that Docling's OCR extraction produces high-fidelity table content from pixel-rendered PDFs:
+
+- **Highest score (0.973)**: 12x4 table — compact, dense, consistent cell lengths
+- **Lowest score (0.946)**: 12x7 table — larger, some variation in cell content density
+- **Quality spread**: Only 0.027 range across all tables — very consistent OCR quality
+
+### Bugs Fixed (3 production, 1 test)
+
+| Bug | Root Cause | Fix |
+|-----|-----------|-----|
+| Docling field mismatch | Old code used `cells`/`rows`/`columns` — Docling uses `table_cells`/`num_rows`/`num_cols` with position indices | Updated `_convert_table_to_markdown()` and `_build_cells_2d()` |
+| Qdrant metadata gap | `vector_embedding.py` uses strict payload whitelist — table fields not included | Added explicit table metadata propagation |
+| Empty chunk crash | Table-only PDFs produce empty prose text → Pydantic validation error | Added skip guard for empty/whitespace-only chunks |
+| Test format (84 tests) | Tests used old flat cell format without position indices | Rewrote with `_cell()` helper and Docling grid format |
+
+### Key Takeaways
+
+1. **Table content extraction works end-to-end** — Docling OCR → markdown → chunk → embedding → graph extraction → Qdrant storage with quality metadata
+2. **Quality scoring is effective** — all 4 tables scored EXCELLENT, confirming Docling's OCR quality on pixel-rendered PDFs
+3. **Relation specificity is lower for tables (50.2%)** vs prose documents (84.5% in Sprint 128.9) — table content tends toward RELATED_TO because tabular data has structural relationships that don't map cleanly to ADR-060 relation types
+4. **Edge case identified** — table-only PDFs (no prose) need the empty chunk guard to avoid crashing the pipeline
+5. **Entity extraction from tables is rich** — 65 entities from a single 12x7 table, showing the LLM can extract structured knowledge from tabular content

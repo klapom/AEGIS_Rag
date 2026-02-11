@@ -1138,9 +1138,13 @@
 **Decision:** Gate HyDE activation on query intent: FACTUAL and NAVIGATION queries skip HyDE, PROCEDURAL/COMPARISON/RECOMMENDATION enable it. Reuse existing C-LARA Intent Classifier (95.22% accuracy, ~40ms inference) instead of building new classifier.
 **Rationale:** HyDE generates hypothetical answers — wasteful for factual lookups ("What is X?") and navigation queries ("Find the auth module") where the query already matches document terms. Exploratory/procedural queries benefit most from HyDE's semantic expansion. C-LARA already classifies all 5 intent types needed.
 
+### 2026-02-11 | Table Ingestion Pipeline with Quality-Gated Chunks (Sprint 129.6a-f)
+**Decision:** Add table content extraction from Docling JSON (using `table_cells`, `grid`, `num_rows`/`num_cols` fields), composite quality scoring (6 weighted metrics: header 15%, density 25%, consistency 20%, cell length 15%, column stability 15%, row uniformity 10%), and dedicated table chunks with metadata propagation to Qdrant (`is_table`, `table_quality_score`, `table_quality_grade`). Tables < 2x2 rejected. Empty prose chunks skipped (table-only PDFs).
+**Rationale:** Tables were previously discarded during chunking despite Docling parsing them. Structured table content contains high-density factual knowledge (e.g., financial data, specifications). Quality gating prevents noisy/malformed table chunks. E2E benchmark: 4/5 DP-Bench PDFs ingested, all EXCELLENT quality (0.946-0.973), 119 entities from table content.
+
 ---
 
-**Last Updated:** 2026-02-10 (Sprint 129 🔄)
-**Total Decisions Documented:** 187 (+4 from Sprint 129)
-**Current Sprint:** Sprint 129 🔄 IN PROGRESS (5/10 features, ~15 SP delivered)
-**Next Sprint:** Sprint 129 continued (RAGAS Full Ingestion + Domain Editor UI + Table Ingestion)
+**Last Updated:** 2026-02-11 (Sprint 129 🔄)
+**Total Decisions Documented:** 188 (+5 from Sprint 129)
+**Current Sprint:** Sprint 129 🔄 IN PROGRESS (8/10 features, ~21 SP delivered)
+**Next Sprint:** Sprint 129 continued (RAGAS Full Ingestion + Domain Editor UI + VLM Cross-Validation)

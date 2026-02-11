@@ -267,6 +267,94 @@ def _extract_pictures_from_markdown(
     return pictures
 
 
+def _convert_table_to_markdown(table_data: dict[str, Any]) -> str:
+    """Convert Docling table data to Markdown format.
+
+    Sprint 129.6a: Helper function to convert structured table data to
+    pipe-separated markdown table format.
+
+    Args:
+        table_data: Table data dict with 'table_cells', 'num_rows', 'num_cols', 'grid' fields
+
+    Returns:
+        Markdown table string with pipe separators and header separator
+
+    Example:
+        >>> table_data = {
+        ...     "cells": [
+        ...         {"text": "Name", "row_span": 1, "col_span": 1},
+        ...         {"text": "Age", "row_span": 1, "col_span": 1},
+        ...         {"text": "Alice", "row_span": 1, "col_span": 1},
+        ...         {"text": "30", "row_span": 1, "col_span": 1},
+        ...     ],
+        ...     "rows": [{"cells": [0, 1]}, {"cells": [2, 3]}],
+        ...     "columns": [{"cells": [0, 2]}, {"cells": [1, 3]}],
+        ... }
+        >>> _convert_table_to_markdown(table_data)
+        '| Name | Age |\\n|---|---|\\n| Alice | 30 |'
+
+    Note:
+        - Handles missing data fields gracefully
+        - For merged cells (rowspan/colspan > 1), repeats content or leaves empty
+        - Adds header separator row (|---|---|) after first row
+    """
+    # Docling uses 'table_cells' (not 'cells'), 'num_rows'/'num_cols', and 'grid'
+    table_cells = table_data.get("table_cells", [])
+    docling_grid = table_data.get("grid", [])
+    num_rows = table_data.get("num_rows", 0)
+    num_cols = table_data.get("num_cols", 0)
+
+    # Handle empty table
+    if not table_cells and not docling_grid:
+        logger.warning("table_conversion_empty", reason="no_table_cells_or_grid")
+        return ""
+
+    # Build 2D grid — prefer Docling's pre-built grid (already row×col)
+    grid: list[list[str]] = []
+
+    if docling_grid:
+        # Docling grid: list of rows, each row is a list of cell dicts
+        for row in docling_grid:
+            row_data = []
+            for cell in row:
+                if isinstance(cell, dict):
+                    row_data.append(cell.get("text", ""))
+                elif isinstance(cell, str):
+                    row_data.append(cell)
+                else:
+                    row_data.append("")
+            grid.append(row_data)
+    elif table_cells and num_rows > 0 and num_cols > 0:
+        # Fallback: build grid from table_cells using row/col offset indices
+        grid = [[""] * num_cols for _ in range(num_rows)]
+        for cell in table_cells:
+            row_idx = cell.get("start_row_offset_idx", 0)
+            col_idx = cell.get("start_col_offset_idx", 0)
+            if 0 <= row_idx < num_rows and 0 <= col_idx < num_cols:
+                grid[row_idx][col_idx] = cell.get("text", "")
+    elif table_cells:
+        # Last resort: flat list as single row
+        grid = [[c.get("text", "") if isinstance(c, dict) else str(c) for c in table_cells]]
+
+    # Convert grid to markdown
+    if not grid:
+        return ""
+
+    markdown_lines = []
+
+    for row_idx, row in enumerate(grid):
+        # Escape pipe characters in cell text
+        escaped_row = [cell.replace("|", "\\|") for cell in row]
+        markdown_lines.append("| " + " | ".join(escaped_row) + " |")
+
+        # Add header separator after first row
+        if row_idx == 0:
+            separator = "|" + "|".join(["---"] * len(row)) + "|"
+            markdown_lines.append(separator)
+
+    return "\n".join(markdown_lines)
+
+
 class DoclingParsedDocument(BaseModel):
     """Parsed document from Docling container.
 
@@ -1052,6 +1140,7 @@ class DoclingClient:
             md_content = document.get("md_content", "")
 
             # Extract tables from JSON (Feature 21.5)
+            # Sprint 129.6a: Added full table content extraction
             tables_data = []
             for table in json_content.get("tables", []):
                 table_info = {
@@ -1067,6 +1156,35 @@ class DoclingClient:
                     p = prov[0] if isinstance(prov, list) else prov
                     table_info["page_no"] = p.get("page_no")
                     table_info["bbox"] = p.get("bbox")
+
+                # Sprint 129.6a: Extract full table content from data field
+                table_data = table.get("data", {})
+                if table_data:
+                    # Convert table data to markdown
+                    markdown = _convert_table_to_markdown(table_data)
+                    table_info["markdown"] = markdown
+
+                    # Extract structured cell data (Docling uses table_cells, num_rows, num_cols, grid)
+                    table_cells = table_data.get("table_cells", [])
+                    table_info["cells"] = table_cells
+                    table_info["num_rows"] = table_data.get("num_rows", 0)
+                    table_info["num_cols"] = table_data.get("num_cols", 0)
+                    table_info["grid"] = table_data.get("grid", [])
+
+                    # Detect header from Docling cell metadata (column_header field)
+                    has_header = any(c.get("column_header", False) for c in table_cells)
+                    # Fallback: assume header if table has multiple rows
+                    if not has_header and table_info["num_rows"] > 1 and table_cells:
+                        has_header = True
+                    table_info["has_header"] = has_header
+                else:
+                    # No table data field - set empty values
+                    table_info["markdown"] = ""
+                    table_info["cells"] = []
+                    table_info["num_rows"] = 0
+                    table_info["num_cols"] = 0
+                    table_info["has_header"] = False
+
                 tables_data.append(table_info)
 
             # Extract images/pictures from JSON (Feature 21.5)

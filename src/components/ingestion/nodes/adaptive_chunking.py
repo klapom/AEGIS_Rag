@@ -77,6 +77,223 @@ def calculate_bbox_iou(bbox1: dict[str, Any], bbox2: dict[str, Any]) -> float:
     return intersection / union if union > 0 else 0.0
 
 
+def _create_table_chunks(
+    parsed_tables: list[dict[str, Any]],
+    document_id: str,
+    document_type: str,
+    merged_chunks: list[dict[str, Any]],
+    start_index: int,
+) -> tuple[int, int]:
+    """Create dedicated chunks for extracted tables with quality scoring.
+
+    Sprint 129.6e: Tables are extracted by Docling (129.6a) and quality-scored
+    using composite heuristics (129.6b). Tables passing quality thresholds are
+    added as dedicated chunks with table-specific metadata.
+
+    Args:
+        parsed_tables: Table data from state["parsed_tables"]
+        document_id: Source document ID
+        document_type: Document type (pdf, docx, etc.)
+        merged_chunks: Existing chunk list to append to (mutated in place)
+        start_index: Starting chunk index for table chunks
+
+    Returns:
+        Tuple of (chunks_created, chunks_rejected)
+    """
+    from src.core.chunk import Chunk
+
+    try:
+        from src.components.ingestion.table_quality import (
+            compute_table_quality,
+            should_ingest_table,
+        )
+    except ImportError:
+        logger.warning("table_quality_module_not_available")
+        return 0, 0
+
+    created = 0
+    rejected = 0
+
+    for table in parsed_tables:
+        markdown = table.get("markdown", "")
+        if not markdown or not markdown.strip():
+            continue
+
+        # Build 2D cell list for quality scoring
+        cells_2d = _build_cells_2d(table)
+
+        # Hard gate: tables must be at least 2x2 (1-row or 1-col aren't real tables)
+        num_rows = table.get("num_rows", len(cells_2d))
+        num_cols = table.get("num_cols", len(cells_2d[0]) if cells_2d else 0)
+        if num_rows < 2 or num_cols < 2:
+            rejected += 1
+            logger.info(
+                "table_chunk_rejected_min_size",
+                document_id=document_id,
+                table_ref=table.get("ref", ""),
+                num_rows=num_rows,
+                num_cols=num_cols,
+            )
+            continue
+
+        # Run quality assessment
+        if cells_2d:
+            quality_report = compute_table_quality(cells_2d, has_header=True)
+            should_ingest, mode = should_ingest_table(quality_report)
+        else:
+            # No structured cells — accept markdown as-is with basic validation
+            should_ingest = len(markdown.strip()) > 10
+            mode = "with_warning" if should_ingest else "rejected"
+            quality_report = None
+
+        if not should_ingest:
+            rejected += 1
+            logger.info(
+                "table_chunk_rejected",
+                document_id=document_id,
+                table_ref=table.get("ref", ""),
+                quality_score=quality_report.overall_score if quality_report else 0.0,
+                grade=quality_report.grade if quality_report else "UNKNOWN",
+            )
+            continue
+
+        # Build table chunk content with caption context
+        captions = table.get("captions", [])
+        caption_text = ""
+        if captions:
+            if isinstance(captions[0], dict):
+                caption_text = captions[0].get("text", "")
+            elif isinstance(captions[0], str):
+                caption_text = captions[0]
+
+        content_parts = []
+        if caption_text:
+            content_parts.append(f"Table: {caption_text}")
+        content_parts.append(markdown)
+
+        content = "\n\n".join(content_parts)
+        chunk_index = start_index + created
+
+        chunk_id = Chunk.generate_chunk_id(
+            document_id=document_id,
+            chunk_index=chunk_index,
+            content=content,
+        )
+
+        chunk_obj = Chunk(
+            chunk_id=chunk_id,
+            document_id=document_id,
+            chunk_index=chunk_index,
+            content=content,
+            start_char=0,
+            end_char=len(content),
+            token_count=len(content.split()),  # Approximate
+            overlap_tokens=0,
+            section_headings=[caption_text] if caption_text else ["[Table]"],
+            section_pages=[table.get("page_no")] if table.get("page_no") else [],
+            section_bboxes=[],
+            primary_section=caption_text or "[Table]",
+            metadata={
+                "is_table": True,
+                "table_ref": table.get("ref", ""),
+                "table_quality_score": (
+                    round(quality_report.overall_score, 3) if quality_report else None
+                ),
+                "table_quality_grade": quality_report.grade if quality_report else None,
+                "table_ingest_mode": mode,
+                "table_num_rows": table.get("num_rows", 0),
+                "table_num_cols": table.get("num_cols", 0),
+            },
+            document_type=document_type,
+        )
+
+        enhanced_chunk = {"chunk": chunk_obj, "image_bboxes": []}
+        merged_chunks.append(enhanced_chunk)
+        created += 1
+
+        logger.info(
+            "table_chunk_created",
+            document_id=document_id,
+            table_ref=table.get("ref", ""),
+            chunk_index=chunk_index,
+            content_length=len(content),
+            quality_score=quality_report.overall_score if quality_report else None,
+            grade=quality_report.grade if quality_report else None,
+            mode=mode,
+            page_no=table.get("page_no"),
+        )
+
+    if created > 0 or rejected > 0:
+        logger.info(
+            "table_chunking_summary",
+            document_id=document_id,
+            total_tables=len(parsed_tables),
+            chunks_created=created,
+            chunks_rejected=rejected,
+        )
+
+    return created, rejected
+
+
+def _build_cells_2d(table: dict[str, Any]) -> list[list[str]]:
+    """Build a 2D cell list from Docling table data for quality scoring.
+
+    Docling uses 'table_cells' (flat list with row/col offset indices),
+    'grid' (pre-built 2D array), 'num_rows', and 'num_cols'.
+
+    Args:
+        table: Table dict with 'cells' (table_cells), 'num_rows', 'num_cols',
+            and optionally 'grid' from docling_client.py Sprint 129.6a extraction
+
+    Returns:
+        2D list of cell text values (rows x cols), or empty list if no data
+    """
+    # Prefer Docling's pre-built grid (already row x col structure)
+    docling_grid = table.get("grid", [])
+    if docling_grid:
+        result: list[list[str]] = []
+        for row in docling_grid:
+            row_data: list[str] = []
+            for cell in row:
+                if isinstance(cell, dict):
+                    row_data.append(cell.get("text", ""))
+                elif isinstance(cell, str):
+                    row_data.append(cell)
+                else:
+                    row_data.append("")
+            result.append(row_data)
+        return result
+
+    # Fallback: use table_cells (Docling field name) or cells (legacy)
+    raw_cells = table.get("cells", [])
+    if not raw_cells:
+        return []
+
+    num_rows = table.get("num_rows", 0)
+    num_cols = table.get("num_cols", 0)
+
+    if num_rows == 0 or num_cols == 0:
+        # Arrange as single row
+        texts = []
+        for cell in raw_cells:
+            if isinstance(cell, dict):
+                texts.append(cell.get("text", ""))
+            elif isinstance(cell, str):
+                texts.append(cell)
+        return [texts] if texts else []
+
+    # Build grid from cells using row/col offset indices (Docling format)
+    grid: list[list[str]] = [[""] * num_cols for _ in range(num_rows)]
+    for cell in raw_cells:
+        if isinstance(cell, dict):
+            row_idx = cell.get("start_row_offset_idx", -1)
+            col_idx = cell.get("start_col_offset_idx", -1)
+            if 0 <= row_idx < num_rows and 0 <= col_idx < num_cols:
+                grid[row_idx][col_idx] = cell.get("text", "")
+
+    return grid
+
+
 def _integrate_vlm_descriptions(
     sections: list[SectionMetadata],
     vlm_metadata: list[dict[str, Any]],
@@ -813,9 +1030,21 @@ async def chunking_node(state: IngestionState) -> IngestionState:
         from src.core.chunk import Chunk
 
         merged_chunks = []
-        for idx, adaptive_chunk in enumerate(adaptive_chunks):
+        chunk_idx = 0
+        for adaptive_chunk in adaptive_chunks:
+            # Sprint 129.6: Skip empty text chunks (table-only PDFs produce empty sections)
+            if not adaptive_chunk.text or not adaptive_chunk.text.strip():
+                logger.info(
+                    "skipping_empty_text_chunk",
+                    document_id=state["document_id"],
+                    reason="empty_or_whitespace_only",
+                )
+                continue
+
             # Create proper Pydantic Chunk (not dynamic type!)
             # Generate deterministic chunk_id
+            idx = chunk_idx
+            chunk_idx += 1
             chunk_id = Chunk.generate_chunk_id(
                 document_id=state["document_id"],
                 chunk_index=idx,
@@ -863,6 +1092,19 @@ async def chunking_node(state: IngestionState) -> IngestionState:
             enhanced_chunk = {"chunk": chunk_obj, "image_bboxes": chunk_bboxes}
             merged_chunks.append(enhanced_chunk)
 
+        # Sprint 129.6e: Create dedicated table chunks with quality scoring
+        parsed_tables = state.get("parsed_tables", [])
+        table_chunks_created = 0
+        table_chunks_rejected = 0
+        if parsed_tables:
+            table_chunks_created, table_chunks_rejected = _create_table_chunks(
+                parsed_tables=parsed_tables,
+                document_id=state["document_id"],
+                document_type=state.get("document_type", "unknown"),
+                merged_chunks=merged_chunks,
+                start_index=len(adaptive_chunks),
+            )
+
         state["chunks"] = merged_chunks
         # Sprint 32 Feature 32.4: Store sections and adaptive_chunks for Neo4j section node creation
         state["sections"] = sections  # SectionMetadata list for section hierarchy
@@ -889,6 +1131,8 @@ async def chunking_node(state: IngestionState) -> IngestionState:
             ),
             chunks_with_images=sum(1 for c in merged_chunks if c["image_bboxes"]),
             total_image_annotations=sum(len(c["image_bboxes"]) for c in merged_chunks),
+            table_chunks_created=table_chunks_created,
+            table_chunks_rejected=table_chunks_rejected,
             timing_breakdown={
                 "section_extraction_ms": round(section_extraction_ms, 2),
                 "adaptive_merge_ms": round(adaptive_chunking_ms, 2),

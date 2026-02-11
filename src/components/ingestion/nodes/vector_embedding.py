@@ -314,6 +314,23 @@ async def embedding_node(state: IngestionState) -> IngestionState:
                 "domain_id": state.get("domain_id"),
             }
 
+            # Sprint 129.6: Propagate table metadata from chunk to Qdrant payload
+            chunk_meta = getattr(chunk, "metadata", {}) or {}
+            if chunk_meta.get("is_table"):
+                payload["is_table"] = True
+                for key in (
+                    "table_quality_score",
+                    "table_quality_grade",
+                    "table_ingest_mode",
+                    "table_ref",
+                    "table_num_rows",
+                    "table_num_cols",
+                    "table_page_no",
+                    "table_caption",
+                ):
+                    if key in chunk_meta:
+                        payload[key] = chunk_meta[key]
+
             # Sprint 87: Create point with multi-vector or dense-only format
             if is_multi_vector and has_sparse:
                 # Multi-vector point: Named vectors (dense + sparse)

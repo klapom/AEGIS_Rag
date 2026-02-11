@@ -1,0 +1,86 @@
+{
+  "timestamp": "2026-02-11T07:26:00",
+  "namespace": "table_benchmark_sprint129",
+  "sprint": "129.6f",
+  "pdf_count": 5,
+  "completed": 4,
+  "failed": 1,
+  "total_time_s": 999.3,
+  "neo4j_aggregate": {
+    "chunks": 8,
+    "entities": 119,
+    "entity_types": 12,
+    "relations": 283,
+    "relation_types": 18,
+    "specificity_pct": 50.2
+  },
+  "qdrant_aggregate": {
+    "total_vectors": 8,
+    "table_vectors": 4,
+    "table_quality_scores": [0.946, 0.961, 0.956, 0.973]
+  },
+  "results": [
+    {
+      "file": "01030000000045.pdf",
+      "status": "success",
+      "upload_time_s": 109.0,
+      "chunks_created": 2,
+      "neo4j_entities": 23,
+      "neo4j_relationships": 9,
+      "points_indexed": 2,
+      "table_quality": 0.956,
+      "table_grade": "EXCELLENT",
+      "table_dimensions": "9x3"
+    },
+    {
+      "file": "01030000000046.pdf",
+      "status": "success",
+      "upload_time_s": 341.6,
+      "chunks_created": 2,
+      "neo4j_entities": 65,
+      "neo4j_relationships": 95,
+      "points_indexed": 2,
+      "table_quality": 0.946,
+      "table_grade": "EXCELLENT",
+      "table_dimensions": "12x7"
+    },
+    {
+      "file": "01030000000047.pdf",
+      "status": "failed",
+      "upload_time_s": 2.3,
+      "error": "Chunk.content String should have at least 1 character - Docling produced empty text chunk (table-only PDF)"
+    },
+    {
+      "file": "01030000000051.pdf",
+      "status": "success",
+      "upload_time_s": 132.0,
+      "chunks_created": 2,
+      "neo4j_entities": 24,
+      "neo4j_relationships": 21,
+      "points_indexed": 2,
+      "table_quality": 0.961,
+      "table_grade": "EXCELLENT",
+      "table_dimensions": "9x4"
+    },
+    {
+      "file": "01030000000052.pdf",
+      "status": "success",
+      "upload_time_s": 414.0,
+      "chunks_created": 2,
+      "neo4j_entities": 41,
+      "neo4j_relationships": 66,
+      "points_indexed": 2,
+      "table_quality": 0.973,
+      "table_grade": "EXCELLENT",
+      "table_dimensions": "12x4"
+    }
+  ],
+  "bugs_fixed": [
+    "Docling field name mismatch: cells→table_cells, rows→num_rows, columns→num_cols, added grid support",
+    "Qdrant metadata gap: is_table, table_quality_score, table_quality_grade not propagated to Qdrant payload",
+    "Test data format: 3 test files updated from old cell format to Docling format (84/84 passing)"
+  ],
+  "known_issues": [
+    "Doc 01030000000047.pdf fails: table-only PDF with no prose text → empty Chunk.content → Pydantic validation error"
+  ]
+}
