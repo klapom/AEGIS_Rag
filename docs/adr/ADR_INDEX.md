@@ -73,6 +73,7 @@ ADRs dokumentieren wichtige Architektur-Entscheidungen mit Kontext, Alternativen
 | 060 | Standards-Based Domain Taxonomy Architecture (DDC+FORD, Two-Tier Types) | Accepted | 2026-02-06 |
 | 061 | LightRAG Removal — Direct Neo4j Architecture | Proposed | 2026-02-06 |
 | 062 | LLM Engine Mode Configuration (vLLM/Ollama Runtime Selection) | Accepted | 2026-02-07 |
+| 063 | VLM Model Selection for Table Cross-Validation (Nemotron VL v1 8B) | Accepted | 2026-02-11 |
 
 ---
 

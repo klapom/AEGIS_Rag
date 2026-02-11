@@ -2171,9 +2171,9 @@ Sprint 117.1 (Domain CRUD) - Foundation
 | 129.5 | Domain Editor UI (Admin) | 5 | 📝 |
 | 129.6a | Table Content Extraction (Docling data.cells/rows parsing) | 2 | ✅ |
 | 129.6b | Table Quality Heuristics (composite scoring, 6 metrics) | 2 | ✅ |
-| 129.6c | Granite-Docling-258M VLM Integration (docling-serve VlmPipeline) | 3 | ✅ |
-| 129.6d | DeepSeek-OCR-2 Cross-Validation Service | 3 | ✅ |
-| 129.6e | Cross-Validation Logic + Pipeline Integration | 3 | ✅ |
+| 129.6c | VLM Model Evaluation (5 candidates, 45-iteration benchmark) | 3 | ✅ |
+| 129.6d | VLM Selection: Nemotron VL v1 8B FP4 (ADR-063) | 3 | ✅ |
+| 129.6e | Cross-Validation Logic + Pipeline Integration | 3 | 📝 |
 | 129.6f | Table Ingestion E2E Benchmark (DP-Bench PDFs) | 2 | ✅ |
 | 129.7 | HyDE Query Classification (auto-enable for abstract queries) | 3 | ✅ |
 | 129.8 | HyDE RAGAS A/B Evaluation | 3 | 📝 |
@@ -2188,7 +2188,7 @@ Sprint 117.1 (Domain CRUD) - Foundation
 - Metadata artifacts (`clean_text`, `Doc Type`) pollute knowledge graph → filtering (129.2)
 - 498-doc RAGAS ingestion carried from Sprint 128.3 → now feasible with stable vLLM (129.3)
 - Tables completely discarded in current pipeline → full extraction + quality-gated ingestion (129.6a-f)
-- Cross-validation via Granite-Docling + DeepSeek-OCR-2 for table confidence scoring (129.6c-e)
+- VLM cross-validation via Nemotron VL v1 8B (ADR-063) — 45-iteration benchmark eliminated Granite-258M, DeepSeek-OCR-2, and V2 12B (129.6c-e)
 
 ### Sprint 129.6 Table Ingestion Results (2026-02-11)
 

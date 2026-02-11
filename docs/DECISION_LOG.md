@@ -1142,13 +1142,20 @@
 **Decision:** Add table content extraction from Docling JSON (using `table_cells`, `grid`, `num_rows`/`num_cols` fields), composite quality scoring (6 weighted metrics: header 15%, density 25%, consistency 20%, cell length 15%, column stability 15%, row uniformity 10%), and dedicated table chunks with metadata propagation to Qdrant (`is_table`, `table_quality_score`, `table_quality_grade`). Tables < 2x2 rejected. Empty prose chunks skipped (table-only PDFs).
 **Rationale:** Tables were previously discarded during chunking despite Docling parsing them. Structured table content contains high-density factual knowledge (e.g., financial data, specifications). Quality gating prevents noisy/malformed table chunks. E2E benchmark: 4/5 DP-Bench PDFs ingested, all EXCELLENT quality (0.946-0.973), 119 entities from table content.
 
-### 2026-02-11 | VLM Cross-Validation for Borderline Table Quality (Sprint 129.6c-e)
-**Decision:** Add optional VLM-based cross-validation for tables with borderline heuristic scores (0.50-0.85). Two VLM services: Granite-Docling-258M (docling-serve, port 8083, <2GB VRAM) and DeepSeek-OCR-2 (vLLM, port 8002, ~8GB VRAM). Sequential calls, 3-source weighted blend (0.40×H + 0.30×G + 0.30×D), agreement boost when VLMs agree (diff < 0.10). Disabled by default (`TABLE_CROSS_VALIDATION_ENABLED=false`). Docker profile `table-vlm` for on-demand deployment.
-**Rationale:** Heuristic scoring alone cannot distinguish edge cases (e.g., sparse but valid financial tables vs. OCR artifacts). VLM cross-validation adds a second opinion via cell-by-cell agreement (dimension 0.3 + Jaccard 0.5 + header 0.2). Feature-toggled for zero overhead when disabled. Graceful degradation: 2 VLMs → 1 VLM → heuristic-only.
+### 2026-02-11 | VLM Cross-Validation — Single VLM Architecture (Sprint 129.6c-e, ADR-063)
+**Decision:** Use **Nemotron Nano VL v1 (8B FP4-QAD)** as single VLM for borderline table cross-validation (score 0.50-0.85). Replaces original dual-VLM plan (Granite + DeepSeek). Prompt: P2 HTML table (NVIDIA RD-TableBench official). Deploy on-demand via `aegis-vllm-eugr:latest` (port 8002, ~5GB VRAM, 0.10 gpu-memory-utilization). 2-source blend: `0.50×Heuristic + 0.50×VLM`. Feature-toggled off by default.
+**Rationale:** 45-iteration benchmark across 5 candidates eliminated alternatives: Granite-258M (column shift on 60% of tables), DeepSeek-OCR-2 (not instruction-following — only "Free OCR." prompt), Nemotron VL v2 12B (20% failure rate, 34% slower, 50% more VRAM). V1 wins on all metrics: **100% reliability** (15/15), **34.7 tok/s**, **~5GB VRAM**, clean HTML with rowspan/colspan. GPU memory experiment (0.10 vs 0.20) showed only 3% improvement — model is decode-bound. Same base image as extraction vLLM → zero additional disk via Docker layer caching.
+
+---
+
+### 2026-02-11 | VLM Model Evaluation — 45-Iteration Benchmark (Sprint 129.6c-e)
+**Decision:** Comprehensive VLM evaluation for table cross-validation. 5 models tested on 5 images (1 PPT edge case + 4 DP-Bench PDFs), 3 NVIDIA official prompts (P1 doc extraction, P2 HTML table, P3 HTML+bbox), V2 tested with `/no_think` and `/think` modes. Total: 45 iterations + 15 GPU memory comparison.
+**Results:** (1) Granite-Docling-258M: Column shift on 3/5 tables — eliminated. (2) DeepSeek-OCR-2: Only accepts "Free OCR." prompt, no structured output — eliminated. (3) Nemotron VL v2 12B: 20% failure (6/30 empty), 22.9 tok/s, /no_think 33% failure — eliminated. (4) **Nemotron VL v1 8B: 0% failure (15/15), 34.7 tok/s, 5GB VRAM** — selected. GPU memory: 0.10 vs 0.20 = only 1.03x (decode-bound). P2 HTML prompt: 12.3s avg, cleanest parseable output.
+**Benchmark data:** `/tmp/vlm_benchmark_v1.json` (V1, 15 entries), `/tmp/vlm_benchmark_v2.json` (V2, 30 entries), `/tmp/vlm_benchmark_v1_020.json` (V1 at 0.20 GPU, 15 entries). Full details in ADR-063.
 
 ---
 
 **Last Updated:** 2026-02-11 (Sprint 129 🔄)
-**Total Decisions Documented:** 189 (+6 from Sprint 129)
-**Current Sprint:** Sprint 129 🔄 IN PROGRESS (11/13 features, ~30 SP delivered)
+**Total Decisions Documented:** 191 (+8 from Sprint 129)
+**Current Sprint:** Sprint 129 🔄 IN PROGRESS (11/15 features, ~34 SP delivered)
 **Next Sprint:** Sprint 129 continued (RAGAS Full Ingestion + Domain Editor UI)

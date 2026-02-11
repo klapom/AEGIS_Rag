@@ -1,0 +1,81 @@
+# =============================================================================
+# Dockerfile.docling-vlm - Docling VLM for Table Cross-Validation (DGX Spark)
+# =============================================================================
+# Base: aegis-vllm-eugr (CUDA 13.1.1, SM121, ARM64, PyTorch 2.9.1+cu130)
+# Purpose: GPU-accelerated Granite-Docling-258M for table extraction
+#
+# Sprint 129.6c-e: VLM cross-validation of borderline table quality scores
+#
+# Build:
+#   docker build -f docker/Dockerfile.docling-vlm -t aegis-docling-vlm-gpu:latest .
+#
+# Run:
+#   docker run --gpus=all -p 8083:5001 aegis-docling-vlm-gpu:latest
+# =============================================================================
+
+FROM aegis-vllm-eugr:latest
+
+LABEL maintainer="AegisRAG Team"
+LABEL description="Docling-serve with GPU for table VLM cross-validation (DGX Spark ARM64)"
+LABEL sprint="129.6c-e"
+
+# System dependencies for Docling (OpenCV, PDF, OCR)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgl1 \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    poppler-utils \
+    tesseract-ocr \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Install docling-serve using uv (eugr image ships uv, not pip)
+# Step 1: Install docling-serve WITHOUT its torch dependency (keep CUDA torch)
+RUN uv pip install --no-cache \
+        "docling-serve>=1.12.0" \
+        "opencv-python-headless>=4.10" \
+        "rapidocr-onnxruntime" \
+        "easyocr" && \
+    # Step 2: Force-reinstall CUDA PyTorch if docling pulled in CPU version
+    uv pip install --reinstall --no-cache \
+        torch==2.9.1 torchvision \
+        --index-url https://download.pytorch.org/whl/cu130 && \
+    # Step 3: Verify CUDA PyTorch is intact
+    python3 -c "import torch; assert 'cu' in torch.__version__ or torch.cuda.is_available(), 'CUDA torch missing!'; print(f'PyTorch {torch.__version__} CUDA OK')"
+
+# Pre-download Granite-Docling-258M model (saves startup time)
+RUN python3 -c "\
+from huggingface_hub import snapshot_download; \
+snapshot_download('ibm-granite/granite-docling-258M'); \
+print('Granite-Docling-258M downloaded')" || \
+    echo "WARN: Model preload skipped - will download on first use"
+
+# Pre-download Docling layout/table models
+RUN python3 -c "\
+from docling.document_converter import DocumentConverter; \
+print('Docling models initialized')" || \
+    echo "WARN: Docling model preload skipped"
+
+# Create cache directories
+RUN mkdir -p /root/.cache/huggingface /root/.cache/rapidocr
+
+# Environment
+ENV PORT=5001
+ENV DOCLING_DEVICE=cuda
+ENV DOCLING_LAZY_LOADING=true
+ENV DOCLING_TABLE_STRUCTURE=true
+ENV DOCLING_LAYOUT_ANALYSIS=true
+ENV DOCLING_OCR_ENGINE=easyocr
+ENV LOG_LEVEL=INFO
+ENV TORCH_CUDA_ARCH_LIST="12.1a"
+
+EXPOSE 5001
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=180s --retries=3 \
+    CMD curl -f http://localhost:5001/health || exit 1
+
+CMD ["docling-serve", "run", "--host", "0.0.0.0", "--port", "5001"]

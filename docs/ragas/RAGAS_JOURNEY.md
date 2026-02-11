@@ -1,7 +1,7 @@
 # RAGAS Journey - Continuous RAG Metrics Optimization
 
 **Status:** 🔄 Active Development
-**Sprint:** 79+ (Current: Sprint 124)
+**Sprint:** 79+ (Current: Sprint 129)
 **Goal:** Achieve SOTA-level RAGAS metrics (F ≥ 0.90, AR ≥ 0.95, CP ≥ 0.85, CR ≥ 0.75)
 
 ---
@@ -4488,3 +4488,178 @@ All 4 successfully ingested tables scored EXCELLENT (≥0.85). The quality scori
 3. **Relation specificity is lower for tables (50.2%)** vs prose documents (84.5% in Sprint 128.9) — table content tends toward RELATED_TO because tabular data has structural relationships that don't map cleanly to ADR-060 relation types
 4. **Edge case identified** — table-only PDFs (no prose) need the empty chunk guard to avoid crashing the pipeline
 5. **Entity extraction from tables is rich** — 65 entities from a single 12x7 table, showing the LLM can extract structured knowledge from tabular content
+
+---
+
+## Sprint 129.6c-e: VLM Model Evaluation for Table Cross-Validation (2026-02-11)
+
+### Overview
+
+Sprint 129.6a-b established heuristic-based table quality scoring (0.946-0.973 on DP-Bench PDFs). For borderline tables (score 0.50-0.85), a VLM cross-validation step was planned to provide a second opinion. This section documents the comprehensive model evaluation that led to the VLM selection decision (ADR-063).
+
+### Evaluation Setup
+
+**Hardware:** DGX Spark — NVIDIA GB10 (Blackwell), CUDA 13.0, 128GB Unified Memory, ARM64
+**Base image:** `aegis-vllm-eugr:latest` (SM121-native compilation, vLLM 0.15.1, FlashInfer 0.6.3)
+
+**Test images (5):**
+| # | Image | Type | Description |
+|---|-------|------|-------------|
+| 1 | VM3_page2_PPT | Edge case | PPT→PDF with merged cells (Audi EV specs table) |
+| 2 | PDF_046_parties1 | Normal | 12×7 political party registration table (multi-column headers) |
+| 3 | PDF_047_parties2 | Normal | Continuation of doc 46 (7 parties + total row) |
+| 4 | PDF_051_govt_women | Normal | Government participation stats (merged headers) |
+| 5 | PDF_052_regions | Normal | Regional statistics table (12×4) |
+
+**Prompts (3 NVIDIA official — from RD-TableBench documentation):**
+- **P1 (Doc Extraction):** Full document parsing as Mathpix markdown with LaTeX equations, bounding boxes, and 14 semantic categories (Bibliography, Caption, Table, Text, Title, etc.)
+- **P2 (HTML Table):** `Convert the image to an HTML table. The output should begin with <table> and end with </table>. Specify rowspan and colspan attributes when greater than 1.`
+- **P3 (HTML Table + BBox):** Same as P2 plus normalized bounding box coordinates (0-1000)
+
+### Candidate Models (5)
+
+| Model | Params | VRAM | Architecture | Instruction-Following |
+|-------|--------|------|--------------|-----------------------|
+| Granite-Docling-258M | 258M | <2GB | Transformer (docling-serve) | No (fixed JSON output) |
+| DeepSeek-OCR-2 | 3B | ~8GB | VL Transformer (vLLM) | No (only "Free OCR.") |
+| Nemotron VL v1 8B | 8B | ~5GB | Llama_Nemotron_Nano_VL (FP4) | Yes |
+| Nemotron VL v2 12B | 12B | ~10GB | NemotronH_Nano_VL_V2 (NVFP4) | Yes |
+| Docling CPU (baseline) | 258M | 0 (CPU) | Docling batch converter | No (fixed output) |
+
+### Phase 1: Early Eliminations
+
+**Granite-Docling-258M:**
+- Built GPU-enabled Docker container (`aegis-docling-vlm`), tested on all 5 images
+- **Finding:** Systematic column shift on tables with colspan headers (e.g., doc 46: party columns shifted by 1 position)
+- 3/5 tables had column alignment errors → **ELIMINATED**
+
+**DeepSeek-OCR-2:**
+- Served via vLLM on port 8002, tested with multiple prompts
+- **Finding:** Model only responds to "Free OCR." prompt — ignores all other instructions. Output is raw OCR text without table structure
+- Cannot produce HTML or structured cell grids → **ELIMINATED**
+
+**Docling CPU (baseline):**
+- Already used in Sprint 129.6a for table extraction
+- 2.0s per page for normal PDFs, handles colspan natively
+- **Finding:** Good baseline for well-formatted PDFs, but cannot provide independent cross-validation (it's the same tool producing the original extraction)
+
+### Phase 2: Nemotron VL v1 vs v2 Benchmark (45 Iterations)
+
+**V1:** 3 prompts × 5 images × 1 mode = **15 iterations** (0.10 gpu-memory-utilization)
+**V2:** 3 prompts × 5 images × 2 modes (no_think, think) = **30 iterations** (0.15 gpu-memory-utilization)
+
+#### V1 Detailed Results (15/15 success, 100% reliability)
+
+| Prompt | Image | Time | Tokens | tok/s |
+|--------|-------|------|--------|-------|
+| P1 (doc) | VM3_page2_PPT | 34.6s | 1188 | 34.3 |
+| P1 (doc) | PDF_046 | 21.9s | 730 | 33.4 |
+| P1 (doc) | PDF_047 | 12.9s | 447 | 34.8 |
+| P1 (doc) | PDF_051 | 21.6s | 723 | 33.4 |
+| P1 (doc) | PDF_052 | 19.0s | 667 | 35.0 |
+| **P2 (HTML)** | **VM3_page2_PPT** | **5.7s** | **203** | **35.5** |
+| **P2 (HTML)** | **PDF_046** | **18.7s** | **671** | **35.9** |
+| **P2 (HTML)** | **PDF_047** | **15.1s** | **541** | **35.9** |
+| **P2 (HTML)** | **PDF_051** | **10.7s** | **348** | **32.5** |
+| **P2 (HTML)** | **PDF_052** | **11.5s** | **412** | **35.9** |
+| P3 (HTML+bbox) | VM3_page2_PPT | 5.7s | 201 | 35.4 |
+| P3 (HTML+bbox) | PDF_046 | 19.5s | 664 | 34.1 |
+| P3 (HTML+bbox) | PDF_047 | 14.8s | 531 | 36.0 |
+| P3 (HTML+bbox) | PDF_051 | 9.5s | 343 | 36.0 |
+| P3 (HTML+bbox) | PDF_052 | 12.6s | 415 | 33.0 |
+
+**V1 Summary:** Avg 15.6s, 34.7 tok/s, 0 failures. **P2 HTML is fastest** (12.3s avg) with cleanest output.
+
+#### V2 Detailed Results (24/30 real success, 80% reliability)
+
+| Prompt | Mode | Image | Time | Tokens | Status |
+|--------|------|-------|------|--------|--------|
+| P1 | no_think | VM3 | 0.6s | 2 | **EMPTY** |
+| P1 | no_think | PDF_046 | 38.5s | 883 | OK |
+| P1 | no_think | PDF_047 | 23.3s | 523 | OK |
+| P1 | no_think | PDF_051 | 36.0s | 828 | OK |
+| P1 | no_think | PDF_052 | 31.9s | 730 | OK |
+| P1 | think | VM3 | 0.9s | 2 | **EMPTY** |
+| P1 | think | PDF_046 | 37.8s | 874 | OK |
+| P1 | think | PDF_047 | 24.0s | 541 | OK |
+| P1 | think | PDF_051 | 36.0s | 829 | OK |
+| P1 | think | PDF_052 | 32.0s | 735 | OK |
+| P2 | no_think | VM3 | 0.8s | 1 | **EMPTY** |
+| P2 | no_think | PDF_046 | 34.2s | 788 | OK |
+| P2 | no_think | PDF_047 | 9.3s | 210 | OK |
+| P2 | no_think | PDF_051 | 0.6s | 1 | **EMPTY** |
+| P2 | no_think | PDF_052 | 0.8s | 4 | **EMPTY** |
+| P2 | think | VM3 | 10.4s | 230 | OK |
+| P2 | think | PDF_046 | 80.2s | 1863 | OK |
+| P2 | think | PDF_047 | 25.8s | 584 | OK |
+| P2 | think | PDF_051 | 47.1s | 1078 | OK |
+| P2 | think | PDF_052 | 52.7s | 1233 | OK |
+| P3 | no_think | VM3 | 11.8s | 263 | OK |
+| P3 | no_think | PDF_046 | 34.0s | 783 | OK |
+| P3 | no_think | PDF_047 | 26.5s | 602 | OK |
+| P3 | no_think | PDF_051 | 17.5s | 388 | OK |
+| P3 | no_think | PDF_052 | 18.9s | 441 | OK |
+| P3 | think | VM3 | 0.9s | 2 | **EMPTY** |
+| P3 | think | PDF_046 | 57.3s | 1323 | OK |
+| P3 | think | PDF_047 | 148.4s | 3458 | OK |
+| P3 | think | PDF_051 | 41.8s | 968 | OK |
+| P3 | think | PDF_052 | 39.4s | 911 | OK |
+
+**V2 Failure analysis:**
+- 6/30 iterations produced empty responses (1-4 tokens)
+- VM3 (PPT→PDF) fails across ALL prompt/mode combinations except P2+think and P3+no_think
+- `/no_think` mode: 3/15 additional failures on normal PDFs (P2+no_think on PDF_051 and PDF_052)
+- `/think` mode reduces failures but adds 2-5x latency due to CoT reasoning tokens
+
+### Phase 3: GPU Memory Experiment (V1 Only)
+
+Re-ran all 15 V1 iterations at 0.20 gpu-memory-utilization (double the baseline 0.10):
+
+| Prompt | Image | 0.10 GPU | 0.20 GPU | Speedup |
+|--------|-------|----------|----------|---------|
+| P1 | VM3 | 34.6s | 33.4s | 1.04x |
+| P1 | PDF_046 | 21.9s | 20.7s | 1.06x |
+| P1 | PDF_047 | 12.9s | 12.9s | 1.00x |
+| P1 | PDF_051 | 21.6s | 20.5s | 1.05x |
+| P1 | PDF_052 | 19.0s | 19.0s | 1.00x |
+| P2 | VM3 | 5.7s | 5.7s | 1.00x |
+| P2 | PDF_046 | 18.7s | 18.6s | 1.00x |
+| P2 | PDF_047 | 15.1s | 15.0s | 1.00x |
+| P2 | PDF_051 | 10.7s | 9.6s | 1.12x |
+| P2 | PDF_052 | 11.5s | 11.4s | 1.00x |
+| P3 | VM3 | 5.7s | 5.6s | 1.01x |
+| P3 | PDF_046 | 19.5s | 18.4s | 1.06x |
+| P3 | PDF_047 | 14.8s | 14.7s | 1.00x |
+| P3 | PDF_051 | 9.5s | 9.5s | 1.00x |
+| P3 | PDF_052 | 12.6s | 11.5s | 1.09x |
+
+**Average speedup: 1.03x (3%)**. Doubling KV-cache from 0.10→0.20 provides negligible benefit. Model is **decode-bound** (autoregressive token generation) not prefill-bound. Use 0.10 to minimize VRAM footprint.
+
+### Head-to-Head Comparison
+
+| Metric | V1 (8B FP4) | V2 (12B NVFP4) | Delta |
+|--------|-------------|-----------------|-------|
+| **Reliability** | 100% (15/15) | 80% (24/30) | V1 +20% |
+| **Throughput** | 34.7 tok/s | 22.9 tok/s | V1 +52% |
+| **VRAM** | ~5GB (0.10) | ~10GB (0.15) | V1 50% less |
+| **Avg latency (P2)** | 12.3s | 43.2s (think) | V1 3.5x faster |
+| **VM3 edge case** | 3/3 OK | 1/6 OK | V1 far better |
+| **P2 no_think failures** | 0/5 | 3/5 | V1 100% vs 40% |
+
+### Decision: Nemotron VL v1 + P2 HTML Prompt
+
+**Selected:** `nvidia/Llama-3.1-Nemotron-Nano-VL-8B-V1-FP4-QAD`
+**Prompt:** P2 (HTML table with rowspan/colspan)
+**Config:** `gpu-memory-utilization=0.10`, port 8002, on-demand deployment
+**ADR:** [ADR-063](../adr/ADR-063-vlm-table-cross-validation.md)
+
+**Architecture change:** Original plan was dual-VLM (Granite + DeepSeek) with 3-source weighted blend. Evaluation showed both alternatives are unsuitable. New architecture: single VLM with 2-source blend (`0.50×Heuristic + 0.50×VLM`).
+
+**Container strategy:** Same `aegis-vllm-eugr:latest` base image as extraction vLLM → zero additional disk (Docker layer caching). Separate vLLM process on port 8002. Starts on-demand during ingestion, not always-on.
+
+### Benchmark Data Files
+
+- V1 results (15 entries): `/tmp/vlm_benchmark_v1.json`
+- V2 results (30 entries): `/tmp/vlm_benchmark_v2.json`
+- V1 at 0.20 GPU (15 entries): `/tmp/vlm_benchmark_v1_020.json`
+- Benchmark script: `/tmp/vlm_benchmark.py`

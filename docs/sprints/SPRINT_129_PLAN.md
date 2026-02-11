@@ -197,29 +197,54 @@ if len(results) == 0 AND len(window.sentences) >= 4:
 
 ---
 
-### 129.7: Table Ingestion — Docling Structured Extraction (8 SP) — MEDIUM
+### 129.7: Table Ingestion — Docling Structured Extraction (8 SP) — MEDIUM ✅
 
 **Goal:** Extract structured data from tables in PDF/DOCX documents and store as typed relations in Neo4j.
 
-**Current State:** Docling CUDA parser extracts table bounding boxes but converts them to flat text. Structured row/column data is lost.
+**Actual Implementation (Sprint 129.6a-f in SPRINT_PLAN.md):**
 
-**Approach:**
-1. Use Docling's `TableStructure` output to preserve row/column headers
-2. Convert table cells to entity-relation triples: `(row_header, column_header, cell_value)`
-3. Store with relation type `HAS_VALUE` and entity type `TABLE_CELL` / `TABLE_HEADER`
-4. Add `source_type: "table"` metadata to distinguish from text-extracted relations
+**129.6a — Table Content Extraction (2 SP) ✅**
+- Docling field extraction: `table_cells`, `grid`, `num_rows`/`num_cols`, `column_header`
+- `_build_cells_2d()` grid builder, `_convert_table_to_markdown()` for LLM-friendly format
+- Files: `adaptive_chunking.py`, `table_quality.py`
 
-**Files to Modify:**
-- `src/components/document_processing/document_parsers.py` — Table extraction path
-- `src/components/graph_rag/extraction_service.py` — Table-aware extraction mode
-- `src/core/models.py` — `source_type` field on relations
+**129.6b — Table Quality Heuristics (2 SP) ✅**
+- Composite scoring (6 metrics: header 15%, density 25%, consistency 20%, cell length 15%, col stability 15%, row uniformity 10%)
+- Grades: EXCELLENT (≥0.85), GOOD (≥0.70), FAIR (≥0.50), POOR (<0.50)
+- E2E Benchmark: 4/5 DP-Bench PDFs, all EXCELLENT (0.946-0.973)
 
-**Acceptance Criteria:**
-- [ ] Tables in PDFs produce structured triples (not flat text)
-- [ ] Table headers become entity names
-- [ ] Cell values stored with row+column context
-- [ ] `source_type: "table"` metadata present
-- [ ] Unit tests with sample table PDF
+**129.6c — VLM Model Evaluation (3 SP) ✅**
+- 45-iteration benchmark: 5 VLM candidates × 5 test images × 3 NVIDIA official prompts
+- Eliminated: Granite-258M (column shift 60%), DeepSeek-OCR-2 (not instruction-following), Nemotron VL v2 (20% failure)
+- V1 vs V2: 34.7 vs 22.9 tok/s, 100% vs 80% reliability, 5GB vs 10GB VRAM
+- GPU memory: 0.10 vs 0.20 = only 3% improvement (decode-bound)
+
+**129.6d — VLM Selection: Nemotron VL v1 8B FP4 (ADR-063) (3 SP) ✅**
+- Selected: `nvidia/Llama-3.1-Nemotron-Nano-VL-8B-V1-FP4-QAD`
+- Prompt: P2 HTML table (NVIDIA RD-TableBench official)
+- Config: 0.10 gpu-memory-utilization, port 8002, on-demand deployment
+- Same base image as extraction vLLM (aegis-vllm-eugr:latest)
+
+**129.6e — Cross-Validation Logic + Pipeline Integration (3 SP) 📝**
+- 2-source blend: `0.50×Heuristic + 0.50×VLM` (changed from original 3-source)
+- Only for borderline tables (score 0.50-0.85)
+- Feature-toggled: `TABLE_CROSS_VALIDATION_ENABLED=false` default
+
+**129.6f — Table Ingestion E2E Benchmark (2 SP) ✅**
+- 4/5 PDFs ingested, 119 entities (12 types), 283 relations (18 types)
+- All tables EXCELLENT grade (0.946-0.973)
+- Bugs fixed: field mismatch, Qdrant metadata, empty chunk guard, 84 test rewrites
+
+**VLM Benchmark Summary:**
+
+| Model | Params | VRAM | tok/s | Reliability | Status |
+|-------|--------|------|-------|-------------|--------|
+| Granite-258M | 258M | <2GB | N/A | Column shift 60% | Eliminated |
+| DeepSeek-OCR-2 | 3B | ~8GB | 165 | Not instruction-following | Eliminated |
+| **Nemotron VL v1** | **8B** | **~5GB** | **34.7** | **100% (15/15)** | **Selected** |
+| Nemotron VL v2 | 12B | ~10GB | 22.9 | 80% (24/30) | Eliminated |
+
+Full evaluation data: [ADR-063](../adr/ADR-063-vlm-table-cross-validation.md), [RAGAS_JOURNEY](../ragas/RAGAS_JOURNEY.md)
 
 ---
 
