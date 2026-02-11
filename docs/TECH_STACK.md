@@ -1,7 +1,7 @@
 # AEGIS RAG Technology Stack
 
 **Project:** AEGIS RAG (Agentic Enterprise Graph Intelligence System)
-**Last Updated:** 2026-02-07 (Sprint 126: LLM Engine Mode, Community Batch, Domain Sub-Types)
+**Last Updated:** 2026-02-11 (Sprint 129: Table VLM Cross-Validation, PyMuPDF)
 
 ---
 
@@ -124,6 +124,7 @@ pip install --break-system-packages <package>
 | **NER Models** | SpaCy Transformers | 1.3.0 | Transformer-based NER (Sprint 83) |
 | **GPU Monitoring** | pynvml | 11.5.0 | VRAM Tracking (Sprint 83) |
 | **Retry Logic** | Tenacity | 8.0.0 | Exponential Backoff (Sprint 83) |
+| **PDF Rendering** | PyMuPDF (fitz) | ^1.25 | Page-to-PNG for VLM cross-validation (Sprint 129) |
 
 ### Frontend Stack
 

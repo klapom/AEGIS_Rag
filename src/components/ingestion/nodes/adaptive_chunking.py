@@ -77,12 +77,13 @@ def calculate_bbox_iou(bbox1: dict[str, Any], bbox2: dict[str, Any]) -> float:
     return intersection / union if union > 0 else 0.0
 
 
-def _create_table_chunks(
+async def _create_table_chunks(
     parsed_tables: list[dict[str, Any]],
     document_id: str,
     document_type: str,
     merged_chunks: list[dict[str, Any]],
     start_index: int,
+    document_path: str = "",
 ) -> tuple[int, int]:
     """Create dedicated chunks for extracted tables with quality scoring.
 
@@ -90,12 +91,17 @@ def _create_table_chunks(
     using composite heuristics (129.6b). Tables passing quality thresholds are
     added as dedicated chunks with table-specific metadata.
 
+    Sprint 129.6c-e: Borderline tables (score 0.50-0.85) are optionally
+    cross-validated with VLM services (Granite-Docling + DeepSeek-OCR) when
+    TABLE_CROSS_VALIDATION_ENABLED=true.
+
     Args:
         parsed_tables: Table data from state["parsed_tables"]
         document_id: Source document ID
         document_type: Document type (pdf, docx, etc.)
         merged_chunks: Existing chunk list to append to (mutated in place)
         start_index: Starting chunk index for table chunks
+        document_path: Path to source PDF (needed for VLM page rendering)
 
     Returns:
         Tuple of (chunks_created, chunks_rejected)
@@ -110,6 +116,23 @@ def _create_table_chunks(
     except ImportError:
         logger.warning("table_quality_module_not_available")
         return 0, 0
+
+    # Sprint 129.6c-e: Initialize cross-validator if enabled
+    cross_validator = None
+    try:
+        from src.core.config import get_settings
+
+        _settings = get_settings()
+        if _settings.table_cross_validation_enabled:
+            from src.components.ingestion.table_cross_validator import TableCrossValidator
+
+            cross_validator = TableCrossValidator(
+                granite_url=_settings.granite_docling_url,
+                deepseek_url=_settings.deepseek_ocr_url,
+            )
+            await cross_validator.check_availability()
+    except Exception as e:
+        logger.warning("cross_validator_init_failed", error=repr(e))
 
     created = 0
     rejected = 0
@@ -137,8 +160,57 @@ def _create_table_chunks(
             continue
 
         # Run quality assessment
+        cross_validation_meta = None
         if cells_2d:
             quality_report = compute_table_quality(cells_2d, has_header=True)
+
+            # Sprint 129.6c-e: VLM cross-validation for borderline tables
+            if (
+                cross_validator
+                and cross_validator.should_cross_validate(quality_report.overall_score)
+                and cells_2d
+                and document_path
+                and table.get("page_no")
+            ):
+                try:
+                    from src.components.ingestion.page_image_renderer import (
+                        render_page_image,
+                    )
+
+                    page_image = render_page_image(document_path, table["page_no"])
+                    cv_result = await cross_validator.cross_validate(
+                        docling_cells_2d=cells_2d,
+                        page_image_bytes=page_image,
+                        heuristic_score=quality_report.overall_score,
+                    )
+                    # Apply adjusted score
+                    quality_report.overall_score = cv_result.adjusted_score
+                    # Re-grade based on adjusted score
+                    if cv_result.adjusted_score >= 0.85:
+                        quality_report.grade = "EXCELLENT"
+                    elif cv_result.adjusted_score >= 0.70:
+                        quality_report.grade = "GOOD"
+                    elif cv_result.adjusted_score >= 0.50:
+                        quality_report.grade = "FAIR"
+                    else:
+                        quality_report.grade = "POOR"
+
+                    cross_validation_meta = {
+                        "original_heuristic_score": cv_result.original_heuristic_score,
+                        "adjusted_score": cv_result.adjusted_score,
+                        "granite_agreement": cv_result.granite_agreement,
+                        "deepseek_agreement": cv_result.deepseek_agreement,
+                        "sources_used": cv_result.sources_used,
+                        "validation_time_ms": cv_result.validation_time_ms,
+                    }
+                except Exception as e:
+                    logger.warning(
+                        "cross_validation_skipped",
+                        document_id=document_id,
+                        table_ref=table.get("ref", ""),
+                        error=repr(e),
+                    )
+
             should_ingest, mode = should_ingest_table(quality_report)
         else:
             # No structured cells — accept markdown as-is with basic validation
@@ -180,6 +252,22 @@ def _create_table_chunks(
             content=content,
         )
 
+        chunk_metadata = {
+            "is_table": True,
+            "table_ref": table.get("ref", ""),
+            "table_quality_score": (
+                round(quality_report.overall_score, 3) if quality_report else None
+            ),
+            "table_quality_grade": quality_report.grade if quality_report else None,
+            "table_ingest_mode": mode,
+            "table_num_rows": table.get("num_rows", 0),
+            "table_num_cols": table.get("num_cols", 0),
+        }
+
+        # Sprint 129.6c-e: Attach cross-validation metadata if available
+        if cross_validation_meta:
+            chunk_metadata["cross_validation"] = cross_validation_meta
+
         chunk_obj = Chunk(
             chunk_id=chunk_id,
             document_id=document_id,
@@ -193,17 +281,7 @@ def _create_table_chunks(
             section_pages=[table.get("page_no")] if table.get("page_no") else [],
             section_bboxes=[],
             primary_section=caption_text or "[Table]",
-            metadata={
-                "is_table": True,
-                "table_ref": table.get("ref", ""),
-                "table_quality_score": (
-                    round(quality_report.overall_score, 3) if quality_report else None
-                ),
-                "table_quality_grade": quality_report.grade if quality_report else None,
-                "table_ingest_mode": mode,
-                "table_num_rows": table.get("num_rows", 0),
-                "table_num_cols": table.get("num_cols", 0),
-            },
+            metadata=chunk_metadata,
             document_type=document_type,
         )
 
@@ -221,6 +299,7 @@ def _create_table_chunks(
             grade=quality_report.grade if quality_report else None,
             mode=mode,
             page_no=table.get("page_no"),
+            cross_validated=cross_validation_meta is not None,
         )
 
     if created > 0 or rejected > 0:
@@ -1093,16 +1172,18 @@ async def chunking_node(state: IngestionState) -> IngestionState:
             merged_chunks.append(enhanced_chunk)
 
         # Sprint 129.6e: Create dedicated table chunks with quality scoring
+        # Sprint 129.6c-e: Now async for VLM cross-validation support
         parsed_tables = state.get("parsed_tables", [])
         table_chunks_created = 0
         table_chunks_rejected = 0
         if parsed_tables:
-            table_chunks_created, table_chunks_rejected = _create_table_chunks(
+            table_chunks_created, table_chunks_rejected = await _create_table_chunks(
                 parsed_tables=parsed_tables,
                 document_id=state["document_id"],
                 document_type=state.get("document_type", "unknown"),
                 merged_chunks=merged_chunks,
                 start_index=len(adaptive_chunks),
+                document_path=document_path,
             )
 
         state["chunks"] = merged_chunks

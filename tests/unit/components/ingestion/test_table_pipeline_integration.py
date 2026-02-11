@@ -5,6 +5,8 @@ integrated into the chunking pipeline.
 
 Uses Docling format: table_cells with start_row_offset_idx/start_col_offset_idx,
 grid (pre-built 2D array), num_rows, num_cols.
+
+Sprint 129.6c-e: _create_table_chunks is now async for VLM cross-validation support.
 """
 
 import pytest
@@ -124,9 +126,13 @@ class TestBuildCells2D:
 
 
 class TestCreateTableChunks:
-    """Test table chunk creation with quality scoring."""
+    """Test table chunk creation with quality scoring.
 
-    def test_high_quality_table_creates_chunk(self):
+    Sprint 129.6c-e: _create_table_chunks is now async.
+    """
+
+    @pytest.mark.asyncio
+    async def test_high_quality_table_creates_chunk(self):
         merged_chunks = []
         parsed_tables = [
             {
@@ -148,7 +154,7 @@ class TestCreateTableChunks:
             }
         ]
 
-        created, rejected = _create_table_chunks(
+        created, rejected = await _create_table_chunks(
             parsed_tables=parsed_tables,
             document_id="doc_001",
             document_type="pdf",
@@ -174,7 +180,8 @@ class TestCreateTableChunks:
         assert chunk.document_id == "doc_001"
         assert chunk.document_type == "pdf"
 
-    def test_empty_markdown_skipped(self):
+    @pytest.mark.asyncio
+    async def test_empty_markdown_skipped(self):
         merged_chunks = []
         parsed_tables = [
             {
@@ -187,7 +194,7 @@ class TestCreateTableChunks:
             }
         ]
 
-        created, rejected = _create_table_chunks(
+        created, rejected = await _create_table_chunks(
             parsed_tables=parsed_tables,
             document_id="doc_001",
             document_type="pdf",
@@ -199,7 +206,8 @@ class TestCreateTableChunks:
         assert rejected == 0
         assert len(merged_chunks) == 0
 
-    def test_poor_quality_table_rejected(self):
+    @pytest.mark.asyncio
+    async def test_poor_quality_table_rejected(self):
         merged_chunks = []
         # Single cell, 1x1 table — fails min_size and density heuristics
         parsed_tables = [
@@ -213,7 +221,7 @@ class TestCreateTableChunks:
             }
         ]
 
-        created, rejected = _create_table_chunks(
+        created, rejected = await _create_table_chunks(
             parsed_tables=parsed_tables,
             document_id="doc_001",
             document_type="pdf",
@@ -225,7 +233,8 @@ class TestCreateTableChunks:
         assert created == 0
         assert rejected == 1
 
-    def test_multiple_tables_mixed_quality(self):
+    @pytest.mark.asyncio
+    async def test_multiple_tables_mixed_quality(self):
         merged_chunks = []
         parsed_tables = [
             # Good table (3x3 with grid)
@@ -253,7 +262,7 @@ class TestCreateTableChunks:
             },
         ]
 
-        created, rejected = _create_table_chunks(
+        created, rejected = await _create_table_chunks(
             parsed_tables=parsed_tables,
             document_id="doc_001",
             document_type="pdf",
@@ -266,7 +275,8 @@ class TestCreateTableChunks:
         assert len(merged_chunks) == 1
         assert "Good Table" in merged_chunks[0]["chunk"].content
 
-    def test_caption_as_string(self):
+    @pytest.mark.asyncio
+    async def test_caption_as_string(self):
         merged_chunks = []
         parsed_tables = [
             {
@@ -282,7 +292,7 @@ class TestCreateTableChunks:
             }
         ]
 
-        created, _ = _create_table_chunks(
+        created, _ = await _create_table_chunks(
             parsed_tables=parsed_tables,
             document_id="doc_001",
             document_type="pdf",
@@ -293,9 +303,10 @@ class TestCreateTableChunks:
         assert created == 1
         assert "String Caption" in merged_chunks[0]["chunk"].content
 
-    def test_no_parsed_tables(self):
+    @pytest.mark.asyncio
+    async def test_no_parsed_tables(self):
         merged_chunks = []
-        created, rejected = _create_table_chunks(
+        created, rejected = await _create_table_chunks(
             parsed_tables=[],
             document_id="doc_001",
             document_type="pdf",
@@ -305,7 +316,8 @@ class TestCreateTableChunks:
         assert created == 0
         assert rejected == 0
 
-    def test_table_metadata_fields(self):
+    @pytest.mark.asyncio
+    async def test_table_metadata_fields(self):
         merged_chunks = []
         parsed_tables = [
             {
@@ -323,7 +335,7 @@ class TestCreateTableChunks:
             }
         ]
 
-        _create_table_chunks(
+        await _create_table_chunks(
             parsed_tables=parsed_tables,
             document_id="doc_test",
             document_type="docx",
@@ -338,7 +350,8 @@ class TestCreateTableChunks:
         assert meta["table_num_cols"] == 2
         assert meta["table_ingest_mode"] in ["full", "with_warning"]
 
-    def test_chunk_has_image_bboxes_empty(self):
+    @pytest.mark.asyncio
+    async def test_chunk_has_image_bboxes_empty(self):
         """Table chunks should have empty image_bboxes."""
         merged_chunks = []
         parsed_tables = [
@@ -355,7 +368,7 @@ class TestCreateTableChunks:
             }
         ]
 
-        _create_table_chunks(
+        await _create_table_chunks(
             parsed_tables=parsed_tables,
             document_id="doc_001",
             document_type="pdf",

@@ -1157,6 +1157,21 @@ class Settings(BaseSettings):
         description="Cron schedule for temporal purge job",  # 2 AM daily
     )
 
+    # Sprint 129.6c-e: VLM Table Cross-Validation
+    granite_docling_url: str = Field(
+        default="http://localhost:8083",
+        description="Granite-Docling-258M via docling-serve (table cross-validation)",
+    )
+    deepseek_ocr_url: str = Field(
+        default="http://localhost:8002",
+        description="DeepSeek-OCR-2 via vLLM (table cross-validation)",
+    )
+    table_cross_validation_enabled: bool = Field(
+        default=False,
+        description="Enable VLM cross-validation for borderline table quality scores (0.50-0.85). "
+        "Requires table-vlm Docker profile. Zero overhead when disabled.",
+    )
+
     # Web Search Configuration (Sprint 63 Feature 63.9)
     web_search_enabled: bool = Field(
         default=False,

@@ -2171,9 +2171,9 @@ Sprint 117.1 (Domain CRUD) - Foundation
 | 129.5 | Domain Editor UI (Admin) | 5 | 📝 |
 | 129.6a | Table Content Extraction (Docling data.cells/rows parsing) | 2 | ✅ |
 | 129.6b | Table Quality Heuristics (composite scoring, 6 metrics) | 2 | ✅ |
-| 129.6c | Granite-Docling-258M VLM Integration (docling-serve VlmPipeline) | 3 | 📝 |
-| 129.6d | DeepSeek-OCR-2 Cross-Validation Service | 3 | 📝 |
-| 129.6e | Cross-Validation Logic + Pipeline Integration | 3 | 📝 |
+| 129.6c | Granite-Docling-258M VLM Integration (docling-serve VlmPipeline) | 3 | ✅ |
+| 129.6d | DeepSeek-OCR-2 Cross-Validation Service | 3 | ✅ |
+| 129.6e | Cross-Validation Logic + Pipeline Integration | 3 | ✅ |
 | 129.6f | Table Ingestion E2E Benchmark (DP-Bench PDFs) | 2 | ✅ |
 | 129.7 | HyDE Query Classification (auto-enable for abstract queries) | 3 | ✅ |
 | 129.8 | HyDE RAGAS A/B Evaluation | 3 | 📝 |

@@ -1142,9 +1142,13 @@
 **Decision:** Add table content extraction from Docling JSON (using `table_cells`, `grid`, `num_rows`/`num_cols` fields), composite quality scoring (6 weighted metrics: header 15%, density 25%, consistency 20%, cell length 15%, column stability 15%, row uniformity 10%), and dedicated table chunks with metadata propagation to Qdrant (`is_table`, `table_quality_score`, `table_quality_grade`). Tables < 2x2 rejected. Empty prose chunks skipped (table-only PDFs).
 **Rationale:** Tables were previously discarded during chunking despite Docling parsing them. Structured table content contains high-density factual knowledge (e.g., financial data, specifications). Quality gating prevents noisy/malformed table chunks. E2E benchmark: 4/5 DP-Bench PDFs ingested, all EXCELLENT quality (0.946-0.973), 119 entities from table content.
 
+### 2026-02-11 | VLM Cross-Validation for Borderline Table Quality (Sprint 129.6c-e)
+**Decision:** Add optional VLM-based cross-validation for tables with borderline heuristic scores (0.50-0.85). Two VLM services: Granite-Docling-258M (docling-serve, port 8083, <2GB VRAM) and DeepSeek-OCR-2 (vLLM, port 8002, ~8GB VRAM). Sequential calls, 3-source weighted blend (0.40×H + 0.30×G + 0.30×D), agreement boost when VLMs agree (diff < 0.10). Disabled by default (`TABLE_CROSS_VALIDATION_ENABLED=false`). Docker profile `table-vlm` for on-demand deployment.
+**Rationale:** Heuristic scoring alone cannot distinguish edge cases (e.g., sparse but valid financial tables vs. OCR artifacts). VLM cross-validation adds a second opinion via cell-by-cell agreement (dimension 0.3 + Jaccard 0.5 + header 0.2). Feature-toggled for zero overhead when disabled. Graceful degradation: 2 VLMs → 1 VLM → heuristic-only.
+
 ---
 
 **Last Updated:** 2026-02-11 (Sprint 129 🔄)
-**Total Decisions Documented:** 188 (+5 from Sprint 129)
-**Current Sprint:** Sprint 129 🔄 IN PROGRESS (8/10 features, ~21 SP delivered)
-**Next Sprint:** Sprint 129 continued (RAGAS Full Ingestion + Domain Editor UI + VLM Cross-Validation)
+**Total Decisions Documented:** 189 (+6 from Sprint 129)
+**Current Sprint:** Sprint 129 🔄 IN PROGRESS (11/13 features, ~30 SP delivered)
+**Next Sprint:** Sprint 129 continued (RAGAS Full Ingestion + Domain Editor UI)
