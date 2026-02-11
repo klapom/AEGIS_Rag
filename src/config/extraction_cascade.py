@@ -86,36 +86,22 @@ class CascadeRankConfig:
 _DEFAULT_EXTRACTION_MODEL = os.environ.get("EXTRACTION_LLM_MODEL", "nemotron-3-nano:128k")
 
 DEFAULT_CASCADE: list[CascadeRankConfig] = [
-    # Rank 1: Nemotron-3-Nano (LLM-Only) - Fast, local, 300s timeout
+    # Rank 1: Nemotron-3-Nano via vLLM (LLM-Only) - Fast, local, 600s timeout
     # Sprint 124: Use environment variable for model selection
+    # Sprint 129: Rank 2/3 (Ollama gpt-oss:20b, SpaCy hybrid) REMOVED.
+    #   Rationale: Ollama fallback wastes ~20GB GPU memory and triggers
+    #   cudaErrorIllegalInstruction when both engines compete for GPU.
+    #   vLLM tenacity retry (3 attempts, exp backoff 5-30s) handles transient
+    #   failures including auto-restart recovery. See Sprint 128.7 benchmark:
+    #   0 retries needed in 199 consecutive calls at 0.45 gpu-memory-utilization.
     CascadeRankConfig(
         rank=1,
         model=_DEFAULT_EXTRACTION_MODEL,
         method=ExtractionMethod.LLM_ONLY,
-        entity_timeout_s=300,
-        relation_timeout_s=300,
+        entity_timeout_s=600,
+        relation_timeout_s=600,
         max_retries=3,
-        retry_backoff_multiplier=1,  # 1s, 2s, 4s backoff
-    ),
-    # Rank 2: GPT-OSS:20b (LLM-Only) - Larger model, 300s timeout
-    CascadeRankConfig(
-        rank=2,
-        model="gpt-oss:20b",
-        method=ExtractionMethod.LLM_ONLY,
-        entity_timeout_s=300,
-        relation_timeout_s=300,
-        max_retries=3,
-        retry_backoff_multiplier=1,
-    ),
-    # Rank 3: Hybrid SpaCy NER + LLM - Maximum recall, no entity timeout, 600s relation timeout
-    CascadeRankConfig(
-        rank=3,
-        model="gpt-oss:20b",  # Used only for relation extraction
-        method=ExtractionMethod.HYBRID_NER_LLM,
-        entity_timeout_s=9999,  # SpaCy NER is synchronous, no timeout needed
-        relation_timeout_s=600,  # Double timeout for relation extraction
-        max_retries=3,
-        retry_backoff_multiplier=1,
+        retry_backoff_multiplier=2,  # 2s, 4s, 8s backoff — enough for vLLM auto-restart
     ),
 ]
 

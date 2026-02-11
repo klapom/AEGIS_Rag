@@ -1,0 +1,124 @@
+{
+  "timestamp": "2026-02-11T21:30:00",
+  "notes": "Phase A ran with old cascade (Rank 2/3 Ollama) + Redis cache. Phase B ran with Rank 1 only + clean cache.",
+  "phase_a_vlm_on": [
+    {
+      "file": "VM3.pdf",
+      "status": "success",
+      "upload_time_s": 861.2,
+      "chunks_created": 6,
+      "neo4j_entities": 95,
+      "neo4j_relationships": 87,
+      "points_indexed": 6,
+      "duration_seconds": 861.170148,
+      "file_type": "pdf",
+      "description": "VM3 - 13pg complex tables"
+    },
+    {
+      "file": "01030000000045.pdf",
+      "status": "success",
+      "upload_time_s": 126.0,
+      "chunks_created": 2,
+      "neo4j_entities": 22,
+      "neo4j_relationships": 9,
+      "points_indexed": 2,
+      "duration_seconds": 125.953972,
+      "file_type": "pdf",
+      "description": "DP-Bench 45 - tables"
+    },
+    {
+      "file": "01030000000046.pdf",
+      "status": "success",
+      "upload_time_s": 371.2,
+      "chunks_created": 2,
+      "neo4j_entities": 32,
+      "neo4j_relationships": 74,
+      "points_indexed": 2,
+      "duration_seconds": 371.228434,
+      "file_type": "pdf",
+      "description": "DP-Bench 46 - tables"
+    },
+    {
+      "file": "ragas_phase1_0003_hotpot_5a82171f.txt",
+      "status": "success",
+      "upload_time_s": 292.9,
+      "chunks_created": 1,
+      "neo4j_entities": 16,
+      "neo4j_relationships": 14,
+      "points_indexed": 1,
+      "duration_seconds": 292.896224,
+      "file_type": "txt",
+      "description": "RAGAS hotpot (text)"
+    },
+    {
+      "file": "ragas_phase1_0012_ragbench_techqaTR.txt",
+      "status": "timeout",
+      "upload_time_s": 1800.1,
+      "file_type": "txt",
+      "description": "RAGAS techQA (text) - completed in background: 103E/920R/3931s"
+    }
+  ],
+  "phase_b_vlm_off": [
+    {
+      "file": "VM3.pdf",
+      "status": "success",
+      "upload_time_s": 1206.1,
+      "chunks_created": 6,
+      "neo4j_entities": 121,
+      "neo4j_relationships": 209,
+      "points_indexed": 6,
+      "duration_seconds": 1206.022103,
+      "file_type": "pdf",
+      "description": "VM3 - 13pg complex tables"
+    },
+    {
+      "file": "01030000000045.pdf",
+      "status": "success",
+      "upload_time_s": 110.3,
+      "chunks_created": 2,
+      "neo4j_entities": 15,
+      "neo4j_relationships": 11,
+      "points_indexed": 2,
+      "duration_seconds": 110.24828,
+      "file_type": "pdf",
+      "description": "DP-Bench 45 - tables"
+    },
+    {
+      "file": "01030000000046.pdf",
+      "status": "success",
+      "upload_time_s": 165.1,
+      "chunks_created": 2,
+      "neo4j_entities": 0,
+      "neo4j_relationships": 0,
+      "points_indexed": 2,
+      "duration_seconds": 165.095982,
+      "file_type": "pdf",
+      "description": "DP-Bench 46 - tables (extraction anomaly: 0 entities)"
+    },
+    {
+      "file": "ragas_phase1_0003_hotpot_5a82171f.txt",
+      "status": "success",
+      "upload_time_s": 55.5,
+      "chunks_created": 1,
+      "neo4j_entities": 0,
+      "neo4j_relationships": 0,
+      "points_indexed": 1,
+      "duration_seconds": 55.470882,
+      "file_type": "txt",
+      "description": "RAGAS hotpot (text) (extraction anomaly: 0 entities)"
+    }
+  ],
+  "table_quality_comparison": {
+    "vm3_tables": {
+      "table_0_3x6": {"vlm_on": {"score": 0.832, "grade": "GOOD", "cross_validated": true, "heuristic": 0.903, "vlm_agreement": 0.761}, "vlm_off": {"score": 0.903, "grade": "EXCELLENT", "cross_validated": false}},
+      "table_1_8x3": {"vlm_on": {"score": 0.805, "grade": "GOOD", "cross_validated": true, "heuristic": 0.918, "vlm_agreement": 0.692}, "vlm_off": {"score": 0.918, "grade": "EXCELLENT", "cross_validated": false}},
+      "table_2_4x3": {"vlm_on": {"score": 0.659, "grade": "FAIR", "cross_validated": true, "heuristic": 0.930, "vlm_agreement": 0.388}, "vlm_off": {"score": 0.930, "grade": "EXCELLENT", "cross_validated": false}},
+      "table_3_9x2": {"vlm_on": {"score": 0.523, "grade": "FAIR", "cross_validated": true, "heuristic": 0.815, "vlm_agreement": 0.230}, "vlm_off": {"score": 0.523, "grade": "FAIR", "cross_validated": true, "note": "on-demand VLM call despite toggle OFF"}}
+    },
+    "dp_bench_tables": {
+      "dp45_table_0": {"vlm_on": 0.978, "vlm_off": 0.956},
+      "dp46_table_0": {"vlm_on": 0.916, "vlm_off": 0.946}
+    }
+  },
+  "conclusion": "VLM cross-validation consistently DOWNGRADED table quality for VM3.pdf. Nemotron VL 8B agreement scores (0.23-0.76) indicate the model is too weak for reliable table validation. Recommendation: DISABLE VLM cross-validation, keep Docling heuristic scoring only."
+}

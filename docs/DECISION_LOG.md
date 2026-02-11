@@ -1161,9 +1161,17 @@
 **Decision:** Add parallel VLM page processing mode: when enabled via frontend toggle (AdminLLMConfigPage), render ALL PDF pages as PNG via PyMuPDF and send to Nemotron VL v1 8B in parallel (asyncio.gather + asyncio.Semaphore for bounded concurrency). Pre-computed VLM tables stored in `IngestionState.vlm_page_results` and passed to `TableCrossValidator` — avoids redundant per-table VLM calls. Toggle persisted in Redis (`aegis:vlm_parallel_pages_enabled`). Text-only formats (.txt, .md, .csv, etc.) skip VLM entirely. Feature disabled by default.
 **Rationale:** On-demand VLM calls (one per borderline table) add 12-15s latency per table. Pre-computing all pages in parallel during Docling parsing amortizes VLM overhead across the document: N pages in ~1 VLM call time instead of N sequential calls. Redis persistence follows ADR-062 engine mode pattern. Frontend toggle enables operators to activate VLM globally without config file changes.
 
+### 2026-02-11 | Cascade Rank 2/3 Removal — vLLM-Only Extraction (Sprint 129)
+**Decision:** Remove Ollama-based cascade Rank 2 (`gpt-oss:20b`) and Rank 3 (SpaCy hybrid). Extraction uses only Rank 1 (vLLM Nemotron-3-Nano) with 600s timeout and exponential backoff retry (3 attempts, 2-8s). `extraction_cascade.py` `DEFAULT_CASCADE` reduced from 3 to 1 entry.
+**Rationale:** Ollama fallback wastes ~20GB GPU memory and causes `cudaErrorIllegalInstruction` when both engines compete for GPU during concurrent extractions. vLLM tenacity retry already handles transient failures (0 retries needed in 199 consecutive calls at 0.45 gpu-memory-utilization). A/B benchmark during VLM evaluation confirmed: GPU contention between extraction vLLM (64GB) + VLM table (12GB) + Ollama (20GB) saturates 128GB and crashes.
+
+### 2026-02-11 | VLM Cross-Validation Evaluation — DISABLE Recommendation (Sprint 129.6h)
+**Decision:** VLM cross-validation does NOT improve table quality. Benchmark with 4 documents (VM3.pdf 13pg, DP-Bench 45/46, RAGAS hotpot) shows VLM consistently **downgrades** table scores: VM3 tables went from 0.90-0.93 EXCELLENT (heuristic) to 0.52-0.83 GOOD/FAIR (VLM-adjusted). Nemotron VL 8B agreement scores 0.23-0.76 indicate the model is too weak for reliable table validation. Keep `TABLE_CROSS_VALIDATION_ENABLED=false` (default). VLM table container stopped.
+**Rationale:** The VLM general vision model disagrees with Docling's specialized OCR pipeline, introducing noise rather than correcting errors. VLM container adds 12GB GPU memory pressure, reducing headroom and increasing crash risk under concurrent load. Docling heuristic scoring (0.90+ for well-structured tables) is already accurate.
+
 ---
 
 **Last Updated:** 2026-02-11 (Sprint 129 🔄)
-**Total Decisions Documented:** 193 (+10 from Sprint 129)
+**Total Decisions Documented:** 195 (+12 from Sprint 129)
 **Current Sprint:** Sprint 129 🔄 IN PROGRESS (10/11 features complete, ~27 SP delivered)
 **Next Sprint:** Sprint 129 continued (RAGAS Full Ingestion + Domain Editor UI)

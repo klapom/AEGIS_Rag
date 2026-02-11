@@ -700,6 +700,8 @@ services:
       - TABLE_CROSS_VALIDATION_ENABLED=${TABLE_CROSS_VALIDATION_ENABLED:-false}
       - GRANITE_DOCLING_URL=${GRANITE_DOCLING_URL:-http://docling-vlm:5001}
       - DEEPSEEK_OCR_URL=${DEEPSEEK_OCR_URL:-http://deepseek-ocr:8002}
+      # Sprint 129.6g: Nemotron VL v1 8B for parallel page table extraction
+      - NEMOTRON_VLM_URL=${NEMOTRON_VLM_URL:-http://aegis-vlm-table:8002}
       # Sprint 124: Thinking mode control (default: false)
       - AEGIS_LLM_THINKING=${AEGIS_LLM_THINKING:-false}
       - VLM_BACKEND=ollama

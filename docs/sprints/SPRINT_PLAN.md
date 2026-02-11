@@ -2155,7 +2155,7 @@ Sprint 117.1 (Domain CRUD) - Foundation
 
 ## Sprint 129 🔄 **In Progress** (started 2026-02-10)
 
-**Status:** 🔄 IN PROGRESS (10/11 features complete, ~27 SP delivered)
+**Status:** 🔄 IN PROGRESS (11/12 features complete, ~29 SP delivered)
 **Focus:** Extraction Resilience + RAGAS Full Ingestion + Domain Editor UI + Table Ingestion
 **Story Points:** ~42 SP (estimated)
 **Predecessor:** Sprint 128 ✅
@@ -2176,6 +2176,7 @@ Sprint 117.1 (Domain CRUD) - Foundation
 | 129.6e | Cross-Validation Logic + Pipeline Integration | 3 | ✅ |
 | 129.6f | Table Ingestion E2E Benchmark (DP-Bench PDFs) | 2 | ✅ |
 | 129.6g | VLM Parallel Page Processing (all pages, frontend toggle, Redis persist) | 3 | ✅ |
+| 129.6h | VLM A/B Evaluation: DISABLE cross-validation, Cascade Rank 2/3 removed | 2 | ✅ |
 | 129.7 | HyDE Query Classification (auto-enable for abstract queries) | 3 | ✅ |
 | 129.8 | HyDE RAGAS A/B Evaluation | 3 | 📝 |
 | 129.9 | TD-102: Relation Type Validation (partial) | 5 | ✅ |
@@ -2220,5 +2221,18 @@ Previously, Docling parsed table structures but they were discarded during chunk
 *Doc 47 = table-only PDF with no prose text → empty Chunk.content (fixed with empty chunk guard, needs rebuild + retest)
 
 **Aggregate:** 4/5 success, 119 entities (12 types), 283 relations (18 types), 50.2% specificity, 4 table vectors in Qdrant (all EXCELLENT grade, scores 0.946-0.973)
+
+### Sprint 129.6h VLM Cross-Validation Evaluation (2026-02-11)
+
+**A/B Benchmark:** 4 docs (3 PDFs + 1 TXT), Nemotron VL 8B FP4 (port 8002, ~12GB GPU)
+
+**Result: DISABLE VLM cross-validation.** Nemotron VL 8B agreement scores (0.23-0.76) consistently DOWNGRADE table quality. Docling heuristic scoring (0.90+ EXCELLENT) is already accurate.
+
+**Key Decisions:**
+1. **Cascade Rank 2/3 Removed** — Ollama fallback (gpt-oss:20b) wastes ~20GB GPU, triggers `cudaErrorIllegalInstruction`. vLLM tenacity retry (3 attempts, exp backoff) is sufficient.
+2. **VLM table container stopped** — Reclaim 12GB GPU headroom.
+3. **`TABLE_CROSS_VALIDATION_ENABLED=false`** (default) — Keep Docling heuristic scoring only.
+
+**See:** [SPRINT_129_VLM_EVALUATION.md](SPRINT_129_VLM_EVALUATION.md)
 
 **Detailed plan:** See [SPRINT_129_PLAN.md](SPRINT_129_PLAN.md)
