@@ -2155,7 +2155,7 @@ Sprint 117.1 (Domain CRUD) - Foundation
 
 ## Sprint 129 🔄 **In Progress** (started 2026-02-10)
 
-**Status:** 🔄 IN PROGRESS (8/10 features complete, ~21 SP delivered)
+**Status:** 🔄 IN PROGRESS (10/11 features complete, ~27 SP delivered)
 **Focus:** Extraction Resilience + RAGAS Full Ingestion + Domain Editor UI + Table Ingestion
 **Story Points:** ~42 SP (estimated)
 **Predecessor:** Sprint 128 ✅
@@ -2173,15 +2173,16 @@ Sprint 117.1 (Domain CRUD) - Foundation
 | 129.6b | Table Quality Heuristics (composite scoring, 6 metrics) | 2 | ✅ |
 | 129.6c | VLM Model Evaluation (5 candidates, 45-iteration benchmark) | 3 | ✅ |
 | 129.6d | VLM Selection: Nemotron VL v1 8B FP4 (ADR-063) | 3 | ✅ |
-| 129.6e | Cross-Validation Logic + Pipeline Integration | 3 | 📝 |
+| 129.6e | Cross-Validation Logic + Pipeline Integration | 3 | ✅ |
 | 129.6f | Table Ingestion E2E Benchmark (DP-Bench PDFs) | 2 | ✅ |
+| 129.6g | VLM Parallel Page Processing (all pages, frontend toggle, Redis persist) | 3 | ✅ |
 | 129.7 | HyDE Query Classification (auto-enable for abstract queries) | 3 | ✅ |
 | 129.8 | HyDE RAGAS A/B Evaluation | 3 | 📝 |
 | 129.9 | TD-102: Relation Type Validation (partial) | 5 | ✅ |
 | 129.10 | MAX_RELATIONSHIPS Cap removed | 2 | ✅ |
 
 **Critical Path:** 129.1 → 129.2 → 129.3 → 129.4 → 129.8
-**Table Path:** 129.6a+129.6b (parallel) → 129.6c+129.6d (parallel) → 129.6e → 129.6f
+**Table Path:** 129.6a+129.6b (parallel) → 129.6c+129.6d (parallel) → 129.6e → 129.6f → 129.6g
 
 **Key Motivations:**
 - Sprint 128.3a Benchmark revealed 0-relation windows → bisection fallback (129.1)
@@ -2189,6 +2190,7 @@ Sprint 117.1 (Domain CRUD) - Foundation
 - 498-doc RAGAS ingestion carried from Sprint 128.3 → now feasible with stable vLLM (129.3)
 - Tables completely discarded in current pipeline → full extraction + quality-gated ingestion (129.6a-f)
 - VLM cross-validation via Nemotron VL v1 8B (ADR-063) — 45-iteration benchmark eliminated Granite-258M, DeepSeek-OCR-2, and V2 12B (129.6c-e)
+- VLM parallel page processing: all pages rendered + sent to VLM via asyncio.gather + Semaphore, results pre-cached for cross-validation. Frontend toggle (AdminLLMConfigPage), Redis persistence, text-only format exclusion (129.6g)
 
 ### Sprint 129.6 Table Ingestion Results (2026-02-11)
 

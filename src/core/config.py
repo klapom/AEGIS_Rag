@@ -1157,19 +1157,30 @@ class Settings(BaseSettings):
         description="Cron schedule for temporal purge job",  # 2 AM daily
     )
 
-    # Sprint 129.6c-e: VLM Table Cross-Validation
-    granite_docling_url: str = Field(
-        default="http://localhost:8083",
-        description="Granite-Docling-258M via docling-serve (table cross-validation)",
-    )
-    deepseek_ocr_url: str = Field(
+    # Sprint 129.6c-e: VLM Table Cross-Validation (ADR-063)
+    nemotron_vlm_url: str = Field(
         default="http://localhost:8002",
-        description="DeepSeek-OCR-2 via vLLM (table cross-validation)",
+        description="Nemotron VL v1 8B FP4-QAD via vLLM (port 8002, table cross-validation)",
     )
     table_cross_validation_enabled: bool = Field(
         default=False,
         description="Enable VLM cross-validation for borderline table quality scores (0.50-0.85). "
-        "Requires table-vlm Docker profile. Zero overhead when disabled.",
+        "Requires aegis-vlm-table container. Zero overhead when disabled.",
+    )
+    vlm_parallel_pages_enabled: bool = Field(
+        default=False,
+        description="Send ALL document pages to VLM for table extraction in parallel. "
+        "Provides maximum table quality via dual-source validation. "
+        "Persisted in Redis, toggleable via API/frontend. Requires aegis-vlm-table container.",
+    )
+    # Legacy: kept for backward compatibility but unused since ADR-063
+    granite_docling_url: str = Field(
+        default="http://localhost:8083",
+        description="[Deprecated] Granite-Docling-258M URL (replaced by Nemotron VL v1)",
+    )
+    deepseek_ocr_url: str = Field(
+        default="http://localhost:8002",
+        description="[Deprecated] DeepSeek-OCR-2 URL (replaced by Nemotron VL v1)",
     )
 
     # Web Search Configuration (Sprint 63 Feature 63.9)

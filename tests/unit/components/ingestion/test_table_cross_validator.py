@@ -2,6 +2,7 @@
 
 Sprint 129.6d: Tests cover borderline detection, score blending, cell agreement,
 VLM unavailability fallback, and timeout handling.
+Sprint 129.6g (ADR-063): Updated for single Nemotron VLM + precomputed support.
 """
 
 from unittest.mock import AsyncMock, patch
@@ -111,54 +112,47 @@ class TestComputeCellAgreement:
 
 
 # ============================================================================
-# _blend_scores
+# _blend_scores (ADR-063: single VLM)
 # ============================================================================
 
 
 class TestBlendScores:
-    """Tests for score blending algorithm."""
+    """Tests for score blending algorithm (single VLM, ADR-063)."""
 
-    def test_no_vlms(self):
+    def test_no_vlm(self):
         """No VLM data → return heuristic unchanged."""
-        assert _blend_scores(0.65, None, None) == 0.65
+        assert _blend_scores(0.65, None) == 0.65
 
-    def test_one_vlm_granite(self):
-        """Single VLM → 50/50 blend."""
-        result = _blend_scores(0.60, 0.80, None)
+    def test_vlm_agreement_blend(self):
+        """VLM available → 50/50 blend."""
+        result = _blend_scores(0.60, 0.80)
         expected = 0.50 * 0.60 + 0.50 * 0.80
         assert result == pytest.approx(expected)
 
-    def test_one_vlm_deepseek(self):
-        """Single VLM (DeepSeek only) → 50/50 blend."""
-        result = _blend_scores(0.60, None, 0.90)
-        expected = 0.50 * 0.60 + 0.50 * 0.90
-        assert result == pytest.approx(expected)
+    def test_vlm_perfect_agreement(self):
+        """VLM agrees perfectly → score unchanged."""
+        result = _blend_scores(0.70, 0.70)
+        assert result == pytest.approx(0.70)
 
-    def test_both_vlms_base_weights(self):
-        """Both VLMs, NO agreement boost (diff >= 0.10)."""
-        result = _blend_scores(0.60, 0.90, 0.70)
-        # diff = |0.90 - 0.70| = 0.20 >= 0.10 → no boost
-        expected = 0.40 * 0.60 + 0.30 * 0.90 + 0.30 * 0.70
-        assert result == pytest.approx(expected)
+    def test_vlm_low_agreement_lowers_score(self):
+        """VLM disagrees → score pulled down."""
+        result = _blend_scores(0.80, 0.20)
+        assert result == pytest.approx(0.50)
 
-    def test_both_vlms_agreement_boost(self):
-        """Both VLMs agree (diff < 0.10) → agreement boost."""
-        result = _blend_scores(0.60, 0.82, 0.85)
-        # diff = |0.82 - 0.85| = 0.03 < 0.10 → boost
-        # w_h = 0.30, w_g = 0.35, w_d = 0.35
-        expected = 0.30 * 0.60 + 0.35 * 0.82 + 0.35 * 0.85
-        assert result == pytest.approx(expected)
+    def test_vlm_high_agreement_boosts_score(self):
+        """VLM high agreement boosts borderline heuristic."""
+        result = _blend_scores(0.55, 0.95)
+        assert result == pytest.approx(0.75)
 
     def test_blend_preserves_poor_consensus(self):
-        """If all sources agree table is poor, result stays poor."""
-        result = _blend_scores(0.30, 0.25, 0.28)
-        assert result < 0.35  # All sources say poor
+        """If both sources agree table is poor, result stays poor."""
+        result = _blend_scores(0.30, 0.25)
+        assert result < 0.35
 
-    def test_vlms_can_boost_borderline(self):
-        """VLMs agreeing table is good can boost borderline heuristic."""
-        result = _blend_scores(0.55, 0.90, 0.88)
-        # Heuristic says borderline, VLMs say excellent
-        assert result > 0.70  # Should be boosted above GOOD threshold
+    def test_vlm_can_boost_borderline(self):
+        """VLM agreeing table is good can boost borderline heuristic."""
+        result = _blend_scores(0.55, 0.90)
+        assert result > 0.70
 
 
 # ============================================================================
@@ -190,19 +184,18 @@ class TestFindBestMatchingTable:
 
 
 # ============================================================================
-# TableCrossValidator.cross_validate (integration with mocked VLMs)
+# TableCrossValidator.cross_validate (ADR-063: single VLM)
 # ============================================================================
 
 
 class TestCrossValidateIntegration:
-    """Integration tests for cross_validate() with mocked VLM clients."""
+    """Integration tests for cross_validate() with mocked VLM client."""
 
     @pytest.mark.asyncio
-    async def test_both_vlms_unavailable(self):
-        """When both VLMs are down, return heuristic score unchanged."""
+    async def test_vlm_unavailable(self):
+        """When VLM is down, return heuristic score unchanged."""
         cv = TableCrossValidator()
-        cv._granite_available = False
-        cv._deepseek_available = False
+        cv._vlm_available = False
 
         result = await cv.cross_validate(
             docling_cells_2d=[["A", "B"], ["1", "2"]],
@@ -212,18 +205,15 @@ class TestCrossValidateIntegration:
 
         assert result.adjusted_score == 0.65
         assert result.sources_used == ["heuristic"]
-        assert result.granite_agreement is None
-        assert result.deepseek_agreement is None
+        assert result.vlm_agreement is None
 
     @pytest.mark.asyncio
-    async def test_granite_only(self):
-        """When only Granite is available, use 2-source blend."""
+    async def test_on_demand_vlm(self):
+        """On-demand mode: VLM available → 2-source blend."""
         cv = TableCrossValidator()
-        cv._granite_available = True
-        cv._deepseek_available = False
+        cv._vlm_available = True
 
-        # Mock Granite to return matching table
-        cv._granite.extract_tables_from_page = AsyncMock(return_value=[[["A", "B"], ["1", "2"]]])
+        cv._vlm.extract_tables_from_page = AsyncMock(return_value=[[["A", "B"], ["1", "2"]]])
 
         result = await cv.cross_validate(
             docling_cells_2d=[["A", "B"], ["1", "2"]],
@@ -231,20 +221,18 @@ class TestCrossValidateIntegration:
             heuristic_score=0.65,
         )
 
-        assert "granite" in result.sources_used
-        assert "deepseek" not in result.sources_used
-        assert result.granite_agreement is not None
-        # 2-source blend: 0.50 * H + 0.50 * G
-        assert result.adjusted_score != 0.65  # Should be different from pure heuristic
+        assert "nemotron_vlm" in result.sources_used
+        assert result.vlm_agreement is not None
+        assert result.used_precomputed is False
+        assert result.adjusted_score != 0.65
 
     @pytest.mark.asyncio
-    async def test_granite_returns_no_tables(self):
-        """Granite finds no tables → error logged, heuristic used."""
+    async def test_on_demand_vlm_no_tables(self):
+        """VLM finds no tables → error logged, heuristic used."""
         cv = TableCrossValidator()
-        cv._granite_available = True
-        cv._deepseek_available = False
+        cv._vlm_available = True
 
-        cv._granite.extract_tables_from_page = AsyncMock(return_value=[])
+        cv._vlm.extract_tables_from_page = AsyncMock(return_value=[])
 
         result = await cv.cross_validate(
             docling_cells_2d=[["A", "B"], ["1", "2"]],
@@ -253,40 +241,50 @@ class TestCrossValidateIntegration:
         )
 
         assert result.adjusted_score == 0.65
-        assert "granite_no_tables_found" in result.errors
+        assert "vlm_no_tables_found" in result.errors
 
     @pytest.mark.asyncio
-    async def test_both_vlms_available(self):
-        """Both VLMs available → 3-source blend."""
+    async def test_precomputed_vlm_tables(self):
+        """Pre-computed mode: uses parallel page processor results."""
         cv = TableCrossValidator()
-        cv._granite_available = True
-        cv._deepseek_available = True
+        # VLM availability doesn't matter for precomputed
 
-        matching_table = [["A", "B"], ["1", "2"]]
-        cv._granite.extract_tables_from_page = AsyncMock(return_value=[matching_table])
-        cv._deepseek.extract_tables_from_page = AsyncMock(return_value=[matching_table])
+        precomputed = [[["A", "B"], ["1", "2"]]]
 
         result = await cv.cross_validate(
             docling_cells_2d=[["A", "B"], ["1", "2"]],
-            page_image_bytes=b"fake_png",
             heuristic_score=0.65,
+            precomputed_vlm_tables=precomputed,
         )
 
-        assert "granite" in result.sources_used
-        assert "deepseek" in result.sources_used
-        assert result.granite_agreement is not None
-        assert result.deepseek_agreement is not None
-        assert result.validation_time_ms >= 0  # Mocked calls may complete in 0.0ms
+        assert result.used_precomputed is True
+        assert "nemotron_vlm" in result.sources_used
+        assert result.vlm_agreement is not None
+        # Identical tables → high agreement → adjusted score different from heuristic
+        assert result.adjusted_score != 0.65
+
+    @pytest.mark.asyncio
+    async def test_precomputed_empty_tables(self):
+        """Pre-computed but VLM found no tables → error, heuristic only."""
+        cv = TableCrossValidator()
+
+        result = await cv.cross_validate(
+            docling_cells_2d=[["A", "B"], ["1", "2"]],
+            heuristic_score=0.65,
+            precomputed_vlm_tables=[],  # Empty list = VLM ran but found nothing
+        )
+
+        assert result.used_precomputed is True
+        assert result.adjusted_score == 0.65
+        assert "vlm_no_tables_found" in result.errors
 
     @pytest.mark.asyncio
     async def test_vlm_exception_graceful(self):
-        """VLM raising exception → skip silently, use remaining sources."""
+        """VLM raising exception → skip silently, use heuristic only."""
         cv = TableCrossValidator()
-        cv._granite_available = True
-        cv._deepseek_available = True
+        cv._vlm_available = True
 
-        cv._granite.extract_tables_from_page = AsyncMock(side_effect=RuntimeError("GPU OOM"))
-        cv._deepseek.extract_tables_from_page = AsyncMock(return_value=[[["A", "B"], ["1", "2"]]])
+        cv._vlm.extract_tables_from_page = AsyncMock(side_effect=RuntimeError("GPU OOM"))
 
         result = await cv.cross_validate(
             docling_cells_2d=[["A", "B"], ["1", "2"]],
@@ -294,10 +292,39 @@ class TestCrossValidateIntegration:
             heuristic_score=0.65,
         )
 
-        # Granite failed, DeepSeek succeeded
-        assert "granite" not in result.sources_used
-        assert "deepseek" in result.sources_used
-        assert any("granite_error" in e for e in result.errors)
+        assert result.adjusted_score == 0.65
+        assert any("vlm_error" in e for e in result.errors)
+
+    @pytest.mark.asyncio
+    async def test_no_image_no_precomputed(self):
+        """Neither page image nor precomputed → heuristic only."""
+        cv = TableCrossValidator()
+
+        result = await cv.cross_validate(
+            docling_cells_2d=[["A", "B"], ["1", "2"]],
+            heuristic_score=0.70,
+        )
+
+        assert result.adjusted_score == 0.70
+        assert result.sources_used == ["heuristic"]
+
+    @pytest.mark.asyncio
+    async def test_precomputed_no_matching_table(self):
+        """Pre-computed tables don't match Docling dimensions → error."""
+        cv = TableCrossValidator()
+
+        # VLM found a very different-shaped table
+        precomputed = [[["X"]]]  # 1x1 table
+
+        result = await cv.cross_validate(
+            docling_cells_2d=[["A", "B", "C"], ["1", "2", "3"], ["4", "5", "6"]],
+            heuristic_score=0.65,
+            precomputed_vlm_tables=precomputed,
+        )
+
+        # The best-matching table will still be found (it's the only one)
+        # but agreement will be low
+        assert result.used_precomputed is True
 
 
 # ============================================================================
@@ -315,8 +342,20 @@ class TestCrossValidationResult:
         )
         assert result.adjusted_score == 0.75
         assert result.original_heuristic_score == 0.65
-        assert result.granite_agreement is None
-        assert result.deepseek_agreement is None
+        assert result.vlm_agreement is None
         assert result.sources_used == []
         assert result.errors == []
         assert result.validation_time_ms == 0.0
+        assert result.used_precomputed is False
+
+    def test_with_vlm_agreement(self):
+        result = CrossValidationResult(
+            adjusted_score=0.80,
+            original_heuristic_score=0.65,
+            vlm_agreement=0.90,
+            sources_used=["heuristic", "nemotron_vlm"],
+            used_precomputed=True,
+        )
+        assert result.vlm_agreement == 0.90
+        assert result.used_precomputed is True
+        assert len(result.sources_used) == 2

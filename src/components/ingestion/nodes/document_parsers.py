@@ -29,6 +29,126 @@ from src.core.exceptions import IngestionError
 
 logger = structlog.get_logger(__name__)
 
+# Text-only formats that don't contain images/tables — skip VLM processing
+_TEXT_ONLY_FORMATS = {".txt", ".md", ".rst", ".adoc", ".org", ".csv", ".json", ".xml"}
+
+
+async def _run_vlm_parallel_pages(
+    state: IngestionState,
+    doc_path: Path,
+    page_dimensions: dict,
+) -> None:
+    """Run VLM parallel page processing if enabled and document is non-text.
+
+    Sprint 129.6g (ADR-063): Renders all pages as PNG, sends to Nemotron VL v1
+    via asyncio.gather(), and stores results in state["vlm_page_results"].
+
+    This runs AFTER Docling parsing completes (Docling is batch-only).
+    """
+    import redis.asyncio as aioredis
+
+    from src.core.config import settings
+
+    # Check if feature is enabled (Redis first, then config fallback)
+    enabled = settings.vlm_parallel_pages_enabled
+    try:
+        redis_client = aioredis.from_url(
+            f"redis://{settings.redis_host}:{settings.redis_port}/0",
+            decode_responses=True,
+        )
+        stored = await redis_client.get("aegis:vlm_parallel_pages_enabled")
+        if stored is not None:
+            enabled = stored.lower() == "true"
+        await redis_client.close()
+    except Exception:
+        logger.debug("Redis unavailable for VLM toggle check, using config setting")
+
+    if not enabled:
+        return
+
+    # Skip text-only formats (no tables/images to extract)
+    file_ext = doc_path.suffix.lower()
+    if file_ext in _TEXT_ONLY_FORMATS:
+        logger.info(
+            "vlm_parallel_pages_skipped",
+            document_id=state["document_id"],
+            reason="text_only_format",
+            format=file_ext,
+        )
+        return
+
+    # Only process PDFs for page rendering (other formats need different approach)
+    if file_ext != ".pdf":
+        logger.info(
+            "vlm_parallel_pages_skipped",
+            document_id=state["document_id"],
+            reason="non_pdf_format",
+            format=file_ext,
+        )
+        return
+
+    if not page_dimensions:
+        logger.info(
+            "vlm_parallel_pages_skipped",
+            document_id=state["document_id"],
+            reason="no_pages",
+        )
+        return
+
+    logger.info(
+        "vlm_parallel_pages_starting",
+        document_id=state["document_id"],
+        num_pages=len(page_dimensions),
+    )
+
+    try:
+        from src.components.ingestion.page_image_renderer import render_all_pages
+        from src.components.ingestion.vlm_page_processor import VLMPageProcessor
+
+        # Render all pages as PNG
+        page_images = render_all_pages(str(doc_path))
+        if not page_images:
+            logger.warning(
+                "vlm_parallel_pages_no_images",
+                document_id=state["document_id"],
+            )
+            return
+
+        # Process all pages through VLM
+        processor = VLMPageProcessor(vlm_url=settings.nemotron_vlm_url)
+        result = await processor.process_all_pages(page_images)
+
+        if result.vlm_available and result.page_results:
+            # Store VLM tables per page in state
+            vlm_page_results: dict[int, list] = {}
+            for page_no, page_result in result.page_results.items():
+                if page_result.tables:
+                    vlm_page_results[page_no] = page_result.tables
+
+            state["vlm_page_results"] = vlm_page_results
+
+            logger.info(
+                "vlm_parallel_pages_complete",
+                document_id=state["document_id"],
+                total_pages=result.total_pages,
+                pages_with_tables=result.pages_with_tables,
+                total_tables=result.total_tables,
+                total_time_ms=result.total_processing_time_ms,
+            )
+        else:
+            logger.warning(
+                "vlm_parallel_pages_unavailable",
+                document_id=state["document_id"],
+                vlm_available=result.vlm_available,
+            )
+
+    except Exception as e:
+        logger.warning(
+            "vlm_parallel_pages_error",
+            document_id=state["document_id"],
+            error=repr(e),
+        )
+
 
 async def docling_extraction_node(state: IngestionState) -> IngestionState:
     """Node 2: Parse document with Docling CUDA container + extract BBox (Feature 21.6).
@@ -188,6 +308,10 @@ async def docling_extraction_node(state: IngestionState) -> IngestionState:
                 pages_count=len(page_dimensions),
                 parse_time_ms=parsed.parse_time_ms,
             )
+
+            # Sprint 129.6g: VLM parallel page processing
+            # When enabled, render all pages and send to VLM for table extraction
+            await _run_vlm_parallel_pages(state, doc_path, page_dimensions)
 
             # Sprint 33: Removed verbose raw_text_complete logging (caused Unicode errors on Windows)
             # Text length is logged above in node_docling_parsed

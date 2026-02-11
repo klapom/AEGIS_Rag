@@ -172,11 +172,51 @@ A single high-quality VLM (Nemotron VL v1) provides better cross-validation than
 
 ### Container Architecture
 
-vLLM only serves one model per process. Two separate containers are required:
-1. **aegis-vllm-eugr-test** (port 8001) — Nemotron-3-Nano-30B extraction (always-on during ingestion)
-2. **aegis-vlm-table** (port 8002) — Nemotron VL v1 8B table cross-validation (on-demand)
+**vLLM serves one model per process** — two separate containers are required. Cannot merge into a single container because the extraction model (Nemotron-3-Nano-30B, MoE text architecture) and the VLM (Nemotron VL v1 8B, Llama + C-RADIOv2 vision encoder) have completely different architectures. vLLM's multi-model serving only supports LoRA adapters on the same base model.
 
-Both use `aegis-vllm-eugr:latest` base image → Docker layer caching means zero additional disk space. The VLM container only starts during ingestion batches with borderline tables.
+| Container | Port | Model | gpu-mem-util | VRAM | Lifecycle |
+|-----------|------|-------|--------------|------|-----------|
+| `aegis-vllm-eugr-test` | 8001 | Nemotron-3-Nano-30B (extraction) | 0.45 | ~64.5 GB | Always-on during ingestion |
+| `aegis-vlm-table` | 8002 | Nemotron VL v1 8B (table VLM) | 0.10 | ~5 GB | On-demand (ingestion start) |
+
+Both use `aegis-vllm-eugr:latest` base image → Docker layer caching means **zero additional disk space**. VLM needs `timm` + `open_clip_torch` installed at runtime (C-RADIOv2 vision encoder dependency).
+
+**VRAM Budget (parallel operation):**
+```
+DGX Spark: 128 GB Unified Memory
+
+  vLLM Extraction (port 8001, 0.45)    ~64.5 GB
+  vLLM Table VLM  (port 8002, 0.10)     ~5.0 GB
+  BGE-M3 Embeddings                      2.0 GB
+  System + CUDA Overhead                10.0 GB
+  ─────────────────────────────────────────────
+  Total:                                ~81.5 GB
+  Free:                                 ~46.5 GB  ✅
+```
+
+**Deployment strategy — Auto-start with warmup:**
+The VLM container starts automatically at ingestion begin (not only when a borderline table is detected) to avoid cold-start latency mid-pipeline. A lightweight warmup request ("What is in this image?" with a 1x1 white PNG, max_tokens=8) triggers CUDA graph capture and model initialization (~30-40s). By the time Docling finishes parsing and table quality scores are computed, the VLM is warm and ready.
+
+Start command:
+```bash
+docker run -d --name aegis-vlm-table \
+  --gpus=all --network aegis_rag_aegis-network --network-alias vlm-table \
+  -p 8002:8002 \
+  -v ${HOME}/.cache/huggingface:/root/.cache/huggingface \
+  aegis-vllm-eugr:latest \
+  bash -c "pip install timm open_clip_torch && \
+    vllm serve nvidia/Llama-3.1-Nemotron-Nano-VL-8B-V1-FP4-QAD \
+      --port 8002 --gpu-memory-utilization 0.10 \
+      --limit-mm-per-prompt '{\"image\": 1}' \
+      --trust-remote-code --max-model-len 4096"
+```
+
+**Tradeoffs of auto-start:**
+- **Pro:** Eliminates 40-70s cold-start surprise when first borderline table appears
+- **Pro:** Warmup runs in parallel with Docling parsing → effectively zero added latency
+- **Con:** 5GB VRAM occupied even for text-only documents or PDFs with only EXCELLENT tables
+- **Con:** Container startup + pip install + warmup = ~60-90s even when VLM is never queried
+- **Mitigation:** On 128GB DGX Spark, 5GB is 3.9% of total — negligible. Auto-stop after ingestion completes.
 
 ## Consequences
 

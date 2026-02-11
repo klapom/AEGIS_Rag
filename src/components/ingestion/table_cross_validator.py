@@ -1,14 +1,13 @@
-"""VLM cross-validation for borderline table quality scores.
+"""VLM cross-validation for table quality scores.
 
-Sprint 129.6d: Cross-validates Docling's heuristic table quality with
-two VLM services (Granite-Docling-258M and DeepSeek-OCR-2). Only runs
-for borderline tables (score 0.50-0.85) where heuristic confidence is low.
+Sprint 129.6d: Cross-validates Docling's heuristic table quality with VLM.
+Sprint 129.6g (ADR-063): Updated to use Nemotron VL v1 as single VLM.
+Now supports both on-demand validation (borderline tables only) and
+pre-computed VLM page results (when vlm_parallel_pages_enabled=true).
 
-Scoring:
-- 3 sources: 0.40×heuristic + 0.30×Granite + 0.30×DeepSeek
-- 2 sources: 0.50×heuristic + 0.50×VLM
-- 1 source: heuristic unchanged (graceful degradation)
-- Agreement boost: +0.10 shift from heuristic to VLMs when both agree
+Scoring (2 sources):
+- 0.50×heuristic + 0.50×VLM agreement
+- 1 source: heuristic unchanged (graceful degradation if VLM unavailable)
 """
 
 import time
@@ -16,10 +15,7 @@ from dataclasses import dataclass, field
 
 import structlog
 
-from src.components.ingestion.vlm_table_clients import (
-    DeepSeekOCRClient,
-    GraniteDoclingClient,
-)
+from src.components.ingestion.vlm_table_clients import NemotronVLClient
 
 logger = structlog.get_logger(__name__)
 
@@ -34,35 +30,30 @@ class CrossValidationResult:
 
     adjusted_score: float
     original_heuristic_score: float
-    granite_agreement: float | None = None
-    deepseek_agreement: float | None = None
+    vlm_agreement: float | None = None
     sources_used: list[str] = field(default_factory=list)
     cell_count_docling: int = 0
-    cell_count_granite: int = 0
-    cell_count_deepseek: int = 0
+    cell_count_vlm: int = 0
     header_match: float | None = None
     content_similarity: float | None = None
     validation_time_ms: float = 0.0
     errors: list[str] = field(default_factory=list)
+    used_precomputed: bool = False
 
 
 class TableCrossValidator:
-    """Cross-validates table extraction using VLM services.
+    """Cross-validates table extraction using Nemotron VL v1 (ADR-063).
 
-    Orchestrates sequential calls to Granite and DeepSeek VLMs,
-    computes cell agreement between Docling and VLM outputs,
-    and blends scores for a more confident quality assessment.
+    Supports two modes:
+    1. On-demand: Renders page image and queries VLM for borderline tables
+    2. Pre-computed: Uses VLM page results from parallel page processor
+
+    Both modes compute cell agreement and blend with heuristic score.
     """
 
-    def __init__(
-        self,
-        granite_url: str = "http://localhost:8083",
-        deepseek_url: str = "http://localhost:8002",
-    ):
-        self._granite = GraniteDoclingClient(base_url=granite_url)
-        self._deepseek = DeepSeekOCRClient(base_url=deepseek_url)
-        self._granite_available: bool | None = None
-        self._deepseek_available: bool | None = None
+    def __init__(self, vlm_url: str = "http://localhost:8002"):
+        self._vlm = NemotronVLClient(base_url=vlm_url)
+        self._vlm_available: bool | None = None
 
     def should_cross_validate(self, score: float) -> bool:
         """Check if a table score falls in the borderline range.
@@ -76,29 +67,28 @@ class TableCrossValidator:
         return BORDERLINE_LOW <= score <= BORDERLINE_HIGH
 
     async def check_availability(self) -> None:
-        """Probe VLM services and cache availability. Call once per batch."""
-        self._granite_available = await self._granite.health_check()
-        self._deepseek_available = await self._deepseek.health_check()
-        logger.info(
-            "vlm_availability_checked",
-            granite=self._granite_available,
-            deepseek=self._deepseek_available,
-        )
+        """Probe VLM service and cache availability. Call once per batch."""
+        self._vlm_available = await self._vlm.health_check()
+        logger.info("vlm_availability_checked", nemotron_vlm=self._vlm_available)
 
     async def cross_validate(
         self,
         docling_cells_2d: list[list[str]],
-        page_image_bytes: bytes,
-        heuristic_score: float,
+        page_image_bytes: bytes | None = None,
+        heuristic_score: float = 0.0,
+        precomputed_vlm_tables: list[list[list[str]]] | None = None,
     ) -> CrossValidationResult:
-        """Cross-validate a table using VLM services.
+        """Cross-validate a table using Nemotron VLM.
 
-        Sequential calls: Granite first, then DeepSeek (avoid peak GPU memory).
+        Two modes:
+        - precomputed_vlm_tables: Use pre-extracted VLM tables (from parallel processor)
+        - page_image_bytes: Query VLM on-demand (fallback for borderline-only mode)
 
         Args:
             docling_cells_2d: 2D cell grid from Docling extraction
-            page_image_bytes: PNG image of the PDF page containing the table
+            page_image_bytes: PNG image of the page (on-demand mode)
             heuristic_score: Original heuristic quality score
+            precomputed_vlm_tables: VLM-extracted tables for this page (parallel mode)
 
         Returns:
             CrossValidationResult with adjusted score and agreement metrics
@@ -111,50 +101,39 @@ class TableCrossValidator:
             cell_count_docling=sum(len(row) for row in docling_cells_2d),
         )
 
-        # Check availability if not yet probed
-        if self._granite_available is None or self._deepseek_available is None:
-            await self.check_availability()
+        vlm_tables: list[list[list[str]]] | None = None
 
-        granite_agreement: float | None = None
-        deepseek_agreement: float | None = None
+        # Mode 1: Use pre-computed VLM tables (from parallel page processor)
+        if precomputed_vlm_tables is not None:
+            vlm_tables = precomputed_vlm_tables
+            result.used_precomputed = True
+        # Mode 2: On-demand VLM query
+        elif page_image_bytes is not None:
+            if self._vlm_available is None:
+                await self.check_availability()
+            if self._vlm_available:
+                try:
+                    vlm_tables = await self._vlm.extract_tables_from_page(page_image_bytes)
+                except Exception as e:
+                    result.errors.append(f"vlm_error: {repr(e)}")
+                    logger.warning("vlm_cross_validation_failed", error=repr(e))
 
-        # Call Granite (sequential — not parallel, to avoid GPU peak)
-        if self._granite_available:
-            try:
-                granite_tables = await self._granite.extract_tables_from_page(page_image_bytes)
-                if granite_tables:
-                    # Use first table (closest match to single-table validation)
-                    best_grid = _find_best_matching_table(docling_cells_2d, granite_tables)
-                    granite_agreement = _compute_cell_agreement(docling_cells_2d, best_grid)
-                    result.granite_agreement = granite_agreement
-                    result.cell_count_granite = sum(len(row) for row in best_grid)
-                    result.sources_used.append("granite")
-                else:
-                    result.errors.append("granite_no_tables_found")
-            except Exception as e:
-                result.errors.append(f"granite_error: {repr(e)}")
-                logger.warning("granite_cross_validation_failed", error=repr(e))
-
-        # Call DeepSeek
-        if self._deepseek_available:
-            try:
-                deepseek_tables = await self._deepseek.extract_tables_from_page(page_image_bytes)
-                if deepseek_tables:
-                    best_grid = _find_best_matching_table(docling_cells_2d, deepseek_tables)
-                    deepseek_agreement = _compute_cell_agreement(docling_cells_2d, best_grid)
-                    result.deepseek_agreement = deepseek_agreement
-                    result.cell_count_deepseek = sum(len(row) for row in best_grid)
-                    result.sources_used.append("deepseek")
-                else:
-                    result.errors.append("deepseek_no_tables_found")
-            except Exception as e:
-                result.errors.append(f"deepseek_error: {repr(e)}")
-                logger.warning("deepseek_cross_validation_failed", error=repr(e))
+        # Compute agreement if VLM returned tables
+        vlm_agreement: float | None = None
+        if vlm_tables:
+            best_grid = _find_best_matching_table(docling_cells_2d, vlm_tables)
+            if best_grid:
+                vlm_agreement = _compute_cell_agreement(docling_cells_2d, best_grid)
+                result.vlm_agreement = vlm_agreement
+                result.cell_count_vlm = sum(len(row) for row in best_grid)
+                result.sources_used.append("nemotron_vlm")
+            else:
+                result.errors.append("vlm_no_matching_table")
+        elif vlm_tables is not None:
+            result.errors.append("vlm_no_tables_found")
 
         # Blend scores
-        result.adjusted_score = _blend_scores(
-            heuristic_score, granite_agreement, deepseek_agreement
-        )
+        result.adjusted_score = _blend_scores(heuristic_score, vlm_agreement)
 
         elapsed_ms = (time.perf_counter() - start) * 1000
         result.validation_time_ms = round(elapsed_ms, 1)
@@ -163,14 +142,10 @@ class TableCrossValidator:
             "table_cross_validation_complete",
             heuristic=round(heuristic_score, 3),
             adjusted=round(result.adjusted_score, 3),
-            granite_agreement=(
-                round(granite_agreement, 3) if granite_agreement is not None else None
-            ),
-            deepseek_agreement=(
-                round(deepseek_agreement, 3) if deepseek_agreement is not None else None
-            ),
+            vlm_agreement=(round(vlm_agreement, 3) if vlm_agreement is not None else None),
             sources=result.sources_used,
             time_ms=result.validation_time_ms,
+            precomputed=result.used_precomputed,
             errors=result.errors,
         )
 
@@ -265,44 +240,13 @@ def _compute_cell_agreement(grid_a: list[list[str]], grid_b: list[list[str]]) ->
     return 0.3 * dimension_match + 0.5 * content_jaccard + 0.2 * header_match
 
 
-def _blend_scores(
-    heuristic: float,
-    granite_agreement: float | None,
-    deepseek_agreement: float | None,
-) -> float:
-    """Blend heuristic and VLM agreement scores.
+def _blend_scores(heuristic: float, vlm_agreement: float | None) -> float:
+    """Blend heuristic and VLM agreement scores (ADR-063: single VLM).
 
-    Weighting by number of available sources:
-    - 3 sources: 0.40×H + 0.30×G + 0.30×D
-    - 2 sources (1 VLM): 0.50×H + 0.50×VLM
-    - 1 source: H unchanged
-
-    Agreement boost: If both VLMs agree (diff < 0.10),
-    shift +0.10 from heuristic to VLMs.
+    Weighting:
+    - 2 sources: 0.50×heuristic + 0.50×VLM
+    - 1 source: heuristic unchanged (graceful degradation)
     """
-    vlms = []
-    if granite_agreement is not None:
-        vlms.append(granite_agreement)
-    if deepseek_agreement is not None:
-        vlms.append(deepseek_agreement)
-
-    if len(vlms) == 0:
+    if vlm_agreement is None:
         return heuristic
-
-    if len(vlms) == 1:
-        return 0.50 * heuristic + 0.50 * vlms[0]
-
-    # Both VLMs available
-    g = granite_agreement  # type: ignore[assignment]
-    d = deepseek_agreement  # type: ignore[assignment]
-
-    # Base weights
-    w_h, w_g, w_d = 0.40, 0.30, 0.30
-
-    # Agreement boost: if VLMs agree closely, increase their weight
-    if abs(g - d) < 0.10:
-        w_h -= 0.10
-        w_g += 0.05
-        w_d += 0.05
-
-    return w_h * heuristic + w_g * g + w_d * d
+    return 0.50 * heuristic + 0.50 * vlm_agreement

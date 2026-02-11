@@ -286,6 +286,12 @@ export function AdminLLMConfigPage() {
   const [isSavingEngine, setIsSavingEngine] = useState(false);
   const [engineSaveStatus, setEngineSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
+  // Sprint 129: VLM Parallel Pages State
+  const [vlmParallelEnabled, setVlmParallelEnabled] = useState(false);
+  const [vlmHealthy, setVlmHealthy] = useState(false);
+  const [isSavingVlmParallel, setIsSavingVlmParallel] = useState(false);
+  const [vlmParallelSaveStatus, setVlmParallelSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
+
   // Sprint 126: Fetch engine mode from backend
   const fetchEngineMode = useCallback(async () => {
     try {
@@ -299,6 +305,20 @@ export function AdminLLMConfigPage() {
       setOllamaHealthy(data.ollama_healthy);
     } catch (err) {
       console.error('Failed to fetch engine mode:', err);
+    }
+  }, []);
+
+  // Sprint 129: Fetch VLM parallel pages state from backend
+  const fetchVlmParallelPages = useCallback(async () => {
+    try {
+      const data = await apiClient.get<{
+        enabled: boolean;
+        vlm_healthy: boolean;
+      }>('/api/v1/admin/vlm/parallel-pages');
+      setVlmParallelEnabled(data.enabled);
+      setVlmHealthy(data.vlm_healthy);
+    } catch (err) {
+      console.error('Failed to fetch VLM parallel pages state:', err);
     }
   }, []);
 
@@ -320,6 +340,28 @@ export function AdminLLMConfigPage() {
       setTimeout(() => setEngineSaveStatus('idle'), 3000);
     } finally {
       setIsSavingEngine(false);
+    }
+  };
+
+  // Sprint 129: Save VLM parallel pages toggle
+  const handleToggleVlmParallelPages = async (enabled: boolean) => {
+    setIsSavingVlmParallel(true);
+    setVlmParallelSaveStatus('idle');
+    try {
+      const response = await apiClient.put<{
+        status: string;
+        enabled: boolean;
+        message: string;
+      }>('/api/v1/admin/vlm/parallel-pages', { enabled });
+      setVlmParallelEnabled(response.enabled);
+      setVlmParallelSaveStatus('success');
+      setTimeout(() => setVlmParallelSaveStatus('idle'), 3000);
+    } catch (err) {
+      console.error('Failed to save VLM parallel pages state:', err);
+      setVlmParallelSaveStatus('error');
+      setTimeout(() => setVlmParallelSaveStatus('idle'), 3000);
+    } finally {
+      setIsSavingVlmParallel(false);
     }
   };
 
@@ -476,8 +518,9 @@ export function AdminLLMConfigPage() {
     fetchSummaryModelConfig();
     fetchToolsConfig();  // Sprint 70 Feature 70.7
     fetchEngineMode();   // Sprint 126: LLM Engine Mode
+    fetchVlmParallelPages();  // Sprint 129: VLM Parallel Pages
     initializeConfig();
-  }, [fetchEngineMode]);
+  }, [fetchEngineMode, fetchVlmParallelPages]);
 
   const fetchOllamaModels = async () => {
     setIsRefreshing(true);
@@ -920,6 +963,76 @@ export function AdminLLMConfigPage() {
               <AlertCircle className="w-3 h-3" /> Failed to save engine mode.
             </p>
           )}
+        </div>
+
+        {/* Sprint 129: VLM Table Processing */}
+        <div className="bg-white dark:bg-gray-800 rounded-md shadow-sm p-4 mb-4" data-testid="vlm-parallel-section">
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-1.5">
+            <FileText className="w-4 h-4" />
+            VLM Table Processing
+          </h2>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+            Configure VLM parallel page processing for table extraction during document ingestion.
+          </p>
+
+          <div className="border dark:border-gray-700 rounded-md p-3">
+            <div className="flex justify-between items-center">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    VLM Parallel Pages
+                  </h3>
+                  <span
+                    className={`w-2 h-2 rounded-full ${vlmHealthy ? 'bg-green-500' : 'bg-red-400'}`}
+                    title={vlmHealthy ? 'VLM Healthy' : 'VLM Unreachable'}
+                    data-testid="vlm-health-indicator"
+                  />
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  When enabled, all document pages are sent to Nemotron VL v1 for parallel table extraction during ingestion.
+                  Provides dual-source table quality validation.
+                </p>
+                <p className="text-xs text-gray-600 dark:text-gray-400" data-testid="vlm-status-text">
+                  Status: {vlmParallelEnabled ? (
+                    <span className="text-green-600 dark:text-green-400 font-medium">Active</span>
+                  ) : (
+                    <span className="text-gray-500 dark:text-gray-400 font-medium">Inactive</span>
+                  )}
+                </p>
+              </div>
+
+              <label className="relative inline-flex items-center cursor-pointer ml-4">
+                <input
+                  type="checkbox"
+                  checked={vlmParallelEnabled}
+                  onChange={(e) => handleToggleVlmParallelPages(e.target.checked)}
+                  disabled={isSavingVlmParallel}
+                  className="sr-only peer"
+                  data-testid="vlm-parallel-toggle"
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600 peer-disabled:opacity-50 peer-disabled:cursor-not-allowed"></div>
+              </label>
+            </div>
+
+            {/* Save Status */}
+            <div className="mt-3">
+              {isSavingVlmParallel && (
+                <p className="text-xs text-blue-600 flex items-center gap-1">
+                  <RefreshCw className="w-3 h-3 animate-spin" /> Saving...
+                </p>
+              )}
+              {vlmParallelSaveStatus === 'success' && (
+                <p className="text-xs text-green-600 flex items-center gap-1">
+                  <CheckCircle className="w-3 h-3" /> VLM parallel pages {vlmParallelEnabled ? 'enabled' : 'disabled'}. Takes effect immediately.
+                </p>
+              )}
+              {vlmParallelSaveStatus === 'error' && (
+                <p className="text-xs text-red-600 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" /> Failed to save VLM parallel pages state.
+                </p>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Use Case Model Assignment */}

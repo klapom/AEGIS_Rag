@@ -159,6 +159,14 @@ class IngestionState(TypedDict, total=False):
     enrichment_status: Literal["pending", "running", "completed", "failed"]
 
     # ============================================================
+    # Sprint 129.6g: VLM PARALLEL PAGE RESULTS
+    # ============================================================
+    # Dict mapping 1-based page numbers to list of VLM-extracted tables
+    # Each table is a 2D list[list[str]] (rows × cols)
+    # Populated by VLMPageProcessor when vlm_parallel_pages_enabled=true
+    vlm_page_results: dict[int, list[Any]]
+
+    # ============================================================
     # NODE 3: CHUNKING
     # ============================================================
     chunks: list[Chunk]  # Chunk objects (1800 tokens)
@@ -277,6 +285,8 @@ def create_initial_state(
         # VLM enrichment (initialized by image_enrichment_node)
         vlm_metadata=[],
         enrichment_status="pending",
+        # Sprint 129.6g: VLM parallel page results
+        vlm_page_results={},
         # Chunking (initialized by chunking_node)
         chunks=[],
         chunking_status="pending",

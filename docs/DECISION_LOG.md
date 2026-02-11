@@ -1148,14 +1148,22 @@
 
 ---
 
+### 2026-02-11 | VLM Container Architecture — Separate Processes, Auto-Start at Ingestion (Sprint 129.6c-e)
+**Decision:** VLM runs as separate vLLM container (`aegis-vlm-table`, port 8002) alongside extraction vLLM (`aegis-vllm-eugr-test`, port 8001). Cannot merge: vLLM serves one model per process, and the two models have incompatible architectures (MoE text vs Llama+C-RADIOv2 vision). Same Docker base image → zero additional disk (layer caching). VRAM budget: 64.5 + 5 + 2 + 10 = ~81.5GB / 128GB. VLM auto-starts with warmup at ingestion begin (not on-demand at first borderline table) to avoid cold-start latency mid-pipeline. Auto-stop after ingestion completes.
+**Rationale:** Auto-start costs ~60-90s startup + 5GB VRAM (3.9% of 128GB) but eliminates 40-70s cold-start surprise when a borderline table appears mid-batch. Warmup runs in parallel with Docling parsing → effectively zero added latency. Tradeoff is acceptable because VRAM headroom is large (46.5GB free) and text-only ingestions only waste the startup time, not ongoing GPU compute.
+
 ### 2026-02-11 | VLM Model Evaluation — 45-Iteration Benchmark (Sprint 129.6c-e)
 **Decision:** Comprehensive VLM evaluation for table cross-validation. 5 models tested on 5 images (1 PPT edge case + 4 DP-Bench PDFs), 3 NVIDIA official prompts (P1 doc extraction, P2 HTML table, P3 HTML+bbox), V2 tested with `/no_think` and `/think` modes. Total: 45 iterations + 15 GPU memory comparison.
 **Results:** (1) Granite-Docling-258M: Column shift on 3/5 tables — eliminated. (2) DeepSeek-OCR-2: Only accepts "Free OCR." prompt, no structured output — eliminated. (3) Nemotron VL v2 12B: 20% failure (6/30 empty), 22.9 tok/s, /no_think 33% failure — eliminated. (4) **Nemotron VL v1 8B: 0% failure (15/15), 34.7 tok/s, 5GB VRAM** — selected. GPU memory: 0.10 vs 0.20 = only 1.03x (decode-bound). P2 HTML prompt: 12.3s avg, cleanest parseable output.
 **Benchmark data:** `/tmp/vlm_benchmark_v1.json` (V1, 15 entries), `/tmp/vlm_benchmark_v2.json` (V2, 30 entries), `/tmp/vlm_benchmark_v1_020.json` (V1 at 0.20 GPU, 15 entries). Full details in ADR-063.
 
+### 2026-02-11 | VLM Parallel Page Processing — Pre-Computed Cross-Validation (Sprint 129.6g)
+**Decision:** Add parallel VLM page processing mode: when enabled via frontend toggle (AdminLLMConfigPage), render ALL PDF pages as PNG via PyMuPDF and send to Nemotron VL v1 8B in parallel (asyncio.gather + asyncio.Semaphore for bounded concurrency). Pre-computed VLM tables stored in `IngestionState.vlm_page_results` and passed to `TableCrossValidator` — avoids redundant per-table VLM calls. Toggle persisted in Redis (`aegis:vlm_parallel_pages_enabled`). Text-only formats (.txt, .md, .csv, etc.) skip VLM entirely. Feature disabled by default.
+**Rationale:** On-demand VLM calls (one per borderline table) add 12-15s latency per table. Pre-computing all pages in parallel during Docling parsing amortizes VLM overhead across the document: N pages in ~1 VLM call time instead of N sequential calls. Redis persistence follows ADR-062 engine mode pattern. Frontend toggle enables operators to activate VLM globally without config file changes.
+
 ---
 
 **Last Updated:** 2026-02-11 (Sprint 129 🔄)
-**Total Decisions Documented:** 191 (+8 from Sprint 129)
-**Current Sprint:** Sprint 129 🔄 IN PROGRESS (11/15 features, ~34 SP delivered)
+**Total Decisions Documented:** 193 (+10 from Sprint 129)
+**Current Sprint:** Sprint 129 🔄 IN PROGRESS (10/11 features complete, ~27 SP delivered)
 **Next Sprint:** Sprint 129 continued (RAGAS Full Ingestion + Domain Editor UI)

@@ -679,6 +679,104 @@ async def set_llm_engine_mode(request: LLMEngineModeRequest) -> dict:
 
 
 # ============================================================================
+# Sprint 129.6g: VLM Parallel Pages Setting (ADR-063)
+# ============================================================================
+
+REDIS_KEY_VLM_PARALLEL_PAGES = "aegis:vlm_parallel_pages_enabled"
+
+
+class VLMParallelPagesResponse(BaseModel):
+    """Response with current VLM parallel pages setting."""
+
+    enabled: bool = Field(..., description="Whether VLM parallel page processing is enabled")
+    vlm_healthy: bool = Field(False, description="Whether Nemotron VLM service is reachable")
+
+
+class VLMParallelPagesRequest(BaseModel):
+    """Request to set VLM parallel pages enabled/disabled."""
+
+    enabled: bool = Field(..., description="Enable or disable VLM parallel page processing")
+
+
+@router.get(
+    "/vlm/parallel-pages",
+    response_model=VLMParallelPagesResponse,
+    summary="Get VLM parallel pages setting",
+    description="Get whether VLM parallel page processing is enabled (ADR-063)",
+)
+async def get_vlm_parallel_pages() -> VLMParallelPagesResponse:
+    """Get current VLM parallel pages setting from Redis.
+
+    Sprint 129.6g: When enabled, all document pages are sent to Nemotron VL v1
+    for table extraction in parallel, providing dual-source table validation.
+    """
+    import redis.asyncio as aioredis
+
+    enabled = False  # Default: disabled
+    try:
+        redis_client = aioredis.from_url(
+            f"redis://{settings.redis_host}:{settings.redis_port}/0",
+            decode_responses=True,
+        )
+        stored = await redis_client.get(REDIS_KEY_VLM_PARALLEL_PAGES)
+        if stored is not None:
+            enabled = stored.lower() == "true"
+        await redis_client.close()
+    except Exception as e:
+        logger.warning("redis_vlm_parallel_read_failed", error=str(e))
+
+    # VLM health check
+    vlm_healthy = False
+    vlm_url = settings.nemotron_vlm_url or "http://localhost:8002"
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.get(f"{vlm_url}/health")
+            vlm_healthy = resp.status_code == 200
+    except Exception:  # nosec B110
+        pass
+
+    return VLMParallelPagesResponse(enabled=enabled, vlm_healthy=vlm_healthy)
+
+
+@router.put(
+    "/vlm/parallel-pages",
+    summary="Set VLM parallel pages enabled/disabled",
+    description="Enable or disable VLM parallel page processing. Takes effect immediately.",
+)
+async def set_vlm_parallel_pages(request: VLMParallelPagesRequest) -> dict:
+    """Set VLM parallel pages setting in Redis (hot-reloadable).
+
+    Sprint 129.6g (ADR-063): When enabled, all pages of non-text documents
+    are sent to Nemotron VL v1 for parallel table extraction.
+    """
+    import redis.asyncio as aioredis
+
+    try:
+        redis_client = aioredis.from_url(
+            f"redis://{settings.redis_host}:{settings.redis_port}/0",
+            decode_responses=True,
+        )
+        await redis_client.set(REDIS_KEY_VLM_PARALLEL_PAGES, "true" if request.enabled else "false")
+        await redis_client.close()
+
+        logger.info("vlm_parallel_pages_updated", enabled=request.enabled)
+
+        return {
+            "status": "success",
+            "enabled": request.enabled,
+            "message": f"VLM parallel pages {'enabled' if request.enabled else 'disabled'}. "
+            "Takes effect on next ingestion.",
+        }
+
+    except Exception as e:
+        logger.error("vlm_parallel_pages_update_failed", error=str(e), exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to update VLM parallel pages setting: {str(e)}",
+        ) from e
+
+
+# ============================================================================
 # Sprint 128.5: vLLM Model Information
 # ============================================================================
 

@@ -84,6 +84,7 @@ async def _create_table_chunks(
     merged_chunks: list[dict[str, Any]],
     start_index: int,
     document_path: str = "",
+    vlm_page_results: dict[int, list] | None = None,
 ) -> tuple[int, int]:
     """Create dedicated chunks for extracted tables with quality scoring.
 
@@ -91,9 +92,8 @@ async def _create_table_chunks(
     using composite heuristics (129.6b). Tables passing quality thresholds are
     added as dedicated chunks with table-specific metadata.
 
-    Sprint 129.6c-e: Borderline tables (score 0.50-0.85) are optionally
-    cross-validated with VLM services (Granite-Docling + DeepSeek-OCR) when
-    TABLE_CROSS_VALIDATION_ENABLED=true.
+    Sprint 129.6g (ADR-063): Cross-validates with Nemotron VL v1. Supports
+    both on-demand (borderline-only) and pre-computed VLM results (all pages).
 
     Args:
         parsed_tables: Table data from state["parsed_tables"]
@@ -102,6 +102,7 @@ async def _create_table_chunks(
         merged_chunks: Existing chunk list to append to (mutated in place)
         start_index: Starting chunk index for table chunks
         document_path: Path to source PDF (needed for VLM page rendering)
+        vlm_page_results: Pre-computed VLM tables per page (from VLMPageProcessor)
 
     Returns:
         Tuple of (chunks_created, chunks_rejected)
@@ -117,18 +118,17 @@ async def _create_table_chunks(
         logger.warning("table_quality_module_not_available")
         return 0, 0
 
-    # Sprint 129.6c-e: Initialize cross-validator if enabled
+    # Sprint 129.6g (ADR-063): Initialize cross-validator with Nemotron VL
     cross_validator = None
     try:
         from src.core.config import get_settings
 
         _settings = get_settings()
-        if _settings.table_cross_validation_enabled:
+        if _settings.table_cross_validation_enabled or _settings.vlm_parallel_pages_enabled:
             from src.components.ingestion.table_cross_validator import TableCrossValidator
 
             cross_validator = TableCrossValidator(
-                granite_url=_settings.granite_docling_url,
-                deepseek_url=_settings.deepseek_ocr_url,
+                vlm_url=_settings.nemotron_vlm_url,
             )
             await cross_validator.check_availability()
     except Exception as e:
@@ -164,24 +164,39 @@ async def _create_table_chunks(
         if cells_2d:
             quality_report = compute_table_quality(cells_2d, has_header=True)
 
-            # Sprint 129.6c-e: VLM cross-validation for borderline tables
-            if (
+            # Sprint 129.6g (ADR-063): VLM cross-validation with Nemotron VL v1
+            # Mode 1: Pre-computed VLM results (vlm_parallel_pages_enabled)
+            # Mode 2: On-demand VLM query (borderline tables only)
+            page_no = table.get("page_no")
+            precomputed = vlm_page_results.get(page_no) if vlm_page_results and page_no else None
+            should_validate = (
                 cross_validator
-                and cross_validator.should_cross_validate(quality_report.overall_score)
                 and cells_2d
-                and document_path
-                and table.get("page_no")
-            ):
-                try:
-                    from src.components.ingestion.page_image_renderer import (
-                        render_page_image,
+                and (
+                    precomputed is not None  # Always use precomputed if available
+                    or (
+                        cross_validator.should_cross_validate(quality_report.overall_score)
+                        and document_path
+                        and page_no
                     )
+                )
+            )
 
-                    page_image = render_page_image(document_path, table["page_no"])
+            if should_validate:
+                try:
+                    page_image = None
+                    if precomputed is None and document_path and page_no:
+                        from src.components.ingestion.page_image_renderer import (
+                            render_page_image,
+                        )
+
+                        page_image = render_page_image(document_path, page_no)
+
                     cv_result = await cross_validator.cross_validate(
                         docling_cells_2d=cells_2d,
                         page_image_bytes=page_image,
                         heuristic_score=quality_report.overall_score,
+                        precomputed_vlm_tables=precomputed,
                     )
                     # Apply adjusted score
                     quality_report.overall_score = cv_result.adjusted_score
@@ -198,10 +213,10 @@ async def _create_table_chunks(
                     cross_validation_meta = {
                         "original_heuristic_score": cv_result.original_heuristic_score,
                         "adjusted_score": cv_result.adjusted_score,
-                        "granite_agreement": cv_result.granite_agreement,
-                        "deepseek_agreement": cv_result.deepseek_agreement,
+                        "vlm_agreement": cv_result.vlm_agreement,
                         "sources_used": cv_result.sources_used,
                         "validation_time_ms": cv_result.validation_time_ms,
+                        "used_precomputed": cv_result.used_precomputed,
                     }
                 except Exception as e:
                     logger.warning(
@@ -1172,7 +1187,7 @@ async def chunking_node(state: IngestionState) -> IngestionState:
             merged_chunks.append(enhanced_chunk)
 
         # Sprint 129.6e: Create dedicated table chunks with quality scoring
-        # Sprint 129.6c-e: Now async for VLM cross-validation support
+        # Sprint 129.6g: Pass pre-computed VLM page results when available
         parsed_tables = state.get("parsed_tables", [])
         table_chunks_created = 0
         table_chunks_rejected = 0
@@ -1184,6 +1199,7 @@ async def chunking_node(state: IngestionState) -> IngestionState:
                 merged_chunks=merged_chunks,
                 start_index=len(adaptive_chunks),
                 document_path=document_path,
+                vlm_page_results=state.get("vlm_page_results"),
             )
 
         state["chunks"] = merged_chunks
