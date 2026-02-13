@@ -1,684 +1,240 @@
-# CLAUDE.md - AegisRAG Project Context
+# CLAUDE.md - AegisRAG Essentials
 
-## Session Continuity Check
+## Context Loss Recovery
+1. [docs/CONTEXT_REFRESH.md](docs/CONTEXT_REFRESH.md)
+2. [docs/sprints/SPRINT_PLAN.md](docs/sprints/SPRINT_PLAN.md)
+3. [docs/adr/ADR_INDEX.md](docs/adr/ADR_INDEX.md)
+4. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+5. [docs/TECH_STACK.md](docs/TECH_STACK.md)
+6. **Erweiterte Infos:** [docs/CLAUDE_extended.md](docs/CLAUDE_extended.md)
 
-**Bei Context Loss:**
-1. Lies [docs/CONTEXT_REFRESH.md](docs/CONTEXT_REFRESH.md)
-2. Checke docs/sprints/SPRINT_PLAN.md
-3. Verifiziere ADR-Awareness: docs/adr/ADR_INDEX.md
-4. Consolidated Architecture: docs/ARCHITECTURE.md
-5. Technology Stack: docs/TECH_STACK.md
-6. Code Conventions: docs/CONVENTIONS.md
-7. **RAGAS Journey:** [docs/ragas/RAGAS_JOURNEY.md](docs/ragas/RAGAS_JOURNEY.md) - Living document for RAGAS metrics optimization (Sprint 79+)
-8. PLAYWRIGHT E2E Testing: docs/
 ---
 
-## Project Overview
+## Projekt-Übersicht
 
 **AegisRAG** = Agentic Enterprise Graph Intelligence System
 
-| Component | Technology | Purpose |
-|-----------|------------|---------|
-| Vector Search | Qdrant + BGE-M3 (Dense+Sparse) | Hybrid Retrieval (Sprint 87: replaces BM25) |
-| Graph Reasoning | LightRAG + Neo4j | Entity/Relation Queries |
+| Komponente | Technologie | Zweck |
+|-----------|------------|-------|
+| Vector Search | Qdrant + BGE-M3 | Dense+Sparse Hybrid Retrieval |
+| Graph Reasoning | Neo4j | Entity/Relation Queries |
 | Temporal Memory | Graphiti + Redis | 3-Layer Memory |
 | Orchestration | LangGraph | Multi-Agent System |
 | LLM Routing | AegisLLMProxy | Multi-Cloud (ADR-033) |
 | Ingestion | Docling CUDA | GPU-accelerated OCR |
-| Chunking | Section-Aware | 800-1800 tokens (ADR-039) |
-| Evaluation | RAGAS 0.4.2 | 4 metrics + operational metrics |
+| Evaluation | RAGAS 0.4.2 | 4 Metriken |
 
 ---
 
-## Technology Stack
-
-**See [docs/TECH_STACK.md](docs/TECH_STACK.md) for complete details**
+## Tech Stack (Kurzfassung)
 
 ```yaml
-Backend: Python 3.12.7, FastAPI, Pydantic v2
-Package Manager: Poetry (pyproject.toml)
-Orchestration: LangGraph 0.6.10 + LangChain Core
+Backend: Python 3.12.7, FastAPI, Poetry
+Orchestration: LangGraph 0.6.10
 
-Databases:
-  Vector: Qdrant 1.11.0 (Dense + Sparse vectors, server-side RRF)
-  Graph: Neo4j 5.24 Community (entity/relation extraction)
-  Memory: Redis 7.x + Graphiti (3-layer temporal memory)
+DBs:
+  Vector: Qdrant 1.11.0 (Dense+Sparse, RRF)
+  Graph: Neo4j 5.24 Community
+  Memory: Redis 7.x + Graphiti
 
-LLM & Embeddings:
-  Current Model: Nemotron3 Nano 30/3a (DGX Spark)
-  LLM Routing: AegisLLMProxy (ADR-033) - Multi-cloud support
-  Fallback: Alibaba Cloud DashScope, OpenAI
-  Embeddings: BGE-M3 via FlagEmbedding (1024-dim Dense + Sparse lexical) - Sprint 87
-  Sparse Search: Learned lexical weights (replaces BM25) - Sprint 87
-  Reranking: Cross-encoder (top-k candidates)
+LLM:
+  Chat: Ollama (Nemotron3 Nano 30/3a)
+  Extraction: vLLM (port 8001, ADR-059)
+  Fallback: Alibaba DashScope
+  Embeddings: BGE-M3 (FlagEmbedding)
 
 Ingestion:
-  Parser: Docling CUDA (GPU-accelerated OCR) - ADR-027
-  Chunking: Section-aware (800-1800 tokens) - ADR-039
-  Extraction: Pure LLM pipeline - ADR-026
+  Parser: Docling CUDA (ADR-027)
+  Chunking: Section-aware 800-1800 tokens (ADR-039)
+  Extraction: LLM Cascade (ADR-026)
 
-Frontend:
-  Framework: React 19, TypeScript, Vite 7.1.12
-  Styling: Tailwind CSS, Lucide Icons
-  Testing: Playwright
+Frontend: React 19, TypeScript, Vite 7.1.12, Tailwind
+Testing: pytest, Playwright
+```
 
 ---
 
-## DGX Spark Deployment (sm_121)
+## DGX Spark Deployment
 
 **Hardware:** NVIDIA GB10 (Blackwell), CUDA 13.0, 128GB Unified Memory, ARM64
 
-### Running Services (alle auf DGX Spark!)
+### Services (alle Docker)
 ```yaml
-# Sprint 92: All services run in Docker containers
-Frontend:  http://192.168.178.10      # Port 80 (React/Vite in Docker)
-Backend:   http://192.168.178.10:8000 # FastAPI (Docker)
-Qdrant:    localhost:6333/6334        # Vector DB (gRPC on 6334)
+Frontend:  http://192.168.178.10      # Port 80
+Backend:   http://192.168.178.10:8000 # FastAPI
+Qdrant:    localhost:6333/6334        # Vector DB
 Neo4j:     bolt://localhost:7687      # Graph DB (Browser: 7474)
 Redis:     localhost:6379             # Memory/Cache
-Ollama:    http://localhost:11434     # LLM Chat (Nemotron3)
-vLLM:      http://localhost:8001      # Extraction Engine (profile: ingestion)
-Grafana:   http://192.168.178.10:3000 # Monitoring Dashboard
+Ollama:    http://localhost:11434     # Chat (Nemotron3)
+vLLM:      http://localhost:8001      # Extraction Engine
+Grafana:   http://192.168.178.10:3000 # Monitoring
 ```
 
-**Sprint 92: Vollständige Docker-Deployment**
-- **Alle Services** laufen in Docker-Containern
-- Frontend auf Port 80 für einfachen Zugriff
-- Auto-Start mit `docker compose up -d`
-- Hot-Reload für Frontend-Entwicklung aktiv
-
+### Quick Start
 ```bash
-# Start all services (inkl. Frontend)
+# Alle Services starten
 docker compose -f docker-compose.dgx-spark.yml up -d
 
-# View logs
+# Logs prüfen
 docker logs -f aegis-frontend
 docker logs -f aegis-api
+
+# Container neu bauen (nach Code-Änderungen)
+docker compose -f docker-compose.dgx-spark.yml build --no-cache api frontend
+docker compose -f docker-compose.dgx-spark.yml up -d --force-recreate api frontend
 ```
 
-### Ingestion API (KRITISCH für RAGAS Testing)
+### Ingestion API (KRITISCH)
 
-**IMMER die Frontend API verwenden - NIE direkte Backend-Funktionen!**
-
+**IMMER Frontend API verwenden:**
 ```bash
-# ✅ RICHTIG: Frontend API (verwendet von React UI)
+# ✅ RICHTIG
 POST http://localhost:8000/api/v1/retrieval/upload
 Content-Type: multipart/form-data
-
-# Datei-Upload
-file: <binary PDF/TXT/DOCX>
-namespace: "ragas_phase2_sprint83_v1"
+file: <binary>
+namespace: "test_namespace"
 domain: "research_papers"
 
-# Response (Sprint 83: Two-Phase Upload)
-{
-  "document_id": "doc_abc123",
-  "status": "processing_background",
-  "message": "Document uploaded! Processing in background..."
-}
-
-# Status prüfen (2-5s nach Upload)
-GET http://localhost:8000/api/v1/admin/upload-status/doc_abc123
-
-# ❌ FALSCH: Admin-Endpoints, direkte Service-Aufrufe
-# POST /api/v1/admin/ingest (alt, deprecated)
-# POST /api/v1/admin/upload-fast (nur intern)
-```
-
-**Warum Frontend API?**
-1. **Vollständige Indexierung:** Alle 4 DBs werden befüllt (Qdrant, Neo4j, BM25, Redis)
-2. **Sprint 83 Features aktiv:** 3-Rank Cascade, Gleaning, Fast Upload, Comprehensive Logging
-3. **Production-like Testing:** Gleiche Code-Pfade wie echte Nutzer
-4. **RAGAS Konsistenz:** Retrieval-API erwartet Daten aus diesem Endpoint
-
-**Verwendung in Scripts:**
-```python
-# scripts/upload_ragas_phase2.py
-import requests
-
-def upload_document(file_path: str, namespace: str = "ragas_phase2"):
-    """Upload document via frontend API."""
-    with open(file_path, 'rb') as f:
-        response = requests.post(
-            "http://localhost:8000/api/v1/retrieval/upload",
-            files={"file": f},
-            data={"namespace": namespace, "domain": "research_papers"}
-        )
-    return response.json()["document_id"]
-```
-
-### Framework Compatibility
-| Framework | Status | Notes |
-|-----------|--------|-------|
-| PyTorch cu130 | Works | `--index-url https://download.pytorch.org/whl/cu130` |
-| NGC Container | Works | `nvcr.io/nvidia/pytorch:25.09-py3` |
-| llama.cpp | Works | Native CUDA compilation |
-| PyTorch cu128 | Fails | `nvrtc: invalid value for --gpu-architecture` |
-| TensorFlow | Unsupported | Not yet supported on DGX Spark |
-| TensorRT | Fails | Not yet  sm_121 support |
-
-### Required Environment
-```bash
-export TORCH_CUDA_ARCH_LIST="12.1a"
-export CUDACXX=/usr/local/cuda-13.0/bin/nvcc
-```
-
-### Flash Attention Workaround
-```python
-import torch
-torch.backends.cuda.enable_flash_sdp(False)
-torch.backends.cuda.enable_mem_efficient_sdp(True)
-```
-
----
-
-## Repository Structure
-
-```
-aegis-rag/
-├── src/
-│   ├── agents/                  # LangGraph Agents
-│   │   ├── coordinator/         # Query routing & orchestration
-│   │   ├── vector_agent/        # Vector search execution
-│   │   ├── graph_agent/         # Graph reasoning
-│   │   ├── memory_agent/        # Memory retrieval
-│   │   └── action_agent/        # Tool execution (MCP)
-│   ├── domains/                 # Domain-driven structure (Sprint 56+)
-│   │   ├── document_processing/ # Ingestion & chunking
-│   │   ├── knowledge_graph/     # Graph extraction & reasoning
-│   │   ├── vector_search/       # Vector retrieval
-│   │   │   ├── embedding/       # BGE-M3 embeddings (planned Sprint 61)
-│   │   │   └── reranking/       # Cross-encoder reranking (planned Sprint 61)
-│   │   ├── memory/              # Graphiti + Redis
-│   │   └── llm_integration/     # AegisLLMProxy
-│   │       └── tools/           # Tool framework (Sprint 59)
-│   ├── core/                    # Config, Logging, Models
-│   └── api/                     # FastAPI Endpoints
-├── tests/                       # Unit, Integration, E2E tests
-├── frontend/                    # React 19 Frontend + Playwright E2E
-├── docs/                        # Documentation
-│   ├── adr/                     # Architecture Decision Records
-│   ├── sprints/                 # Sprint Plans & Reports
-│   ├── technical-debt/          # Technical debt items
-│   ├── archive/                 # Archived documentation
-│   └── analysis/                # Technical investigations
-└── docker/                      # Dockerfiles & compose files
+# Status prüfen
+GET http://localhost:8000/api/v1/admin/upload-status/{document_id}
 ```
 
 ---
 
 ## Development Workflow
 
-### Feature-Based Development
+### Feature Development
 - **1 Feature = 1 Commit** (Atomic Rollbacks)
-- Feature-ID: `{Sprint}.{Nr}` (e.g., 38.1, 38.2)
+- Feature-ID: `{Sprint}.{Nr}` (z.B. 128.1, 128.2)
 
-### Branch Strategy
-- `main`: Production-ready
-- `feature/*`: Feature branches
-- `fix/*`: Bug fixes
+### Code Quality
+```bash
+# Linting & Formatting
+ruff check src/
+black src/ --line-length=100
+mypy src/
 
-### Commit Convention
+# Tests
+pytest tests/unit -v
+pytest tests/integration -v
+
+# E2E Tests (Playwright)
+cd frontend
+PLAYWRIGHT_BASE_URL=http://192.168.178.10 npx playwright test
 ```
-<type>(<scope>): <subject>
-
-Types: feat, fix, docs, style, refactor, test, chore
-Scopes: vector, graph, memory, agent, api, infra
-```
-
-### Code Quality Gates
-- **Linting:** Ruff
-- **Formatting:** Black (line-length=100)
-- **Types:** MyPy (strict)
-- **Testing:** pytest (>80% coverage)
 
 ---
 
-## Subagent Responsibilities
+## Claude Code Subagents
 
-**Claude Code hat 8 spezialisierte Subagents, die automatisch getriggert werden können:**
-
-| Subagent | Focus | Trigger Keywords |
-|----------|-------|------------------|
-| **backend-agent** | LangGraph agents, retrieval algorithms, memory logic, core business logic | "implement", "fix", "LangGraph", "agent", "retrieval", "memory" |
-| **documentation-agent** | ADRs, API docs, guides, README updates, technical writing | "document", "ADR", "README", "guide", "write docs" |
-| **infrastructure-agent** | Docker, K8s, CI/CD, monitoring, deployment, environment setup | "Docker", "deploy", "CI/CD", "infrastructure", "monitoring" |
-| **testing-agent** | Unit tests, integration tests, E2E tests, fixtures, test coverage | "test", "pytest", "coverage", "E2E", "Playwright" |
-| **performance-agent** | Performance optimization, profiling, benchmarking, latency analysis | "optimize", "performance", "benchmark", "profiling", "latency" |
-| **api-agent** | FastAPI routers, Pydantic models, OpenAPI, REST endpoints | "API", "endpoint", "FastAPI", "Pydantic", "OpenAPI" |
-| **frontend-agent** | React components, TypeScript, UI implementation, state management | "UI", "frontend", "React", "component", "TypeScript" |
-| **rag-tuning-agent** | RAGAS metrics optimization, A/B testing retrieval params, systematic RAG evaluation | "RAGAS", "metrics", "evaluate", "optimize RAG", "tuning", "Context Precision", "Faithfulness" |
-
-**Usage:** Diese Agents werden automatisch vom Task-Tool getriggert, wenn relevante Keywords im Task erkannt werden.
-
-### RAG Tuning Agent (Sprint 80+)
-
-**Purpose:** Automated agent for systematic RAGAS metrics optimization.
-
-**Capabilities:**
-- Run RAGAS evaluations in parallel (Vector/Graph/Hybrid modes)
-- A/B test parameter changes (top_k, reranking weights, prompts)
-- Track metric evolution over time (updates docs/ragas/RAGAS_JOURNEY.md)
-- Suggest optimizations based on bottleneck analysis
-- Auto-generate experiment reports
-
-**Triggers:**
-- User requests RAGAS evaluation ("run RAGAS", "evaluate retrieval quality")
-- User wants to improve metrics ("increase Context Recall", "reduce hallucination")
-- User asks about RAG performance ("why is Faithfulness low?")
-
-**Process:**
-1. **Baseline:** Run current RAGAS evaluation (all 3 modes)
-2. **Analysis:** Identify bottlenecks (low CR? low F? low CP?)
-3. **Hypothesis:** Generate optimization hypotheses based on analysis
-4. **Experiment:** Implement changes, re-run RAGAS
-5. **Document:** Update docs/ragas/RAGAS_JOURNEY.md with results
-6. **Iterate:** Continue until targets achieved or user stops
-
-**Example Usage:**
-```
-User: "Our Context Recall is only 0.29, how can we improve it?"
-
-rag-tuning-agent:
-1. Runs baseline RAGAS (confirms CR=0.291)
-2. Analyzes bottleneck: "Retrieving only 3-5 contexts vs SOTA 10-20"
-3. Hypotheses:
-   - Increase top_k from 5 to 15 (expected: CR +100%)
-   - Add parent chunk retrieval (expected: CR +50%)
-   - Audit entity extraction coverage (expected: CR +40%)
-4. Experiments:
-   - A: top_k=15 → CR=0.58 (+99%)
-   - B: top_k=15 + parent chunks → CR=0.72 (+148%)
-5. Documents results in RAGAS_JOURNEY.md
-6. Recommends: "Implement parent chunk retrieval (B) for best results"
-```
-
-**Output Location:** docs/ragas/RAGAS_JOURNEY.md (Experiment Log section)
+| Agent | Trigger Keywords | Focus |
+|-------|------------------|-------|
+| **backend-agent** | "implement", "LangGraph", "agent", "retrieval" | Core business logic |
+| **api-agent** | "API", "endpoint", "FastAPI", "Pydantic" | REST endpoints |
+| **frontend-agent** | "UI", "React", "component", "TypeScript" | React UI |
+| **testing-agent** | "test", "pytest", "E2E", "Playwright" | Tests |
+| **infrastructure-agent** | "Docker", "deploy", "CI/CD" | Deployment |
+| **documentation-agent** | "document", "ADR", "README" | Docs |
+| **performance-agent** | "optimize", "benchmark", "profiling" | Performance |
+| **rag-tuning-agent** | "RAGAS", "metrics", "evaluate" | RAG optimization |
 
 ---
 
 ## Environment Variables
 
 ```bash
-# Ollama (Chat Engine)
+# LLM Engines
 OLLAMA_BASE_URL=http://localhost:11434
 OLLAMA_MODEL_GENERATION=Nemotron3
-
-# vLLM (Extraction Engine - Sprint 125+)
-VLLM_ENABLED=false
+VLLM_ENABLED=true
 VLLM_BASE_URL=http://localhost:8001
 VLLM_MODEL=nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-NVFP4
-
-# Alibaba Cloud DashScope
-ALIBABA_CLOUD_API_KEY=sk-...
-MONTHLY_BUDGET_ALIBABA_CLOUD=10.0
 
 # Databases
 QDRANT_HOST=localhost
 QDRANT_PORT=6333
 NEO4J_URI=bolt://localhost:7687
-NEO4J_USER=neo4j
-NEO4J_PASSWORD=<password>
 REDIS_HOST=localhost
-```
 
----
+# Cloud Fallback
+ALIBABA_CLOUD_API_KEY=sk-...
+MONTHLY_BUDGET_ALIBABA_CLOUD=10.0
 
-## LangSmith Tracing (Sprint 115+)
-
-### Setup
-
-LangSmith tracing ist für LangGraph-Agents aktiviert. **WICHTIG:** Die `LANGCHAIN_*` Variablen müssen beim Container-Start gesetzt sein (nicht zur Laufzeit), da LangGraph diese beim Import liest.
-
-**Benötigte Environment Variables in `.env`:**
-```bash
+# LangSmith Tracing (Sprint 115+)
 LANGSMITH_TRACING=true
-LANGSMITH_API_KEY=lsv2_pt_...  # Von https://smith.langchain.com/settings
+LANGSMITH_API_KEY=lsv2_pt_...
 LANGSMITH_PROJECT=aegis-rag-sprint115
 ```
 
-**Docker-Compose setzt automatisch:**
-```bash
-LANGCHAIN_TRACING_V2=${LANGSMITH_TRACING}
-LANGCHAIN_API_KEY=${LANGSMITH_API_KEY}
-LANGCHAIN_PROJECT=${LANGSMITH_PROJECT}
-```
-
-### Container Restart bei Env-Änderungen
-
-**KRITISCH:** `docker compose restart` lädt `.env` NICHT neu! Immer verwenden:
+**WICHTIG:** Container nach `.env` Änderungen neu starten:
 ```bash
 docker compose -f docker-compose.dgx-spark.yml up -d --force-recreate api
 ```
 
-### LangSmith API Abfragen
+---
 
+## Wichtige ADRs
+
+| ADR | Beschreibung |
+|-----|--------------|
+| ADR-026 | Pure LLM Extraction Pipeline |
+| ADR-027 | Docling CUDA Ingestion |
+| ADR-033 | AegisLLMProxy Multi-Cloud Routing |
+| ADR-039 | Adaptive Section-Aware Chunking |
+| ADR-059 | vLLM Dual-Engine (Ollama/vLLM) |
+| ADR-060 | S-P-O Entity Extraction (15+22 Types) |
+| ADR-062 | LLM Engine Mode (vLLM/Ollama/Auto) |
+
+---
+
+## Sprint-Abschluss
+
+**Verwende `/commit` — deckt alle Docs-Updates ab (A-J):** SPRINT_PLAN, DECISION_LOG, CLAUDE.md, TECH_STACK, ADR_INDEX, Root Cleanup, ARCHITECTURE, README, TD-Archivierung, scripts/README.
+
+**Docker Rebuild nach Sprint:**
 ```bash
-# API Key (aus .env)
-API_KEY="lsv2_pt_..."
-
-# Projekte auflisten
-curl -s "https://api.smith.langchain.com/api/v1/sessions" \
-  -H "x-api-key: $API_KEY"
-
-# Einzelnen Trace abrufen (funktioniert immer)
-curl -s "https://api.smith.langchain.com/api/v1/runs/{run_id}" \
-  -H "x-api-key: $API_KEY"
-
-# Traces per trace_id abfragen (funktioniert)
-curl -s -X POST "https://api.smith.langchain.com/api/v1/runs/query" \
-  -H "x-api-key: $API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"trace": "{trace_id}", "limit": 10}'
-
-# ACHTUNG: Query mit "session" Filter funktioniert NICHT zuverlässig!
-# Nutze stattdessen die UI: https://smith.langchain.com
-```
-
-### Bekannte Einschränkungen
-
-| Feature | Status | Workaround |
-|---------|--------|------------|
-| `/runs/query` mit `session` Filter | ❌ Bug | UI verwenden oder `trace` Filter |
-| `/runs/{id}` einzelner Trace | ✅ Funktioniert | - |
-| LangGraph Auto-Tracing | ✅ Funktioniert | `LANGCHAIN_*` vars beim Start |
-| `@traceable` Decorator | ✅ Funktioniert | Für custom Functions |
-
-### UI Zugang
-
-- **URL:** https://smith.langchain.com
-- **Projekt:** `aegis-rag-sprint115`
-- **Login:** GitHub OAuth (klapom)
-
----
-
-## Performance Requirements
-
-| Metric | Target |
-|--------|--------|
-| Simple Query (Vector) | <200ms p95 |
-| Hybrid Query (Vector+Graph) | <500ms p95 |
-| Complex Multi-Hop | <1000ms p95 |
-| Sustained Load | 50 QPS |
-
----
-
-## Testing Strategy
-
-### Test Categories
-- **Unit Tests:** Mocked dependencies, fast (<1s)
-- **Integration Tests:** Real services (Qdrant, Neo4j, Redis)
-- **E2E Tests:** Full flows with Playwright
-
-### E2E Testing with Playwright (Sprint 108+)
-
-**Documentation:** [docs/e2e/PLAYWRIGHT_E2E.md](docs/e2e/PLAYWRIGHT_E2E.md)
-
-**Test Execution:**
-Make sure frontend container is uptdodate, maybe just rebuild it to be on the safe side
-```bash
-cd /home/admin/projects/aegisrag/AEGIS_Rag/frontend
-PLAYWRIGHT_BASE_URL=http://192.168.178.10 npx playwright test --reporter=list
-```
-
-**Test Groups (200 tests across 16 groups):**
-- **Group 01-03:** MCP Tools, Bash, Python Execution
-- **Group 04-06:** Browser Tools, Skills Management (23 tests skipped - need data-testids)
-- **Group 07:** Memory Management (11 failures - missing data-testids)
-- **Group 08-09:** Deep Research, Long Context
-- **Group 10-12:** Hybrid Search, Document Upload, Graph Communities
-- **Group 13-15:** Agent Hierarchy, GDPR/Audit, Explainability (Sprint 95-96 features)
-- **Group 16:** MCP Marketplace
-
-**Current Status (Sprint 108):**
-- **Pass Rate:** 65% (130/200 tests)
-- **Failed:** 39 tests (19.5%)
-- **Skipped:** 31 tests (15.5%)
-
-**Testing Strategy:**
-1. **After every code change:** Rebuild Docker containers with `--no-cache`
-2. **Document all test runs:** Update `docs/e2e/PLAYWRIGHT_E2E.md`
-3. **Create temp test docs:** In `docs/e2e/` during test runs
-4. **Sprint planning:** Document test-related tasks in `docs/sprints/SPRINT_XX_PLAN.md`
-5. **Archive old docs:** Move outdated E2E docs to `docs/e2e/archive/`
-
-**Common E2E Issues & Fixes:**
-- **Timing:** E2E tests need 50-100% overhead vs API-only tests
-- **Selectors:** Use scoped selectors (`.within()`, `parent.getByTestId()`)
-- **Mock APIs:** Should have graceful fallbacks (components cache data)
-- **File Inputs:** Hidden inputs need `.count()` not `.toBeVisible()`
-- **TypeScript:** Never export interfaces from runtime code files
-
-**Key Learnings (Sprint 108):**
-- Always verify backend APIs first before assuming missing endpoints
-- Use parallel specialized agents (testing-agent, frontend-agent, api-agent) for 4-5x speedup
-- Rebuild Docker containers after every frontend/backend change
-
-### Lazy Import Patching (Critical!)
-
-When patching lazy imports, **patch at source module**, not caller:
-
-```python
-# WRONG
-patch("src.api.v1.chat.get_redis_memory")
-
-# CORRECT
-patch("src.components.memory.get_redis_memory")
+docker compose -f docker-compose.dgx-spark.yml build --no-cache api frontend
+docker compose -f docker-compose.dgx-spark.yml up -d
 ```
 
 ---
-
-## Key ADRs
-
-| ADR | Decision |
-|-----|----------|
-| ADR-024 | BGE-M3 embeddings (1024-dim) |
-| ADR-026 | Pure LLM extraction pipeline |
-| ADR-027 | Docling CUDA for ingestion |
-| ADR-033 | AegisLLMProxy multi-cloud routing |
-| ADR-039 | Adaptive section-aware chunking |
-| ADR-040 | RELATES_TO semantic relationships |
-
----
-
 
 ## Quick Commands
 
 ```bash
-# Start services
-docker compose up -d
-
-# Run tests
-pytest tests/unit -v
-pytest tests/integration -v
-
-# Start API
-uvicorn src.api.main:app --reload --port 8000
-
-# Check health
-curl http://localhost:8000/health
-```
-
----
-
-## Sprint-Abschluss: Dokumentations- & Container-Update Checkliste
-
-**Nach jedem Sprint MÜSSEN folgende Schritte durchgeführt werden:**
-
-### 1. Dokumentation aktualisieren (MANDATORY)
-
-**📍 Dokumentations-Locations (WICHTIG):**
-- ✅ `CLAUDE.md` → **Root-Verzeichnis** (`/CLAUDE.md`)
-- ✅ `SPRINT_XX_PLAN.md` → **docs/sprints/** (`/docs/sprints/SPRINT_110_PLAN.md`)
-- ✅ `PLAYWRIGHT_E2E.md` → **docs/e2e/** (`/docs/e2e/PLAYWRIGHT_E2E.md`)
-- ✅ `SPRINT_PLAN.md` → **docs/sprints/** (`/docs/sprints/SPRINT_PLAN.md`)
-
-**A. ADR erstellen/aktualisieren (wenn architektonische Entscheidungen):**
-- Neue ADR in `docs/adr/ADR-XXX-title.md` erstellen
-- `docs/adr/ADR_INDEX.md` aktualisieren
-
-**B. DECISION_LOG.md aktualisieren (ALWAYS):**
-- Neue Sektion für Sprint XX mit allen Entscheidungen
-- Format: `### 2026-XX-XX | Decision Title (Sprint XX.Y)`
-- **Total Decisions** + **Current/Next Sprint** am Ende aktualisieren
-
-**C. TECH_STACK.md aktualisieren (bei neuen Dependencies/Frameworks):**
-- Neue Dependencies mit Versions-Nummern dokumentieren
-- Beispiele: RAGAS 0.3.9→0.4.2, DSPy 2.5+, neue npm packages
-
-**D. ARCHITECTURE.md aktualisieren (bei System-Architektur-Änderungen):**
-- Neue Komponenten/Module dokumentieren
-- Interaktions-Diagramme + Performance-Metriken aktualisieren
-
-**E. SPRINT_PLAN.md aktualisieren (ALWAYS):**
-- Sprint XX Status: 📝 Planned → ✅ Complete
-- **Cumulative Story Points** aktualisieren
-- Nächsten Sprint-Eintrag anlegen
-
-**F. README.md aktualisieren (Major Features):**
-- **Current Sprint Status** aktualisieren
-- Key Achievements + Performance Metrics hinzufügen
-
-**G. CLAUDE.md aktualisieren (ALWAYS - Sprint Summary):**
-- Sprint XX Complete Zeile hinzufügen (max 1 Zeile, kompakt)
-- Format: `**Sprint XX Complete:** Hauptfeatures + Metriken`
-
-**H. Root-Verzeichnis bereinigen (wenn temporäre Dokumentations-Artefakte vorhanden):**
-- Temporäre Markdown-Dateien aus Root löschen (z.B. `TEMP_ANALYSIS.md`, `NOTES.md`)
-- Sprint-spezifische Notizen nach `docs/sprints/archive/` verschieben
-- Nur permanente Docs im Root behalten: `README.md`, `CLAUDE.md`, `CHANGELOG.md`
-
-**I. Behobene Technical Debt archivieren (wenn TDs gelöst wurden):**
-- Gelöste TD-Dateien von `docs/technical-debt/` nach `docs/technical-debt/archive/` verschieben
-- TD_INDEX.md aktualisieren: Eintrag als "✅ RESOLVED (Sprint XX)" markieren
-- **Active TD Count** und **Total SP** im TD_INDEX.md Footer aktualisieren
-- Beispiel: `TD-096` (RAGAS Timeouts) wird in Sprint 79 gelöst → nach `archive/TD-096-ragas-timeout.md`
-
-**J. scripts/README.md aktualisieren (bei Änderungen in /scripts):**
-- **IMMER** wenn Scripts hinzugefügt, geändert oder archiviert werden
-- Neue Scripts in entsprechende Sektion eintragen (RAGAS, Upload, Testing, etc.)
-- Veraltete Scripts ins `archive/` verschieben und README aktualisieren
-- `Last Updated` Datum und Sprint-Nummer aktualisieren
-- Quick Commands Sektion aktuell halten
-
-**⚠️ CRITICAL PROCESS GAP (Sprint 84 Erkenntnisse):**
-- **Problem:** TDs werden im Code gelöst, aber Dokumentation wird nicht aktualisiert → Documentation Drift
-- **Root Cause:** Fehlende Automatisierung der TD-Archivierung nach Feature-Abschluss
-- **Best Practice (Future Sprint 85+):**
-  ```bash
-  # Git Hook: .git/hooks/commit-msg
-  # 1. Suche nach "TD-XXX" in Commit-Message
-  # 2. Automatisches Verschieben nach docs/technical-debt/archive/
-  # 3. Update TD_INDEX.md (Active Count, Total SP)
-  # 4. Füge "Resolved in Sprint XX" Footer hinzu
-  ```
-- **Interim Manual Process:** Mindestens bei Sprint-Abschluss alle TD-Dateien reviewen
-- **Example (Sprint 83):** TD-075, TD-100, TD-083, TD-059 waren Code-seitig gelöst, aber als "OPEN" dokumentiert
-
----
-
-### 2. Docker Container neu bauen (MANDATORY)
-
-**Nach jedem Sprint müssen die Docker Container neu gebaut werden:**
-
-```bash
-# 1. API Container neu bauen (enthält Backend Code)
-docker compose -f docker-compose.dgx-spark.yml build --no-cache api
-
-# 2. Frontend Container neu bauen (Sprint 92: React/Vite in Docker)
-docker compose -f docker-compose.dgx-spark.yml build --no-cache frontend
-
-# 3. Test Container neu bauen (enthält Tests)
-docker compose -f docker-compose.dgx-spark.yml build --no-cache test
-
-# 4. Docling Container (nur bei Änderungen am Ingestion Code)
-docker compose -f docker-compose.dgx-spark.yml build --no-cache docling
-
-# 5. Alle Container neu starten
+# Services starten
 docker compose -f docker-compose.dgx-spark.yml up -d
-```
 
-**Container-Images prüfen:**
-```bash
-# Image-Datum prüfen (sollte nach Sprint-Commit sein)
-docker images aegis-rag-api --format "{{.CreatedAt}}"
-docker images aegis-rag-test --format "{{.CreatedAt}}"
-```
+# Logs
+docker logs -f aegis-api
+docker logs -f aegis-frontend
 
-**Wichtig:** Die Datenbank-Container (Qdrant, Neo4j, Redis, Ollama) müssen NICHT neu gebaut werden - diese verwenden offizielle Images.
+# Health Check
+curl http://localhost:8000/health
+
+# API neu laden
+docker compose -f docker-compose.dgx-spark.yml restart api
+
+# Tests
+pytest tests/unit -v
+cd frontend && npx playwright test
+```
 
 ---
 
-### 3. Sprint-Abschluss-Commit (OPTIONAL)
+## Aktuelle Sprint-Highlights
 
-```bash
-# Nach allen Dokumentations-Updates:
-git add docs/ README.md CLAUDE.md
-git commit -m "docs(sprintXX): Complete Sprint XX documentation
+**Sprint 128 Complete:** LightRAG Removal (-6,660 LOC), Cascade Guard, HyDE, vLLM eugr SM121 (0 CUDA crashes), Domain Prompt Verification (27/35), E2E Benchmarks (15-doc: 212 entities, 626 relations, 84.5% relation specificity), MAX_RELATIONSHIPS cap removed, Chat Benchmark (Ollama 64 vs vLLM 55 tok/s). 30 SP (128.3 carried to 129).
 
-- ADR-XXX: [Decision Title]
-- DECISION_LOG.md: X new decisions
-- ARCHITECTURE.md: [Changes]
-- SPRINT_PLAN.md: Sprint XX Complete
-- [weitere Änderungen]
-
-Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
-```
-
-**Automatisierung:** Aktuell NICHT automatisiert - manuelle Checkliste erforderlich. Zukünftig (Sprint 80+) könnte `scripts/sprint_close.py` + Git Hooks teilweise automatisieren.
-
-**Sprint 64 Complete:** Domain training optimization, LLM config backend integration (Redis persistence, 60s cache), multi-turn research agents, section-aware citations, production deployment (Docker Compose + Nginx @ 192.168.178.10), E2E testing (337/594 passed).
-**Sprint 65 Complete:** CUDA optimization for embeddings (10-80x speedup), critical E2E test fixes, performance improvements.
-**Sprint 66 Complete:** Document upload pipeline stabilization, VLM metadata, Admin UI fixes.
-**Sprint 67 Complete:** Secure Shell Sandbox, Agents Adaptation Framework, C-LARA Intent Classifier (60%→89.5% accuracy), 195 tests passing, 3,511 LOC.
-**Sprint 68 Complete:** E2E test completion (594→606 tests, 57%→100%), performance optimization (500ms→320ms P95), section community detection, cache optimization.
-**Sprint 69 Complete:** LLM streaming (TTFT 320ms→87ms), model selection (3-tier routing), learned reranker weights, query rewriter v2, production monitoring (Prometheus + Grafana).
-**Sprint 70 Complete:** Deep Research Repair + Tool Use Integration.
-**Sprint 71 Complete:** SearchableSelect Component, Backend APIs (/graph/documents, /sections), Original Filenames, 22/23 E2E tests (96%).
-**Sprint 72 Complete:** API-Frontend Gap Closure (MCP, Domain, Memory UI), Gap 72%→60% (18 endpoints), 100% E2E (594 tests).
-**Sprint 73 Complete:** E2E Test Infrastructure & Documentation, Chat Interface tests (10/10), Integration test analysis.
-**Sprint 74 Complete:** RAGAS Integration & Quality Metrics, Timeouts 60s→180s, RAGAS tests (20 questions, 8 tests), Retrieval comparison.
-**Sprint 75 Complete:** Critical Architecture Gap Discovery (TD-084: Namespace Isolation, TD-085: DSPy), Infrastructure fixes (Ollama 32K, PyTorch cu130).
-**Sprint 76 Complete:** .txt File Support + RAGAS Baseline (15 HotpotQA files, 146 entities, 38 types), Entity extraction fix, RAGAS (Faithfulness 80%, Relevancy 93%).
-**Sprint 77 Complete:** Critical Bug Fixes (BM25 namespace, chunk mismatch, Qdrant index), Community Summarization (92/92, batch job + API), Entity Connectivity Benchmarks (4 domains), 2,108 LOC.
-**Sprint 78 Complete:** Graph Entity→Chunk Expansion (100-char→447-char full chunks), 3-Stage Semantic Search (LLM→Graph N-hop→Synonym→BGE-M3), 4 UI settings (hops 1-3, threshold 5-20), 20 unit tests (100%), ADR-041, RAGAS deferred (GPT-OSS:20b 85.76s, Nemotron3 >600s).
-**Sprint 79 Complete:** RAGAS 0.4.2 Migration (4 features, 12 SP), Graph Expansion UI (56 tests), Admin Graph Ops UI (74 tests), BGE-M3 Embeddings (99s/sample), DSPy deferred to Sprint 80 (21 SP).
-**Sprint 81 Complete:** C-LARA SetFit Intent Classifier **95.22%** (Multi-Teacher training: 4 LLMs + 42 edge cases), 5-class intents, ~40ms inference, TD-079 resolved, namespace bug fix (TD-099).
-**Sprint 82 Complete:** RAGAS Phase 1 Text-Only Benchmark (8 SP), 500 samples (450 answerable + 50 unanswerable), HotpotQA + RAGBench adapters, stratified sampling engine, 49 unit tests (100%), SHA256: 8f6be17d...
-**Sprint 83 Complete:** ER-Extraction Improvements (26 SP, 4 features), 3-Rank LLM Cascade (Nemotron3→GPT-OSS→Hybrid SpaCy NER, 99.9% success), Gleaning (+20-40% recall, Microsoft GraphRAG), Fast Upload (2-5s response, 10-15x faster), Multi-language SpaCy (DE/EN/FR/ES), Comprehensive Logging (P95 metrics, GPU VRAM, LLM cost), Ollama Health Monitor, 94+ tests (100%), 7,638 LOC, 5 TDs archived (27 SP).
-**Sprint 87 Complete:** BGE-M3 Native Hybrid Search (replaces BM25), FlagEmbedding Service (Dense 1024D + Sparse lexical), Qdrant multi-vector collection with server-side RRF fusion, async embedding fix for LangGraph compatibility.
-**Sprint 88 In Progress:** RAGAS Phase 2 Evaluation (Tables + Code), T2-RAGBench (5/5 = 100%), MBPP Code QA (5/5 = 100%), comprehensive metrics schema (4 RAGAS + ingestion + retrieval + LLM eval metrics).
-**Sprint 92 Complete (36 SP, 24 Features):** Graph Search **17-19s→<2s** (89% faster), FlagEmbedding Warmup (40s→<1s), Ollama GPU Fix (19→77 tok/s), Deep Research UI, Docker Frontend (Port 80), Vector display fix, Rank consistency (1-indexed), Stop Words Filter, **Community Detection GDS Fix** (2,387 communities), Context Relevance Guard (TD-080 resolved), Recursive LLM Scoring (ADR-052), 10+ unit tests, ADR-053.
-**Sprint 93 Complete:** Tool Composition Framework (ToolComposer, PolicyEngine, Browser Tool, Skill-Tool Mapping, DSL), LangGraph 1.0.6 upgrade, 227 tests (100%), 6 modules (3,609 LOC).
-**Sprint 94 Complete:** Multi-Agent Communication (Messaging Bus, Shared Memory, Skill Orchestrator), 144 tests (100%), 5,011 LOC, 26 SP (TD-101: RISE deferred).
-**Sprint 95 Complete:** Hierarchical Agents (Executive→Manager→Worker), Skill Libraries & Bundles (Research/Analysis/Synthesis/Development/Enterprise), Procedural Memory (LangSmith traces), 207 tests (100%), 3,620+ LOC, 30 SP.
-**Sprint 96 Complete:** EU Governance (GDPR Articles 6,7,13-17,20,30), Audit Trail (SHA-256 chain, 7-year retention), Explainability (3 levels), Certification (3 tiers), 211 tests (100%), 32 SP. **Sprints 90-96 Transformation Complete (208 SP): Basic RAG → Enterprise Agentic Framework with full EU compliance.**
-**Sprint 114 Complete:** E2E Test Stabilization Phase 2 - Bug fixes (19 pattern bugs), skip missing features (28 tests), CI/CD optimization (6 fixes), 18 SP delivered. Pass Rate 46.5%→Target 85%+, Category E analysis (473 tests, 8 patterns), 4 files modified.
-**Sprint 115 Complete:** Graph Query Optimization (**27s→1.4s, 95% faster**), ADR-057 (disable SmartEntityExpander), Vector-First Graph-Augment (Option 3), CI/CD parallelization (45min→20min), Test 3-tier system (fast/standard/full), LangSmith tracing, 48 SP (100%). Multi-turn tests now pass.
-**Sprint 120 Complete:** UI Polish, Tools Activation, Performance Fixes — Ollama GPU offload (**3.1→74 tok/s, +2,287%**), MCP tool execution + disconnect crash fix, auth bypass for LAN/Docker, reranker CUDA singleton, ~64 SP.
-**Sprint 121 Complete:** Technical Debt Consolidation (44 SP, 5 TDs resolved) — ChunkingService removed (**-1,727 lines**), parallel section extraction (tokenizer singleton + ThreadPool), ingestion **77% faster** (170s→38.5s), LLM tool detection default, Entity CRUD API (**GDPR Art. 17**) + EntityManagementPage frontend.
-**Sprint 120 Performance Fix:** Ollama 0.13.4→**0.15.2** + `OLLAMA_NEW_ENGINE=true` — Nemotron3 Nano (`nemotron_h_moe` Hybrid: Mamba SSM + MoE) jetzt GPU-beschleunigt (**3→74 tok/s, 24×**), Reranker CPU→CUDA (**17.8s→335ms**), Singleton-Fixes. E2E warm: **2min→~1s**. Details: [CLAUDE_zusatzinfos.md](docs/CLAUDE_zusatzinfos.md)
-**Sprint 125 Complete:** vLLM dual-engine (ADR-059, port 8001), S-P-O extraction (15+22 universal types, ADR-060), domain taxonomy (35 DDC+FORD domains), domain-aware ingestion (BGE-M3 classification → domain prompts), domain-aware frontend (detection, profiles, filter), 45 SP (100%).
-**Sprint 126 Complete:** LLM Engine Mode (ADR-062, vLLM/Ollama/Auto hot-reload via Redis), community detection as nightly batch job (**85% faster ingestion**, 732s→107s/doc), DSPy EntityExtractionSig fix (list[str]→list[dict]), NULL relation backfill (1,021→0), domain sub-type pipeline (253 entity + 43 relation aliases, 4-tier prompt priority), AdminNavigationBar on ~28 pages, 35 domains seeded into Neo4j, 14 SP (100%).
-**Sprint 127 Complete:** RAGAS Phase 1 Benchmark — **CP=0.739** (+27%), **CR=0.760** (+162%), F=0.699, AR=0.828 (vs Sprint 82). vLLM tenacity retry (0 retries/199 calls), 10-doc ingestion (204 entities, 1,376 relations), parallel benchmark (2 workers/0.45 GPU optimal), RAGAS local model fix (LangchainLLMWrapper + extract_json monkey-patch, 94.6% parse success). LightRAG bottleneck confirmed (92% overhead, 79% generic RELATED_TO). 13 SP (100%).
-**Sprint 128 Complete:** LightRAG Removal (-6,660 LOC), Cascade Guard, HyDE, vLLM eugr SM121 (**0 CUDA crashes**), Domain Prompt Verification (27/35), E2E Benchmarks (15-doc: 212 entities, 626 relations, **84.5% relation specificity**), MAX_RELATIONSHIPS cap removed, Chat Benchmark (Ollama 64 vs vLLM 55 tok/s). 30 SP (128.3 carried to 129).
+**Previous Sprints:** 127 (RAGAS CP=0.739, CR=0.760), 126 (LLM Engine Mode, community batch jobs), 125 (vLLM dual-engine, S-P-O extraction), 121 (ChunkingService removal, -1,727 LOC), 120 (Ollama 3→74 tok/s), 115 (Graph 27s→1.4s), 92 (Graph <2s, Frontend Docker).
 
 ---
 
 ## Links
 
-**Core Documentation:**
+- [Extended Info](docs/CLAUDE_extended.md) - DGX Spark Details, vLLM, Ollama, Playwright, Repo-Struktur
 - [Architecture](docs/ARCHITECTURE.md)
-- [Technology Stack](docs/TECH_STACK.md)
-- [Code Conventions](docs/CONVENTIONS.md)
-- [Context Refresh](docs/CONTEXT_REFRESH.md)
-
-**Project Planning:**
+- [Tech Stack](docs/TECH_STACK.md)
 - [Sprint Plans](docs/sprints/)
 - [ADR Index](docs/adr/ADR_INDEX.md)
-- [Technical Debt Index](docs/technical-debt/TD_INDEX.md)
-
-**External Resources:**
-- [LangGraph Documentation](https://langchain-ai.github.io/langgraph/)
-- [Qdrant Documentation](https://qdrant.tech/documentation/)
-- [Neo4j Documentation](https://neo4j.com/docs/)
+- [TD Index](docs/technical-debt/TD_INDEX.md)

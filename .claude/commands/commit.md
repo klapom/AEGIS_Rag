@@ -34,6 +34,22 @@ Check EACH of these documents and update if the changes warrant it:
 ### F. Root Cleanup
 - Check for temp .md files in root directory that should be in `docs/sprints/archive/`
 
+### G. ARCHITECTURE.md (`docs/ARCHITECTURE.md`)
+- Only if system architecture changed (new components, modified data flows, new integrations)
+- Update interaction diagrams and performance metrics if applicable
+
+### H. README.md (root)
+- Only for major features (new Sprint complete, significant capability additions)
+- Update "Current Sprint Status" and key performance metrics
+
+### I. Technical Debt (`docs/technical-debt/`)
+- If TDs were resolved: move from `docs/technical-debt/` to `docs/technical-debt/archive/`
+- Update `TD_INDEX.md`: mark as "✅ RESOLVED (Sprint XX)", update Active Count and Total SP
+
+### J. scripts/README.md (`scripts/README.md`)
+- Only if scripts were added, changed, or archived
+- Update `Last Updated` date and Sprint number
+
 **IMPORTANT:** Skip docs that don't need updating. Don't update docs just for the sake of it.
 If only documentation was changed (no code), skip Step 2 entirely.
 

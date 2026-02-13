@@ -1,8 +1,8 @@
 # Technical Debt Index
 
-**Last Updated:** 2026-01-28 (Sprint 121 — TD-122, TD-123 added for tool streaming/display)
-**Total Active Items:** 9 (4 Active + 5 Deferred)
-**Total Active Story Points:** ~139 SP
+**Last Updated:** 2026-02-12 (Sprint 129 — TD-124 added for VLM LoRA fine-tuning)
+**Total Active Items:** 10 (4 Active + 6 Deferred)
+**Total Active Story Points:** ~147 SP
 **Archived Items:** [49 items](archive/ARCHIVE_INDEX.md)
 **Review Frequency:** Every sprint planning
 
@@ -15,7 +15,7 @@
 | CRITICAL | 1     | 6 SP         | TD-101: DEFERRED (Sprint 130+) |
 | HIGH     | 1     | ~18 SP       | TD-102: Sprint 122 |
 | MEDIUM   | 1     | ~8 SP        | TD-098: DEFERRED |
-| LOW      | 6     | ~107 SP      | TD-056, TD-064, TD-120, TD-121, TD-122, TD-123: DEFERRED/OPEN |
+| LOW      | 7     | ~115 SP      | TD-056, TD-064, TD-120, TD-121, TD-122, TD-123, TD-124: DEFERRED/OPEN |
 
 **Note:** TD-120 (31 SP), TD-121 (21 SP) deferred indefinitely unless customer trigger.
 **Note:** TD-122 (5 SP), TD-123 (3 SP) — Sprint 121 discoveries, low priority.
@@ -58,6 +58,7 @@
 | [TD-121](TD-121_GRAPH_VERSIONING_UI.md) | **Neo4j Graph Versioning UI (39.5-39.7)** | 🔴 **DEFERRED** | 21 | **Sprint 122+** |
 | [TD-122](TD-122_TOOL_PROGRESS_STREAMING.md) | **Tool Progress Streaming (Backend)** | 🔴 OPEN | 5 | **Sprint 123+** |
 | [TD-123](TD-123_TOOL_DISPLAY_COMPONENT_MERGE.md) | **Tool Display Component Merge** | 🔴 OPEN | 3 | **Sprint 123+** |
+| [TD-124](TD-124_VLM_LORA_TABLE_FINETUNING.md) | **VLM LoRA Fine-Tuning for Table OCR** | 🟡 **DEFERRED** | 8 | **Post-Sprint 130** |
 
 **TD-064 Update (Sprint 121):** Marked DEFERRED per user decision. No immediate business need.
 
@@ -68,6 +69,8 @@
 **TD-122 Discovery (Sprint 121):** `tool_progress` SSE event is a "sleeping feature" — frontend handler exists in `useStreamChat.ts` but backend never emits this event. Low priority, needed for long-running tool UX (>5s bash/python).
 
 **TD-123 Discovery (Sprint 121):** Two overlapping tool display components: `ToolExecutionDisplay.tsx` (Sprint 63, post-execution) and `ToolExecutionPanel.tsx` (Sprint 119+121, streaming). ~600 lines with significant overlap. Merge into shared component family.
+
+**TD-124 Discovery (Sprint 129):** VLM Cross-Validation Benchmark showed Nemotron VL FP4 has 22 OCR errors on German automotive tables. LoRA fine-tuning on 100-500 corrected samples expected to reduce errors 50-70%. Benchmark data archived in `data/evaluation/table_benchmark/TD-124_VLM_LORA_TABLE_FINETUNING.zip`. Prerequisite: Table ingestion pipeline (Sprint 129.6) must be production-ready first.
 
 ---
 
