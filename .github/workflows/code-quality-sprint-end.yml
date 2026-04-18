@@ -39,7 +39,7 @@ jobs:
 
       - name: Install code quality tools
         run: |
-          pip install radon vulture jscpd safety pip-audit
+          pip install radon vulture safety pip-audit
 
       - name: Run code complexity analysis
         id: complexity
