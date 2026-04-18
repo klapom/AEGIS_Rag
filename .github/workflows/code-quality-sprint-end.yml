@@ -37,6 +37,11 @@ jobs:
           pip install poetry
           poetry install --with dev
 
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bubblewrap
+
       - name: Install code quality tools
         run: |
           pip install radon vulture safety pip-audit
@@ -186,7 +191,7 @@ jobs:
               --cov=src \
               --cov-report=json \
               --cov-report=term \
-              -m "not integration" | tee coverage-output.txt
+              -m "not integration and not requires_llm" | tee coverage-output.txt
 
             COVERAGE=$(jq '.totals.percent_covered' coverage.json)
             echo "Current coverage (unit tests only): $COVERAGE%" >> $GITHUB_STEP_SUMMARY
