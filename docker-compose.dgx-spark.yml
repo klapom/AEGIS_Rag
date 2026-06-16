@@ -311,7 +311,7 @@ services:
   # DGX Spark: Increased heap for complex graph queries
   # ============================================================================
   neo4j:
-    image: neo4j:5.24-community
+    image: neo4j:5.26-community
     container_name: aegis-neo4j
     ports:
       - "7474:7474"  # HTTP
