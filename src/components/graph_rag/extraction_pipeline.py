@@ -171,6 +171,7 @@ async def extract_and_store_entities(
         "total_chunks": 0,
         "total_entities": 0,
         "total_relations": 0,
+        "total_relations_stored": 0,
         "total_mentioned_in": 0,
     }
 
@@ -458,6 +459,7 @@ async def extract_and_store_entities(
     aggregate_stats["total_chunks"] = len(converted_chunks)
     aggregate_stats["total_entities"] = len(storage_entities)
     aggregate_stats["total_relations"] = len(all_relations)
+    aggregate_stats["total_relations_stored"] = total_relations_stored
 
     total_time = time.time() - total_start
 

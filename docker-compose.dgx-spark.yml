@@ -704,6 +704,8 @@ services:
       - NEMOTRON_VLM_URL=${NEMOTRON_VLM_URL:-http://aegis-vlm-table:8002}
       # Sprint 124: Thinking mode control (default: false)
       - AEGIS_LLM_THINKING=${AEGIS_LLM_THINKING:-false}
+      # ADR-064: Round-2 relation extraction disabled by default (Sprint 129, 2026-07-21)
+      - AEGIS_ENABLE_LEGACY_ROUND2_RELATIONS=${AEGIS_ENABLE_LEGACY_ROUND2_RELATIONS:-false}
       - VLM_BACKEND=ollama
       - EMBEDDING_BACKEND=flag-embedding  # Sprint 87: Multi-vector (dense + sparse)
       - ST_MODEL_NAME=BAAI/bge-m3
@@ -888,6 +890,8 @@ services:
       - AEGIS_USE_LEGACY_CASCADE=${AEGIS_USE_LEGACY_CASCADE:-0}
       # Sprint 124: Thinking mode control (default: false)
       - AEGIS_LLM_THINKING=${AEGIS_LLM_THINKING:-false}
+      # ADR-064: Round-2 relation extraction disabled by default (Sprint 129, 2026-07-21)
+      - AEGIS_ENABLE_LEGACY_ROUND2_RELATIONS=${AEGIS_ENABLE_LEGACY_ROUND2_RELATIONS:-false}
       - VLM_BACKEND=ollama
       - EMBEDDING_BACKEND=flag-embedding  # Sprint 87: Multi-vector (dense + sparse)
       - ST_MODEL_NAME=BAAI/bge-m3

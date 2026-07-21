@@ -14,6 +14,7 @@ Node: graph_extraction_node
 """
 
 import asyncio
+import os
 import time
 from typing import Any
 
@@ -364,237 +365,254 @@ async def graph_extraction_node(state: IngestionState) -> IngestionState:
             wait_seconds=1.0,
         )
 
-        # Sprint 34 Feature 34.1 & 34.2: Extract and store RELATES_TO relationships
-        # Round 2: Re-extract relations using entities now stored in Neo4j
-        relation_extraction_start = time.perf_counter()
-        total_relations_created = 0
-
-        # Sprint 83 Feature 83.1: Track per-chunk latencies for relation extraction
-        relation_latency_tracker = PhaseLatencyTracker()
-
-        logger.info(
-            "TIMING_relation_extraction_start",
-            stage="graph_extraction",
-            substage="relation_extraction",
-            chunks_to_process=len(prechunked_docs),
+        # ADR-064: Round-2 relation extraction is deactivated by default.
+        # Round 1 (extract_and_store_entities above) already writes typed RELATES_TO edges.
+        # Set AEGIS_ENABLE_LEGACY_ROUND2_RELATIONS=true to reactivate the Sprint-34 legacy path.
+        _round2_enabled = (
+            os.environ.get("AEGIS_ENABLE_LEGACY_ROUND2_RELATIONS", "false").lower() == "true"
         )
 
-        # Import RelationExtractor
-        from src.components.graph_rag.relation_extractor import RelationExtractor
-
-        relation_extractor = RelationExtractor()
-
-        # Sprint 33 FIX: Query Neo4j for entities per chunk
-        # Get Neo4j client to query entities associated with each chunk via MENTIONED_IN
-        from src.components.graph_rag.neo4j_client import get_neo4j_client
-
-        neo4j_client = get_neo4j_client()
-
-        # Sprint 42: Query Neo4j for chunks that were just stored by insert_prechunked_documents
-        # The chunk_ids should now match between Qdrant and Neo4j (unified ID)
-        document_id = state["document_id"]
-        chunks_query = """
-        MATCH (c:chunk {document_id: $document_id})
-        RETURN c.chunk_id AS chunk_id, c.text AS chunk_text
-        ORDER BY c.chunk_index
-        """
-        try:
-            neo4j_chunks = await neo4j_client.execute_read(
-                chunks_query, {"document_id": document_id}
-            )
+        if not _round2_enabled:
+            round1_relations_stored = graph_stats.get("stats", {}).get("total_relations_stored", 0)
             logger.info(
-                "neo4j_chunks_queried_for_relations",
-                document_id=document_id,
-                chunks_found=len(neo4j_chunks),
+                "round2_relation_extraction_skipped",
+                reason="disabled_by_adr_064",
+                document_id=state["document_id"],
+                round1_relations=round1_relations_stored,
             )
-        except Exception as e:
-            logger.error(
-                "failed_to_query_neo4j_chunks",
-                document_id=document_id,
-                error=str(e),
+            state["relations_count"] = round1_relations_stored
+        else:
+            # Sprint 34 Feature 34.1 & 34.2: Extract and store RELATES_TO relationships
+            # Round 2: Re-extract relations using entities now stored in Neo4j
+            relation_extraction_start = time.perf_counter()
+            total_relations_created = 0
+
+            # Sprint 83 Feature 83.1: Track per-chunk latencies for relation extraction
+            relation_latency_tracker = PhaseLatencyTracker()
+
+            logger.info(
+                "TIMING_relation_extraction_start",
+                stage="graph_extraction",
+                substage="relation_extraction",
+                chunks_to_process=len(prechunked_docs),
             )
-            neo4j_chunks = []
 
-        # Sprint 51: Emit progress event for relation extraction start
-        relation_chunks_total = len(neo4j_chunks)
-        await emit_progress(
-            document_id=document_id,
-            phase="relation_extraction",
-            current=0,
-            total=relation_chunks_total,
-            message=f"Starting relation extraction for {relation_chunks_total} chunks...",
-            details={"stage": "relation_extraction_start"},
-        )
+            # Import RelationExtractor
+            from src.components.graph_rag.relation_extractor import RelationExtractor
 
-        # Process each chunk from Neo4j: extract relations and store to Neo4j
-        for chunk_idx, chunk_data in enumerate(neo4j_chunks):
-            # Sprint 83 Feature 83.1: Track per-chunk latency
-            with relation_latency_tracker.track():
-                chunk_text = chunk_data.get("chunk_text", "")
-                chunk_id = chunk_data.get("chunk_id", "")
+            relation_extractor = RelationExtractor()
 
-                if not chunk_id or not chunk_text:
-                    continue
+            # Sprint 33 FIX: Query Neo4j for entities per chunk
+            # Get Neo4j client to query entities associated with each chunk via MENTIONED_IN
+            from src.components.graph_rag.neo4j_client import get_neo4j_client
 
-                # Sprint 33 FIX: Query Neo4j for entities that MENTIONED_IN this chunk
-                # This replaces the broken empty entities list
-                try:
-                    entity_query = """
-                    MATCH (e:base)-[:MENTIONED_IN]->(c:chunk {chunk_id: $chunk_id})
-                    RETURN e.entity_name AS name, e.entity_type AS type
-                    """
-                    entity_results = await neo4j_client.execute_read(
-                        entity_query, {"chunk_id": chunk_id}
-                    )
-                    raw_entities = entity_results  # Track raw count before filtering
-                    entities = [
-                        {"name": r["name"], "type": r.get("type", "UNKNOWN")}
-                        for r in entity_results
-                        if r.get("name")  # Filter out None entity names
-                    ]
+            neo4j_client = get_neo4j_client()
 
-                    logger.info(
-                        "chunk_entities_queried",
-                        chunk_id=chunk_id[:8] if len(chunk_id) > 8 else chunk_id,
-                        entities_found=len(entities),
-                        entity_names=[e["name"] for e in entities[:5]],  # Log first 5
-                    )
+            # Sprint 42: Query Neo4j for chunks that were just stored by insert_prechunked_documents
+            # The chunk_ids should now match between Qdrant and Neo4j (unified ID)
+            document_id = state["document_id"]
+            chunks_query = """
+            MATCH (c:chunk {document_id: $document_id})
+            RETURN c.chunk_id AS chunk_id, c.text AS chunk_text
+            ORDER BY c.chunk_index
+            """
+            try:
+                neo4j_chunks = await neo4j_client.execute_read(
+                    chunks_query, {"document_id": document_id}
+                )
+                logger.info(
+                    "neo4j_chunks_queried_for_relations",
+                    document_id=document_id,
+                    chunks_found=len(neo4j_chunks),
+                )
+            except Exception as e:
+                logger.error(
+                    "failed_to_query_neo4j_chunks",
+                    document_id=document_id,
+                    error=str(e),
+                )
+                neo4j_chunks = []
 
-                    # Sprint 83 Feature 83.1: Log extraction quality metrics
-                    entity_types = list({e["type"] for e in entities})
-                    log_extraction_quality_metrics(
-                        chunk_id=chunk_id[:8] if len(chunk_id) > 8 else chunk_id,
-                        raw_entities_extracted=len(raw_entities),
-                        deduplicated_entities=len(entities),
-                        entity_types=entity_types,
-                    )
+            # Sprint 51: Emit progress event for relation extraction start
+            relation_chunks_total = len(neo4j_chunks)
+            await emit_progress(
+                document_id=document_id,
+                phase="relation_extraction",
+                current=0,
+                total=relation_chunks_total,
+                message=f"Starting relation extraction for {relation_chunks_total} chunks...",
+                details={"stage": "relation_extraction_start"},
+            )
 
-                except Exception as e:
-                    logger.warning(
-                        "chunk_entity_query_failed",
-                        chunk_id=chunk_id[:8] if len(chunk_id) > 8 else chunk_id,
-                        error=str(e),
-                    )
-                    entities = []
+            # Process each chunk from Neo4j: extract relations and store to Neo4j
+            for chunk_idx, chunk_data in enumerate(neo4j_chunks):
+                # Sprint 83 Feature 83.1: Track per-chunk latency
+                with relation_latency_tracker.track():
+                    chunk_text = chunk_data.get("chunk_text", "")
+                    chunk_id = chunk_data.get("chunk_id", "")
 
-                # Need at least 2 entities to find relations between them
-                if len(entities) < 2:
-                    logger.debug(
-                        "skipping_relation_extraction",
-                        chunk_id=chunk_id[:8] if len(chunk_id) > 8 else chunk_id,
-                        reason="less_than_2_entities",
-                        entities_found=len(entities),
-                    )
-                    continue
+                    if not chunk_id or not chunk_text:
+                        continue
 
-                try:
-                    # Sprint 85 Feature 85.8: Extract relations with gleaning for improved ER ratio
-                    # Sprint 124: Gleaning disabled for benchmark (gleaning_steps=0)
-                    # TODO: Re-enable with gleaning_steps=2 after vLLM integration
-                    relations = await relation_extractor.extract_with_gleaning(
-                        chunk_text, entities, gleaning_steps=0
-                    )
-
-                    # Store relations to Neo4j with RELATES_TO relationships
-                    # Sprint 76 Feature 76.1 (TD-084): Use namespace_id from state
-                    if relations:
-                        relations_created = await neo4j_client.store_relations(
-                            relations=relations,
-                            chunk_id=chunk_id,
-                            namespace_id=namespace_id,
+                    # Sprint 33 FIX: Query Neo4j for entities that MENTIONED_IN this chunk
+                    # This replaces the broken empty entities list
+                    try:
+                        entity_query = """
+                        MATCH (e:base)-[:MENTIONED_IN]->(c:chunk {chunk_id: $chunk_id})
+                        RETURN e.entity_name AS name, e.entity_type AS type
+                        """
+                        entity_results = await neo4j_client.execute_read(
+                            entity_query, {"chunk_id": chunk_id}
                         )
-                        total_relations_created += relations_created
+                        raw_entities = entity_results  # Track raw count before filtering
+                        entities = [
+                            {"name": r["name"], "type": r.get("type", "UNKNOWN")}
+                            for r in entity_results
+                            if r.get("name")  # Filter out None entity names
+                        ]
 
-                        logger.debug(
-                            "chunk_relations_stored",
-                            chunk_id=chunk_id[:8],
-                            relations_extracted=len(relations),
-                            relations_created=relations_created,
-                        )
-
-                        # Sprint 83 Feature 83.1: Log chunk-entity provenance mapping
-                        entity_ids = [e["name"] for e in entities]  # Entity names as IDs
-                        relation_ids = [
-                            f"Rel_{i}" for i in range(relations_created)
-                        ]  # Synthetic IDs
-                        # Get section hierarchy from adaptive_chunks if available
-                        section_hierarchy = []
-                        matching_adaptive_chunk = None
-                        for ac in state.get("adaptive_chunks", []):
-                            # Match by chunk_id (Neo4j chunk_id matches Qdrant chunk_id from Sprint 42)
-                            if hasattr(ac, "section_headings"):
-                                # Simple heuristic: find first adaptive chunk (we don't have direct mapping)
-                                matching_adaptive_chunk = ac
-                                break
-                        if matching_adaptive_chunk:
-                            section_hierarchy = matching_adaptive_chunk.section_headings
-
-                        log_chunk_entity_mapping(
+                        logger.info(
+                            "chunk_entities_queried",
                             chunk_id=chunk_id[:8] if len(chunk_id) > 8 else chunk_id,
-                            entities_created=entity_ids[:10],  # Log first 10 entities
-                            relations_created=relation_ids[:10],  # Log first 10 relations
-                            section_hierarchy=section_hierarchy,
+                            entities_found=len(entities),
+                            entity_names=[e["name"] for e in entities[:5]],  # Log first 5
                         )
 
-                    # Sprint 51: Emit progress event with extracted count
-                    await emit_progress(
-                        document_id=document_id,
-                        phase="relation_extraction",
-                        current=chunk_idx + 1,
-                        total=relation_chunks_total,
-                        message=f"Extracted {len(relations) if relations else 0} relations (chunk {chunk_idx + 1}/{relation_chunks_total})",
-                        details={
-                            "chunk_id": chunk_id[:8] if chunk_id else "unknown",
-                            "relations": len(relations) if relations else 0,
-                            "total_entities": entities_extracted,  # From entity extraction phase
-                            "total_relations": total_relations_created,
-                        },
-                    )
+                        # Sprint 83 Feature 83.1: Log extraction quality metrics
+                        entity_types = list({e["type"] for e in entities})
+                        log_extraction_quality_metrics(
+                            chunk_id=chunk_id[:8] if len(chunk_id) > 8 else chunk_id,
+                            raw_entities_extracted=len(raw_entities),
+                            deduplicated_entities=len(entities),
+                            entity_types=entity_types,
+                        )
 
-                except Exception as e:
-                    logger.warning(
-                        "chunk_relation_extraction_failed",
-                        chunk_id=chunk_id[:8],
-                        error=str(e),
-                        action="continuing_with_next_chunk",
-                    )
-                    continue
+                    except Exception as e:
+                        logger.warning(
+                            "chunk_entity_query_failed",
+                            chunk_id=chunk_id[:8] if len(chunk_id) > 8 else chunk_id,
+                            error=str(e),
+                        )
+                        entities = []
 
-        relation_extraction_end = time.perf_counter()
-        relation_extraction_ms = (relation_extraction_end - relation_extraction_start) * 1000
+                    # Need at least 2 entities to find relations between them
+                    if len(entities) < 2:
+                        logger.debug(
+                            "skipping_relation_extraction",
+                            chunk_id=chunk_id[:8] if len(chunk_id) > 8 else chunk_id,
+                            reason="less_than_2_entities",
+                            entities_found=len(entities),
+                        )
+                        continue
 
-        # Store relations count in state
-        state["relations_count"] = total_relations_created
+                    try:
+                        # Sprint 85 Feature 85.8: Extract relations with gleaning for improved ER ratio
+                        # Sprint 124: Gleaning disabled for benchmark (gleaning_steps=0)
+                        # TODO: Re-enable with gleaning_steps=2 after vLLM integration
+                        relations = await relation_extractor.extract_with_gleaning(
+                            chunk_text, entities, gleaning_steps=0
+                        )
 
-        logger.info(
-            "TIMING_relation_extraction_complete",
-            stage="graph_extraction",
-            substage="relation_extraction",
-            duration_ms=round(relation_extraction_ms, 2),
-            chunks_processed=len(neo4j_chunks),  # Sprint 41: Use actual Neo4j chunks count
-            total_relations_created=total_relations_created,
-        )
+                        # Store relations to Neo4j with RELATES_TO relationships
+                        # Sprint 76 Feature 76.1 (TD-084): Use namespace_id from state
+                        if relations:
+                            relations_created = await neo4j_client.store_relations(
+                                relations=relations,
+                                chunk_id=chunk_id,
+                                namespace_id=namespace_id,
+                            )
+                            total_relations_created += relations_created
 
-        # Sprint 83 Feature 83.1: Log relation extraction phase summary with percentiles
-        relation_latency_tracker.log_summary(
-            phase="relation_extraction",
-            items_processed=len(neo4j_chunks),
-            total_relations_created=total_relations_created,
-        )
+                            logger.debug(
+                                "chunk_relations_stored",
+                                chunk_id=chunk_id[:8],
+                                relations_extracted=len(relations),
+                                relations_created=relations_created,
+                            )
 
-        # Sprint 51: Emit relation extraction complete summary
-        await emit_progress(
-            document_id=document_id,
-            phase="relation_extraction",
-            current=relation_chunks_total,
-            total=relation_chunks_total,
-            message=f"Extracted {total_relations_created} relations total",
-            details={
-                "total_entities": entities_extracted,
-                "total_relations": total_relations_created,
-                "chunks_processed": len(neo4j_chunks),
-            },
-        )
+                            # Sprint 83 Feature 83.1: Log chunk-entity provenance mapping
+                            entity_ids = [e["name"] for e in entities]  # Entity names as IDs
+                            relation_ids = [
+                                f"Rel_{i}" for i in range(relations_created)
+                            ]  # Synthetic IDs
+                            # Get section hierarchy from adaptive_chunks if available
+                            section_hierarchy = []
+                            matching_adaptive_chunk = None
+                            for ac in state.get("adaptive_chunks", []):
+                                # Match by chunk_id (Neo4j chunk_id matches Qdrant chunk_id from Sprint 42)
+                                if hasattr(ac, "section_headings"):
+                                    # Simple heuristic: find first adaptive chunk (we don't have direct mapping)
+                                    matching_adaptive_chunk = ac
+                                    break
+                            if matching_adaptive_chunk:
+                                section_hierarchy = matching_adaptive_chunk.section_headings
+
+                            log_chunk_entity_mapping(
+                                chunk_id=chunk_id[:8] if len(chunk_id) > 8 else chunk_id,
+                                entities_created=entity_ids[:10],  # Log first 10 entities
+                                relations_created=relation_ids[:10],  # Log first 10 relations
+                                section_hierarchy=section_hierarchy,
+                            )
+
+                        # Sprint 51: Emit progress event with extracted count
+                        await emit_progress(
+                            document_id=document_id,
+                            phase="relation_extraction",
+                            current=chunk_idx + 1,
+                            total=relation_chunks_total,
+                            message=f"Extracted {len(relations) if relations else 0} relations (chunk {chunk_idx + 1}/{relation_chunks_total})",
+                            details={
+                                "chunk_id": chunk_id[:8] if chunk_id else "unknown",
+                                "relations": len(relations) if relations else 0,
+                                "total_entities": entities_extracted,  # From entity extraction phase
+                                "total_relations": total_relations_created,
+                            },
+                        )
+
+                    except Exception as e:
+                        logger.warning(
+                            "chunk_relation_extraction_failed",
+                            chunk_id=chunk_id[:8],
+                            error=str(e),
+                            action="continuing_with_next_chunk",
+                        )
+                        continue
+
+            relation_extraction_end = time.perf_counter()
+            relation_extraction_ms = (relation_extraction_end - relation_extraction_start) * 1000
+
+            # Store relations count in state
+            state["relations_count"] = total_relations_created
+
+            logger.info(
+                "TIMING_relation_extraction_complete",
+                stage="graph_extraction",
+                substage="relation_extraction",
+                duration_ms=round(relation_extraction_ms, 2),
+                chunks_processed=len(neo4j_chunks),  # Sprint 41: Use actual Neo4j chunks count
+                total_relations_created=total_relations_created,
+            )
+
+            # Sprint 83 Feature 83.1: Log relation extraction phase summary with percentiles
+            relation_latency_tracker.log_summary(
+                phase="relation_extraction",
+                items_processed=len(neo4j_chunks),
+                total_relations_created=total_relations_created,
+            )
+
+            # Sprint 51: Emit relation extraction complete summary
+            await emit_progress(
+                document_id=document_id,
+                phase="relation_extraction",
+                current=relation_chunks_total,
+                total=relation_chunks_total,
+                message=f"Extracted {total_relations_created} relations total",
+                details={
+                    "total_entities": entities_extracted,
+                    "total_relations": total_relations_created,
+                    "chunks_processed": len(neo4j_chunks),
+                },
+            )
 
         # Sprint 32 Feature 32.4: Create Section nodes in Neo4j (ADR-039)
         # Extract sections and chunks from state for section node creation

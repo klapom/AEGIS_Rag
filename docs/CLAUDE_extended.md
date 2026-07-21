@@ -201,6 +201,47 @@ AEGIS_LLM_THINKING=false  # Disable thinking for extraction
 
 ---
 
+## ADR-064: Round-2 Relation Extraction Flag
+
+The ingestion graph-extraction node ran relation extraction **twice** per document:
+Round 1 (`ExtractionService`, typed ADR-060 relations) and a legacy Round 2
+(`RelationExtractor.extract_with_gleaning`, `graph_extraction.py`) that re-extracts
+relations from entities already stored in Neo4j. Round 2 predates ADR-060, writes
+some off-taxonomy relation types, and can overwrite Round-1 typed `relation_type`
+values on MERGE collisions (see ADR-064 for the full MERGE-semantics analysis).
+
+Round 2 is now **disabled by default**:
+
+```bash
+# .env
+AEGIS_ENABLE_LEGACY_ROUND2_RELATIONS=false  # default; set "true" to re-enable
+```
+
+**Semantics** (same pattern as `AEGIS_LLM_THINKING` above):
+- Only the exact literal `"true"` (case-insensitive: `true`/`True`/`TRUE`)
+  activates Round 2. `"1"`, `"yes"`, `"on"`, or a value with surrounding
+  whitespace are all treated as disabled.
+- Read via `os.environ.get(...)` at runtime on every ingestion call (not an
+  import-time constant), so unit tests can toggle it with `monkeypatch.setenv`
+  without `importlib.reload`.
+- In Docker, the process environment is frozen at container start. A `.env`
+  flip only takes effect after:
+  ```bash
+  docker compose -f docker-compose.dgx-spark.yml up -d --force-recreate api
+  ```
+  There is no code change or rebuild required — just the recreate.
+
+**API side effect:** the upload response's `relations_count` field now reports
+the Round-1 **stored** relation count (`total_relations_stored`) instead of the
+Round-2 count. This is a semantic correction, not a regression — Round 1 was
+previously never counted in that field.
+
+See `docs/adr/ADR-064-round2-relation-extraction-flag.md` and
+`docs/analysis/CRITIC_GATE_ADR_064_2026-07-21.md` for the full design rationale,
+ablation test plan, and rollback procedure.
+
+---
+
 ## vLLM SM121 CUDA Crash Analysis (Sprint 128)
 
 ### The Problem
