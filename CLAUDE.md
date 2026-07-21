@@ -224,6 +224,8 @@ cd frontend && npx playwright test
 
 ## Aktuelle Sprint-Highlights
 
+**Sprint 129 In Progress (2026-07-21):** Baseline-Ingestion-Messung offenbart Round-2-Relation-Extraction (Sprint-34-Relikt in `graph_extraction.py`) als Killer-Bottleneck: 4 kleine Docs (max 13 KB) = 21.9 min HTTP-Wall, ~100 % LLM-getrieben (57 Calls, Ø 23.6 s, p95 59.3 s). Zusätzlich verifiziert: Round-2 überschreibt Round-1-typisierte Relations aktiv wegen kaputtem MERGE-Guard (`RELATES_TO` vs `RELATED_TO`). **ADR-064:** Feature-Flag `AEGIS_ENABLE_LEGACY_ROUND2_RELATIONS` (default `false`) skipped Round 2; Ablation-Plan mit M1–M5-Metriken vorbereitet. Erwarteter Speedup nach R1+R2 (ADR-065, extraction_worker_pool wire-up, Semaphore-4): 17 min → ~3 min pro Doc. 35/35 Unit-Tests grün. CGC (CodeGraphContext) für AEGIS-Repo aufgesetzt.
+
 **Sprint 128 Complete:** LightRAG Removal (-6,660 LOC), Cascade Guard, HyDE, vLLM eugr SM121 (0 CUDA crashes), Domain Prompt Verification (27/35), E2E Benchmarks (15-doc: 212 entities, 626 relations, 84.5% relation specificity), MAX_RELATIONSHIPS cap removed, Chat Benchmark (Ollama 64 vs vLLM 55 tok/s). 30 SP (128.3 carried to 129).
 
 **Previous Sprints:** 127 (RAGAS CP=0.739, CR=0.760), 126 (LLM Engine Mode, community batch jobs), 125 (vLLM dual-engine, S-P-O extraction), 121 (ChunkingService removal, -1,727 LOC), 120 (Ollama 3→74 tok/s), 115 (Graph 27s→1.4s), 92 (Graph <2s, Frontend Docker).
