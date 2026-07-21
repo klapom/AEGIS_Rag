@@ -1169,6 +1169,10 @@
 **Decision:** VLM cross-validation does NOT improve table quality. Benchmark with 4 documents (VM3.pdf 13pg, DP-Bench 45/46, RAGAS hotpot) shows VLM consistently **downgrades** table scores: VM3 tables went from 0.90-0.93 EXCELLENT (heuristic) to 0.52-0.83 GOOD/FAIR (VLM-adjusted). Nemotron VL 8B agreement scores 0.23-0.76 indicate the model is too weak for reliable table validation. Keep `TABLE_CROSS_VALIDATION_ENABLED=false` (default). VLM table container stopped.
 **Rationale:** The VLM general vision model disagrees with Docling's specialized OCR pipeline, introducing noise rather than correcting errors. VLM container adds 12GB GPU memory pressure, reducing headroom and increasing crash risk under concurrent load. Docling heuristic scoring (0.90+ for well-structured tables) is already accurate.
 
+### 2026-07-21 | Round-2 Relation Extraction Disabled by Default — API Semantics of `relations_count` (Sprint 129, ADR-064)
+**Decision:** The legacy Round-2 relation extraction in `graph_extraction_node` is gated behind `AEGIS_ENABLE_LEGACY_ROUND2_RELATIONS` (default off). Side effect: the upload response field `neo4j_relationships` (`POST /api/v1/retrieval/upload` → `retrieval.py`, fed from `state["relations_count"]`) now reports the **Round-1 stored** relation count (`total_relations_stored`) instead of the Round-2 count. Visible in `UploadResultCard.tsx`/`ExtractionSummary.tsx`.
+**Rationale:** Round 2 duplicated ~50% of chunk-based LLM calls and actively degraded ADR-060 typed relations on MERGE collisions (Critic G2). The old field value under-reported (Round 1 was never counted) and could over-report vs. stored edges; the new value is the semantically correct stored count. No API schema change, values shift only.
+
 ---
 
 **Last Updated:** 2026-02-11 (Sprint 129 🔄)
