@@ -1,0 +1,114 @@
+# CGC ignore for AEGIS RAG
+# Zweck: nur produktions-Code in den Graphen — Daten, Artefakte, Caches raus.
+
+# === Python-Umgebung ===
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+venv.bak/
+env/
+.venv.backup/
+lib/
+lib64/
+*.egg-info/
+*.egg
+build/
+dist/
+wheels/
+
+# === Test-/Type-Caches ===
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.hypothesis/
+htmlcov/
+coverage.xml
+coverage.json
+.coverage*
+*.cover
+
+# === Data & Artefakte (kein Code-Analyse-Wert) ===
+data/
+runs/
+uploads/
+downloads/
+llm_cache/
+models/
+reports/
+logs/
+dashboards/
+searxng/
+prometheus_data/
+grafana_data/
+*_benchmark.json
+table_competitive_benchmark.json
+table_ingestion_benchmark_sprint129.json
+vlm_parallel_benchmark.json
+skill_libraries/
+skills/
+
+# === Frontend node_modules & build ===
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+frontend/.next/
+frontend/coverage/
+frontend/data/
+node_modules/
+package-lock.json
+poetry.lock
+
+# === Docker/Deploy — kein Python-Code-Graph-Wert ===
+docker/*.log
+docker-compose.override.yml
+nginx/logs/
+
+# === Notebooks / experimentelle Scripts ===
+*.ipynb
+.ipynb_checkpoints/
+scripts/feature_21_6/
+scripts/check_neo4j_labels.py
+scripts/index_performance_tuning_debug.py
+scripts/log_chunks_and_entities.py
+scripts/quick_index_pptx.py
+
+# === Editor/OS ===
+.idea/
+.vscode/
+*.sublime-*
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# === Backups & Temporär ===
+*.backup
+*.bak
+*.full_backup
+pyproject.toml.full_backup
+.env.backup*
+tmp/
+temp/
+*.tmp
+*.log
+
+# === Secrets ===
+secrets/
+*.pem
+*.key
+*.crt
+
+# === Analysis-Outputs (Text-Reports, kein Code) ===
+CHUNK_ANALYSIS_LOG.txt
+ENTITIES_AND_RELATIONS_FOR_ANNOTATION.txt
+ENTITY_VALIDATION_RESULTS.txt
+*_analysis.txt
+*_ANALYSIS_LOG.txt
+test_results*.txt
+
+# === Git ===
+.git/
