@@ -273,6 +273,16 @@ services:
   qdrant:
     image: qdrant/qdrant:v1.11.0
     container_name: aegis-qdrant
+    # ADR-067 (Sprint 130, 2026-07-22): managed-qdrant profile so this
+    # service is not auto-started. The DGX Spark runs a manually-managed
+    # qdrant:v1.17.1 container that already holds aegis_rag_qdrant_data.
+    # Starting this v1.11.0 container would cause a WAL lock (both mount
+    # the same volume) and, if it did start, would be a 6-minor-version
+    # downgrade with data-format risk. Only start explicitly via
+    # `docker compose --profile managed-qdrant up -d qdrant` after
+    # migrating the volume off the external container.
+    profiles:
+      - managed-qdrant
     # Sprint 122: Prevent "Too many open files" error during E2E test runs
     # Default ulimit (1024) exhausted by parallel test connections
     ulimits:
@@ -353,8 +363,13 @@ services:
   redis:
     image: redis:7-alpine
     container_name: aegis-redis
-    ports:
-      - "6379:6379"
+    # ADR-067 (Sprint 130, 2026-07-22): expose intern, do not bind to
+    # host port 6379. Host port 6379 is held by mcp-gateway-redis-1
+    # (unrelated tenant) since well before Sprint 130. aegis-api
+    # reaches aegis-redis via compose-DNS 'redis:6379' inside
+    # aegis_rag_aegis-network — no host binding required.
+    expose:
+      - "6379"
     volumes:
       - redis_data:/data
     command: >
@@ -412,7 +427,9 @@ services:
     networks:
       - aegis-network
     depends_on:
-      - qdrant
+      # ADR-067: qdrant depends_on relaxed (was: - qdrant). The managed-qdrant
+      # profile makes the compose qdrant optional; scrape target is still
+      # configured but Prometheus starts without waiting for it.
       - neo4j
       - redis
 
@@ -688,8 +705,12 @@ services:
       # Set VLLM_ENABLED=true to route extraction tasks to vLLM (256+ concurrent)
       # Requires: docker compose --profile ingestion up -d vllm
       - VLLM_ENABLED=${VLLM_ENABLED:-false}
-      - VLLM_BASE_URL=http://vllm:8001
-      - VLLM_MODEL=nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-NVFP4
+      # ADR-067 (Sprint 130, 2026-07-22): env-substitute so .env can point
+      # to the external Qwen endpoint. Was hardcoded, causing DNS failure
+      # under host networking (Bug A root cause). Compose-DNS default
+      # kept for stock developer setups that run the aegis-vllm profile.
+      - VLLM_BASE_URL=${VLLM_BASE_URL:-http://vllm:8001}
+      - VLLM_MODEL=${VLLM_MODEL:-nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-NVFP4}
       # Sprint 124: LLM-First Cascade (SpaCy only as Rank 3 fallback)
       - AEGIS_USE_LEGACY_CASCADE=${AEGIS_USE_LEGACY_CASCADE:-0}
       # A/B Test: Cross-sentence window extraction (default: 1=ON)
@@ -762,8 +783,9 @@ services:
     depends_on:
       ollama:
         condition: service_healthy
-      qdrant:
-        condition: service_started
+      # ADR-067: qdrant depends_on removed. External qdrant:v1.17.1 is
+      # canonical on DGX Spark and doesn't participate in compose lifecycle.
+      # Compose qdrant service moved to profiles: [managed-qdrant].
       neo4j:
         condition: service_healthy
       redis:
@@ -906,8 +928,8 @@ services:
       # Test Configuration
       - PYTEST_ADDOPTS=-v --tb=short
     depends_on:
+      # ADR-067: qdrant removed from depends_on (managed-qdrant profile).
       - ollama
-      - qdrant
       - neo4j
       - redis
     networks:

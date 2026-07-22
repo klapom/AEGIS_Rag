@@ -79,6 +79,12 @@ from src.prompts.extraction_prompts import (
 
 logger = structlog.get_logger(__name__)
 
+# Phase-0 diagnostic log-level bump (Bug A / ADR-066 Critic-Gate E-0).
+# Diagnostic-only; scoped to this module only. Remove after Phase 0.
+import logging as _stdlib_logging  # noqa: E402
+
+_stdlib_logging.getLogger(__name__).setLevel(_stdlib_logging.DEBUG)
+
 # ============================================================================
 # Sprint 125 Feature 125.3: ADR-060 Universal Types
 # Sprint 126: Domain sub-type mappings loaded from seed_domains.yaml
