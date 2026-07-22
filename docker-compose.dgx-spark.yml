@@ -273,6 +273,16 @@ services:
   qdrant:
     image: qdrant/qdrant:v1.11.0
     container_name: aegis-qdrant
+    # ADR-067 (Sprint 130, 2026-07-22): managed-qdrant profile so this
+    # service is not auto-started. The DGX Spark runs a manually-managed
+    # qdrant:v1.17.1 container that already holds aegis_rag_qdrant_data.
+    # Starting this v1.11.0 container would cause a WAL lock (both mount
+    # the same volume) and, if it did start, would be a 6-minor-version
+    # downgrade with data-format risk. Only start explicitly via
+    # `docker compose --profile managed-qdrant up -d qdrant` after
+    # migrating the volume off the external container.
+    profiles:
+      - managed-qdrant
     # Sprint 122: Prevent "Too many open files" error during E2E test runs
     # Default ulimit (1024) exhausted by parallel test connections
     ulimits:
@@ -688,8 +698,12 @@ services:
       # Set VLLM_ENABLED=true to route extraction tasks to vLLM (256+ concurrent)
       # Requires: docker compose --profile ingestion up -d vllm
       - VLLM_ENABLED=${VLLM_ENABLED:-false}
-      - VLLM_BASE_URL=http://vllm:8001
-      - VLLM_MODEL=nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-NVFP4
+      # ADR-067 (Sprint 130, 2026-07-22): env-substitute so .env can point
+      # to the external Qwen endpoint. Was hardcoded, causing DNS failure
+      # under host networking (Bug A root cause). Compose-DNS default
+      # kept for stock developer setups that run the aegis-vllm profile.
+      - VLLM_BASE_URL=${VLLM_BASE_URL:-http://vllm:8001}
+      - VLLM_MODEL=${VLLM_MODEL:-nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-NVFP4}
       # Sprint 124: LLM-First Cascade (SpaCy only as Rank 3 fallback)
       - AEGIS_USE_LEGACY_CASCADE=${AEGIS_USE_LEGACY_CASCADE:-0}
       # A/B Test: Cross-sentence window extraction (default: 1=ON)
