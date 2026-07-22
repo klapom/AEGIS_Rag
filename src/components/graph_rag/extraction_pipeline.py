@@ -34,6 +34,12 @@ from src.monitoring.metrics import record_deduplication_detail, record_extractio
 
 logger = structlog.get_logger(__name__)
 
+# Phase-0 diagnostic log-level bump (Bug A / ADR-066 Critic-Gate E-0).
+# Diagnostic-only; scoped to this module only. Remove after Phase 0.
+import logging as _stdlib_logging  # noqa: E402
+
+_stdlib_logging.getLogger(__name__).setLevel(_stdlib_logging.DEBUG)
+
 # Sprint 129.2: Metadata artifact blocklist
 # Document structure tokens that the LLM sometimes extracts as entities.
 # Case-insensitive matching. Configurable via AEGIS_ENTITY_BLOCKLIST env var.
@@ -233,7 +239,17 @@ async def extract_and_store_entities(
             )
 
         except Exception as e:
-            logger.error("chunk_extraction_failed", chunk_id=chunk_id, error=str(e))
+            # Phase-0 instrumentation (Bug A / ADR-066 Critic-Gate D-1, E-0):
+            # break the silent exception swallow — log full type + traceback so the
+            # failing stage can be identified. Diagnostic-only change, see
+            # docs/analysis/CRITIC_GATE_ADR_066_2026-07-22.md Section E-0.
+            logger.error(
+                "chunk_extraction_failed",
+                chunk_id=chunk_id,
+                error=str(e),
+                error_type=type(e).__name__,
+                exc_info=True,
+            )
             continue
 
     # Sprint 129.2: Filter metadata artifacts before dedup
