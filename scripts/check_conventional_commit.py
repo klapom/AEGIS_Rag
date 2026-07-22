@@ -8,6 +8,7 @@ Allows merge commits and fixup!/squash! prefixes.
 """
 
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -21,8 +22,28 @@ PATTERN = re.compile(
 )
 
 
+def _default_commit_msg_path() -> Path:
+    """Resolve COMMIT_EDITMSG, worktree-aware.
+
+    In a plain repo, `.git` is a directory and `.git/COMMIT_EDITMSG` works.
+    In a `git worktree`, `.git` is a *file* pointing at
+    `<main-repo>/.git/worktrees/<name>/`, so the real COMMIT_EDITMSG lives
+    under that path instead. Ask git directly rather than hardcoding.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--git-path", "COMMIT_EDITMSG"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return Path(result.stdout.strip())
+    except Exception:
+        return Path(".git/COMMIT_EDITMSG")
+
+
 def main() -> int:
-    commit_msg_file = Path(".git/COMMIT_EDITMSG")
+    commit_msg_file = _default_commit_msg_path()
     # Also accept the file as first argument if provided
     if len(sys.argv) > 1:
         commit_msg_file = Path(sys.argv[1])
