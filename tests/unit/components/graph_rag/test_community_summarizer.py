@@ -348,7 +348,16 @@ class TestUpdateSummariesForDelta:
                 # Second call: _get_community_relationships for community 5
                 [{"source": "Entity1", "target": "Entity2", "type": "RELATES_TO"}],
                 # Third call: _get_community_entities for community 6
-                [{"name": "Entity3", "type": "CONCEPT", "entity_id": "e3"}],
+                # Sprint 85 (TD-101): single-entity communities with zero
+                # relationships skip the LLM call entirely (community_summarizer.py
+                # generate_summary()). Use >=2 entities here so this test exercises
+                # the standard LLM-generation path for both new communities, matching
+                # its stated intent; TD-101's skip path is a distinct behavior with
+                # no dedicated test in this suite.
+                [
+                    {"name": "Entity3", "type": "CONCEPT", "entity_id": "e3"},
+                    {"name": "Entity4", "type": "CONCEPT", "entity_id": "e4"},
+                ],
                 # Fourth call: _get_community_relationships for community 6
                 [],
             ]

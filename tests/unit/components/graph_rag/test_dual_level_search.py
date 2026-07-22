@@ -69,44 +69,67 @@ class TestDualLevelSearch:
         """Test local search with no matching entities."""
         mock_neo4j_client.execute_read = AsyncMock(return_value=[])
 
-        entities = await dual_level_search.local_search("What is machine learning?", top_k=5)
+        entities, metadata = await dual_level_search.local_search(
+            "What is machine learning?", top_k=5
+        )
 
         assert entities == []
-        mock_neo4j_client.execute_read.assert_called_once()
+        assert isinstance(metadata, dict)
+        # Sprint 113: namespace_has_entities early-exit check adds one extra
+        # execute_read call before the (skipped-in-effect) chunk expansion query.
+        assert mock_neo4j_client.execute_read.call_count == 2
 
     @pytest.mark.asyncio
     async def test_local_search_with_results(self, dual_level_search, mock_neo4j_client):
-        """Test local search with matching entities."""
-        mock_results = [
+        """Test local search with matching entities.
+
+        Sprint 78 rewired local_search to expand entities via SmartEntityExpander
+        and then traverse MENTIONED_IN to full document chunks, so the Neo4j
+        response shape here is chunk-shaped (id/chunk_text/document_id/...),
+        not the old entity-shaped rows (name/type/description/confidence).
+        """
+        # Chunk-shaped rows matching the current MENTIONED_IN traversal query
+        mock_chunk_results = [
             {
-                "id": "e1",
-                "name": "Machine Learning",
-                "type": "CONCEPT",
-                "description": "Field of artificial intelligence",
-                "properties": {},
-                "source_document": "doc1",
-                "confidence": 0.95,
+                "id": "chunk_1",
+                "chunk_text": "Field of artificial intelligence",
+                "document_id": "doc1",
+                "chunk_index": 0,
+                "matched_entities": ["Machine Learning"],
+                "entity_count": 1,
             },
             {
-                "id": "e2",
-                "name": "Python",
-                "type": "TECHNOLOGY",
-                "description": "Programming language",
-                "properties": {},
-                "source_document": "doc1",
-                "confidence": 0.90,
+                "id": "chunk_2",
+                "chunk_text": "Programming language",
+                "document_id": "doc1",
+                "chunk_index": 1,
+                "matched_entities": ["Python"],
+                "entity_count": 1,
             },
         ]
 
-        mock_neo4j_client.execute_read = AsyncMock(return_value=mock_results)
+        mock_neo4j_client.execute_read = AsyncMock(return_value=mock_chunk_results)
 
-        entities = await dual_level_search.local_search("machine learning with python", top_k=5)
+        with patch(
+            "src.components.graph_rag.entity_expansion.SmartEntityExpander"
+        ) as mock_expander_class:
+            mock_expander = MagicMock()
+            mock_expander.expand_entities = AsyncMock(
+                return_value=(["Machine Learning", "Python"], 0)
+            )
+            mock_expander_class.return_value = mock_expander
+
+            entities, metadata = await dual_level_search.local_search(
+                "machine learning with python", top_k=5
+            )
 
         assert len(entities) == 2
+        assert isinstance(metadata, dict)
         assert isinstance(entities[0], GraphEntity)
-        assert entities[0].name == "Machine Learning"
-        assert entities[0].type == "CONCEPT"
-        assert entities[1].name == "Python"
+        assert entities[0].type == "CHUNK"
+        assert "Machine Learning" in entities[0].properties["matched_entities"]
+        assert entities[0].description == "Field of artificial intelligence"
+        assert "Python" in entities[1].properties["matched_entities"]
 
     @pytest.mark.asyncio
     async def test_global_search_empty_results(self, dual_level_search, mock_neo4j_client):
@@ -333,9 +356,10 @@ class TestDualLevelSearch:
 
         await dual_level_search.hybrid_search("test query", top_k=10)
 
-        # Should be called 2 times: local search, global search
+        # Should be called 3 times: local search's namespace_has_entities
+        # early-exit check (Sprint 113), local search's chunk query, global search.
         # Relationships query skipped because entities list is empty
-        assert mock_neo4j_client.execute_read.call_count == 2
+        assert mock_neo4j_client.execute_read.call_count == 3
 
     def test_singleton_pattern(self):
         """Test singleton pattern for global instance."""
@@ -391,7 +415,7 @@ class TestSprint78EntityChunkExpansion:
         ) as mock_expander_class:
             mock_instance = MagicMock()
             mock_instance.expand_entities = AsyncMock(
-                return_value=["abortion", "reproductive rights"]
+                return_value=(["abortion", "reproductive rights"], 0)
             )
             mock_expander_class.return_value = mock_instance
             yield mock_instance
@@ -443,7 +467,7 @@ class TestSprint78EntityChunkExpansion:
             "src.components.graph_rag.entity_expansion.SmartEntityExpander",
             return_value=mock_entity_expander,
         ):
-            entities = await dual_level_search.local_search(
+            entities, metadata = await dual_level_search.local_search(
                 query="What are the global implications of abortion?",
                 top_k=5,
                 namespaces=["amnesty_qa"],
@@ -451,6 +475,7 @@ class TestSprint78EntityChunkExpansion:
 
         # Verify - should return chunks as GraphEntity objects
         assert len(entities) == 2
+        assert isinstance(metadata, dict)
 
         # Check first chunk
         assert entities[0].id == "chunk_001"
@@ -503,7 +528,7 @@ class TestSprint78EntityChunkExpansion:
         ) as mock_expander_class:
             mock_instance = MagicMock()
             mock_instance.expand_entities = AsyncMock(
-                return_value=["abortion", "reproductive rights", "Supreme Court"]
+                return_value=(["abortion", "reproductive rights", "Supreme Court"], 1)
             )
             mock_expander_class.return_value = mock_instance
 
@@ -575,11 +600,12 @@ class TestSprint78EntityChunkExpansion:
             "src.components.graph_rag.entity_expansion.SmartEntityExpander",
             return_value=mock_entity_expander,
         ):
-            entities = await dual_level_search.local_search(
+            entities, metadata = await dual_level_search.local_search(
                 query="Test", top_k=5, namespaces=["test"]
             )
 
         # Verify ordering - higher entity count should come first
+        assert isinstance(metadata, dict)
         assert entities[0].id == "chunk_high"
         assert entities[0].properties["entity_match_count"] == 3
         assert entities[1].id == "chunk_low"
