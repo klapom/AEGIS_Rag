@@ -375,6 +375,7 @@ class TestInheritedFunctionality:
         """Test that local_search is available."""
         mock_neo4j_client.execute_read.return_value = []
 
-        entities = await search.local_search("test query", top_k=5)
+        entities, metadata = await search.local_search("test query", top_k=5)
 
         assert isinstance(entities, list)
+        assert isinstance(metadata, dict)
