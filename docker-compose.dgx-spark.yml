@@ -363,8 +363,13 @@ services:
   redis:
     image: redis:7-alpine
     container_name: aegis-redis
-    ports:
-      - "6379:6379"
+    # ADR-067 (Sprint 130, 2026-07-22): expose intern, do not bind to
+    # host port 6379. Host port 6379 is held by mcp-gateway-redis-1
+    # (unrelated tenant) since well before Sprint 130. aegis-api
+    # reaches aegis-redis via compose-DNS 'redis:6379' inside
+    # aegis_rag_aegis-network — no host binding required.
+    expose:
+      - "6379"
     volumes:
       - redis_data:/data
     command: >
@@ -422,7 +427,9 @@ services:
     networks:
       - aegis-network
     depends_on:
-      - qdrant
+      # ADR-067: qdrant depends_on relaxed (was: - qdrant). The managed-qdrant
+      # profile makes the compose qdrant optional; scrape target is still
+      # configured but Prometheus starts without waiting for it.
       - neo4j
       - redis
 
@@ -776,8 +783,9 @@ services:
     depends_on:
       ollama:
         condition: service_healthy
-      qdrant:
-        condition: service_started
+      # ADR-067: qdrant depends_on removed. External qdrant:v1.17.1 is
+      # canonical on DGX Spark and doesn't participate in compose lifecycle.
+      # Compose qdrant service moved to profiles: [managed-qdrant].
       neo4j:
         condition: service_healthy
       redis:
@@ -920,8 +928,8 @@ services:
       # Test Configuration
       - PYTEST_ADDOPTS=-v --tb=short
     depends_on:
+      # ADR-067: qdrant removed from depends_on (managed-qdrant profile).
       - ollama
-      - qdrant
       - neo4j
       - redis
     networks:
